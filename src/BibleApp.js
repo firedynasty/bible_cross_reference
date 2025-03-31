@@ -14,6 +14,11 @@ const getBaseUrl = () => {
     return '/bible_cross_reference';
   }
   
+  // For Vercel deployment
+  if (window.location.hostname.includes('vercel.app')) {
+    return '';
+  }
+  
   return '';
 };
 
@@ -188,20 +193,32 @@ const BibleApp = () => {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
       
-      // Log the response text for debugging if needed
-      const responseText = await response.text();
-      console.log("Response received, first 50 characters:", responseText.substring(0, 50));
-      
-      // Check if the response starts with HTML tags (indicating we got a webpage instead of JSON)
-      if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
-        throw new Error("Received HTML instead of JSON. The crossRefs.json file may not exist in the correct location.");
+      // Get response as text first to validate
+      let responseText;
+      try {
+        responseText = await response.text();
+        console.log("Response received, first 50 characters:", responseText.substring(0, 50));
+        
+        // Check if the response starts with HTML tags (indicating we got a webpage instead of JSON)
+        if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+          throw new Error("Received HTML instead of JSON. The crossRefs.json file may not exist in the correct location.");
+        }
+      } catch (textError) {
+        console.error("Error reading response text:", textError);
+        throw new Error("Failed to read response data");
       }
       
       // Parse the JSON (after confirming it's not HTML)
-      const crossRefs = JSON.parse(responseText);
-      setCrossReferences(crossRefs);
-      console.log("Cross references loaded successfully");
-      return crossRefs;
+      let crossRefs;
+      try {
+        crossRefs = JSON.parse(responseText);
+        setCrossReferences(crossRefs);
+        console.log("Cross references loaded successfully");
+        return crossRefs;
+      } catch (parseError) {
+        console.error("JSON parse error:", parseError);
+        throw new Error("Invalid JSON data received");
+      }
     } catch (err) {
       console.error("Failed to load cross references:", err);
       

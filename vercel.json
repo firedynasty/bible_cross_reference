@@ -4,6 +4,8 @@
     { "src": "/favicon.ico", "dest": "/favicon.ico" },
     { "src": "/manifest.json", "dest": "/manifest.json" },
     { "src": "/logo192.png", "dest": "/logo192.png" },
+    { "src": "/en_kjv.json", "dest": "/en_kjv.json" },
+    { "src": "/crossRefs.json", "dest": "/crossRefs.json" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
