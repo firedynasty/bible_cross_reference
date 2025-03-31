@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/bible_cross_reference/static/css/main.76b369d5.css",
+    "main.js": "/bible_cross_reference/static/js/main.bebc2b67.js",
+    "static/js/488.87ab4e83.chunk.js": "/bible_cross_reference/static/js/488.87ab4e83.chunk.js",
+    "index.html": "/bible_cross_reference/index.html",
+    "main.76b369d5.css.map": "/bible_cross_reference/static/css/main.76b369d5.css.map",
+    "main.bebc2b67.js.map": "/bible_cross_reference/static/js/main.bebc2b67.js.map",
+    "488.87ab4e83.chunk.js.map": "/bible_cross_reference/static/js/488.87ab4e83.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.76b369d5.css",
+    "static/js/main.bebc2b67.js"
+  ]
+}
