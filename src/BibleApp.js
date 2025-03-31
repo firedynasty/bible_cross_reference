@@ -148,19 +148,52 @@ const BibleApp = () => {
         console.log("Current hostname:", window.location.hostname);
         console.log("Current pathname:", window.location.pathname);
         
-        // Load Bible data
+        // First try loading Bible data from static file
         console.log("Attempting to load Bible data from", `${baseUrl}/en_kjv.json`);
-        const bibleResponse = await fetch(`${baseUrl}/en_kjv.json`);
-        console.log("Bible data response status:", bibleResponse.status);
+        let bibleData;
+        let bibleResponse;
+        let usingApiEndpoint = false;
         
-        if (!bibleResponse.ok) {
-          const errorText = await bibleResponse.text();
-          console.error("Bible data error response:", errorText.substring(0, 200));
-          throw new Error(`HTTP error! Status: ${bibleResponse.status}`);
+        try {
+          bibleResponse = await fetch(`${baseUrl}/en_kjv.json`);
+          console.log("Bible data response status:", bibleResponse.status);
+          
+          // Check if we got HTML instead of JSON (common error with Vercel)
+          const contentType = bibleResponse.headers.get('content-type');
+          if (contentType && contentType.includes('text/html')) {
+            console.warn("Received HTML instead of JSON, will try API endpoint");
+            throw new Error("Received HTML instead of JSON");
+          }
+          
+          if (!bibleResponse.ok) {
+            throw new Error(`HTTP error! Status: ${bibleResponse.status}`);
+          }
+          
+          // Try to parse the JSON
+          bibleData = await bibleResponse.json();
+        } catch (directError) {
+          console.warn("Error loading from direct file:", directError.message);
+          
+          // Try the API endpoint instead
+          console.log("Trying API endpoint as fallback...");
+          try {
+            usingApiEndpoint = true;
+            const apiResponse = await fetch(`${baseUrl}/api/data?file=en_kjv.json`);
+            console.log("API response status:", apiResponse.status);
+            
+            if (!apiResponse.ok) {
+              throw new Error(`API HTTP error! Status: ${apiResponse.status}`);
+            }
+            
+            bibleData = await apiResponse.json();
+          } catch (apiError) {
+            console.error("API endpoint also failed:", apiError);
+            throw new Error(`Failed to load Bible data: ${directError.message}. API fallback also failed: ${apiError.message}`);
+          }
         }
         
-        const bibleData = await bibleResponse.json();
         console.log("Bible data loaded successfully, first book:", bibleData[0]?.abbrev);
+        console.log("Data loaded using", usingApiEndpoint ? "API endpoint" : "direct file access");
         setBibleData(bibleData);
         
         // Set default selected book to Genesis (first book)
@@ -172,8 +205,8 @@ const BibleApp = () => {
           });
         }
         
-        // Load cross-references from the JSON file
-        await loadCrossReferences(baseUrl);
+        // Load cross-references from the JSON file, using the same method that worked for Bible data
+        await loadCrossReferences(baseUrl, usingApiEndpoint);
         
         setLoading(false);
       } catch (err) {
@@ -187,45 +220,78 @@ const BibleApp = () => {
   }, []);
 
   // Load cross references from external JSON file
-  const loadCrossReferences = async (baseUrl) => {
+  const loadCrossReferences = async (baseUrl, useApiEndpoint = false) => {
     try {
+      // If we already know the API endpoint worked for Bible data, use it directly
+      if (useApiEndpoint) {
+        console.log("Using API endpoint for cross references");
+        const apiUrl = `${baseUrl}/api/data?file=crossRefs.json`;
+        console.log("Attempting to load cross references from API:", apiUrl);
+        
+        const apiResponse = await fetch(apiUrl);
+        console.log("API cross references response status:", apiResponse.status);
+        
+        if (!apiResponse.ok) {
+          throw new Error(`API HTTP error! Status: ${apiResponse.status}`);
+        }
+        
+        const crossRefs = await apiResponse.json();
+        setCrossReferences(crossRefs);
+        console.log("Cross references loaded successfully via API");
+        return crossRefs;
+      }
+      
+      // Try direct file access first
       const url = `${baseUrl}/crossRefs.json`;
       console.log("Attempting to load cross references from", url);
-      const response = await fetch(url);
       
-      console.log("Cross references response status:", response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Cross references error response:", errorText.substring(0, 200));
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      // Get response as text first to validate
-      let responseText;
       try {
-        responseText = await response.text();
+        const response = await fetch(url);
+        console.log("Cross references response status:", response.status);
+        
+        // Check if we got HTML instead of JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/html')) {
+          console.warn("Received HTML instead of JSON for cross references, will try API endpoint");
+          throw new Error("Received HTML instead of JSON");
+        }
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        // Get response as text first to validate
+        const responseText = await response.text();
         console.log("Response received, first 50 characters:", responseText.substring(0, 50));
         
-        // Check if the response starts with HTML tags (indicating we got a webpage instead of JSON)
+        // Check if the response starts with HTML tags
         if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
-          throw new Error("Received HTML instead of JSON. The crossRefs.json file may not exist in the correct location.");
+          throw new Error("Received HTML instead of JSON");
         }
-      } catch (textError) {
-        console.error("Error reading response text:", textError);
-        throw new Error("Failed to read response data");
-      }
-      
-      // Parse the JSON (after confirming it's not HTML)
-      let crossRefs;
-      try {
-        crossRefs = JSON.parse(responseText);
+        
+        // Parse the JSON
+        const crossRefs = JSON.parse(responseText);
         setCrossReferences(crossRefs);
-        console.log("Cross references loaded successfully");
+        console.log("Cross references loaded successfully via direct file");
         return crossRefs;
-      } catch (parseError) {
-        console.error("JSON parse error:", parseError);
-        throw new Error("Invalid JSON data received");
+      } catch (directError) {
+        console.warn("Error loading cross references from direct file:", directError.message);
+        
+        // Try the API endpoint as fallback
+        console.log("Trying API endpoint for cross references as fallback...");
+        const apiUrl = `${baseUrl}/api/data?file=crossRefs.json`;
+        
+        const apiResponse = await fetch(apiUrl);
+        console.log("API cross references response status:", apiResponse.status);
+        
+        if (!apiResponse.ok) {
+          throw new Error(`API HTTP error! Status: ${apiResponse.status}`);
+        }
+        
+        const crossRefs = await apiResponse.json();
+        setCrossReferences(crossRefs);
+        console.log("Cross references loaded successfully via API fallback");
+        return crossRefs;
       }
     } catch (err) {
       console.error("Failed to load cross references:", err);
