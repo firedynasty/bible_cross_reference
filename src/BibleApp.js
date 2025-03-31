@@ -178,7 +178,7 @@ const BibleApp = () => {
           console.log("Trying API endpoint as fallback...");
           try {
             usingApiEndpoint = true;
-            const apiResponse = await fetch(`${baseUrl}/api/data?file=en_kjv.json`);
+            const apiResponse = await fetch(`${baseUrl}/api/json/en_kjv.json`);
             console.log("API response status:", apiResponse.status);
             
             if (!apiResponse.ok) {
@@ -225,7 +225,7 @@ const BibleApp = () => {
       // If we already know the API endpoint worked for Bible data, use it directly
       if (useApiEndpoint) {
         console.log("Using API endpoint for cross references");
-        const apiUrl = `${baseUrl}/api/data?file=crossRefs.json`;
+        const apiUrl = `${baseUrl}/api/json/crossRefs.json`;
         console.log("Attempting to load cross references from API:", apiUrl);
         
         const apiResponse = await fetch(apiUrl);
@@ -279,7 +279,7 @@ const BibleApp = () => {
         
         // Try the API endpoint as fallback
         console.log("Trying API endpoint for cross references as fallback...");
-        const apiUrl = `${baseUrl}/api/data?file=crossRefs.json`;
+        const apiUrl = `${baseUrl}/api/json/crossRefs.json`;
         
         const apiResponse = await fetch(apiUrl);
         console.log("API cross references response status:", apiResponse.status);
@@ -446,7 +446,7 @@ const BibleApp = () => {
           </div>
           
           {/* Add direct link to try loading JSON*/}
-          <div className="mt-4 flex justify-center space-x-4">
+          <div className="mt-4 flex flex-wrap justify-center space-x-4">
             <a 
               href="/en_kjv.json" 
               target="_blank"
@@ -460,6 +460,20 @@ const BibleApp = () => {
               className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
             >
               Test crossRefs.json
+            </a>
+            <a 
+              href="/api/json/en_kjv.json" 
+              target="_blank"
+              className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Test API en_kjv.json
+            </a>
+            <a 
+              href="/api/list-files" 
+              target="_blank"
+              className="mt-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            >
+              Diagnostics
             </a>
           </div>
           
