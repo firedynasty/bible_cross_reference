@@ -2,7 +2,6 @@
   "name": "from-claude",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://firedynasty.github.io/bible_cross_reference",
   "dependencies": {
     "@radix-ui/react-slider": "^1.2.3",
     "@radix-ui/react-slot": "^1.1.2",
