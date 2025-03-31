@@ -1,11 +1,19 @@
 {
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "publicDirectory": "public",
   "routes": [
-    { "src": "/static/(.*)", "dest": "/static/$1" },
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1",
+      "headers": { "cache-control": "public, max-age=31536000, immutable" }
+    },
+    { "src": "/en_kjv.json", "dest": "/en_kjv.json", "headers": { "content-type": "application/json" } },
+    { "src": "/crossRefs.json", "dest": "/crossRefs.json", "headers": { "content-type": "application/json" } },
     { "src": "/favicon.ico", "dest": "/favicon.ico" },
-    { "src": "/manifest.json", "dest": "/manifest.json" },
     { "src": "/logo192.png", "dest": "/logo192.png" },
-    { "src": "/en_kjv.json", "dest": "/en_kjv.json" },
-    { "src": "/crossRefs.json", "dest": "/crossRefs.json" },
+    { "src": "/manifest.json", "dest": "/manifest.json" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

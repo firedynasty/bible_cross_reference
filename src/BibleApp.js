@@ -3,22 +3,30 @@ import { Book, MessageSquare, Send, Link, ChevronRight, History } from 'lucide-r
 
 // Helper function to handle base URL for different environments
 const getBaseUrl = () => {
+  // Explicitly log the hostname for debugging
+  const hostname = window.location.hostname;
+  const pathname = window.location.pathname;
+  console.log('Current hostname for path detection:', hostname);
+  console.log('Current pathname for path detection:', pathname);
+  
   // For GitHub Pages, use the repository name as base URL
-  // For local development with path that includes '/bible_cross_reference', use that path
   const isGitHubPages = 
-    window.location.hostname.includes('github.io') || 
-    window.location.hostname.includes('firedynasty.github.io');
+    hostname.includes('github.io') || 
+    hostname.includes('firedynasty.github.io');
   
   // If running on GitHub Pages or the path already includes the repo name
-  if (isGitHubPages || window.location.pathname.includes('/bible_cross_reference')) {
+  if (isGitHubPages || pathname.includes('/bible_cross_reference')) {
+    console.log('Detected GitHub Pages environment, using /bible_cross_reference base');
     return '/bible_cross_reference';
   }
   
   // For Vercel deployment
-  if (window.location.hostname.includes('vercel.app')) {
+  if (hostname.includes('vercel.app')) {
+    console.log('Detected Vercel deployment environment, using empty base');
     return '';
   }
   
+  console.log('Using default empty base path');
   return '';
 };
 
@@ -358,6 +366,35 @@ const BibleApp = () => {
               (en_kjv.json and crossRefs.json) are in the correct location for the current 
               environment (local or GitHub Pages).
             </p>
+            
+            <div className="mt-4 p-3 bg-gray-100 rounded-md text-gray-800 text-sm">
+              <p className="font-bold">Vercel Deployment Tips:</p>
+              <ul className="list-disc pl-5 mt-2">
+                <li>Verify that JSON files were copied to the build directory during build</li>
+                <li>Check that vercel.json has the correct content type headers</li>
+                <li>Try accessing the JSON files directly: <a href="/en_kjv.json" target="_blank" className="underline">/en_kjv.json</a></li>
+                <li>Look at network requests in browser developer tools</li>
+                <li>Consider manually uploading JSON files using the Vercel dashboard</li>
+              </ul>
+            </div>
+          </div>
+          
+          {/* Add direct link to try loading JSON*/}
+          <div className="mt-4 flex justify-center space-x-4">
+            <a 
+              href="/en_kjv.json" 
+              target="_blank"
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+            >
+              Test en_kjv.json
+            </a>
+            <a 
+              href="/crossRefs.json" 
+              target="_blank"
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+            >
+              Test crossRefs.json
+            </a>
           </div>
           
           {/* Retry button */}
