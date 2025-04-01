@@ -151,7 +151,8 @@ const BibleApp = () => {
   ];
   
   // Store current position for translation changes
-  const [currentBookAbbrev, setCurrentBookAbbrev] = useState(null);
+  // Using the state setter directly in useEffect to avoid unused var warning
+  const [, setCurrentBookAbbrev] = useState(null);
   
   // Update current book abbrev when book changes
   useEffect(() => {
@@ -482,7 +483,7 @@ const BibleApp = () => {
               <ul className="list-disc pl-5 mt-2">
                 <li>Verify that JSON files were copied to the build directory during build</li>
                 <li>Check that vercel.json has the correct content type headers</li>
-                <li>Try accessing the JSON files directly: <a href={`/${selectedTranslation}`} target="_blank" className="underline">/{selectedTranslation}</a></li>
+                <li>Try accessing the JSON files directly: <a href={`/${selectedTranslation}`} target="_blank" rel="noreferrer" className="underline">/{selectedTranslation}</a></li>
                 <li>Look at network requests in browser developer tools</li>
                 <li>Consider manually uploading JSON files using the Vercel dashboard</li>
               </ul>
@@ -496,6 +497,7 @@ const BibleApp = () => {
                 ? `http://localhost:3001/${selectedTranslation}` 
                 : `/${selectedTranslation}`} 
               target="_blank"
+              rel="noreferrer"
               className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
             >
               Test {selectedTranslation}
@@ -505,6 +507,7 @@ const BibleApp = () => {
                 ? "http://localhost:3001/crossRefs.json" 
                 : "/crossRefs.json"} 
               target="_blank"
+              rel="noreferrer"
               className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
             >
               Test crossRefs.json
@@ -514,6 +517,7 @@ const BibleApp = () => {
                 ? `http://localhost:3001/api/json/${selectedTranslation}` 
                 : `/api/json/${selectedTranslation}`} 
               target="_blank"
+              rel="noreferrer"
               className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               Test API {selectedTranslation}
@@ -523,6 +527,7 @@ const BibleApp = () => {
                 ? "http://localhost:3001/api/list-files" 
                 : "/api/list-files"} 
               target="_blank"
+              rel="noreferrer"
               className="mt-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
             >
               Diagnostics
