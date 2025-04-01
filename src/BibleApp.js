@@ -123,9 +123,11 @@ const BibleApp = () => {
   const [selectedBook, setSelectedBook] = useState(null);
   const [selectedChapter, setSelectedChapter] = useState(1);
   const [userInput, setUserInput] = useState('');
+  const [password, setPassword] = useState('');
   const [outputText, setOutputText] = useState('');
   const [crossReferences, setCrossReferences] = useState({});
   const [showCrossRef, setShowCrossRef] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Add a ref for the chapter content container
   const chapterContentRef = useRef(null);
@@ -407,12 +409,54 @@ const BibleApp = () => {
   };
   
   // Handle user input submission
-  const handleSubmit = () => {
-    // Future Ollama integration will go here
-    setOutputText(`You asked: ${userInput}\n\nThis is where the Ollama response will appear.`);
+  const handleSubmit = async () => {
+    if (!userInput.trim()) {
+      setOutputText("Please enter a question about the Bible.");
+      return;
+    }
     
-    // Keep the input for now - you might want to clear it in a real app
-    // setUserInput('');
+    if (!password.trim()) {
+      setOutputText("Please enter the password to access Claude API.");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setOutputText("Asking Claude...");
+    
+    try {
+      // Create a prompt that includes the current Bible context
+      const bookName = selectedBook ? getBookName(selectedBook.abbrev) : "";
+      const chapterText = selectedBook ? selectedBook.chapters[selectedChapter - 1].join(' ') : "";
+      const contextHeader = `Bible passage: ${bookName} ${selectedChapter}\n\n`;
+      const fullPrompt = `${contextHeader}${chapterText}\n\n${userInput}`;
+      
+      // Call the API endpoint with password
+      // For local development, we need to use a different port for the API server
+      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
+      const response = await fetch(`${apiBaseUrl}/api/ask-query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          query: fullPrompt,
+          password: password 
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response');
+      }
+      
+      const data = await response.json();
+      setOutputText(data.reply);
+    } catch (error) {
+      console.error("Error querying Claude API:", error);
+      setOutputText(`Error: ${error.message || "Failed to get response from Claude API. Please try again later."}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Handle click on a verse to navigate to a cross-reference
@@ -801,6 +845,18 @@ const BibleApp = () => {
             
             {/* Input Area */}
             <div className="p-4 border-t border-gray-200">
+              {/* Password Field */}
+              <div className="mb-3">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password for Claude API"
+                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              {/* Query Input */}
               <div className="flex items-start">
                 <textarea
                   value={userInput}
@@ -810,7 +866,8 @@ const BibleApp = () => {
                 />
                 <button
                   onClick={handleSubmit}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-r hover:bg-blue-700 transition-colors h-24 flex items-center justify-center"
+                  disabled={isSubmitting}
+                  className={`${isSubmitting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 py-2 rounded-r transition-colors h-24 flex items-center justify-center`}
                 >
                   <Send className="h-5 w-5" />
                 </button>
