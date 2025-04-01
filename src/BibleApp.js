@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Book, MessageSquare, Send, Link, ChevronRight, History } from 'lucide-react';
+import { Book, MessageSquare, Send, Link, ChevronRight, History, BookOpen } from 'lucide-react';
 
 // Helper function to handle base URL for different environments
 const getBaseUrl = () => {
@@ -136,6 +136,29 @@ const BibleApp = () => {
     book: null,
     chapter: 1
   });
+  
+  // Add translation support
+  const [selectedTranslation, setSelectedTranslation] = useState('en_kjv.json');
+  
+  // Available translations
+  const translations = [
+    { id: 'en_kjv.json', name: 'English - King James Version (KJV)' },
+    { id: 'en_bbe.json', name: 'English - Bible in Basic English (BBE)' },
+    { id: 'zh_cuv.json', name: 'Chinese - Chinese Union Version (CUV)' },
+    { id: 'es_rvr.json', name: 'Spanish - Reina Valera Revisada (RVR)' },
+    { id: 'fr_apee.json', name: 'French - Louis Segond (APEE)' },
+    { id: 'ko_ko.json', name: 'Korean - Korean Version' }
+  ];
+  
+  // Store current position for translation changes
+  const [currentBookAbbrev, setCurrentBookAbbrev] = useState(null);
+  
+  // Update current book abbrev when book changes
+  useEffect(() => {
+    if (selectedBook) {
+      setCurrentBookAbbrev(selectedBook.abbrev);
+    }
+  }, [selectedBook]);
 
   // Load Bible data and cross-references on component mount
   useEffect(() => {
@@ -147,15 +170,16 @@ const BibleApp = () => {
         console.log("Using base URL:", baseUrl);
         console.log("Current hostname:", window.location.hostname);
         console.log("Current pathname:", window.location.pathname);
+        console.log("Loading translation:", selectedTranslation);
         
-        // First try loading Bible data from static file
-        console.log("Attempting to load Bible data from", `${baseUrl}/en_kjv.json`);
+        // First try loading Bible data from static file with the selected translation
+        console.log("Attempting to load Bible data from", `${baseUrl}/${selectedTranslation}`);
         let bibleData;
         let bibleResponse;
         let usingApiEndpoint = false;
         
         try {
-          bibleResponse = await fetch(`${baseUrl}/en_kjv.json`);
+          bibleResponse = await fetch(`${baseUrl}/${selectedTranslation}`);
           console.log("Bible data response status:", bibleResponse.status);
           
           // Check if we got HTML instead of JSON (common error with Vercel)
@@ -178,7 +202,12 @@ const BibleApp = () => {
           console.log("Trying API endpoint as fallback...");
           try {
             usingApiEndpoint = true;
-            const apiResponse = await fetch(`${baseUrl}/api/json/en_kjv.json`);
+            // For local development, we need to use a different port for the API server
+            const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : baseUrl;
+            const apiUrl = `${apiBaseUrl}/api/json/${selectedTranslation}`;
+            console.log("Attempting to fetch from API:", apiUrl);
+            
+            const apiResponse = await fetch(apiUrl);
             console.log("API response status:", apiResponse.status);
             
             if (!apiResponse.ok) {
@@ -211,13 +240,13 @@ const BibleApp = () => {
         setLoading(false);
       } catch (err) {
         console.error("Failed to load data:", err);
-        setError(`Failed to load Bible data: ${err.message}. Make sure the en_kjv.json file exists in the public folder.`);
+        setError(`Failed to load Bible data: ${err.message}. Make sure the ${selectedTranslation} file exists in the public folder.`);
         setLoading(false);
       }
     };
     
     loadData();
-  }, []);
+  }, [selectedTranslation]);
 
   // Load cross references from external JSON file
   const loadCrossReferences = async (baseUrl, useApiEndpoint = false) => {
@@ -225,7 +254,9 @@ const BibleApp = () => {
       // If we already know the API endpoint worked for Bible data, use it directly
       if (useApiEndpoint) {
         console.log("Using API endpoint for cross references");
-        const apiUrl = `${baseUrl}/api/json/crossRefs.json`;
+        // For local development, we need to use a different port for the API server
+        const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : baseUrl;
+        const apiUrl = `${apiBaseUrl}/api/json/crossRefs.json`;
         console.log("Attempting to load cross references from API:", apiUrl);
         
         const apiResponse = await fetch(apiUrl);
@@ -279,7 +310,10 @@ const BibleApp = () => {
         
         // Try the API endpoint as fallback
         console.log("Trying API endpoint for cross references as fallback...");
-        const apiUrl = `${baseUrl}/api/json/crossRefs.json`;
+        // For local development, we need to use a different port for the API server
+        const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : baseUrl;
+        const apiUrl = `${apiBaseUrl}/api/json/crossRefs.json`;
+        console.log("Attempting to load cross references from API fallback:", apiUrl);
         
         const apiResponse = await fetch(apiUrl);
         console.log("API cross references response status:", apiResponse.status);
@@ -361,6 +395,16 @@ const BibleApp = () => {
     }
   };
   
+  // Handle translation change
+  const handleTranslationChange = (e) => {
+    const newTranslation = e.target.value;
+    setSelectedTranslation(newTranslation);
+    // Keep same position but scroll to top
+    if (chapterContentRef.current) {
+      chapterContentRef.current.scrollTop = 0;
+    }
+  };
+  
   // Handle user input submission
   const handleSubmit = () => {
     // Future Ollama integration will go here
@@ -426,10 +470,10 @@ const BibleApp = () => {
             <p>Current hostname: {window.location.hostname}</p>
             <p>Current path: {window.location.pathname}</p>
             <p>Base URL used: {getBaseUrl()}</p>
-            <p>Expected Bible data URL: {getBaseUrl()}/en_kjv.json</p>
+            <p>Expected Bible data URL: {getBaseUrl()}/{selectedTranslation}</p>
             <p className="mt-2 text-sm">
               This could be caused by missing data files. Make sure your Bible data files
-              (en_kjv.json and crossRefs.json) are in the correct location for the current 
+              ({selectedTranslation} and crossRefs.json) are in the correct location for the current 
               environment (local or GitHub Pages).
             </p>
             
@@ -438,7 +482,7 @@ const BibleApp = () => {
               <ul className="list-disc pl-5 mt-2">
                 <li>Verify that JSON files were copied to the build directory during build</li>
                 <li>Check that vercel.json has the correct content type headers</li>
-                <li>Try accessing the JSON files directly: <a href="/en_kjv.json" target="_blank" className="underline">/en_kjv.json</a></li>
+                <li>Try accessing the JSON files directly: <a href={`/${selectedTranslation}`} target="_blank" className="underline">/{selectedTranslation}</a></li>
                 <li>Look at network requests in browser developer tools</li>
                 <li>Consider manually uploading JSON files using the Vercel dashboard</li>
               </ul>
@@ -448,28 +492,36 @@ const BibleApp = () => {
           {/* Add direct link to try loading JSON*/}
           <div className="mt-4 flex flex-wrap justify-center space-x-4">
             <a 
-              href="/en_kjv.json" 
+              href={window.location.hostname === 'localhost' 
+                ? `http://localhost:3001/${selectedTranslation}` 
+                : `/${selectedTranslation}`} 
               target="_blank"
               className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
             >
-              Test en_kjv.json
+              Test {selectedTranslation}
             </a>
             <a 
-              href="/crossRefs.json" 
+              href={window.location.hostname === 'localhost' 
+                ? "http://localhost:3001/crossRefs.json" 
+                : "/crossRefs.json"} 
               target="_blank"
               className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
             >
               Test crossRefs.json
             </a>
             <a 
-              href="/api/json/en_kjv.json" 
+              href={window.location.hostname === 'localhost' 
+                ? `http://localhost:3001/api/json/${selectedTranslation}` 
+                : `/api/json/${selectedTranslation}`} 
               target="_blank"
               className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
-              Test API en_kjv.json
+              Test API {selectedTranslation}
             </a>
             <a 
-              href="/api/list-files" 
+              href={window.location.hostname === 'localhost' 
+                ? "http://localhost:3001/api/list-files" 
+                : "/api/list-files"} 
               target="_blank"
               className="mt-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
             >
@@ -543,27 +595,48 @@ const BibleApp = () => {
         {/* Top Bar with Navigation and Chapter Selection */}
         <div className="bg-white border-b border-gray-200 p-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold">
-                {selectedBook ? getBookName(selectedBook.abbrev) : 'Select a Book'}
-              </h1>
+            <div className="flex flex-wrap items-center justify-between">
+              <div className="flex items-center">
+                <h1 className="text-2xl font-bold">
+                  {selectedBook ? getBookName(selectedBook.abbrev) : 'Select a Book'}
+                </h1>
+                
+                {selectedBook && (
+                  <div className="flex items-center ml-4">
+                    <span className="mr-2">Chapter:</span>
+                    <select 
+                      value={selectedChapter}
+                      onChange={(e) => handleChapterSelect(parseInt(e.target.value))}
+                      className="border border-gray-300 rounded px-2 py-1"
+                    >
+                      {selectedBook.chapters.map((_, index) => (
+                        <option key={index + 1} value={index + 1}>
+                          {index + 1}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
               
-              {selectedBook && (
-                <div className="flex items-center ml-4">
-                  <span className="mr-2">Chapter:</span>
+              {/* Translation Selection */}
+              <div className="flex items-center mt-2 sm:mt-0">
+                <div className="flex items-center">
+                  <BookOpen className="mr-2 h-5 w-5 text-blue-600" />
+                  <span className="mr-2">Translation:</span>
                   <select 
-                    value={selectedChapter}
-                    onChange={(e) => handleChapterSelect(parseInt(e.target.value))}
-                    className="border border-gray-300 rounded px-2 py-1"
+                    value={selectedTranslation}
+                    onChange={handleTranslationChange}
+                    className="border border-gray-300 rounded px-2 py-1 bg-white"
                   >
-                    {selectedBook.chapters.map((_, index) => (
-                      <option key={index + 1} value={index + 1}>
-                        {index + 1}
+                    {translations.map(translation => (
+                      <option key={translation.id} value={translation.id}>
+                        {translation.name}
                       </option>
                     ))}
                   </select>
                 </div>
-              )}
+              </div>
             </div>
             
             {/* Navigation History / Breadcrumb */}

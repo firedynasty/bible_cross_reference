@@ -25,7 +25,51 @@ app.get('/api/test', (req, res) => {
   res.json({ message: `Hello from ${SERVER_NAME}!` });
 });
 
-// Serve the crossRefs.json file (assume it's in the public directory)
+// Diagnostics endpoint to list available files
+app.get('/api/list-files', (req, res) => {
+  const publicDir = path.join(__dirname, 'public');
+  
+  try {
+    const files = require('fs').readdirSync(publicDir);
+    const jsonFiles = files.filter(file => file.endsWith('.json'));
+    
+    res.json({
+      success: true,
+      server: SERVER_NAME,
+      publicDirectory: publicDir,
+      availableJsonFiles: jsonFiles,
+      apiEndpoints: jsonFiles.map(file => `/api/json/${file}`)
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+// API endpoint to serve JSON files
+app.get('/api/json/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(__dirname, 'public', filename);
+  
+  console.log(`Serving API file request for: ${filename}`);
+  
+  // Security check to prevent directory traversal
+  if (!filename.endsWith('.json') || filename.includes('..')) {
+    return res.status(400).json({ error: 'Invalid JSON file request' });
+  }
+  
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error(`Error serving file ${filename}:`, err);
+      res.status(404).json({ error: `File ${filename} not found` });
+    }
+  });
+});
+
+// Legacy endpoint for crossRefs.json
 app.get('/crossRefs.json', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'crossRefs.json'));
 });

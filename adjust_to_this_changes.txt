@@ -1,0 +1,771 @@
+//public/en_bbe.json
+//public/en_kjv.json
+//public/es_rvr.json
+//public/fr_apee.json
+//public/ko_ko.json
+//public/zh_cuv.json
+
+
+<!-- /Users/stanleytan/Documents/32d-bible_app_choice_ollama/public/index.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Web site created using create-react-app"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <!--
+      manifest.json provides metadata used when your web app is installed on a
+      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
+    -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <!--
+      Notice the use of %PUBLIC_URL% in the tags above.
+      It will be replaced with the URL of the `public` folder during the build.
+      Only files inside the `public` folder can be referenced from the HTML.
+
+      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
+      work correctly both with client-side routing and a non-root public URL.
+      Learn how to configure a non-root public URL by running `npm run build`.
+    -->
+    <title>React App</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <!--
+      This HTML file is a template.
+      If you open it directly in the browser, you will see an empty page.
+
+      You can add webfonts, meta tags, or analytics to this file.
+      The build step will place the bundled scripts into the <body> tag.
+
+      To begin the development, run `npm start` or `yarn start`.
+      To create a production bundle, use `npm run build` or `yarn build`.
+    -->
+  </body>
+</html>
+
+
+// /Users/stanleytan/Documents/32d-bible_app_choice_ollama/src/App.js
+
+// App.js
+import React from 'react';
+import './App.css';
+import BibleApp from './BibleApp';
+
+function App() {
+  return (
+    <div className="App">
+      <BibleApp />
+    </div>
+  );
+}
+
+export default App;
+
+// /Users/stanleytan/Documents/32d-bible_app_choice_ollama/src/BibleApp.js
+
+// BibleApp.js
+import React, { useState, useEffect, useRef } from 'react';
+import { Book, MessageSquare, Send, BookOpen } from 'lucide-react';
+
+// Main component
+const BibleApp = () => {
+  const [bibleData, setBibleData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [selectedChapter, setSelectedChapter] = useState(1);
+  const [userInput, setUserInput] = useState('');
+  const [outputText, setOutputText] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedTranslation, setSelectedTranslation] = useState('en_kjv.json');
+  
+  // Add a ref for the chapter content container
+  const chapterContentRef = useRef(null);
+  
+  // Available translations
+  const translations = [
+    { id: 'en_kjv.json', name: 'English - King James Version (KJV)' },
+    { id: 'en_bbe.json', name: 'English - Bible in Basic English (BBE)' },
+    { id: 'zh_cuv.json', name: 'Chinese - Chinese Union Version (CUV)' },
+    { id: 'es_rvr.json', name: 'Spanish - Reina Valera Revisada (RVR)' },
+    { id: 'fr_apee.json', name: 'French - Louis Segond (APEE)' },
+    { id: 'ko_ko.json', name: 'Korean - Korean Version' }
+  ];
+  
+  // Store current position for translation changes
+  const [currentBookAbbrev, setCurrentBookAbbrev] = useState(null);
+  
+  // Update current book abbrev when book changes
+  useEffect(() => {
+    if (selectedBook) {
+      setCurrentBookAbbrev(selectedBook.abbrev);
+    }
+  }, [selectedBook]);
+  
+  // Load Bible data based on selected translation
+  useEffect(() => {
+    const loadBibleData = async () => {
+      try {
+        setLoading(true);
+        // Use standard fetch API to load the selected translation
+        const response = await fetch(`/${selectedTranslation}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setBibleData(data);
+        
+        // Try to maintain the same book and chapter position
+        if (data && data.length > 0) {
+          if (currentBookAbbrev) {
+            // Find the same book in the new translation
+            const sameBook = data.find(b => b.abbrev === currentBookAbbrev);
+            if (sameBook) {
+              setSelectedBook(sameBook);
+              // Check if current chapter exists in new book
+              if (selectedChapter > sameBook.chapters.length) {
+                setSelectedChapter(1); // Reset if chapter doesn't exist
+              }
+            } else {
+              // If book not found, select first book
+              setSelectedBook(data[0]);
+              setSelectedChapter(1);
+            }
+          } else {
+            // Default to first book if no book was selected before
+            setSelectedBook(data[0]);
+            setSelectedChapter(1);
+          }
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error("Failed to load Bible data:", err);
+        setError(`Failed to load Bible data from ${selectedTranslation}. Please try again later.`);
+        setLoading(false);
+      }
+    };
+    
+    loadBibleData();
+  }, [selectedTranslation, currentBookAbbrev]); // Removed selectedChapter from dependencies
+
+  // Handle translation change
+  const handleTranslationChange = (e) => {
+    const newTranslation = e.target.value;
+    setSelectedTranslation(newTranslation);
+    // Keep same position but scroll to top
+    if (chapterContentRef.current) {
+      chapterContentRef.current.scrollTop = 0;
+    }
+  };
+
+  // Handle book selection
+  const handleBookSelect = (abbrev) => {
+    if (bibleData) {
+      const book = bibleData.find(b => b.abbrev === abbrev);
+      setSelectedBook(book);
+      setSelectedChapter(1); // Reset to first chapter when book changes
+      
+      // Scroll to top when book changes
+      if (chapterContentRef.current) {
+        chapterContentRef.current.scrollTop = 0;
+      }
+    }
+  };
+  
+  // Handle chapter selection
+  const handleChapterSelect = (chapterNum) => {
+    setSelectedChapter(chapterNum);
+    
+    // Scroll to top when chapter changes
+    if (chapterContentRef.current) {
+      chapterContentRef.current.scrollTop = 0;
+    }
+  };
+  
+  // Get current context (book and chapter)
+  const getCurrentContext = () => {
+    if (!selectedBook) return "";
+    
+    const bookName = getBookName(selectedBook.abbrev);
+    const translationName = translations.find(t => t.id === selectedTranslation)?.name || selectedTranslation;
+    return `${bookName} chapter ${selectedChapter} (${translationName})`;
+  };
+  
+  // Handle user input submission
+  const handleSubmit = async () => {
+    if (!userInput.trim() || isProcessing) return;
+    
+    setIsProcessing(true);
+    setOutputText("Processing your question...");
+    
+    try {
+      // Add context about the current Bible selection
+      const context = getCurrentContext();
+      
+      // Include previous response if it exists
+      let previousResponse = "";
+      if (outputText && outputText !== "Processing your question..." && !outputText.startsWith("Error:")) {
+        previousResponse = `\n\nPrevious response: ${outputText}`;
+      }
+      
+      const fullPrompt = `Context: I'm reading ${context}.${previousResponse}\n\nQuestion: ${userInput}`;
+      
+      // Important: Use the full URL with port for the server
+      const response = await fetch('http://localhost:3001/api/ask-query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: fullPrompt }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      setOutputText(data.reply);
+      setUserInput(''); // Clear the input after sending
+    } catch (error) {
+      console.error("Error querying Ollama:", error);
+      setOutputText(`Error: ${error.message || "Failed to get response from Ollama. Please try again later."}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle keyboard events in the textarea
+  const handleKeyDown = (e) => {
+    // If Enter is pressed without Shift, submit the form
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault(); // Prevent default behavior (newline)
+      handleSubmit();
+    }
+    // If Shift+Enter is pressed, allow default behavior (newline)
+  };
+
+  // If still loading
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-100">
+        <div className="text-center">
+          <div className="text-2xl font-bold mb-4">Loading Bible Data...</div>
+          <div className="animate-pulse bg-blue-500 h-2 w-64 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+  
+  // If there was an error
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-red-100">
+        <div className="text-center text-red-600">
+          <div className="text-2xl font-bold mb-4">Error</div>
+          <div>{error}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Helper function to get book name based on abbreviation
+  const getBookName = (abbrev) => {
+    const bookNames = {
+      'gn': 'Genesis', 'ex': 'Exodus', 'lv': 'Leviticus', 'nm': 'Numbers', 'dt': 'Deuteronomy',
+      'js': 'Joshua', 'jud': 'Judges', 'rt': 'Ruth', '1sm': '1 Samuel', '2sm': '2 Samuel',
+      '1kgs': '1 Kings', '2kgs': '2 Kings', '1ch': '1 Chronicles', '2ch': '2 Chronicles',
+      'ezr': 'Ezra', 'ne': 'Nehemiah', 'et': 'Esther', 'job': 'Job', 'ps': 'Psalms',
+      'prv': 'Proverbs', 'ec': 'Ecclesiastes', 'so': 'Song of Solomon', 'is': 'Isaiah',
+      'jr': 'Jeremiah', 'lm': 'Lamentations', 'ez': 'Ezekiel', 'dn': 'Daniel',
+      'ho': 'Hosea', 'jl': 'Joel', 'am': 'Amos', 'ob': 'Obadiah', 'jn': 'Jonah',
+      'mi': 'Micah', 'na': 'Nahum', 'hk': 'Habakkuk', 'zp': 'Zephaniah', 'hg': 'Haggai',
+      'zc': 'Zechariah', 'ml': 'Malachi', 'mt': 'Matthew', 'mk': 'Mark', 'lk': 'Luke',
+      'jo': 'John', 'act': 'Acts', 'rm': 'Romans', '1co': '1 Corinthians', '2co': '2 Corinthians',
+      'gl': 'Galatians', 'eph': 'Ephesians', 'ph': 'Philippians', 'cl': 'Colossians',
+      '1ts': '1 Thessalonians', '2ts': '2 Thessalonians', '1tm': '1 Timothy', '2tm': '2 Timothy',
+      'tt': 'Titus', 'phm': 'Philemon', 'hb': 'Hebrews', 'jm': 'James', '1pe': '1 Peter',
+      '2pe': '2 Peter', '1jo': '1 John', '2jo': '2 John', '3jo': '3 John', 'jd': 'Jude',
+      're': 'Revelation'
+    };
+    
+    return bookNames[abbrev] || abbrev;
+  };
+
+  // Main render
+  return (
+    <div className="flex h-screen bg-gray-100">
+      {/* Book Selection Sidebar */}
+      <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto">
+        <div className="p-4 border-b border-gray-200">
+          <h2 className="text-xl font-semibold flex items-center">
+            <Book className="mr-2 h-5 w-5" />
+            Bible Books
+          </h2>
+        </div>
+        <div className="overflow-y-auto h-full">
+          {bibleData && bibleData.map(book => (
+            <button
+              key={book.abbrev}
+              onClick={() => handleBookSelect(book.abbrev)}
+              className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
+                selectedBook && selectedBook.abbrev === book.abbrev ? 'bg-blue-100 font-medium' : ''
+              }`}
+            >
+              {getBookName(book.abbrev)}
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Bar with Translation and Chapter Selection */}
+        <div className="bg-white border-b border-gray-200 p-4">
+          <div className="flex flex-wrap items-center justify-between">
+            <div className="flex items-center">
+              <h1 className="text-2xl font-bold">
+                {selectedBook ? getBookName(selectedBook.abbrev) : 'Select a Book'}
+              </h1>
+              
+              {selectedBook && (
+                <div className="flex items-center ml-4">
+                  <span className="mr-2">Chapter:</span>
+                  <select 
+                    value={selectedChapter}
+                    onChange={(e) => handleChapterSelect(parseInt(e.target.value))}
+                    className="border border-gray-300 rounded px-2 py-1"
+                  >
+                    {selectedBook.chapters.map((_, index) => (
+                      <option key={index + 1} value={index + 1}>
+                        {index + 1}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            
+            {/* Translation Selection */}
+            <div className="flex items-center mt-2 sm:mt-0">
+              <div className="flex items-center">
+                <BookOpen className="mr-2 h-5 w-5 text-blue-600" />
+                <span className="mr-2">Translation:</span>
+                <select 
+                  value={selectedTranslation}
+                  onChange={handleTranslationChange}
+                  className="border border-gray-300 rounded px-2 py-1 bg-white"
+                >
+                  {translations.map(translation => (
+                    <option key={translation.id} value={translation.id}>
+                      {translation.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Bible Text and AI Interaction Split View */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Bible Text Display */}
+          <div ref={chapterContentRef} className="flex-1 overflow-y-auto p-6 bg-white">
+            {selectedBook && selectedChapter > 0 && (
+              <div>
+                <h2 className="text-xl mr-2 font-semibold mb-4">
+                  {getBookName(selectedBook.abbrev)} {selectedChapter}
+                </h2>
+                <div className="space-y-2">
+                  {selectedBook.chapters[selectedChapter - 1].map((verse, index) => (
+                    <p key={index} className="leading-relaxed">
+                      <span className="font-bold text-blue-600 mr-2">{index + 1}</span>
+                      {verse}
+                    </p>
+                  ))}
+                </div>
+                
+                {/* Chapter Navigation - Simple inline approach */}
+                <div className="mt-8 flex justify-between pb-4">
+                  {selectedChapter > 1 ? (
+                    <button 
+                      onClick={() => handleChapterSelect(selectedChapter - 1)}
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-4 py-2 shadow"
+                    >
+                      &lt; Previous Chapter
+                    </button>
+                  ) : (
+                    <div></div>
+                  )}
+                  
+                  {selectedBook && selectedChapter < selectedBook.chapters.length && (
+                    <button 
+                      onClick={() => handleChapterSelect(selectedChapter + 1)}
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-4 py-2 shadow"
+                    >
+                      Next Chapter &gt;
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* AI Interaction Panel */}
+          <div className="w-96 border-l border-gray-200 bg-gray-50 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold flex items-center">
+                <MessageSquare className="mr-2 h-5 w-5" />
+                Ask about Scripture
+              </h2>
+            </div>
+            
+            {/* Output Display */}
+            <div className="flex-1 p-4 overflow-y-auto bg-white">
+              {outputText ? (
+                <div className={`whitespace-pre-wrap ${isProcessing ? 'animate-pulse' : ''}`}>
+                  {outputText}
+                </div>
+              ) : (
+                <div className="text-gray-500 italic">
+                  Ask a question about the Bible text to see the response here.
+                </div>
+              )}
+            </div>
+            
+            {/* Input Area */}
+            <div className="p-4 border-t border-gray-200">
+              <div className="flex items-start">
+                <textarea
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Type your question here... (Press Enter to send, Shift+Enter for new line)"
+                  className="flex-1 border border-gray-300 rounded-l px-3 py-2 min-h-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isProcessing}
+                />
+                <button
+                  onClick={handleSubmit}
+                  className={`bg-blue-600 text-white px-4 py-2 rounded-r hover:bg-blue-700 transition-colors h-24 flex items-center justify-center ${
+                    isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  disabled={isProcessing}
+                >
+                  <Send className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default BibleApp;
+
+// /Users/stanleytan/Documents/32d-bible_app_choice_ollama/src/index.js
+
+// index.js
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+import reportWebVitals from './reportWebVitals';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+reportWebVitals();
+
+// /Users/stanleytan/Documents/32d-bible_app_choice_ollama/package.json
+
+{
+  "name": "from-claude",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@radix-ui/react-slider": "^1.2.3",
+    "@radix-ui/react-slot": "^1.1.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cra-template": "1.2.0",
+    "express": "^4.18.2",
+    "lucide-react": "^0.475.0",
+    "node-fetch": "^2.7.0",
+    "ollama": "^0.4.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "recharts": "^2.15.0",
+    "tailwind-merge": "^3.0.1",
+    "web-vitals": "^4.2.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "server": "node server.js",
+    "dev-server": "node server.js"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17"
+  }
+}
+
+
+// /Users/stanleytan/Documents/32d-bible_app_choice_ollama/server.js
+
+// server.js
+const express = require('express');
+const path = require('path');
+const fetch = require('node-fetch'); // Use node-fetch instead of ollama
+
+const app = express();
+const PORT = process.env.PORT || 3001;  // Use a different port than your React app
+
+// Middleware to parse JSON
+app.use(express.json());
+
+// Add proper CORS handling middleware
+app.use((req, res, next) => {
+  // Set the specific origin instead of wildcard '*' for better security
+  // In development, this is likely to be 'http://localhost:3000'
+  res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+  // Allow credentials to be sent with the request (cookies, auth headers)
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
+// Enhanced logging middleware with full response capture
+app.use((req, res, next) => {
+  const start = Date.now();
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Request received`);
+  
+  // Capture the original res.json function
+  const originalJson = res.json;
+  
+  // Override the json method to log responses
+  res.json = function(data) {
+    const duration = Date.now() - start;
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Response sent (${duration}ms)`);
+    
+    // For Ollama responses, log the full response
+    if (req.url === '/api/ask-query' && data.reply) {
+      console.log('\n========== OLLAMA FULL RESPONSE ==========');
+      console.log(`Length of response: ${data.reply.length} characters`);
+      console.log('Response content:');
+      console.log(data.reply); // Log the full response
+      console.log('==========================================\n');
+    }
+    
+    return originalJson.call(this, data);
+  };
+  
+  next();
+});
+
+// Serve static files from the build directory (when deploying)
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'build')));
+}
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Server is running!' });
+});
+
+// Handle Ollama requests with improved logging
+app.post('/api/ask-query', async (req, res) => {
+  const { query } = req.body;
+
+  if (!query) {
+    return res.status(400).json({ error: 'No query provided' });
+  }
+
+  try {
+    console.log('\n========== OLLAMA REQUEST ==========');
+    console.log('Query sent to Ollama:');
+    console.log(query); // Log the full query
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Connecting to Ollama at: http://127.0.0.1:11434/api/chat');
+    console.log('====================================\n');
+    
+    const startTime = Date.now();
+    
+    // Use fetch to directly call the Ollama API
+    // Using 127.0.0.1 explicitly instead of localhost
+    const response = await fetch('http://127.0.0.1:11434/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama3.2',
+        messages: [{ role: 'user', content: query }],
+        stream: false
+      }),
+      // Add a timeout to fail faster if connection issues persist
+      timeout: 60000
+    });
+
+    const endTime = Date.now();
+    console.log(`Ollama response time: ${endTime - startTime}ms`);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Ollama API responded with error status:', response.status);
+      console.error('Error response body:', errorText);
+      throw new Error(`Ollama API responded with status: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    console.log('\n========== OLLAMA RESPONSE RECEIVED ==========');
+    console.log('Response received at:', new Date().toISOString());
+    console.log('Total processing time:', Date.now() - startTime, 'ms');
+    console.log('==============================================\n');
+    
+    // Check if the response has the expected structure
+    if (!data.message || !data.message.content) {
+      console.error('Unexpected response structure from Ollama:', JSON.stringify(data));
+      return res.status(500).json({ 
+        error: 'Received an unexpected response format from Ollama',
+        details: JSON.stringify(data)
+      });
+    }
+    
+    res.json({ reply: data.message.content });
+  } catch (error) {
+    console.error('\n========== OLLAMA ERROR ==========');
+    console.error('Error type:', error.name);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('==================================\n');
+    
+    // Provide different error messages based on error types
+    if (error.code === 'ECONNREFUSED') {
+      res.status(503).json({ 
+        error: 'Unable to connect to Ollama. Is the Ollama server running at port 11434?',
+        details: error.message
+      });
+    } else if (error.type === 'request-timeout' || error.name === 'AbortError') {
+      res.status(504).json({ 
+        error: 'The request to Ollama timed out. Ollama might be overloaded or not responding.',
+        details: error.message
+      });
+    } else {
+      res.status(500).json({ 
+        error: `Failed to get response from Ollama: ${error.message}`,
+        details: error.stack
+      });
+    }
+  }
+});
+
+// For React Router, send all unhandled requests to index.html in production
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  });
+}
+
+// Add a test endpoint to verify Ollama connectivity directly
+app.get('/api/test-ollama', async (req, res) => {
+  try {
+    console.log('Testing Ollama connectivity...');
+    const response = await fetch('http://127.0.0.1:11434/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama3.2',
+        messages: [{ role: 'user', content: 'Hello, are you working?' }],
+        stream: false
+      }),
+      timeout: 5000
+    });
+
+    if (!response.ok) {
+      throw new Error(`Ollama test failed with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Log full test response too
+    console.log('\n========== OLLAMA TEST RESPONSE ==========');
+    console.log(data.message.content);
+    console.log('=========================================\n');
+    
+    res.json({ 
+      status: 'ok', 
+      message: 'Successfully connected to Ollama',
+      ollamaResponse: data.message.content
+    });
+  } catch (error) {
+    console.error('Ollama test error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: `Failed to connect to Ollama: ${error.message}`
+    });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Health check available at: http://localhost:${PORT}/api/health`);
+  console.log(`Ollama test endpoint available at: http://localhost:${PORT}/api/test-ollama`);
+});
+
