@@ -146,8 +146,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files from the build directory
-app.use(express.static(path.join(__dirname, 'build')));
+// Serve static files from the build directory with explicit content types
+app.use(express.static(path.join(__dirname, 'build'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.json')) {
+      res.setHeader('Content-Type', 'application/json');
+    }
+  }
+}));
 
 // Fall back to index.html for SPA routing
 app.get('*', (req, res) => {
@@ -246,6 +252,11 @@ app.post('/api/ask-query', async (req, res) => {
       res.status(504).json({ 
         error: 'The request to Claude API timed out. The service might be experiencing high load.',
         details: error.message
+      });
+    } else if (error.message && error.message.includes('529') && error.message.includes('overloaded')) {
+      res.status(503).json({ 
+        error: 'Claude AI is currently experiencing high demand. Please try again in a few minutes.',
+        details: 'The Claude API servers are temporarily overloaded.'
       });
     } else {
       res.status(500).json({ 

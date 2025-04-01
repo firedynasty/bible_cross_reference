@@ -453,7 +453,15 @@ const BibleApp = () => {
       setOutputText(data.reply);
     } catch (error) {
       console.error("Error querying Claude API:", error);
-      setOutputText(`Error: ${error.message || "Failed to get response from Claude API. Please try again later."}`);
+      
+      // Check for specific error types and provide user-friendly messages
+      if (error.message && error.message.includes("Claude AI is currently experiencing high demand")) {
+        setOutputText("⚠️ Claude AI is currently experiencing high demand. Please try again in a few minutes.");
+      } else if (error.message && error.message.includes("Invalid password")) {
+        setOutputText("🔑 Invalid password. Please check your password and try again.");
+      } else {
+        setOutputText(`Error: ${error.message || "Failed to get response from Claude API. Please try again later."}`);
+      }
     } finally {
       setIsSubmitting(false);
     }

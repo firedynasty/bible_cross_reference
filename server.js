@@ -178,6 +178,11 @@ app.post('/api/ask-query', async (req, res) => {
         error: 'The request to Claude API timed out. The service might be experiencing high load.',
         details: error.message
       });
+    } else if (error.message && error.message.includes('529') && error.message.includes('overloaded')) {
+      res.status(503).json({ 
+        error: 'Claude AI is currently experiencing high demand. Please try again in a few minutes.',
+        details: 'The Claude API servers are temporarily overloaded.'
+      });
     } else {
       res.status(500).json({ 
         error: `Failed to get response from Claude: ${error.message}`,
