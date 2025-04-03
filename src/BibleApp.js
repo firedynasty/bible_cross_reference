@@ -261,9 +261,15 @@ const BibleApp = () => {
             const parsedState = JSON.parse(savedState);
             savedTranslation = parsedState.translation || selectedTranslation;
             
-            // Only set translation if it matches the current one being loaded
-            // (we'll handle different translations in a separate effect)
-            if (savedTranslation === selectedTranslation && bibleData) {
+            // Set the saved translation
+            if (savedTranslation !== selectedTranslation) {
+              setSelectedTranslation(savedTranslation);
+              // Return early as changing the translation will trigger a reload
+              return;
+            }
+            
+            // Always try to restore saved position regardless of translation
+            if (bibleData) {
               const bookAbbrev = parsedState.bookAbbrev;
               savedBook = bibleData.find(b => b.abbrev === bookAbbrev);
               savedChapter = parsedState.chapter || 1;
@@ -483,7 +489,32 @@ const BibleApp = () => {
         parsedState.bookAbbrev = currentBookAbbrev;
         parsedState.chapter = currentChapter;
         parsedState.translation = newTranslation;
+        
+        // Preserve primary reading state
+        if (primaryReading.book) {
+          parsedState.primaryReading = {
+            bookAbbrev: primaryReading.book.abbrev,
+            chapter: primaryReading.chapter
+          };
+        }
+        
+        // Preserve cross-reference viewing state
+        parsedState.isViewingCrossRef = isViewingCrossRef;
+        
         localStorage.setItem('bibleReaderState', JSON.stringify(parsedState));
+      } else {
+        // If no saved state exists, create one
+        const stateToSave = {
+          bookAbbrev: currentBookAbbrev,
+          chapter: currentChapter,
+          translation: newTranslation,
+          primaryReading: {
+            bookAbbrev: primaryReading.book?.abbrev,
+            chapter: primaryReading.chapter
+          },
+          isViewingCrossRef
+        };
+        localStorage.setItem('bibleReaderState', JSON.stringify(stateToSave));
       }
     } catch (e) {
       console.warn("Error updating translation in localStorage:", e);
