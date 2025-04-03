@@ -162,6 +162,27 @@ const BibleApp = () => {
       setCurrentBookAbbrev(selectedBook.abbrev);
     }
   }, [selectedBook]);
+  
+  // Save reading position to localStorage when it changes
+  useEffect(() => {
+    if (selectedBook) {
+      try {
+        const stateToSave = {
+          bookAbbrev: selectedBook.abbrev,
+          chapter: selectedChapter,
+          translation: selectedTranslation,
+          primaryReading: {
+            bookAbbrev: primaryReading.book?.abbrev,
+            chapter: primaryReading.chapter
+          },
+          isViewingCrossRef
+        };
+        localStorage.setItem('bibleReaderState', JSON.stringify(stateToSave));
+      } catch (e) {
+        console.warn("Error saving state to localStorage:", e);
+      }
+    }
+  }, [selectedBook, selectedChapter, selectedTranslation, primaryReading, isViewingCrossRef]);
 
   // Load Bible data and cross-references on component mount
   useEffect(() => {
@@ -228,8 +249,51 @@ const BibleApp = () => {
         console.log("Data loaded using", usingApiEndpoint ? "API endpoint" : "direct file access");
         setBibleData(bibleData);
         
-        // Set default selected book to Genesis (first book)
-        if (bibleData && bibleData.length > 0) {
+        // Load saved reading position from localStorage or default to Genesis
+        let savedBook = null;
+        let savedChapter = 1;
+        let savedTranslation = selectedTranslation;
+        
+        // Try to load saved state from localStorage
+        try {
+          const savedState = localStorage.getItem('bibleReaderState');
+          if (savedState) {
+            const parsedState = JSON.parse(savedState);
+            savedTranslation = parsedState.translation || selectedTranslation;
+            
+            // Only set translation if it matches the current one being loaded
+            // (we'll handle different translations in a separate effect)
+            if (savedTranslation === selectedTranslation && bibleData) {
+              const bookAbbrev = parsedState.bookAbbrev;
+              savedBook = bibleData.find(b => b.abbrev === bookAbbrev);
+              savedChapter = parsedState.chapter || 1;
+              
+              // Also restore primary reading state
+              if (parsedState.primaryReading) {
+                const primaryBookAbbrev = parsedState.primaryReading.bookAbbrev;
+                const primaryBook = bibleData.find(b => b.abbrev === primaryBookAbbrev);
+                if (primaryBook) {
+                  setPrimaryReading({
+                    book: primaryBook,
+                    chapter: parsedState.primaryReading.chapter || 1
+                  });
+                }
+                
+                // Restore cross-reference viewing state
+                setIsViewingCrossRef(parsedState.isViewingCrossRef || false);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Error loading saved state:", e);
+          // Continue with defaults if localStorage fails
+        }
+        
+        // Set selected book (from saved state or default to first book)
+        if (savedBook) {
+          setSelectedBook(savedBook);
+          setSelectedChapter(savedChapter);
+        } else if (bibleData && bibleData.length > 0) {
           setSelectedBook(bibleData[0]);
           setPrimaryReading({
             book: bibleData[0],
@@ -400,9 +464,32 @@ const BibleApp = () => {
   
   // Handle translation change
   const handleTranslationChange = (e) => {
+    // Save current position before changing translation
+    const currentBookAbbrev = selectedBook?.abbrev;
+    const currentChapter = selectedChapter;
+    
+    // Update translation
     const newTranslation = e.target.value;
     setSelectedTranslation(newTranslation);
-    // Keep same position but scroll to top
+    
+    // The full state restoration will happen in the useEffect that loads Bible data
+    // We're just making sure we preserve these values during the translation change
+    try {
+      // Update the saved state with the new translation but preserve position
+      const savedState = localStorage.getItem('bibleReaderState');
+      if (savedState) {
+        const parsedState = JSON.parse(savedState);
+        // Update with current values in case they changed
+        parsedState.bookAbbrev = currentBookAbbrev;
+        parsedState.chapter = currentChapter;
+        parsedState.translation = newTranslation;
+        localStorage.setItem('bibleReaderState', JSON.stringify(parsedState));
+      }
+    } catch (e) {
+      console.warn("Error updating translation in localStorage:", e);
+    }
+    
+    // Scroll to top when translation changes
     if (chapterContentRef.current) {
       chapterContentRef.current.scrollTop = 0;
     }
