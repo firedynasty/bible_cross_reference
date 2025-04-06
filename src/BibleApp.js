@@ -545,14 +545,20 @@ const BibleApp = () => {
       // Create a prompt that includes the current Bible context
       const bookName = selectedBook ? getBookName(selectedBook.abbrev) : "";
       const chapterText = selectedBook ? selectedBook.chapters[selectedChapter - 1].join(' ') : "";
+      
+      // Limit chapter text to avoid timeouts from large inputs
+      const truncatedChapterText = chapterText.length > 10000 
+        ? chapterText.substring(0, 10000) + "... (truncated for API performance)"
+        : chapterText;
+      
       const contextHeader = `Bible passage: ${bookName} ${selectedChapter}\n\n`;
-      const fullPrompt = `${contextHeader}${chapterText}\n\n${userInput}`;
+      const fullPrompt = `${contextHeader}${truncatedChapterText}\n\n${userInput}`;
       
       // Call the API endpoint with password
       // For local development, we need to use a different port for the API server
       const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 125000); // Client timeout of 2 minutes 5 seconds
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // Client timeout of 1 minute
       
       const response = await fetch(`${apiBaseUrl}/api/ask-query`, {
         method: 'POST',

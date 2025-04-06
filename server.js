@@ -125,11 +125,11 @@ app.post('/api/ask-query', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'claude-3-7-sonnet-20250219',
-        system: "You are a helpful assistant that helps users understand Bible passages.",
+        system: "You are a helpful assistant that helps users understand Bible passages. Keep responses brief and to the point.",
         messages: [{ role: 'user', content: query }],
-        max_tokens: 1000
+        max_tokens: 500
       }),
-      timeout: 120000 // Increased timeout to 2 minutes
+      timeout: 60000 // Reduced timeout to 1 minute
     });
 
     const endTime = Date.now();
