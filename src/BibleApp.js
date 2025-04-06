@@ -551,6 +551,9 @@ const BibleApp = () => {
       // Call the API endpoint with password
       // For local development, we need to use a different port for the API server
       const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 125000); // Client timeout of 2 minutes 5 seconds
+      
       const response = await fetch(`${apiBaseUrl}/api/ask-query`, {
         method: 'POST',
         headers: {
@@ -560,15 +563,32 @@ const BibleApp = () => {
           query: fullPrompt,
           password: password 
         }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
+      
+      // First get the response as text to safely handle both JSON and non-JSON responses
+      const responseText = await response.text();
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get response');
+        // Try to parse as JSON, but handle text errors gracefully
+        try {
+          const errorData = JSON.parse(responseText);
+          throw new Error(errorData.error || 'Failed to get response');
+        } catch (parseError) {
+          // If parsing fails, use the raw text or a fallback message
+          throw new Error(responseText || 'Server returned an error');
+        }
       }
       
-      const data = await response.json();
-      setOutputText(data.reply);
+      // Now safely parse the successful response
+      try {
+        const data = JSON.parse(responseText);
+        setOutputText(data.reply);
+      } catch (parseError) {
+        console.error("Error parsing JSON response:", parseError);
+        throw new Error("Invalid JSON response from server");
+      }
     } catch (error) {
       console.error("Error querying Claude API:", error);
       
@@ -577,8 +597,18 @@ const BibleApp = () => {
         setOutputText("⚠️ Claude AI is currently experiencing high demand. Please try again in a few minutes.");
       } else if (error.message && error.message.includes("Invalid password")) {
         setOutputText("🔑 Invalid password. Please check your password and try again.");
+      } else if (error.message && error.message.includes("SyntaxError") || error.message.includes("Unexpected token")) {
+        setOutputText("❌ Invalid response format. There may be an issue with the server configuration or Claude API.");
+      } else if (error.name === 'AbortError' || error.message && (error.message.includes("timed out") || error.message.includes("abort"))) {
+        setOutputText("⏱️ Request timed out after 2 minutes. Claude may be experiencing heavy load or your query is complex. Try a simpler query or try again later.");
       } else {
-        setOutputText(`Error: ${error.message || "Failed to get response from Claude API. Please try again later."}`);
+        // Sanitize the error message to prevent showing technical details to users
+        let userFriendlyMessage = "Failed to get response from Claude API. Please try again later.";
+        if (error.message && typeof error.message === 'string') {
+          // Only keep the first sentence of the error message for user display
+          userFriendlyMessage = error.message.split('.')[0] + '.';
+        }
+        setOutputText(`Error: ${userFriendlyMessage}`);
       }
     } finally {
       setIsSubmitting(false);

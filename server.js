@@ -129,7 +129,7 @@ app.post('/api/ask-query', async (req, res) => {
         messages: [{ role: 'user', content: query }],
         max_tokens: 1000
       }),
-      timeout: 60000
+      timeout: 120000 // Increased timeout to 2 minutes
     });
 
     const endTime = Date.now();
@@ -167,27 +167,30 @@ app.post('/api/ask-query', async (req, res) => {
     console.error('Error stack:', error.stack);
     console.error('==================================\n');
     
-    // Provide different error messages based on error types
-    if (error.code === 'ECONNREFUSED') {
-      res.status(503).json({ 
-        error: 'Unable to connect to Claude API. Please check your internet connection.',
-        details: error.message
-      });
-    } else if (error.type === 'request-timeout' || error.name === 'AbortError') {
-      res.status(504).json({ 
-        error: 'The request to Claude API timed out. The service might be experiencing high load.',
-        details: error.message
-      });
-    } else if (error.message && error.message.includes('529') && error.message.includes('overloaded')) {
-      res.status(503).json({ 
-        error: 'Claude AI is currently experiencing high demand. Please try again in a few minutes.',
-        details: 'The Claude API servers are temporarily overloaded.'
-      });
-    } else {
-      res.status(500).json({ 
-        error: `Failed to get response from Claude: ${error.message}`,
-        details: error.stack
-      });
+    // Make sure we're always returning valid JSON regardless of the error
+    try {
+      // Provide different error messages based on error types
+      if (error.code === 'ECONNREFUSED') {
+        res.status(503).json({ 
+          error: 'Unable to connect to Claude API. Please check your internet connection.'
+        });
+      } else if (error.type === 'request-timeout' || error.name === 'AbortError') {
+        res.status(504).json({ 
+          error: 'The request to Claude API timed out. The service might be experiencing high load.'
+        });
+      } else if (error.message && error.message.includes('529') && error.message.includes('overloaded')) {
+        res.status(503).json({ 
+          error: 'Claude AI is currently experiencing high demand. Please try again in a few minutes.'
+        });
+      } else {
+        res.status(500).json({ 
+          error: `Failed to get response from Claude: ${error.message}`
+        });
+      }
+    } catch (responseError) {
+      // Fallback if the JSON response itself fails
+      console.error('Error sending error response:', responseError);
+      res.status(500).send('{"error": "An internal server error occurred"}');
     }
   }
 });
