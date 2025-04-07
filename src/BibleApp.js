@@ -59,7 +59,7 @@ const NavigationPlaceholder = ({ book, chapter, getBookName, onNavigate }) => {
       {/* Current Location Display */}
       <div className="flex items-center bg-gray-100 px-3 py-1 rounded-md text-gray-700">
         <span>Primary reading:</span>
-        <span className="font-medium mx-1">{getBookName(book.abbrev)}</span>
+        <span className="font-medium mx-1">{book.book || getBookName(book.abbrev)}</span>
         <ChevronRight className="h-4 w-4 mx-1" />
         <span className="font-medium">Chapter {chapter}</span>
         
@@ -150,7 +150,8 @@ const BibleApp = () => {
     { id: 'es_rvr.json', name: 'Spanish - Reina Valera Revisada (RVR)' },
     { id: 'fr_apee.json', name: 'French - Louis Segond (APEE)' },
     { id: 'ko_ko.json', name: 'Korean - Korean Version' },
-    { id: 'he_heb.json', name: 'Hebrew - Modern Hebrew Bible' }
+    { id: 'he_heb_no_strong.json', name: 'Hebrew - Modern Hebrew Bible' },
+    { id: 'he_heb_strong.json', name: 'Hebrew - Modern Hebrew Bible (with Strong\'s)' }
   ];
   
   // Store current position for translation changes
@@ -262,12 +263,18 @@ const BibleApp = () => {
             const parsedState = JSON.parse(savedState);
             savedTranslation = parsedState.translation || selectedTranslation;
             
-            // Set the saved translation
-            if (savedTranslation !== selectedTranslation) {
+            // Check if the saved translation is still available
+            const isTranslationAvailable = translations.some(t => t.id === savedTranslation);
+            
+            // If the saved translation is available and different from the current one, load it
+            if (isTranslationAvailable && savedTranslation !== selectedTranslation) {
               setSelectedTranslation(savedTranslation);
               // Return early as changing the translation will trigger a reload
               return;
             }
+            
+            // If the saved translation is no longer available (e.g., he_heb.json was replaced),
+            // we'll continue with the default translation
             
             // Always try to restore saved position regardless of translation
             if (bibleData) {
@@ -314,7 +321,13 @@ const BibleApp = () => {
         setLoading(false);
       } catch (err) {
         console.error("Failed to load data:", err);
-        setError(`Failed to load Bible data: ${err.message}. Make sure the ${selectedTranslation} file exists in the public folder.`);
+        // Fix error message if it's referring to the old Hebrew Bible file
+        let errorMessage = err.message;
+        if (errorMessage.includes('he_heb.json')) {
+          errorMessage = errorMessage.replace('he_heb.json', 'Hebrew Bible files (he_heb_no_strong.json or he_heb_strong.json)');
+        }
+        
+        setError(`Failed to load Bible data: ${errorMessage}. Make sure the ${selectedTranslation} file exists in the public folder.`);
         setLoading(false);
       }
     };
@@ -796,7 +809,7 @@ const BibleApp = () => {
                 selectedBook && selectedBook.abbrev === book.abbrev ? 'bg-blue-100 font-medium' : ''
               }`}
             >
-              {getBookName(book.abbrev)}
+              {book.book || getBookName(book.abbrev)}
             </button>
           ))}
         </div>
@@ -810,7 +823,7 @@ const BibleApp = () => {
             <div className="flex flex-wrap items-center justify-between">
               <div className="flex items-center">
                 <h1 className="text-2xl font-bold">
-                  {selectedBook ? getBookName(selectedBook.abbrev) : 'Select a Book'}
+                  {selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : 'Select a Book'}
                 </h1>
                 
                 {selectedBook && (
@@ -905,7 +918,7 @@ const BibleApp = () => {
             {selectedBook && selectedChapter > 0 && (
               <div>
                 <h2 className="text-xl mr-2 font-semibold mb-4">
-                  {getBookName(selectedBook.abbrev)} {selectedChapter}
+                  {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter}
                 </h2>
                 <div className="space-y-2">
                   {selectedBook.chapters[selectedChapter - 1].map((verse, index) => {
