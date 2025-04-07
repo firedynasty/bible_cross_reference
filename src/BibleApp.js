@@ -149,7 +149,8 @@ const BibleApp = () => {
     { id: 'zh_cuv.json', name: 'Chinese - Chinese Union Version (CUV)' },
     { id: 'es_rvr.json', name: 'Spanish - Reina Valera Revisada (RVR)' },
     { id: 'fr_apee.json', name: 'French - Louis Segond (APEE)' },
-    { id: 'ko_ko.json', name: 'Korean - Korean Version' }
+    { id: 'ko_ko.json', name: 'Korean - Korean Version' },
+    { id: 'he_heb.json', name: 'Hebrew - Modern Hebrew Bible' }
   ];
   
   // Store current position for translation changes

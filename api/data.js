@@ -12,7 +12,7 @@ export default function handler(req, res) {
   const { file } = req.query;
   
   // Only allow specific files for security
-  const allowedFiles = ['en_kjv.json', 'crossRefs.json'];
+  const allowedFiles = ['en_kjv.json', 'en_bbe.json', 'zh_cuv.json', 'es_rvr.json', 'fr_apee.json', 'ko_ko.json', 'he_heb.json', 'crossRefs.json'];
   
   if (!file || !allowedFiles.includes(file)) {
     return res.status(400).json({ 
