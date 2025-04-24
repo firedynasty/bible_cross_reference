@@ -122,12 +122,8 @@ const BibleApp = () => {
   const [error, setError] = useState(null);
   const [selectedBook, setSelectedBook] = useState(null);
   const [selectedChapter, setSelectedChapter] = useState(1);
-  const [userInput] = useState('');
-  const [password] = useState('');
-  const [outputText] = useState('');
   const [crossReferences, setCrossReferences] = useState({});
   const [showCrossRef, setShowCrossRef] = useState(null);
-  const [isSubmitting] = useState(false);
   
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
@@ -147,7 +143,7 @@ const BibleApp = () => {
   const [kjvBibleData, setKjvBibleData] = useState(null);
   
   // Available translations
-  const translations = [
+  const translations = React.useMemo(() => [
     { id: 'en_kjv.json', name: 'English - King James Version (KJV)' },
     { id: 'en_bbe.json', name: 'English - Bible in Basic English (BBE)' },
     { id: 'zh_cuv.json', name: 'Chinese - Chinese Union Version (CUV)' },
@@ -156,11 +152,14 @@ const BibleApp = () => {
     { id: 'ko_ko.json', name: 'Korean - Korean Version' },
     { id: 'he_heb_no_strong.json', name: 'Hebrew - Modern Hebrew Bible' },
     { id: 'he_heb_strong.json', name: 'Hebrew - Modern Hebrew Bible (with Strong\'s)' }
-  ];
+  ], []);
   
   // Store current position for translation changes
   // Using the state setter directly in useEffect to avoid unused var warning
   const [, setCurrentBookAbbrev] = useState(null);
+  
+  // Store previous translation for keyboard shortcuts
+  const [previousTranslation, setPreviousTranslation] = useState('en_kjv.json');
   
   // Update current book abbrev when book changes
   useEffect(() => {
@@ -168,6 +167,25 @@ const BibleApp = () => {
       setCurrentBookAbbrev(selectedBook.abbrev);
     }
   }, [selectedBook]);
+  
+  // Add keyboard event handler for translation switching
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // '[' key - go back to previous translation (before BBE)
+      if (e.key === '[' && selectedTranslation === 'en_bbe.json') {
+        setSelectedTranslation(previousTranslation);
+      }
+      // ']' key - switch to BBE
+      else if (e.key === ']' && selectedTranslation !== 'en_bbe.json') {
+        setPreviousTranslation(selectedTranslation);
+        setSelectedTranslation('en_bbe.json');
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTranslation]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
@@ -368,7 +386,8 @@ const BibleApp = () => {
     };
     
     loadData();
-  }, [selectedTranslation, translations]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTranslation]);
 
   // Load cross references from external JSON file
   const loadCrossReferences = async (baseUrl, useApiEndpoint = false) => {
@@ -529,6 +548,9 @@ const BibleApp = () => {
     const currentBookAbbrev = selectedBook?.abbrev;
     const currentChapter = selectedChapter;
     
+    // Store previous translation before changing
+    setPreviousTranslation(selectedTranslation);
+    
     // Update translation
     const newTranslation = e.target.value;
     setSelectedTranslation(newTranslation);
@@ -584,8 +606,6 @@ const BibleApp = () => {
     }
   };
   
-  // This function is kept as a stub for future use (not currently being called)
-  const noop = () => {};
 
   // Handle click on a verse to navigate to a cross-reference
   const handleCrossRefNavigate = (ref) => {
