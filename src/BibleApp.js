@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Book, MessageSquare, Send, Link, ChevronRight, History, BookOpen } from 'lucide-react';
+import { Book, Link, ChevronRight, History, BookOpen } from 'lucide-react';
 
 // Helper function to handle base URL for different environments
 const getBaseUrl = () => {
@@ -122,12 +122,12 @@ const BibleApp = () => {
   const [error, setError] = useState(null);
   const [selectedBook, setSelectedBook] = useState(null);
   const [selectedChapter, setSelectedChapter] = useState(1);
-  const [userInput, setUserInput] = useState('');
-  const [password, setPassword] = useState('');
-  const [outputText, setOutputText] = useState('');
+  const [userInput] = useState('');
+  const [password] = useState('');
+  const [outputText] = useState('');
   const [crossReferences, setCrossReferences] = useState({});
   const [showCrossRef, setShowCrossRef] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting] = useState(false);
   
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
@@ -368,7 +368,7 @@ const BibleApp = () => {
     };
     
     loadData();
-  }, [selectedTranslation]);
+  }, [selectedTranslation, translations]);
 
   // Load cross references from external JSON file
   const loadCrossReferences = async (baseUrl, useApiEndpoint = false) => {
@@ -584,100 +584,8 @@ const BibleApp = () => {
     }
   };
   
-  // Handle user input submission
-  const handleSubmit = async () => {
-    if (!userInput.trim()) {
-      setOutputText("Please enter a question about the Bible.");
-      return;
-    }
-    
-    if (!password.trim()) {
-      setOutputText("Please enter the password to access Claude API.");
-      return;
-    }
-    
-    setIsSubmitting(true);
-    setOutputText("Asking Claude...");
-    
-    try {
-      // Create a prompt that includes the current Bible context
-      const bookName = selectedBook ? getBookName(selectedBook.abbrev) : "";
-      const chapterText = selectedBook ? selectedBook.chapters[selectedChapter - 1].join(' ') : "";
-      
-      // Limit chapter text to avoid timeouts from large inputs
-      const truncatedChapterText = chapterText.length > 10000 
-        ? chapterText.substring(0, 10000) + "... (truncated for API performance)"
-        : chapterText;
-      
-      const contextHeader = `Bible passage: ${bookName} ${selectedChapter}\n\n`;
-      const fullPrompt = `${contextHeader}${truncatedChapterText}\n\n${userInput}`;
-      
-      // Call the API endpoint with password
-      // For local development, we need to use a different port for the API server
-      const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // Client timeout of 1 minute
-      
-      const response = await fetch(`${apiBaseUrl}/api/ask-query`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          query: fullPrompt,
-          password: password 
-        }),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      
-      // First get the response as text to safely handle both JSON and non-JSON responses
-      const responseText = await response.text();
-      
-      if (!response.ok) {
-        // Try to parse as JSON, but handle text errors gracefully
-        try {
-          const errorData = JSON.parse(responseText);
-          throw new Error(errorData.error || 'Failed to get response');
-        } catch (parseError) {
-          // If parsing fails, use the raw text or a fallback message
-          throw new Error(responseText || 'Server returned an error');
-        }
-      }
-      
-      // Now safely parse the successful response
-      try {
-        const data = JSON.parse(responseText);
-        setOutputText(data.reply);
-      } catch (parseError) {
-        console.error("Error parsing JSON response:", parseError);
-        throw new Error("Invalid JSON response from server");
-      }
-    } catch (error) {
-      console.error("Error querying Claude API:", error);
-      
-      // Check for specific error types and provide user-friendly messages
-      if (error.message && error.message.includes("Claude AI is currently experiencing high demand")) {
-        setOutputText("⚠️ Claude AI is currently experiencing high demand. Please try again in a few minutes.");
-      } else if (error.message && error.message.includes("Invalid password")) {
-        setOutputText("🔑 Invalid password. Please check your password and try again.");
-      } else if (error.message && error.message.includes("SyntaxError") || error.message.includes("Unexpected token")) {
-        setOutputText("❌ Invalid response format. There may be an issue with the server configuration or Claude API.");
-      } else if (error.name === 'AbortError' || error.message && (error.message.includes("timed out") || error.message.includes("abort"))) {
-        setOutputText("⏱️ Request timed out after 2 minutes. Claude may be experiencing heavy load or your query is complex. Try a simpler query or try again later.");
-      } else {
-        // Sanitize the error message to prevent showing technical details to users
-        let userFriendlyMessage = "Failed to get response from Claude API. Please try again later.";
-        if (error.message && typeof error.message === 'string') {
-          // Only keep the first sentence of the error message for user display
-          userFriendlyMessage = error.message.split('.')[0] + '.';
-        }
-        setOutputText(`Error: ${userFriendlyMessage}`);
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // This function is kept as a stub for future use (not currently being called)
+  const noop = () => {};
 
   // Handle click on a verse to navigate to a cross-reference
   const handleCrossRefNavigate = (ref) => {
