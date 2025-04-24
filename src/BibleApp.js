@@ -129,8 +129,9 @@ const BibleApp = () => {
   const [showCrossRef, setShowCrossRef] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Add a ref for the chapter content container
+  // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
+  const kjvContentRef = useRef(null);
   
   // State to track primary reading vs cross-reference viewing
   const [isViewingCrossRef, setIsViewingCrossRef] = useState(false);
@@ -141,6 +142,9 @@ const BibleApp = () => {
   
   // Add translation support
   const [selectedTranslation, setSelectedTranslation] = useState('en_kjv.json');
+  
+  // Store KJV Bible data separately
+  const [kjvBibleData, setKjvBibleData] = useState(null);
   
   // Available translations
   const translations = [
@@ -250,6 +254,37 @@ const BibleApp = () => {
         console.log("Bible data loaded successfully, first book:", bibleData[0]?.abbrev);
         console.log("Data loaded using", usingApiEndpoint ? "API endpoint" : "direct file access");
         setBibleData(bibleData);
+        
+        // Load KJV Bible data if the current translation is not KJV
+        if (selectedTranslation !== 'en_kjv.json') {
+          try {
+            console.log("Loading KJV Bible data for the second panel");
+            const kjvResponse = await fetch(`${baseUrl}/en_kjv.json`);
+            
+            if (!kjvResponse.ok) {
+              // Try API endpoint as fallback
+              const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : baseUrl;
+              const kjvApiResponse = await fetch(`${apiBaseUrl}/api/json/en_kjv.json`);
+              
+              if (!kjvApiResponse.ok) {
+                throw new Error("Failed to load KJV Bible data");
+              }
+              
+              const kjvData = await kjvApiResponse.json();
+              setKjvBibleData(kjvData);
+            } else {
+              const kjvData = await kjvResponse.json();
+              setKjvBibleData(kjvData);
+            }
+          } catch (kjvError) {
+            console.error("Failed to load KJV Bible data:", kjvError);
+            // Use the current Bible data as fallback
+            setKjvBibleData(bibleData);
+          }
+        } else {
+          // If current translation is already KJV, use the same data
+          setKjvBibleData(bibleData);
+        }
         
         // Load saved reading position from localStorage or default to Genesis
         let savedBook = null;
@@ -455,9 +490,12 @@ const BibleApp = () => {
       });
       setIsViewingCrossRef(false);
       
-      // Scroll to top when book changes
+      // Scroll both panels to top when book changes
       if (chapterContentRef.current) {
         chapterContentRef.current.scrollTop = 0;
+      }
+      if (kjvContentRef.current) {
+        kjvContentRef.current.scrollTop = 0;
       }
     }
   };
@@ -476,9 +514,12 @@ const BibleApp = () => {
       setIsViewingCrossRef(false);
     }
     
-    // Scroll to top when chapter changes
+    // Scroll both panels to top when chapter changes
     if (chapterContentRef.current) {
       chapterContentRef.current.scrollTop = 0;
+    }
+    if (kjvContentRef.current) {
+      kjvContentRef.current.scrollTop = 0;
     }
   };
   
@@ -534,9 +575,12 @@ const BibleApp = () => {
       console.warn("Error updating translation in localStorage:", e);
     }
     
-    // Scroll to top when translation changes
+    // Scroll both panels to top when translation changes
     if (chapterContentRef.current) {
       chapterContentRef.current.scrollTop = 0;
+    }
+    if (kjvContentRef.current) {
+      kjvContentRef.current.scrollTop = 0;
     }
   };
   
@@ -649,8 +693,9 @@ const BibleApp = () => {
       // Hide the cross-reference popup
       setShowCrossRef(null);
       
-      // Add a slight delay before scrolling to the verse
+      // Add a slight delay before scrolling to the verse in both panels
       setTimeout(() => {
+        // Scroll to verse in primary panel
         const verseElement = document.getElementById(`verse-${ref.verse}`);
         if (verseElement && chapterContentRef.current) {
           verseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -659,6 +704,18 @@ const BibleApp = () => {
           verseElement.classList.add('bg-yellow-100');
           setTimeout(() => {
             verseElement.classList.remove('bg-yellow-100');
+          }, 3000); // Remove highlight after 3 seconds
+        }
+        
+        // Scroll to verse in KJV panel
+        const kjvVerseElement = document.getElementById(`kjv-verse-${ref.verse}`);
+        if (kjvVerseElement && kjvContentRef.current) {
+          kjvVerseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          // Highlight the verse temporarily in KJV panel
+          kjvVerseElement.classList.add('bg-yellow-100');
+          setTimeout(() => {
+            kjvVerseElement.classList.remove('bg-yellow-100');
           }, 3000); // Remove highlight after 3 seconds
         }
       }, 300);
@@ -977,7 +1034,15 @@ const BibleApp = () => {
                 <div className="mt-8 flex justify-between pb-4">
                   {selectedChapter > 1 ? (
                     <button 
-                      onClick={() => handleChapterSelect(selectedChapter - 1)}
+                      onClick={() => {
+                        handleChapterSelect(selectedChapter - 1);
+                        // Sync KJV panel scroll with primary panel
+                        if (kjvContentRef.current) {
+                          setTimeout(() => {
+                            kjvContentRef.current.scrollTop = 0;
+                          }, 100);
+                        }
+                      }}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-4 py-2 shadow"
                     >
                       &lt; Previous Chapter
@@ -988,7 +1053,15 @@ const BibleApp = () => {
                   
                   {selectedBook && selectedChapter < selectedBook.chapters.length && (
                     <button 
-                      onClick={() => handleChapterSelect(selectedChapter + 1)}
+                      onClick={() => {
+                        handleChapterSelect(selectedChapter + 1);
+                        // Sync KJV panel scroll with primary panel
+                        if (kjvContentRef.current) {
+                          setTimeout(() => {
+                            kjvContentRef.current.scrollTop = 0;
+                          }, 100);
+                        }
+                      }}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-4 py-2 shadow"
                     >
                       Next Chapter &gt;
@@ -999,55 +1072,69 @@ const BibleApp = () => {
             )}
           </div>
           
-          {/* AI Interaction Panel */}
+          {/* KJV Bible Panel */}
           <div className="w-96 border-l border-gray-200 bg-gray-50 flex flex-col">
             <div className="p-4 border-b border-gray-200">
               <h2 className="text-xl font-semibold flex items-center">
-                <MessageSquare className="mr-2 h-5 w-5" />
-                Ask about Scripture
+                <BookOpen className="mr-2 h-5 w-5" />
+                King James Version
               </h2>
             </div>
             
-            {/* Output Display */}
-            <div className="flex-1 p-4 overflow-y-auto bg-white">
-              {outputText ? (
-                <div className="whitespace-pre-wrap">{outputText}</div>
-              ) : (
-                <div className="text-gray-500 italic">
-                  Ask a question about the Bible text to see the response here.
+            {/* KJV Bible Text Display */}
+            <div ref={kjvContentRef} className="flex-1 p-4 overflow-y-auto bg-white">
+              {selectedBook && selectedChapter > 0 && (
+                <div>
+                  <h2 className="text-xl mr-2 font-semibold mb-4">
+                    {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter}
+                  </h2>
+                  <div className="space-y-2">
+                    {kjvBibleData && selectedBook && kjvBibleData.find(b => b.abbrev === selectedBook.abbrev)?.chapters[selectedChapter - 1].map((verse, index) => {
+                      const verseNumber = index + 1;
+                      
+                      return (
+                        <div 
+                          key={index} 
+                          id={`kjv-verse-${verseNumber}`}
+                          className="leading-relaxed p-2 rounded-md transition-colors"
+                        >
+                          <p className="flex">
+                            <span className="font-bold text-blue-600 mr-2">{verseNumber}</span>
+                            <span className="flex-1">{verse}</span>
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Navigation buttons for KJV panel */}
+                  <div className="mt-8 flex justify-between pb-4">
+                    {selectedChapter > 1 ? (
+                      <button 
+                        onClick={() => {
+                          handleChapterSelect(selectedChapter - 1);
+                        }}
+                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-4 py-2 shadow"
+                      >
+                        &lt; Previous Chapter
+                      </button>
+                    ) : (
+                      <div></div>
+                    )}
+                    
+                    {selectedBook && selectedChapter < selectedBook.chapters.length && (
+                      <button 
+                        onClick={() => {
+                          handleChapterSelect(selectedChapter + 1);
+                        }}
+                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-4 py-2 shadow"
+                      >
+                        Next Chapter &gt;
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
-            </div>
-            
-            {/* Input Area */}
-            <div className="p-4 border-t border-gray-200">
-              {/* Password Field */}
-              <div className="mb-3">
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password for Claude API"
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              {/* Query Input */}
-              <div className="flex items-start">
-                <textarea
-                  value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  placeholder="Type your question here..."
-                  className="flex-1 border border-gray-300 rounded-l px-3 py-2 min-h-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className={`${isSubmitting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 py-2 rounded-r transition-colors h-24 flex items-center justify-center`}
-                >
-                  <Send className="h-5 w-5" />
-                </button>
-              </div>
             </div>
           </div>
         </div>
