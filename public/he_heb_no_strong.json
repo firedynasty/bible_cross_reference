@@ -1,6 +1,6 @@
 [
   {
-    "abbrev": "ge",
+    "abbrev": "gn",
     "book": "Genesis",
     "chapters": [
       [
@@ -2938,7 +2938,7 @@
     ]
   },
   {
-    "abbrev": "le",
+    "abbrev": "lv",
     "book": "Leviticus",
     "chapters": [
       [
@@ -3857,7 +3857,7 @@
     ]
   },
   {
-    "abbrev": "nu",
+    "abbrev": "nm",
     "book": "Numbers",
     "chapters": [
       [
@@ -5223,7 +5223,7 @@
     ]
   },
   {
-    "abbrev": "de",
+    "abbrev": "dt",
     "book": "Deuteronomy",
     "chapters": [
       [
@@ -6968,7 +6968,7 @@
     ]
   },
   {
-    "abbrev": "ju",
+    "abbrev": "jud",
     "book": "Judges",
     "chapters": [
       [
@@ -7634,7 +7634,7 @@
     ]
   },
   {
-    "abbrev": "ru",
+    "abbrev": "rt",
     "book": "Ruth",
     "chapters": [
       [
@@ -7733,7 +7733,7 @@
     ]
   },
   {
-    "abbrev": "i1s",
+    "abbrev": "1sm",
     "book": "I_Samuel",
     "chapters": [
       [
@@ -8611,7 +8611,7 @@
     ]
   },
   {
-    "abbrev": "iiS",
+    "abbrev": "2sm",
     "book": "II_Samuel",
     "chapters": [
       [
@@ -9360,7 +9360,7 @@
     ]
   },
   {
-    "abbrev": "ik",
+    "abbrev": "1kgs",
     "book": "I_Kings",
     "chapters": [
       [
@@ -10226,7 +10226,7 @@
     ]
   },
   {
-    "abbrev": "iik",
+    "abbrev": "2kgs",
     "book": "II_Kings",
     "chapters": [
       [
@@ -11001,7 +11001,7 @@
     ]
   },
   {
-    "abbrev": "ic",
+    "abbrev": "1ch",
     "book": "I_Chronicles",
     "chapters": [
       [
@@ -12007,7 +12007,7 @@
     ]
   },
   {
-    "abbrev": "iic",
+    "abbrev": "2ch",
     "book": "II_Chronicles",
     "chapters": [
       [
@@ -12907,7 +12907,7 @@
     ]
   },
   {
-    "abbrev": "ez",
+    "abbrev": "ezr",
     "book": "Ezra",
     "chapters": [
       [
@@ -13651,7 +13651,7 @@
     ]
   },
   {
-    "abbrev": "es",
+    "abbrev": "et",
     "book": "Esther",
     "chapters": [
       [
@@ -13844,7 +13844,7 @@
     ]
   },
   {
-    "abbrev": "jo",
+    "abbrev": "job",
     "book": "Job",
     "chapters": [
       [
@@ -17771,7 +17771,7 @@
     ]
   },
   {
-    "abbrev": "pr",
+    "abbrev": "prv",
     "book": "Proverbs",
     "chapters": [
       [
@@ -20575,7 +20575,7 @@
     ]
   },
   {
-    "abbrev": "je",
+    "abbrev": "jr",
     "book": "Jeremiah",
     "chapters": [
       [
@@ -22049,7 +22049,7 @@
     ]
   },
   {
-    "abbrev": "la",
+    "abbrev": "lm",
     "book": "Lamentations",
     "chapters": [
       [
@@ -23594,7 +23594,7 @@
     ]
   },
   {
-    "abbrev": "da",
+    "abbrev": "dn",
     "book": "Daniel",
     "chapters": [
       [
@@ -24212,7 +24212,7 @@
     ]
   },
   {
-    "abbrev": "jo",
+    "abbrev": "jl",
     "book": "Joel",
     "chapters": [
       [
@@ -24497,7 +24497,7 @@
     ]
   },
   {
-    "abbrev": "jo",
+    "abbrev": "jn",
     "book": "Jonah",
     "chapters": [
       [
@@ -24743,7 +24743,7 @@
     ]
   },
   {
-    "abbrev": "ha",
+    "abbrev": "hk",
     "book": "Habakkuk",
     "chapters": [
       [

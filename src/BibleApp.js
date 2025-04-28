@@ -57,29 +57,29 @@ const NavigationPlaceholder = ({ book, chapter, getBookName, onNavigate }) => {
   return (
     <div className="relative">
       {/* Current Location Display */}
-      <div className="flex items-center bg-gray-100 px-3 py-1 rounded-md text-gray-700">
-        <span>Primary reading:</span>
+      <div className="flex items-center bg-gray-100 px-2 py-1 rounded-md text-gray-700 text-sm">
+        <span>Primary:</span>
         <span className="font-medium mx-1">{book.book || getBookName(book.abbrev)}</span>
-        <ChevronRight className="h-4 w-4 mx-1" />
-        <span className="font-medium">Chapter {chapter}</span>
+        <ChevronRight className="h-3 w-3 mx-1" />
+        <span className="font-medium">Ch {chapter}</span>
         
         {/* History Button */}
         <button 
           onClick={() => setShowHistory(!showHistory)}
-          className="ml-2 p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+          className="ml-1 p-0.5 rounded-full hover:bg-gray-200 focus:outline-none"
           title="Navigation history"
         >
-          <History className="h-4 w-4" />
+          <History className="h-3 w-3" />
         </button>
       </div>
       
       {/* Navigation History Dropdown */}
       {showHistory && navigationHistory.length > 0 && (
-        <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-          <div className="p-2 border-b border-gray-200">
-            <h3 className="font-medium">Reading History</h3>
+        <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+          <div className="p-3 border-b border-gray-200">
+            <h3 className="font-medium text-lg">Reading History</h3>
           </div>
-          <div className="max-h-64 overflow-y-auto">
+          <div className="max-h-80 overflow-y-auto">
             {[...navigationHistory].reverse().map((item, index) => (
               <button
                 key={index}
@@ -87,12 +87,12 @@ const NavigationPlaceholder = ({ book, chapter, getBookName, onNavigate }) => {
                   onNavigate(item.book, item.chapter);
                   setShowHistory(false);
                 }}
-                className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between"
+                className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center justify-between text-base"
               >
                 <span>
                   {getBookName(item.book)} {item.chapter}
                 </span>
-                <span className="text-xs text-gray-500">
+                <span className="text-sm text-gray-500">
                   {getRelativeTime(item.timestamp)}
                 </span>
               </button>
@@ -128,6 +128,7 @@ const BibleApp = () => {
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
   const kjvContentRef = useRef(null);
+  const isManuallyScrolling = useRef(false);
   
   // State to track primary reading vs cross-reference viewing
   const [isViewingCrossRef, setIsViewingCrossRef] = useState(false);
@@ -388,6 +389,43 @@ const BibleApp = () => {
     loadData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTranslation]);
+  
+  // Setup scroll synchronization - primary pane controls KJV pane
+  useEffect(() => {
+    const primaryPane = chapterContentRef.current;
+    const kjvPane = kjvContentRef.current;
+    
+    if (!primaryPane || !kjvPane) return;
+    
+    const handlePrimaryScroll = () => {
+      if (isManuallyScrolling.current) return;
+      
+      // Calculate relative scroll position as a percentage
+      const primaryScrollPercentage = primaryPane.scrollTop / 
+        (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
+      
+      isManuallyScrolling.current = true;
+      
+      // Apply the same percentage to the KJV pane
+      kjvPane.scrollTop = primaryScrollPercentage * 
+        (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
+      
+      // Reset after a short delay to prevent infinite scroll loops
+      setTimeout(() => {
+        isManuallyScrolling.current = false;
+      }, 100);
+    };
+    
+    // Add scroll event listener to the primary pane
+    primaryPane.addEventListener('scroll', handlePrimaryScroll);
+    
+    // Clean up
+    return () => {
+      if (primaryPane) {
+        primaryPane.removeEventListener('scroll', handlePrimaryScroll);
+      }
+    };
+  }, [selectedBook, selectedChapter, selectedTranslation]); // Re-attach when content changes
 
   // Load cross references from external JSON file
   const loadCrossReferences = async (baseUrl, useApiEndpoint = false) => {
@@ -650,13 +688,29 @@ const BibleApp = () => {
     }
   };
 
+  // Get translation short name for display
+  const getTranslationShortName = (translationId) => {
+    const translationMap = {
+      'en_kjv.json': 'KJV',
+      'en_bbe.json': 'BBE',
+      'zh_cuv.json': 'CUV',
+      'es_rvr.json': 'RVR',
+      'fr_apee.json': 'APEE',
+      'ko_ko.json': 'KO',
+      'he_heb_no_strong.json': 'HEB',
+      'he_heb_strong.json': 'HEB-Strong'
+    };
+    
+    return translationMap[translationId] || translationId.split('_')[1].split('.')[0].toUpperCase();
+  };
+
   // If still loading
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100">
         <div className="text-center">
-          <div className="text-2xl font-bold mb-4">Loading Bible Data...</div>
-          <div className="animate-pulse bg-blue-500 h-2 w-64 rounded"></div>
+          <div className="text-4xl font-bold mb-4">Loading Bible Data...</div>
+          <div className="animate-pulse bg-blue-500 h-4 w-96 rounded"></div>
         </div>
       </div>
     );
@@ -667,23 +721,23 @@ const BibleApp = () => {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-red-100 p-4">
         <div className="text-center text-red-600 max-w-2xl">
-          <div className="text-2xl font-bold mb-4">Error</div>
-          <div className="mb-4">{error}</div>
+          <div className="text-3xl font-bold mb-4">Error</div>
+          <div className="mb-4 text-xl">{error}</div>
           
           {/* Add debugging information */}
           <div className="text-left mt-4 p-4 bg-white rounded-md shadow border border-red-200">
-            <h3 className="font-bold mb-2">Debugging Information:</h3>
+            <h3 className="font-bold mb-2 text-xl">Debugging Information:</h3>
             <p>Current hostname: {window.location.hostname}</p>
             <p>Current path: {window.location.pathname}</p>
             <p>Base URL used: {getBaseUrl()}</p>
             <p>Expected Bible data URL: {getBaseUrl()}/{selectedTranslation}</p>
-            <p className="mt-2 text-sm">
+            <p className="mt-2 text-base">
               This could be caused by missing data files. Make sure your Bible data files
               ({selectedTranslation} and crossRefs.json) are in the correct location for the current 
               environment (local or GitHub Pages).
             </p>
             
-            <div className="mt-4 p-3 bg-gray-100 rounded-md text-gray-800 text-sm">
+            <div className="mt-4 p-3 bg-gray-100 rounded-md text-gray-800 text-base">
               <p className="font-bold">Vercel Deployment Tips:</p>
               <ul className="list-disc pl-5 mt-2">
                 <li>Verify that JSON files were copied to the build directory during build</li>
@@ -703,7 +757,7 @@ const BibleApp = () => {
                 : `/${selectedTranslation}`} 
               target="_blank"
               rel="noreferrer"
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+              className="px-5 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-xl"
             >
               Test {selectedTranslation}
             </a>
@@ -713,7 +767,7 @@ const BibleApp = () => {
                 : "/crossRefs.json"} 
               target="_blank"
               rel="noreferrer"
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+              className="px-5 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-xl"
             >
               Test crossRefs.json
             </a>
@@ -723,7 +777,7 @@ const BibleApp = () => {
                 : `/api/json/${selectedTranslation}`} 
               target="_blank"
               rel="noreferrer"
-              className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              className="mt-2 px-5 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xl"
             >
               Test API {selectedTranslation}
             </a>
@@ -733,7 +787,7 @@ const BibleApp = () => {
                 : "/api/list-files"} 
               target="_blank"
               rel="noreferrer"
-              className="mt-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+              className="mt-2 px-5 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-xl"
             >
               Diagnostics
             </a>
@@ -742,7 +796,7 @@ const BibleApp = () => {
           {/* Retry button */}
           <button 
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="mt-4 px-5 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xl"
           >
             Retry Loading
           </button>
@@ -768,20 +822,32 @@ const BibleApp = () => {
       '1ts': '1 Thessalonians', '2ts': '2 Thessalonians', '1tm': '1 Timothy', '2tm': '2 Timothy',
       'tt': 'Titus', 'phm': 'Philemon', 'hb': 'Hebrews', 'jm': 'James', '1pe': '1 Peter',
       '2pe': '2 Peter', '1jo': '1 John', '2jo': '2 John', '3jo': '3 John', 'jd': 'Jude',
-      're': 'Revelation'
+      're': 'Revelation',
+      // Add mapping for Hebrew Bible abbrevs
+      'ge': 'Genesis'
     };
     
     return bookNames[abbrev] || abbrev;
+  };
+
+  // Map Hebrew book abbreviations to KJV abbreviations
+  const getKjvBookAbbrev = (hebrewAbbrev) => {
+    const abbrevMap = {
+      'ge': 'gn',
+      // Add mappings for other books as needed
+    };
+    
+    return abbrevMap[hebrewAbbrev] || hebrewAbbrev;
   };
 
   // Main render
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Book Selection Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold flex items-center">
-            <Book className="mr-2 h-5 w-5" />
+      <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
+        <div className="p-2 border-b border-gray-200">
+          <h2 className="text-lg font-semibold flex items-center">
+            <Book className="mr-1 h-4 w-4" />
             Bible Books
           </h2>
         </div>
@@ -790,7 +856,7 @@ const BibleApp = () => {
             <button
               key={book.abbrev}
               onClick={() => handleBookSelect(book.abbrev)}
-              className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
+              className={`w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ${
                 selectedBook && selectedBook.abbrev === book.abbrev ? 'bg-blue-100 font-medium' : ''
               }`}
             >
@@ -803,116 +869,117 @@ const BibleApp = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar with Navigation and Chapter Selection */}
-        <div className="bg-white border-b border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-wrap items-center justify-between">
-              <div className="flex items-center">
-                <h1 className="text-2xl font-bold">
-                  {selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : 'Select a Book'}
-                </h1>
-                
-                {selectedBook && (
-                  <div className="flex items-center ml-4">
-                    <span className="mr-2">Chapter:</span>
-                    <select 
-                      value={selectedChapter}
-                      onChange={(e) => handleChapterSelect(parseInt(e.target.value))}
-                      className="border border-gray-300 rounded px-2 py-1"
-                    >
-                      {selectedBook.chapters.map((_, index) => (
-                        <option key={index + 1} value={index + 1}>
-                          {index + 1}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-              
-              {/* Translation Selection */}
-              <div className="flex items-center mt-2 sm:mt-0">
-                <div className="flex items-center">
-                  <BookOpen className="mr-2 h-5 w-5 text-blue-600" />
-                  <span className="mr-2">Translation:</span>
-                  <select 
-                    value={selectedTranslation}
-                    onChange={handleTranslationChange}
-                    className="border border-gray-300 rounded px-2 py-1 bg-white"
-                  >
-                    {translations.map(translation => (
-                      <option key={translation.id} value={translation.id}>
-                        {translation.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
+        <div className="bg-white border-b border-gray-200 p-1 flex flex-wrap items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <h1 className="text-xl font-bold ml-2">
+              {selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : 'Select a Book'}
+            </h1>
             
-            {/* Navigation History / Breadcrumb */}
-            <div className="flex items-center space-x-2">
-              <NavigationPlaceholder 
-                book={primaryReading.book} 
-                chapter={primaryReading.chapter}
-                getBookName={getBookName}
-                onNavigate={(book, chapter) => {
-                  if (book && bibleData) {
-                    const bookObj = bibleData.find(b => b.abbrev === book);
-                    if (bookObj) {
-                      setSelectedBook(bookObj);
-                      setSelectedChapter(chapter);
-                      setPrimaryReading({
-                        book: bookObj,
-                        chapter: chapter
-                      });
-                      setIsViewingCrossRef(false);
-                      if (chapterContentRef.current) {
-                        chapterContentRef.current.scrollTop = 0;
-                      }
+            {selectedBook && (
+              <div className="flex items-center">
+                <span className="mr-1 text-sm">Ch:</span>
+                <select 
+                  value={selectedChapter}
+                  onChange={(e) => handleChapterSelect(parseInt(e.target.value))}
+                  className="border border-gray-300 rounded px-1 py-0 text-sm w-12"
+                >
+                  {selectedBook.chapters.map((_, index) => (
+                    <option key={index + 1} value={index + 1}>
+                      {index + 1}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex items-center ml-2">
+              <BookOpen className="mr-1 h-4 w-4 text-blue-600" />
+              <select 
+                value={selectedTranslation}
+                onChange={handleTranslationChange}
+                className="border border-gray-300 rounded px-2 py-1 text-sm bg-white max-w-xs"
+                style={{ width: "auto" }}
+              >
+                {translations.map(translation => (
+                  <option key={translation.id} value={translation.id}>
+                    {translation.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          {/* Navigation History / Breadcrumb */}
+          <div className="flex items-center space-x-1 mr-2">
+            <NavigationPlaceholder 
+              book={primaryReading.book} 
+              chapter={primaryReading.chapter}
+              getBookName={getBookName}
+              onNavigate={(book, chapter) => {
+                if (book && bibleData) {
+                  const bookObj = bibleData.find(b => b.abbrev === book);
+                  if (bookObj) {
+                    setSelectedBook(bookObj);
+                    setSelectedChapter(chapter);
+                    setPrimaryReading({
+                      book: bookObj,
+                      chapter: chapter
+                    });
+                    setIsViewingCrossRef(false);
+                    if (chapterContentRef.current) {
+                      chapterContentRef.current.scrollTop = 0;
+                    }
+                  }
+                }
+              }}
+            />
+            
+            {/* Return to Primary Reading button (only when viewing cross-reference) */}
+            {isViewingCrossRef && (
+              <button
+                onClick={() => {
+                  if (primaryReading.book) {
+                    setSelectedBook(primaryReading.book);
+                    setSelectedChapter(primaryReading.chapter);
+                    setIsViewingCrossRef(false);
+                    if (chapterContentRef.current) {
+                      chapterContentRef.current.scrollTop = 0;
                     }
                   }
                 }}
-              />
-              
-              {/* Return to Primary Reading button (only when viewing cross-reference) */}
-              {isViewingCrossRef && (
-                <button
-                  onClick={() => {
-                    if (primaryReading.book) {
-                      setSelectedBook(primaryReading.book);
-                      setSelectedChapter(primaryReading.chapter);
-                      setIsViewingCrossRef(false);
-                      if (chapterContentRef.current) {
-                        chapterContentRef.current.scrollTop = 0;
-                      }
-                    }
-                  }}
-                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
-                >
-                  Return to Primary Reading
-                </button>
-              )}
-            </div>
+                className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-xs"
+              >
+                Return
+              </button>
+            )}
           </div>
         </div>
         
-        {/* Bible Text and AI Interaction Split View */}
+        {/* Bible Text and KJV Split View */}
         <div className="flex-1 flex overflow-hidden">
           {/* Bible Text Display */}
-          <div ref={chapterContentRef} className="flex-1 overflow-y-auto p-6 bg-white relative">
+          <div ref={chapterContentRef} className="w-1/2 overflow-y-auto p-8 bg-white relative">
             {selectedBook && selectedChapter > 0 && (
               <div>
-                <h2 className="text-xl font-semibold flex items-center mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-book-open mr-2 h-5 w-5">
+                <h2 className="text-3xl font-semibold flex items-center mb-5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open mr-3 h-8 w-8">
                     <path d="M12 7v14"></path>
                     <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path>
                   </svg>
                   {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter}
-                  <a href="https://cdpn.io/pen/debug/OPJBXKj" target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-500 hover:text-blue-700">
-                    <Link className="h-4 w-4" />
+                  {selectedTranslation !== 'en_kjv.json' && (
+                    <span className="ml-2 text-gray-500">
+                      ({getTranslationShortName(selectedTranslation)})
+                    </span>
+                  )}
+                  <a href="https://cdpn.io/pen/debug/OPJBXKj" target="_blank" rel="noopener noreferrer" className="ml-3 text-blue-500 hover:text-blue-700">
+                    <Link className="h-6 w-6" />
                   </a>
+                  <span className="ml-3 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded" title="Scrolling this pane will sync the KJV pane">
+                    Scroll Sync ↓
+                  </span>
                 </h2>
-                <div className="space-y-2">
+                <div className="space-y-5">
                   {selectedBook.chapters[selectedChapter - 1].map((verse, index) => {
                     const verseNumber = index + 1;
                     const refKey = `${selectedBook.abbrev}-${selectedChapter}-${verseNumber}`;
@@ -922,39 +989,39 @@ const BibleApp = () => {
                       <div 
                         key={index} 
                         id={`verse-${verseNumber}`}
-                        className={`leading-relaxed p-2 rounded-md transition-colors ${
+                        className={`leading-relaxed p-4 rounded-md transition-colors text-2xl ${
                           hasReference ? 'hover:bg-blue-50' : ''
                         }`}
                       >
                         <p className="flex">
-                          <span className="font-bold text-blue-600 mr-2">{verseNumber}</span>
+                          <span className="font-bold text-blue-600 mr-4 text-2xl">{verseNumber}</span>
                           <span className="flex-1">{verse}</span>
                           
                           {hasReference && (
                             <button
                               onClick={() => setShowCrossRef(showCrossRef === refKey ? null : refKey)}
-                              className="ml-2 text-blue-500 hover:text-blue-700 focus:outline-none"
+                              className="ml-3 text-blue-500 hover:text-blue-700 focus:outline-none"
                               title="Show cross-references"
                             >
-                              <Link className="h-4 w-4" />
+                              <Link className="h-6 w-6" />
                             </button>
                           )}
                         </p>
                         
                         {/* Cross-reference popup */}
                         {showCrossRef === refKey && (
-                          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md shadow-sm">
-                            <h4 className="font-medium mb-2">Cross References:</h4>
-                            <ul className="space-y-2">
+                          <div className="mt-4 p-5 bg-blue-50 border border-blue-200 rounded-md shadow-sm">
+                            <h4 className="font-medium mb-4 text-2xl">Cross References:</h4>
+                            <ul className="space-y-4">
                               {crossReferences[refKey].map((ref, i) => (
-                                <li key={i} className="text-sm">
+                                <li key={i} className="text-xl">
                                   <button 
                                     onClick={() => handleCrossRefNavigate(ref)}
                                     className="text-blue-600 hover:text-blue-800 font-medium"
                                   >
                                     {getBookName(ref.book)} {ref.chapter}:{ref.verse}
                                   </button>
-                                  <p className="text-gray-700 mt-1">{ref.text}</p>
+                                  <p className="text-gray-700 mt-2">{ref.text}</p>
                                 </li>
                               ))}
                             </ul>
@@ -966,7 +1033,7 @@ const BibleApp = () => {
                 </div>
                 
                 {/* Chapter Navigation - Simple inline approach */}
-                <div className="mt-8 flex justify-between pb-4">
+                <div className="mt-10 flex justify-between pb-4">
                   {selectedChapter > 1 ? (
                     <button 
                       onClick={() => {
@@ -978,7 +1045,7 @@ const BibleApp = () => {
                           }, 100);
                         }
                       }}
-                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-4 py-2 shadow"
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
                       &lt; Previous Chapter
                     </button>
@@ -997,7 +1064,7 @@ const BibleApp = () => {
                           }, 100);
                         }
                       }}
-                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-4 py-2 shadow"
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
                       Next Chapter &gt;
                     </button>
@@ -1008,48 +1075,64 @@ const BibleApp = () => {
           </div>
           
           {/* KJV Bible Panel */}
-          <div className="w-96 border-l border-gray-200 bg-gray-50 flex flex-col">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold flex items-center">
-                <BookOpen className="mr-2 h-5 w-5" />
-                King James Version
-              </h2>
-            </div>
-            
+          <div className="w-1/2 border-l border-gray-200 bg-gray-50 flex flex-col">
             {/* KJV Bible Text Display */}
-            <div ref={kjvContentRef} className="flex-1 p-4 overflow-y-auto bg-white">
+            <div ref={kjvContentRef} className="flex-1 p-8 overflow-y-auto bg-white">
               {selectedBook && selectedChapter > 0 && (
                 <div>
-                  <h2 className="text-xl mr-2 font-semibold mb-4">
-                    {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter}
+                  <h2 className="text-3xl mr-2 font-semibold mb-5">
+                    {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter} <span className="text-gray-500">(KJV)</span>
                   </h2>
-                  <div className="space-y-2">
-                    {kjvBibleData && selectedBook && kjvBibleData.find(b => b.abbrev === selectedBook.abbrev)?.chapters[selectedChapter - 1].map((verse, index) => {
-                      const verseNumber = index + 1;
-                      
-                      return (
-                        <div 
-                          key={index} 
-                          id={`kjv-verse-${verseNumber}`}
-                          className="leading-relaxed p-2 rounded-md transition-colors"
-                        >
-                          <p className="flex">
-                            <span className="font-bold text-blue-600 mr-2">{verseNumber}</span>
-                            <span className="flex-1">{verse}</span>
-                          </p>
-                        </div>
-                      );
-                    })}
+                  <div className="space-y-5">
+                    {/* Modified to handle Hebrew-KJV mapping */}
+                    {kjvBibleData && selectedBook && (
+                      (() => {
+                        // For Hebrew translations, use the mapping
+                        let bookAbbrev = selectedBook.abbrev;
+                        if (selectedTranslation.includes('he_heb')) {
+                          bookAbbrev = getKjvBookAbbrev(bookAbbrev);
+                        }
+                        
+                        const kjvBook = kjvBibleData.find(b => b.abbrev === bookAbbrev);
+                        if (kjvBook && kjvBook.chapters[selectedChapter - 1]) {
+                          return kjvBook.chapters[selectedChapter - 1].map((verse, index) => {
+                            const verseNumber = index + 1;
+                            
+                            return (
+                              <div 
+                                key={index} 
+                                id={`kjv-verse-${verseNumber}`}
+                                className="leading-relaxed p-4 rounded-md transition-colors text-2xl"
+                              >
+                                <p className="flex">
+                                  <span className="font-bold text-blue-600 mr-4">{verseNumber}</span>
+                                  <span className="flex-1">{verse}</span>
+                                </p>
+                              </div>
+                            );
+                          });
+                        } else {
+                          return (
+                            <div className="p-4 text-amber-600">
+                              <p>Could not find matching KJV text for this book/chapter.</p>
+                              <p className="mt-2 text-sm">
+                                Hebrew book code: {selectedBook.abbrev}, mapped to KJV: {bookAbbrev}
+                              </p>
+                            </div>
+                          );
+                        }
+                      })()
+                    )}
                   </div>
                   
                   {/* Navigation buttons for KJV panel */}
-                  <div className="mt-8 flex justify-between pb-4">
+                  <div className="mt-10 flex justify-between pb-4">
                     {selectedChapter > 1 ? (
                       <button 
                         onClick={() => {
                           handleChapterSelect(selectedChapter - 1);
                         }}
-                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-4 py-2 shadow"
+                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
                         &lt; Previous Chapter
                       </button>
@@ -1062,7 +1145,7 @@ const BibleApp = () => {
                         onClick={() => {
                           handleChapterSelect(selectedChapter + 1);
                         }}
-                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-4 py-2 shadow"
+                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
                         Next Chapter &gt;
                       </button>
