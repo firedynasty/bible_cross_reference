@@ -1042,59 +1042,47 @@ const BibleApp = () => {
           const book = bibleData.find(b => b.abbrev === positionData.bookAbbrev);
           
           if (book) {
-            // Check if we need to change translation
-            if (positionData.translation && positionData.translation !== selectedTranslation) {
-              // Save current position for potential update
-              const currentBookAbbrev = selectedBook?.abbrev;
-              const currentChapter = selectedChapter;
-              
-              // Store the current translation as previous
-              setPreviousTranslation(selectedTranslation);
-              
-              // Update translation
-              setSelectedTranslation(positionData.translation);
-              
-              // Also update the stored state
-              try {
-                const stateToSave = {
+            // Keep the current translation - that's the main change
+            const currentTranslation = selectedTranslation;
+            
+            // Update selected book and chapter
+            setSelectedBook(book);
+            setSelectedChapter(positionData.chapter || 1);
+            setPrimaryReading({
+              book: book,
+              chapter: positionData.chapter || 1
+            });
+            setIsViewingCrossRef(false);
+            
+            // Update the stored state with current translation
+            try {
+              const stateToSave = {
+                bookAbbrev: positionData.bookAbbrev,
+                chapter: positionData.chapter || 1,
+                translation: currentTranslation, // Keep current translation
+                primaryReading: {
                   bookAbbrev: positionData.bookAbbrev,
-                  chapter: positionData.chapter || 1,
-                  translation: positionData.translation,
-                  primaryReading: {
-                    bookAbbrev: positionData.bookAbbrev,
-                    chapter: positionData.chapter || 1
-                  },
-                  isViewingCrossRef: false,
-                  scrollSyncMode
-                };
-                localStorage.setItem('bibleReaderState', JSON.stringify(stateToSave));
-              } catch (e) {
-                console.warn("Error updating state in localStorage:", e);
-              }
-              
-              // The translation change will trigger a reload, which will handle position restoration
-            } else {
-              // If translation is the same, just navigate directly
-              setSelectedBook(book);
-              setSelectedChapter(positionData.chapter || 1);
-              setPrimaryReading({
-                book: book,
-                chapter: positionData.chapter || 1
-              });
-              setIsViewingCrossRef(false);
-              
-              // Scroll both panels to top
-              if (chapterContentRef.current) {
-                chapterContentRef.current.scrollTop = 0;
-              }
-              if (kjvContentRef.current) {
-                kjvContentRef.current.scrollTop = 0;
-              }
-              
-              // Reset scroll sync state
-              lastPrimaryScrollPos.current = 0;
-              scrollSyncInitialized.current = false;
+                  chapter: positionData.chapter || 1
+                },
+                isViewingCrossRef: false,
+                scrollSyncMode
+              };
+              localStorage.setItem('bibleReaderState', JSON.stringify(stateToSave));
+            } catch (e) {
+              console.warn("Error updating state in localStorage:", e);
             }
+            
+            // Scroll both panels to top
+            if (chapterContentRef.current) {
+              chapterContentRef.current.scrollTop = 0;
+            }
+            if (kjvContentRef.current) {
+              kjvContentRef.current.scrollTop = 0;
+            }
+            
+            // Reset scroll sync state
+            lastPrimaryScrollPos.current = 0;
+            scrollSyncInitialized.current = false;
             
             // Show success message
             alert(`Position loaded: ${getBookName(positionData.bookAbbrev)} ${positionData.chapter || 1}`);
