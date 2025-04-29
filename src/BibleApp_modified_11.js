@@ -166,6 +166,7 @@ const BibleApp = () => {
   const isManuallyScrolling = useRef(false);
   const scrollSyncInitialized = useRef(false);
   const lastPrimaryScrollPos = useRef(0);
+  const lastScrollTime = useRef(0);
   
   // State to track primary reading vs cross-reference viewing
   const [isViewingCrossRef, setIsViewingCrossRef] = useState(false);
@@ -249,74 +250,6 @@ const BibleApp = () => {
       }
     }
   }, [selectedBook, selectedChapter, selectedTranslation, primaryReading, isViewingCrossRef, scrollSyncMode]);
-
-  // Helper function to setup scroll synchronization based on relative speeds
-  const setupScrollSync = () => {
-    const primaryPane = chapterContentRef.current;
-    const kjvPane = kjvContentRef.current;
-    
-    if (!primaryPane || !kjvPane) return false;
-    
-    const handlePrimaryScroll = () => {
-      if (isManuallyScrolling.current) return;
-      
-      // Calculate the amount scrolled
-      const currentScrollPos = primaryPane.scrollTop;
-      const scrollDelta = currentScrollPos - lastPrimaryScrollPos.current;
-      
-      // Update the last position for next time
-      lastPrimaryScrollPos.current = currentScrollPos;
-      
-      // If there's no change or just initialization, don't adjust KJV pane
-      if (scrollDelta === 0) return;
-      
-      // Apply scroll sync based on selected mode - different scroll speeds
-      let adjustedDelta = scrollDelta;
-      
-      switch (scrollSyncMode) {
-        case 'faster':
-          // Make KJV pane scroll faster (1.5x speed)
-          adjustedDelta = scrollDelta * 1.5;
-          break;
-        case 'slower':
-          // Make KJV pane scroll slower (0.5x speed)
-          // Use a smaller multiplier to make it clearly slower
-          adjustedDelta = scrollDelta * 0.5;
-          break;
-        case 'exact':
-        default:
-          // Keep the same scroll delta (1x speed)
-          adjustedDelta = scrollDelta;
-          break;
-      }
-      
-      isManuallyScrolling.current = true;
-      
-      // Apply the adjusted delta to the KJV pane
-      kjvPane.scrollTop = Math.max(0, Math.min(
-        kjvPane.scrollHeight - kjvPane.clientHeight,
-        kjvPane.scrollTop + adjustedDelta
-      ));
-      
-      // Reset after a short delay to prevent infinite scroll loops
-      setTimeout(() => {
-        isManuallyScrolling.current = false;
-      }, 50);
-    };
-    
-    // Remove any existing event listener first
-    primaryPane.removeEventListener('scroll', handlePrimaryScroll);
-    
-    // Add scroll event listener to the primary pane
-    primaryPane.addEventListener('scroll', handlePrimaryScroll);
-    
-    // Return a cleanup function
-    return () => {
-      if (primaryPane) {
-        primaryPane.removeEventListener('scroll', handlePrimaryScroll);
-      }
-    };
-  };
 
   // Load Bible data and cross-references on component mount
   useEffect(() => {
@@ -509,6 +442,73 @@ const BibleApp = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTranslation]);
   
+  // Helper function to setup scroll synchronization based on relative speeds
+  const setupScrollSync = () => {
+    const primaryPane = chapterContentRef.current;
+    const kjvPane = kjvContentRef.current;
+    
+    if (!primaryPane || !kjvPane) return false;
+    
+    const handlePrimaryScroll = () => {
+      if (isManuallyScrolling.current) return;
+      
+      // Calculate the amount scrolled
+      const currentScrollPos = primaryPane.scrollTop;
+      const scrollDelta = currentScrollPos - lastPrimaryScrollPos.current;
+      
+      // Update the last position for next time
+      lastPrimaryScrollPos.current = currentScrollPos;
+      
+      // If there's no change or just initialization, don't adjust KJV pane
+      if (scrollDelta === 0) return;
+      
+      // Apply scroll sync based on selected mode - different scroll speeds
+      let adjustedDelta = scrollDelta;
+      
+      switch (scrollSyncMode) {
+        case 'faster':
+          // Make KJV pane scroll faster (1.5x speed)
+          adjustedDelta = scrollDelta * 1.5;
+          break;
+        case 'slower':
+          // Make KJV pane scroll slower (0.7x speed)
+          adjustedDelta = scrollDelta * 0.7;
+          break;
+        case 'exact':
+        default:
+          // Keep the same scroll delta (1x speed)
+          adjustedDelta = scrollDelta;
+          break;
+      }
+      
+      isManuallyScrolling.current = true;
+      
+      // Apply the adjusted delta to the KJV pane
+      kjvPane.scrollTop = Math.max(0, Math.min(
+        kjvPane.scrollHeight - kjvPane.clientHeight,
+        kjvPane.scrollTop + adjustedDelta
+      ));
+      
+      // Reset after a short delay to prevent infinite scroll loops
+      setTimeout(() => {
+        isManuallyScrolling.current = false;
+      }, 50);
+    };
+    
+    // Remove any existing event listener first
+    primaryPane.removeEventListener('scroll', handlePrimaryScroll);
+    
+    // Add scroll event listener to the primary pane
+    primaryPane.addEventListener('scroll', handlePrimaryScroll);
+    
+    // Return a cleanup function
+    return () => {
+      if (primaryPane) {
+        primaryPane.removeEventListener('scroll', handlePrimaryScroll);
+      }
+    };
+  };
+  
   // Setup scroll synchronization when content or mode changes
   useEffect(() => {
     if (!loading && selectedBook) {
@@ -518,7 +518,6 @@ const BibleApp = () => {
       // Setup the scroll sync
       return setupScrollSync();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBook, selectedChapter, selectedTranslation, scrollSyncMode, loading]);
   
   // Additional effect to ensure scroll sync is initialized after everything is loaded and rendered
@@ -540,7 +539,6 @@ const BibleApp = () => {
       
       return () => clearTimeout(timer);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
 
   // Handle scroll sync mode change

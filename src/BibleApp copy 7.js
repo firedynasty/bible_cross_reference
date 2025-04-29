@@ -31,7 +31,7 @@ const getBaseUrl = () => {
 };
 
 // Navigation Placeholder Component
-const NavigationPlaceholder = ({ book, chapter, getBookName, onNavigate, onSyncModeChange, syncMode }) => {
+const NavigationPlaceholder = ({ book, chapter, getBookName, onNavigate }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   
@@ -63,45 +63,10 @@ const NavigationPlaceholder = ({ book, chapter, getBookName, onNavigate, onSyncM
         <ChevronRight className="h-3 w-3 mx-1" />
         <span className="font-medium">Ch {chapter}</span>
         
-        {/* Scroll Sync Buttons */}
-        <button 
-          onClick={() => onSyncModeChange('exact')}
-          className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
-            syncMode === 'exact' 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-          }`}
-          title="Sync KJV scroll at the same speed as primary pane"
-        >
-          Exact
-        </button>
-        <button 
-          onClick={() => onSyncModeChange('faster')}
-          className={`ml-1 px-2 py-0.5 rounded focus:outline-none ${
-            syncMode === 'faster' 
-              ? 'bg-green-600 text-white' 
-              : 'bg-green-100 text-green-700 hover:bg-green-200'
-          }`}
-          title="Make KJV pane scroll faster than primary pane"
-        >
-          KJV faster
-        </button>
-        <button 
-          onClick={() => onSyncModeChange('slower')}
-          className={`ml-1 px-2 py-0.5 rounded focus:outline-none ${
-            syncMode === 'slower' 
-              ? 'bg-amber-600 text-white' 
-              : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-          }`}
-          title="Make KJV pane scroll slower than primary pane"
-        >
-          KJV slower
-        </button>
-        
         {/* History Button */}
         <button 
           onClick={() => setShowHistory(!showHistory)}
-          className="ml-2 p-0.5 rounded-full hover:bg-gray-200 focus:outline-none"
+          className="ml-1 p-0.5 rounded-full hover:bg-gray-200 focus:outline-none"
           title="Navigation history"
         >
           <History className="h-3 w-3" />
@@ -164,8 +129,6 @@ const BibleApp = () => {
   const chapterContentRef = useRef(null);
   const kjvContentRef = useRef(null);
   const isManuallyScrolling = useRef(false);
-  const scrollSyncInitialized = useRef(false);
-  const lastPrimaryScrollPos = useRef(0);
   
   // State to track primary reading vs cross-reference viewing
   const [isViewingCrossRef, setIsViewingCrossRef] = useState(false);
@@ -179,9 +142,6 @@ const BibleApp = () => {
   
   // Store KJV Bible data separately
   const [kjvBibleData, setKjvBibleData] = useState(null);
-  
-  // Add scroll sync mode state
-  const [scrollSyncMode, setScrollSyncMode] = useState('exact'); // 'exact', 'faster', or 'slower'
   
   // Available translations
   const translations = React.useMemo(() => [
@@ -240,83 +200,14 @@ const BibleApp = () => {
             bookAbbrev: primaryReading.book?.abbrev,
             chapter: primaryReading.chapter
           },
-          isViewingCrossRef,
-          scrollSyncMode
+          isViewingCrossRef
         };
         localStorage.setItem('bibleReaderState', JSON.stringify(stateToSave));
       } catch (e) {
         console.warn("Error saving state to localStorage:", e);
       }
     }
-  }, [selectedBook, selectedChapter, selectedTranslation, primaryReading, isViewingCrossRef, scrollSyncMode]);
-
-  // Helper function to setup scroll synchronization based on relative speeds
-  const setupScrollSync = () => {
-    const primaryPane = chapterContentRef.current;
-    const kjvPane = kjvContentRef.current;
-    
-    if (!primaryPane || !kjvPane) return false;
-    
-    const handlePrimaryScroll = () => {
-      if (isManuallyScrolling.current) return;
-      
-      // Calculate the amount scrolled
-      const currentScrollPos = primaryPane.scrollTop;
-      const scrollDelta = currentScrollPos - lastPrimaryScrollPos.current;
-      
-      // Update the last position for next time
-      lastPrimaryScrollPos.current = currentScrollPos;
-      
-      // If there's no change or just initialization, don't adjust KJV pane
-      if (scrollDelta === 0) return;
-      
-      // Apply scroll sync based on selected mode - different scroll speeds
-      let adjustedDelta = scrollDelta;
-      
-      switch (scrollSyncMode) {
-        case 'faster':
-          // Make KJV pane scroll faster (1.5x speed)
-          adjustedDelta = scrollDelta * 1.5;
-          break;
-        case 'slower':
-          // Make KJV pane scroll slower (0.5x speed)
-          // Use a smaller multiplier to make it clearly slower
-          adjustedDelta = scrollDelta * 0.5;
-          break;
-        case 'exact':
-        default:
-          // Keep the same scroll delta (1x speed)
-          adjustedDelta = scrollDelta;
-          break;
-      }
-      
-      isManuallyScrolling.current = true;
-      
-      // Apply the adjusted delta to the KJV pane
-      kjvPane.scrollTop = Math.max(0, Math.min(
-        kjvPane.scrollHeight - kjvPane.clientHeight,
-        kjvPane.scrollTop + adjustedDelta
-      ));
-      
-      // Reset after a short delay to prevent infinite scroll loops
-      setTimeout(() => {
-        isManuallyScrolling.current = false;
-      }, 50);
-    };
-    
-    // Remove any existing event listener first
-    primaryPane.removeEventListener('scroll', handlePrimaryScroll);
-    
-    // Add scroll event listener to the primary pane
-    primaryPane.addEventListener('scroll', handlePrimaryScroll);
-    
-    // Return a cleanup function
-    return () => {
-      if (primaryPane) {
-        primaryPane.removeEventListener('scroll', handlePrimaryScroll);
-      }
-    };
-  };
+  }, [selectedBook, selectedChapter, selectedTranslation, primaryReading, isViewingCrossRef]);
 
   // Load Bible data and cross-references on component mount
   useEffect(() => {
@@ -418,7 +309,6 @@ const BibleApp = () => {
         let savedBook = null;
         let savedChapter = 1;
         let savedTranslation = selectedTranslation;
-        let savedScrollSyncMode = scrollSyncMode;
         
         // Try to load saved state from localStorage
         try {
@@ -426,12 +316,6 @@ const BibleApp = () => {
           if (savedState) {
             const parsedState = JSON.parse(savedState);
             savedTranslation = parsedState.translation || selectedTranslation;
-            
-            // Restore scroll sync mode if available
-            if (parsedState.scrollSyncMode) {
-              savedScrollSyncMode = parsedState.scrollSyncMode;
-              setScrollSyncMode(savedScrollSyncMode);
-            }
             
             // Check if the saved translation is still available
             const isTranslationAvailable = translations.some(t => t.id === savedTranslation);
@@ -489,9 +373,6 @@ const BibleApp = () => {
         await loadCrossReferences(baseUrl, usingApiEndpoint);
         
         setLoading(false);
-        
-        // Reset the scroll sync initialized flag
-        scrollSyncInitialized.current = false;
       } catch (err) {
         console.error("Failed to load data:", err);
         // Fix error message if it's referring to the old Hebrew Bible file
@@ -509,54 +390,42 @@ const BibleApp = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTranslation]);
   
-  // Setup scroll synchronization when content or mode changes
+  // Setup scroll synchronization - primary pane controls KJV pane
   useEffect(() => {
-    if (!loading && selectedBook) {
-      // Ensure last scroll position is reset
-      lastPrimaryScrollPos.current = chapterContentRef.current?.scrollTop || 0;
-      
-      // Setup the scroll sync
-      return setupScrollSync();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBook, selectedChapter, selectedTranslation, scrollSyncMode, loading]);
-  
-  // Additional effect to ensure scroll sync is initialized after everything is loaded and rendered
-  useEffect(() => {
-    // Only run this once after loading is complete
-    if (!loading && !scrollSyncInitialized.current) {
-      // Use a short delay to ensure everything is properly rendered
-      const timer = setTimeout(() => {
-        // Reset last scroll position to current
-        if (chapterContentRef.current) {
-          lastPrimaryScrollPos.current = chapterContentRef.current.scrollTop;
-        }
-        
-        const cleanup = setupScrollSync();
-        scrollSyncInitialized.current = true;
-        console.log("Scroll sync initialized");
-        return cleanup;
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading]);
-
-  // Handle scroll sync mode change
-  const handleScrollSyncModeChange = (mode) => {
-    setScrollSyncMode(mode);
-    // Force re-initialization of scroll sync
-    scrollSyncInitialized.current = false;
+    const primaryPane = chapterContentRef.current;
+    const kjvPane = kjvContentRef.current;
     
-    // Reset the last scroll position to prevent jumps when changing modes
-    if (chapterContentRef.current) {
-      lastPrimaryScrollPos.current = chapterContentRef.current.scrollTop;
-    }
+    if (!primaryPane || !kjvPane) return;
     
-    // Re-initialize immediately
-    setupScrollSync();
-  };
+    const handlePrimaryScroll = () => {
+      if (isManuallyScrolling.current) return;
+      
+      // Calculate relative scroll position as a percentage
+      const primaryScrollPercentage = primaryPane.scrollTop / 
+        (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
+      
+      isManuallyScrolling.current = true;
+      
+      // Apply the same percentage to the KJV pane
+      kjvPane.scrollTop = primaryScrollPercentage * 
+        (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
+      
+      // Reset after a short delay to prevent infinite scroll loops
+      setTimeout(() => {
+        isManuallyScrolling.current = false;
+      }, 100);
+    };
+    
+    // Add scroll event listener to the primary pane
+    primaryPane.addEventListener('scroll', handlePrimaryScroll);
+    
+    // Clean up
+    return () => {
+      if (primaryPane) {
+        primaryPane.removeEventListener('scroll', handlePrimaryScroll);
+      }
+    };
+  }, [selectedBook, selectedChapter, selectedTranslation]); // Re-attach when content changes
 
   // Load cross references from external JSON file
   const loadCrossReferences = async (baseUrl, useApiEndpoint = false) => {
@@ -685,10 +554,6 @@ const BibleApp = () => {
       if (kjvContentRef.current) {
         kjvContentRef.current.scrollTop = 0;
       }
-      
-      // Reset scroll sync state
-      lastPrimaryScrollPos.current = 0;
-      scrollSyncInitialized.current = false;
     }
   };
   
@@ -713,10 +578,6 @@ const BibleApp = () => {
     if (kjvContentRef.current) {
       kjvContentRef.current.scrollTop = 0;
     }
-    
-    // Reset scroll sync state
-    lastPrimaryScrollPos.current = 0;
-    scrollSyncInitialized.current = false;
   };
   
   // Handle translation change
@@ -743,7 +604,6 @@ const BibleApp = () => {
         parsedState.bookAbbrev = currentBookAbbrev;
         parsedState.chapter = currentChapter;
         parsedState.translation = newTranslation;
-        parsedState.scrollSyncMode = scrollSyncMode;
         
         // Preserve primary reading state
         if (primaryReading.book) {
@@ -767,8 +627,7 @@ const BibleApp = () => {
             bookAbbrev: primaryReading.book?.abbrev,
             chapter: primaryReading.chapter
           },
-          isViewingCrossRef,
-          scrollSyncMode
+          isViewingCrossRef
         };
         localStorage.setItem('bibleReaderState', JSON.stringify(stateToSave));
       }
@@ -783,10 +642,6 @@ const BibleApp = () => {
     if (kjvContentRef.current) {
       kjvContentRef.current.scrollTop = 0;
     }
-    
-    // Reset scroll sync state
-    lastPrimaryScrollPos.current = 0;
-    scrollSyncInitialized.current = false;
   };
   
 
@@ -829,14 +684,7 @@ const BibleApp = () => {
             kjvVerseElement.classList.remove('bg-yellow-100');
           }, 3000); // Remove highlight after 3 seconds
         }
-        
-        // Reset scroll sync state
-        if (chapterContentRef.current) {
-          lastPrimaryScrollPos.current = chapterContentRef.current.scrollTop;
-        }
       }, 300);
-      
-      scrollSyncInitialized.current = false;
     }
   };
 
@@ -991,19 +839,6 @@ const BibleApp = () => {
     
     return abbrevMap[hebrewAbbrev] || hebrewAbbrev;
   };
-  
-  // Manually initialize scroll sync if not done yet
-  if (!scrollSyncInitialized.current && !loading && chapterContentRef.current && kjvContentRef.current) {
-    // Use a small timeout to ensure the DOM is fully rendered
-    setTimeout(() => {
-      // Initialize the last scroll position
-      lastPrimaryScrollPos.current = chapterContentRef.current.scrollTop;
-      
-      setupScrollSync();
-      scrollSyncInitialized.current = true;
-      console.log("Scroll sync initialized");
-    }, 100);
-  }
 
   // Main render
   return (
@@ -1080,8 +915,6 @@ const BibleApp = () => {
               book={primaryReading.book} 
               chapter={primaryReading.chapter}
               getBookName={getBookName}
-              syncMode={scrollSyncMode}
-              onSyncModeChange={handleScrollSyncModeChange}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
                   const bookObj = bibleData.find(b => b.abbrev === book);
@@ -1096,9 +929,6 @@ const BibleApp = () => {
                     if (chapterContentRef.current) {
                       chapterContentRef.current.scrollTop = 0;
                     }
-                    // Reset scroll sync initialization flag
-                    lastPrimaryScrollPos.current = 0;
-                    scrollSyncInitialized.current = false;
                   }
                 }
               }}
@@ -1115,9 +945,6 @@ const BibleApp = () => {
                     if (chapterContentRef.current) {
                       chapterContentRef.current.scrollTop = 0;
                     }
-                    // Reset scroll sync initialization flag
-                    lastPrimaryScrollPos.current = 0;
-                    scrollSyncInitialized.current = false;
                   }
                 }}
                 className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-xs"
@@ -1148,16 +975,8 @@ const BibleApp = () => {
                   <a href="https://cdpn.io/pen/debug/OPJBXKj" target="_blank" rel="noopener noreferrer" className="ml-3 text-blue-500 hover:text-blue-700">
                     <Link className="h-6 w-6" />
                   </a>
-                  <span className="ml-3 px-2 py-1 rounded text-xs" 
-                    style={{
-                      backgroundColor: scrollSyncMode === 'exact' ? '#dbeafe' : 
-                                      scrollSyncMode === 'faster' ? '#dcfce7' : '#fef3c7',
-                      color: scrollSyncMode === 'exact' ? '#1d4ed8' : 
-                             scrollSyncMode === 'faster' ? '#15803d' : '#b45309',
-                    }}
-                  >
-                    {scrollSyncMode === 'exact' ? 'Exact Sync' : 
-                     scrollSyncMode === 'faster' ? 'KJV Faster Sync' : 'KJV Slower Sync'}
+                  <span className="ml-3 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded" title="Scrolling this pane will sync the KJV pane">
+                    Scroll Sync ↓
                   </span>
                 </h2>
                 <div className="space-y-5">
@@ -1261,19 +1080,8 @@ const BibleApp = () => {
             <div ref={kjvContentRef} className="flex-1 p-8 overflow-y-auto bg-white">
               {selectedBook && selectedChapter > 0 && (
                 <div>
-                  <h2 className="text-3xl mr-2 font-semibold mb-5 flex items-center">
-                    {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter} <span className="text-gray-500 ml-2">(KJV)</span>
-                    <span className="ml-3 px-2 py-1 rounded text-xs" 
-                      style={{
-                        backgroundColor: scrollSyncMode === 'exact' ? '#dbeafe' : 
-                                        scrollSyncMode === 'faster' ? '#dcfce7' : '#fef3c7',
-                        color: scrollSyncMode === 'exact' ? '#1d4ed8' : 
-                               scrollSyncMode === 'faster' ? '#15803d' : '#b45309',
-                      }}
-                    >
-                      {scrollSyncMode === 'exact' ? 'Exact Sync' : 
-                       scrollSyncMode === 'faster' ? 'KJV Faster Sync' : 'KJV Slower Sync'}
-                    </span>
+                  <h2 className="text-3xl mr-2 font-semibold mb-5">
+                    {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter} <span className="text-gray-500">(KJV)</span>
                   </h2>
                   <div className="space-y-5">
                     {/* Modified to handle Hebrew-KJV mapping */}
