@@ -1,5 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Book, Link, ChevronRight, History, BookOpen } from 'lucide-react';
+import { Book, Link, ChevronRight, History, BookOpen, Save, Database } from 'lucide-react';
+
+// Import Firebase modules
+import { initializeApp } from 'firebase/app';
+import { getDatabase, ref, get, set, onValue } from 'firebase/database';
+
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyB0_4AT0jzRoSeV5jK4rN4Ah7BTKKTl78I",
+  authDomain: "linked-in-creators.firebaseapp.com",
+  databaseURL: "https://linked-in-creators-default-rtdb.firebaseio.com",
+  projectId: "linked-in-creators",
+  storageBucket: "linked-in-creators.appspot.com",
+  messagingSenderId: "282570385061",
+  appId: "1:282570385061:web:24fcf17921e99540984f4c",
+  measurementId: "G-5G6JG8VERG"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+
+// Firebase database name for Bible chapter positions
+const theVocabDatabaseName = 'BibleChapterDatabase';
 
 // Helper function to handle base URL for different environments
 const getBaseUrl = () => {
@@ -28,6 +51,127 @@ const getBaseUrl = () => {
   
   console.log('Using default empty base path');
   return '';
+};
+
+// Firebase Key Selector Component
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation }) => {
+  const [savedPositions, setSavedPositions] = useState([]);
+  const [selectedKey, setSelectedKey] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // Load saved positions from Firebase
+  useEffect(() => {
+    const loadFirebaseKeys = async () => {
+      try {
+        setLoading(true);
+        const bibleDbRef = ref(database, `${theVocabDatabaseName}/`);
+        
+        onValue(bibleDbRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            const positions = [];
+            
+            // Process the data
+            Object.keys(data).forEach(key => {
+              const position = data[key];
+              positions.push({
+                key,
+                value: position
+              });
+            });
+            
+            setSavedPositions(positions);
+          } else {
+            console.log('No saved positions found');
+            setSavedPositions([]);
+          }
+          setLoading(false);
+        });
+      } catch (error) {
+        console.error('Error loading Firebase keys:', error);
+        setLoading(false);
+      }
+    };
+
+    loadFirebaseKeys();
+  }, []);
+
+  // Format saved position for display
+  const formatPositionDisplay = (position) => {
+    if (!position) return 'Empty position';
+    
+    try {
+      const data = typeof position === 'string' ? JSON.parse(position) : position;
+      
+      if (!data.bookAbbrev) return 'Invalid position data';
+      
+      return `${data.bookAbbrev || 'Unknown'} ${data.chapter || '1'} (${data.translation?.split('_')[0] || 'en'})`;
+    } catch (error) {
+      console.error('Error parsing position:', error);
+      return 'Invalid position format';
+    }
+  };
+
+  // Handle saving current position to selected key
+  const handleSave = () => {
+    if (!selectedKey) {
+      alert('Please select a position key first!');
+      return;
+    }
+
+    // Create position data object
+    const positionData = JSON.stringify({
+      bookAbbrev: currentBook?.abbrev,
+      chapter: currentChapter,
+      translation: currentTranslation,
+      timestamp: Date.now()
+    });
+
+    onSave(selectedKey, positionData);
+  };
+
+  // Get key number from key string (e.g., "1-position" returns "1")
+  const getKeyNumber = (key) => {
+    const parts = key.split('-');
+    return parts[0];
+  };
+
+  return (
+    <div className="flex items-center space-x-2">
+      <select
+        className="border border-gray-300 rounded p-1 text-sm bg-white"
+        value={selectedKey}
+        onChange={(e) => setSelectedKey(e.target.value)}
+      >
+        <option value="">Select position...</option>
+        {savedPositions.map((position) => (
+          <option key={position.key} value={position.key}>
+            {getKeyNumber(position.key)}-{formatPositionDisplay(position.value)}
+          </option>
+        ))}
+      </select>
+      
+      <button
+        onClick={() => onSelect(selectedKey)}
+        disabled={!selectedKey || loading}
+        className="flex items-center px-2 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300"
+        title="Load saved position"
+      >
+        <Database className="h-3 w-3 mr-1" />
+        Load
+      </button>
+      
+      <button
+        onClick={handleSave}
+        disabled={loading}
+        className="flex items-center px-2 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 transition-colors disabled:bg-gray-300"
+        title="Save current position"
+      >
+        <Save className="h-3 w-3 mr-1" />
+        Save
+      </button>
+    </div>
+  );
 };
 
 // Navigation Placeholder Component
@@ -201,6 +345,9 @@ const BibleApp = () => {
   
   // Store previous translation for keyboard shortcuts
   const [previousTranslation, setPreviousTranslation] = useState('en_kjv.json');
+
+  // Firebase loading status
+  const [firebaseLoading, setFirebaseLoading] = useState(false);
   
   // Update current book abbrev when book changes
   useEffect(() => {
@@ -249,6 +396,39 @@ const BibleApp = () => {
       }
     }
   }, [selectedBook, selectedChapter, selectedTranslation, primaryReading, isViewingCrossRef, scrollSyncMode]);
+
+  // Initialize Firebase database keys if they don't exist
+  useEffect(() => {
+    const initializeFirebaseKeys = async () => {
+      try {
+        // Define the keys we want to ensure exist
+        const keyNames = ['1', '2', '3'];
+        
+        // Check and create keys if they don't exist
+        for (const key of keyNames) {
+          const keyRef = ref(database, `${theVocabDatabaseName}/${key}-position`);
+          const snapshot = await get(keyRef);
+          
+          if (!snapshot.exists()) {
+            // If key doesn't exist, initialize with empty object
+            const initialData = JSON.stringify({
+              bookAbbrev: 'gn',
+              chapter: 1,
+              translation: 'en_kjv.json',
+              timestamp: Date.now()
+            });
+            
+            await set(keyRef, initialData);
+            console.log(`Initialized Firebase key: ${key}-position`);
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing Firebase keys:', error);
+      }
+    };
+
+    initializeFirebaseKeys();
+  }, []);
 
   // Helper function to setup scroll synchronization based on relative speeds
   const setupScrollSync = () => {
@@ -788,7 +968,6 @@ const BibleApp = () => {
     lastPrimaryScrollPos.current = 0;
     scrollSyncInitialized.current = false;
   };
-  
 
   // Handle click on a verse to navigate to a cross-reference
   const handleCrossRefNavigate = (ref) => {
@@ -837,6 +1016,128 @@ const BibleApp = () => {
       }, 300);
       
       scrollSyncInitialized.current = false;
+    }
+  };
+
+  // Handle selecting a position from Firebase
+  const handleFirebasePositionSelect = async (key) => {
+    if (!key) {
+      alert('Please select a position first!');
+      return;
+    }
+
+    try {
+      setFirebaseLoading(true);
+      
+      // Get the reference to the specific position
+      const positionRef = ref(database, `${theVocabDatabaseName}/${key}`);
+      const snapshot = await get(positionRef);
+      
+      if (snapshot.exists()) {
+        // Parse the position data
+        const positionData = JSON.parse(snapshot.val());
+        
+        if (positionData && positionData.bookAbbrev) {
+          // Find the book in Bible data
+          const book = bibleData.find(b => b.abbrev === positionData.bookAbbrev);
+          
+          if (book) {
+            // Check if we need to change translation
+            if (positionData.translation && positionData.translation !== selectedTranslation) {
+              // Save current position for potential update
+              const currentBookAbbrev = selectedBook?.abbrev;
+              const currentChapter = selectedChapter;
+              
+              // Store the current translation as previous
+              setPreviousTranslation(selectedTranslation);
+              
+              // Update translation
+              setSelectedTranslation(positionData.translation);
+              
+              // Also update the stored state
+              try {
+                const stateToSave = {
+                  bookAbbrev: positionData.bookAbbrev,
+                  chapter: positionData.chapter || 1,
+                  translation: positionData.translation,
+                  primaryReading: {
+                    bookAbbrev: positionData.bookAbbrev,
+                    chapter: positionData.chapter || 1
+                  },
+                  isViewingCrossRef: false,
+                  scrollSyncMode
+                };
+                localStorage.setItem('bibleReaderState', JSON.stringify(stateToSave));
+              } catch (e) {
+                console.warn("Error updating state in localStorage:", e);
+              }
+              
+              // The translation change will trigger a reload, which will handle position restoration
+            } else {
+              // If translation is the same, just navigate directly
+              setSelectedBook(book);
+              setSelectedChapter(positionData.chapter || 1);
+              setPrimaryReading({
+                book: book,
+                chapter: positionData.chapter || 1
+              });
+              setIsViewingCrossRef(false);
+              
+              // Scroll both panels to top
+              if (chapterContentRef.current) {
+                chapterContentRef.current.scrollTop = 0;
+              }
+              if (kjvContentRef.current) {
+                kjvContentRef.current.scrollTop = 0;
+              }
+              
+              // Reset scroll sync state
+              lastPrimaryScrollPos.current = 0;
+              scrollSyncInitialized.current = false;
+            }
+            
+            // Show success message
+            alert(`Position loaded: ${getBookName(positionData.bookAbbrev)} ${positionData.chapter || 1}`);
+          } else {
+            alert(`Book '${positionData.bookAbbrev}' not found in the current Bible data.`);
+          }
+        } else {
+          alert('Invalid position data format.');
+        }
+      } else {
+        alert('No position data found for the selected key.');
+      }
+      
+      setFirebaseLoading(false);
+    } catch (error) {
+      console.error('Error loading position from Firebase:', error);
+      alert(`Error loading position: ${error.message}`);
+      setFirebaseLoading(false);
+    }
+  };
+
+  // Handle saving a position to Firebase
+  const handleFirebasePositionSave = async (key, positionData) => {
+    if (!key) {
+      alert('Please select a position first!');
+      return;
+    }
+
+    try {
+      setFirebaseLoading(true);
+      
+      // Get the reference to the specific position
+      const positionRef = ref(database, `${theVocabDatabaseName}/${key}`);
+      
+      // Save the position data
+      await set(positionRef, positionData);
+      
+      alert(`Position saved to key ${key.split('-')[0]}!`);
+      setFirebaseLoading(false);
+    } catch (error) {
+      console.error('Error saving position to Firebase:', error);
+      alert(`Error saving position: ${error.message}`);
+      setFirebaseLoading(false);
     }
   };
 
@@ -1072,6 +1373,17 @@ const BibleApp = () => {
                 ))}
               </select>
             </div>
+          </div>
+          
+          {/* Firebase Position Controls */}
+          <div className="flex items-center mr-2">
+            <FirebaseKeySelector 
+              onSelect={handleFirebasePositionSelect} 
+              onSave={handleFirebasePositionSave}
+              currentBook={selectedBook}
+              currentChapter={selectedChapter}
+              currentTranslation={selectedTranslation}
+            />
           </div>
           
           {/* Navigation History / Breadcrumb */}

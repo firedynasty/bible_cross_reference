@@ -1,0 +1,1902 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Viewer with Presets and Clipboard-to-Speech</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 1rem;
+        }
+        .display-box {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 0.25rem;
+            background-color: #f8f9fa;
+        }
+        .display-text-main {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        .display-text-sub {
+            font-size: 1rem;
+            color: #666;
+            transition: opacity 0.2s;
+        }
+        .button-group {
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 0.5rem 1rem;
+            color: white;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+        }
+        .nav-button {
+            background-color: #4B5563;
+        }
+        .action-button {
+            background-color: #6B7280;
+        }
+        .import-button {
+            background-color: #3B82F6;
+        }
+        select {
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 0.25rem;
+        }
+        textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        td {
+            border: 1px solid #ccc;
+            padding: 0.5rem;
+            cursor: pointer;
+        }
+        .selected-row {
+            background-color: #fef08a;
+        }
+        .hidden {
+            display: none;
+        }
+        .file-info {
+            margin-left: 1rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .display-options {
+            padding: 0.5rem;
+            margin-right: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 0.25rem;
+            background-color: #fff;
+        }
+        #presetSelector, #jsonPresetSelector {
+            padding: 0.5rem;
+            margin-right: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 0.25rem;
+            background-color: #fff;
+            min-width: 200px;
+        }
+        .selector-label {
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        /* Highlight style for paste & speak button */
+        #clipboardSpeechButton {
+            background-color: #8B5CF6;
+            position: relative;
+        }
+        #clipboardSpeechButton:hover {
+            background-color: #7C3AED;
+        }
+        
+        /* Flashcard dialog styles */
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .dialog-container {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 500px;
+        }
+        
+        .dialog-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        
+        .dialog-input {
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 0.25rem;
+        }
+        
+        .dialog-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+        
+        .dialog-button {
+            padding: 0.5rem 1rem;
+            color: white;
+            background-color: #3B82F6;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+        }
+        
+        .dialog-button.cancel {
+            background-color: #6B7280;
+        }
+    </style>
+</head>
+<body>
+    <h1>CSV Viewer with Built-in Presets</h1>
+    
+    <div class="display-box" id="displayBox" style="cursor: pointer;">
+        <div class="display-text-main" id="displayTextMain"></div>
+        <div class="display-text-sub" id="displayTextSub"></div>
+    </div>
+
+    <div class="button-group">
+        <button class="nav-button" id="leftButton">← Left</button>
+        <button class="nav-button" id="rightButton">Right →</button>
+        <!-- Our new button will be inserted here by JavaScript -->
+
+        <select id="displayOptions" class="display-options">
+            <option value="show">Show Bottom</option>
+            <option value="hide">Hide Bottom</option>
+            <option value="click" selected>Show on Click</option>
+        </select>
+
+        <button class="action-button" id="addFlashcardButton" style="background-color: #8B5CF6;">Add Flashcard (Esc)</button>
+        <button class="action-button" id="switchToCsvButton">CSV Table</button>
+        <button class="action-button" id="switchToFlashcardButton" style="background-color: #3B82F6;">Flashcard Table</button>
+        <button class="action-button" id="reverseButton">Reverse Columns</button>
+        <button class="action-button" id="resetOnesButton">Back to 1</button>
+        <button class="action-button" id="copySecondColumnButton">Copy Second Column</button>
+    </div>
+    
+    <div class="button-group">
+        <select id="firebaseKeyDropdown">
+            <option value="" selected>Select Firebase Key</option>
+        </select>
+        <input type="text" id="newKeyInput" placeholder="New key name" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 0.25rem; margin-right: 0.5rem;">
+        <button class="import-button" id="loadFirebaseKeyButton">Load Key Data</button>
+        <button class="import-button" id="saveToFirebaseKeyButton">Save to Selected Key</button>
+        <button class="import-button" id="refreshKeysButton">Refresh Keys</button>
+    </div>
+
+    <div class="button-group">
+        <div>
+            <span class="selector-label">Built-in Sets:</span>
+            <select id="jsonPresetSelector">
+                <option value="">Select a preset dataset...</option>
+            </select>
+        </div>
+        
+        <button class="import-button" id="prevChunkButton">◀ Prev 30</button>
+        <button class="import-button" id="nextChunkButton">Next 30 ▶</button>
+        <button class="import-button" id="loadJsonPresetButton">Load Selected Dataset</button>
+        <button class="import-button" id="nextPresetButton">Next Dataset</button>
+        <button class="action-button" id="splitDashButton">Split Second Column by "-"</button>
+    </div>
+
+    <div class="button-group">
+        <button class="import-button" id="fromClipboardButton">From Clipboard(CSV.txt)</button>
+        <button class="import-button" id="textButton">Pasted CSV</button>
+        <button class="import-button" id="jsonTextButton">Pasted JSON</button>
+        <button class="import-button" id="clearTextareaButton" style="background-color: #8B5CF6;">Clear Textarea</button>
+        <button class="import-button" id="mdTextButton" style="background-color: #8B5CF6;">From .MD File</button>
+        
+        <input type="file" id="csvFileInput" accept=".csv" class="hidden">
+        <button class="import-button" id="importButton">Import CSV</button>
+        
+        <input type="file" id="jsonFileInput" accept=".json" class="hidden">
+        <button class="import-button" id="importJsonButton">Import JSON</button>
+        
+        <span id="fileName" class="file-info"></span>
+        <button class="import-button" id="exportButtonToTextArea">Export TextArea</button>
+        <button class="import-button" id="exportButton">Export .CSV</button>
+        
+        <span style="margin-left: 10px; font-weight: bold;">for AI Prompt:</span>
+        <button class="import-button" id="extractVocabButton" style="background-color: #10B981;">Extract Vocab</button>
+        <button class="import-button" id="createDialogueButton" style="background-color: #3B82F6;">Create Dialogue</button>
+        <button class="import-button" id="analyzeGrammarButton" style="background-color: #8B5CF6;">Analyze Grammar</button>
+
+        <select id="languageSelect">
+            <option value="zh-HK" selected>Cantonese</option>
+            <option value="en-US">English</option>
+            <option value="fr-FR">French</option>
+            <option value="es-ES">Spanish</option>
+            <option value="zh-CN">Mandarin</option>
+            <option value="ko-KR">Korean</option>
+        </select>
+        <span style="font-size: 0.8em; margin-left: 10px; color: #666;">(JSON Import now loads directly to CSV)</span>
+
+        <select id="rateSelect">
+            <option value="1">1x</option>
+            <option value="1.5">1.5x</option>
+            <option value="0.7" selected>0.7x</option>
+        </select><a href="https://codepen.io/Groundedelectron/pen/OPJBXKj">Pen Link</a>
+    </div>
+
+    <textarea id="csvTextArea" rows="6" placeholder="Enter CSV data here..."></textarea>
+    
+    
+    <table id="csvTable">
+        <tbody></tbody>
+    </table>
+    
+    <table id="flashcardTable">
+        <tbody></tbody>
+    </table>
+    
+    <div class="button-group">
+        <button class="import-button" id="clearFlashcardsButton" style="background-color: #EF4444;">Clear All Flashcards</button>
+        <button class="import-button" id="removeLastFlashcardButton" style="background-color: #F97316;">Remove Last Flashcard</button>
+        <span style="color: #666; font-size: 0.9rem;">(Manage flashcards in the Firebase database)</span>
+    </div>
+
+    <script type="module">
+    // Import Firebase modules
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getDatabase, ref, onValue, set, get } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+    
+    // Language keyboard shortcuts
+    const languageShortcuts = {
+        "[": "zh-HK", // Cantonese
+        "]": "zh-CN"  // Mandarin
+    };
+
+    // Initialize Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyB0_4AT0jzRoSeV5jK4rN4Ah7BTKKTl78I",
+      authDomain: "linked-in-creators.firebaseapp.com",
+      databaseURL: "https://linked-in-creators-default-rtdb.firebaseio.com",
+      projectId: "linked-in-creators",
+      storageBucket: "linked-in-creators.appspot.com",
+      messagingSenderId: "282570385061",
+      appId: "1:282570385061:web:24fcf17921e99540984f4c",
+      measurementId: "G-5G6JG8VERG"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    
+    //the vocabDatabase to save to
+    const theVocabDatabaseName = 'vocabChinese';
+    
+    //the flashcardsDatabase to save to
+    const flashcardsDatabaseName = 'flashcardsChinese';
+    
+    //Pre-defined JSON datasets
+    // const json_file_variable = {
+    //   "1": {
+    //     "title": "Chinese Vocab1",
+    //     "content": "Chinese,English\n姓,surname\n李,Li (surname)\n请问,May I ask\n贵姓,your respected surname\n你好,Hello (informal)\n王,Wang (surname)\n先生,Mr./sir\n叫,to be called/named\n什么,what\n我叫,My name is\n王贵,Wang Gui (name)\n小姐,Miss/Ms.\n李小朋,Li Xiaopeng (name)\n高兴,happy/pleased\n认识,to know/meet"
+    //   },
+    //   "2": {
+    //     "title": "Table Export 2",
+    //     "content": "2,今天,jīntiān today\n2,手机,shǒujī phone\n2,学生,xuéshēng student\n2,数字,shùzì number\n2,医生,yīshēng doctor\n2,号码,hao ma,number\n2,北京,Běijīng Beijing\n2,伦敦,Lúndūn London"
+    //   }
+    // }
+
+    // No additional styles needed
+
+    // No imported presets feature
+
+
+    
+
+
+   const json_file_variable = {
+  "1": {
+    "title": "Elementary Chinese (Page 01)",
+    "content": "Elementary Chinese I"
+  }}
+
+
+    class CSVViewer {
+        constructor() {
+            this.tableData = [];
+            this.flashcardData = [];
+            this.currentIndex = 0;
+            this.displayTextMain = document.getElementById('displayTextMain');
+            this.displayTextSub = document.getElementById('displayTextSub');
+            this.csvTable = document.getElementById('csvTable').getElementsByTagName('tbody')[0];
+            this.flashcardTable = document.getElementById('flashcardTable').getElementsByTagName('tbody')[0];
+            this.displayMode = 'click'; // Default to 'click' mode to match the selected dropdown option
+            this.fileName = '';
+            this.activeTable = 'flashcardTable'; // Always use flashcardTable as the active table
+            
+            // Set initial table visibility - both visible by default
+            document.getElementById('csvTable').style.display = 'table';
+            document.getElementById('flashcardTable').style.display = 'table';
+            
+            // Highlight flashcardTable as active
+            document.getElementById('csvTable').style.border = '1px solid #ccc';
+            document.getElementById('flashcardTable').style.border = '2px solid #3B82F6';
+            
+            // For pagination
+            this.allPresets = [];
+            this.currentChunkIndex = 0;
+            this.itemsPerChunk = 30;
+            
+            this.initializeBuiltInPresets();
+            this.initializeEventListeners();
+            this.loadFlashcardsFromFirebase(); // Load flashcards when app starts
+            this.loadFirebaseKeys(); // Load Firebase keys for the dropdown
+        }
+
+        initializeBuiltInPresets() {
+            const selector = document.getElementById('jsonPresetSelector');
+            
+            // Sort the presets by key numerically instead of alphabetically
+            this.allPresets = Object.entries(json_file_variable)
+                .sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+            
+            // Display first chunk only
+            this.displayPresetChunk(0);
+        }
+        
+        displayPresetChunk(chunkIndex) {
+            // Clear current options except for the first placeholder
+            const selector = document.getElementById('jsonPresetSelector');
+            while (selector.options.length > 0) {
+                selector.remove(0);
+            }
+            
+            // Calculate start and end indices
+            const startIndex = chunkIndex * this.itemsPerChunk;
+            const endIndex = Math.min(startIndex + this.itemsPerChunk, this.allPresets.length);
+            
+            // Update current chunk index
+            this.currentChunkIndex = chunkIndex;
+            
+            // Add a placeholder at the beginning
+            const placeholderOption = document.createElement('option');
+            placeholderOption.value = '';
+            placeholderOption.textContent = `Presets ${startIndex+1}-${endIndex} of ${this.allPresets.length}`;
+            selector.appendChild(placeholderOption);
+            
+            // Add options from the current chunk
+            for (let i = startIndex; i < endIndex; i++) {
+                const [key, data] = this.allPresets[i];
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = data.title;
+                selector.appendChild(option);
+            }
+        }
+
+        // Method removed
+
+        copySecondColumn() {
+            if (this.tableData.length === 0) {
+                alert('No data to copy!');
+                return;
+            }
+            
+            // Extract the second column data (index 1)
+            const secondColumnData = this.tableData.map(row => row.length > 1 ? row[1] : '');
+            
+            // Join with newlines to create a copyable text
+            const copyText = secondColumnData.join('\n');
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(copyText)
+                .then(() => {
+                    alert('Second column copied to clipboard!');
+                })
+                .catch(err => {
+                    console.error('Failed to copy: ', err);
+                    
+                    // Fallback method: create a temporary textarea
+                    const textArea = document.createElement('textarea');
+                    textArea.value = copyText;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    alert('Second column copied to clipboard!');
+                });
+        }
+
+        handleExportToTextArea() {
+            if (this.tableData.length === 0) {
+                alert('No data to export to textarea!');
+                return;
+            }
+            
+            // Convert the table data to CSV format with comma delimiter
+            const csvContent = this.tableData.map(row => row.join(',')).join('\n');
+            
+            // Set the content to the textarea
+            const textArea = document.getElementById('csvTextArea');
+            textArea.value = csvContent;
+            
+            // Scroll to the textarea for visibility
+            textArea.scrollIntoView({ behavior: 'smooth' });
+            
+            // Optional: Select the text in the textarea
+            textArea.select();
+            
+            // Provide feedback to the user
+            alert('Table data exported to the textarea!');
+        }
+
+        // Load available Firebase keys from vocabChinese
+        loadFirebaseKeys() {
+            const vocabRef = ref(database, `${theVocabDatabaseName}/`);
+            const dropdown = document.getElementById('firebaseKeyDropdown');
+            
+            // Clear existing options except the first placeholder
+            while (dropdown.options.length > 1) {
+                dropdown.remove(1);
+            }
+            
+            get(vocabRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    
+                    // Populate dropdown with keys
+                    Object.keys(data).forEach(key => {
+                        const option = document.createElement('option');
+                        option.value = key;
+                        option.textContent = key;
+                        dropdown.appendChild(option);
+                    });
+                    
+                    console.log('Loaded Firebase keys successfully');
+                } else {
+                    console.log('No data available in vocabChinese');
+                }
+            }).catch((error) => {
+                console.error('Error loading Firebase keys:', error);
+            });
+        }
+        
+        // Load data from a specific Firebase key in vocabChinese
+        loadFromFirebaseKey(key) {
+            if (!key) {
+                alert('Please select a Firebase key first!');
+                return;
+            }
+            
+            const keyRef = ref(database, `${theVocabDatabaseName}/${key}`);
+            
+            get(keyRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const content = snapshot.val();
+                    
+                    // Process the content
+                    if (content) {
+                        // Parse the content into flashcard format
+                        const lines = content.split('\n');
+                        this.flashcardData = [];
+                        
+                        lines.forEach(line => {
+                            // Split by semicolon for name-value pairs
+                            const parts = line.split(';');
+                            if (parts.length >= 2) {
+                                const word = parts[0].trim();
+                                const meaning = parts[1].trim();
+                                
+                                if (word && meaning) {
+                                    this.flashcardData.push(['1', word, meaning]);
+                                }
+                            }
+                        });
+                        
+                        // Switch to flashcard table
+                        this.switchActiveTable('flashcardTable');
+                        
+                        if (this.flashcardData.length > 0) {
+                            this.currentIndex = 0;
+                            this.updateDisplayText(
+                                this.flashcardData[0][1] || '',
+                                this.flashcardData[0][2] || ''
+                            );
+                        }
+                        
+                        alert(`Loaded ${this.flashcardData.length} flashcards from key: ${key}`);
+                    } else {
+                        alert('No content found in the selected key!');
+                    }
+                } else {
+                    alert('No data available for the selected key!');
+                }
+            }).catch((error) => {
+                console.error('Error loading from Firebase key:', error);
+                alert('Failed to load from Firebase: ' + error.message);
+            });
+        }
+        
+        // Save to a specific Firebase key in vocabChinese
+        saveToFirebaseKey(key) {
+            // Check for new key input first
+            const newKeyInput = document.getElementById('newKeyInput');
+            const newKey = newKeyInput.value.trim();
+            
+            // If new key input has value, always use it (overriding dropdown)
+            if (newKey) {
+                key = newKey;
+            } else if (!key) {
+                alert('Please select a Firebase key or enter a new key name!');
+                return;
+            }
+            
+            // Check if flashcard table has data
+            if (this.flashcardData.length === 0) {
+                alert('No flashcard data to save!');
+                return;
+            }
+            
+            // Convert flashcard data to string format with semicolons
+            const contentLines = this.flashcardData.map(row => {
+                if (row.length >= 3) {
+                    return `${row[1]}; ${row[2]}`;
+                }
+                return '';
+            }).filter(line => line !== '');
+            
+            const content = contentLines.join('\n');
+            
+            // Save to Firebase
+            set(ref(database, `${theVocabDatabaseName}/${key}`), content)
+                .then(() => {
+                    console.log('Flashcards saved to key successfully!');
+                    alert(`Saved ${contentLines.length} flashcards to key: ${key}`);
+                    
+                    // Clear the new key input field after successful save
+                    if (newKey) {
+                        newKeyInput.value = '';
+                        // Refresh the keys to include the newly added key
+                        this.loadFirebaseKeys();
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error saving to Firebase key:', error);
+                    alert('Failed to save to Firebase: ' + error.message);
+                });
+        }
+        
+        initializeEventListeners() {
+            // Firebase buttons
+            document.getElementById('loadFirebaseKeyButton').addEventListener('click', () => {
+                const dropdown = document.getElementById('firebaseKeyDropdown');
+                const selectedKey = dropdown.value;
+                this.loadFromFirebaseKey(selectedKey);
+            });
+            
+            document.getElementById('saveToFirebaseKeyButton').addEventListener('click', () => {
+                const dropdown = document.getElementById('firebaseKeyDropdown');
+                const selectedKey = dropdown.value;
+                this.saveToFirebaseKey(selectedKey);
+            });
+            
+            document.getElementById('refreshKeysButton').addEventListener('click', () => {
+                this.loadFirebaseKeys();
+            });
+            
+            // Clear flashcards button
+            document.getElementById('clearFlashcardsButton').addEventListener('click', () => {
+                this.clearAllFlashcards();
+            });
+            
+            // Remove last flashcard button
+            document.getElementById('removeLastFlashcardButton').addEventListener('click', () => {
+                this.removeLastFlashcard();
+            });
+            
+            // Table highlighting (without switching functionality)
+            document.getElementById('switchToCsvButton').addEventListener('click', () => {
+                // Just update border styles without changing active table
+                document.getElementById('csvTable').style.border = '2px solid #3B82F6';
+                document.getElementById('flashcardTable').style.border = '1px solid #ccc';
+            });
+            
+            document.getElementById('switchToFlashcardButton').addEventListener('click', () => {
+                // Just update border styles without changing active table
+                document.getElementById('csvTable').style.border = '1px solid #ccc';
+                document.getElementById('flashcardTable').style.border = '2px solid #3B82F6';
+            });
+            
+            // Chunk navigation buttons
+            document.getElementById('prevChunkButton').addEventListener('click', () => {
+                if (this.currentChunkIndex > 0) {
+                    this.displayPresetChunk(this.currentChunkIndex - 1);
+                } else {
+                    alert('Already at the first chunk of datasets!');
+                }
+            });
+            
+            document.getElementById('nextChunkButton').addEventListener('click', () => {
+                const totalChunks = Math.ceil(this.allPresets.length / this.itemsPerChunk);
+                if (this.currentChunkIndex < totalChunks - 1) {
+                    this.displayPresetChunk(this.currentChunkIndex + 1);
+                } else {
+                    alert('Already at the last chunk of datasets!');
+                }
+            });
+            
+            // JSON preset loading
+            document.getElementById('loadJsonPresetButton').addEventListener('click', () => {
+                const selector = document.getElementById('jsonPresetSelector');
+                const selectedKey = selector.value;
+                
+                if (selectedKey && json_file_variable[selectedKey]) {
+                    // Set the textarea content
+                    const textArea = document.getElementById('csvTextArea');
+                    textArea.value = json_file_variable[selectedKey].content;
+                    
+                    // Process the CSV content
+                    this.handleTextSubmit();
+                    
+                    // Show success message
+                    alert(`Loaded dataset: ${json_file_variable[selectedKey].title}`);
+                } else {
+                    alert('Please select a dataset first!');
+                }
+            });
+            
+            // Next dataset button
+            document.getElementById('nextPresetButton').addEventListener('click', () => {
+                const selector = document.getElementById('jsonPresetSelector');
+                const options = selector.options;
+                
+                if (options.length <= 1) {
+                    alert('No datasets available!');
+                    return;
+                }
+                
+                // Find current selection index
+                let currentIndex = selector.selectedIndex;
+                
+                // Move to next dataset (skip the first placeholder option)
+                currentIndex = (currentIndex >= options.length - 1 || currentIndex < 1) ? 1 : currentIndex + 1;
+                
+                // Set new selection
+                selector.selectedIndex = currentIndex;
+                
+                // Trigger click on load button to load the selected dataset
+                document.getElementById('loadJsonPresetButton').click();
+            });
+
+            // Navigation buttons
+            document.getElementById('leftButton').addEventListener('click', () => this.handleNavigation('left'));
+            document.getElementById('rightButton').addEventListener('click', () => this.handleNavigation('right'));
+            document.getElementById('copySecondColumnButton').addEventListener('click', () => this.copySecondColumn());
+            
+            // Display options dropdown
+            document.getElementById('displayOptions').addEventListener('change', (e) => {
+                this.displayMode = e.target.value;
+                this.updateDisplayBox();
+            });
+
+            // Column operations
+            document.getElementById('reverseButton').addEventListener('click', () => this.handleReverseColumns());
+            document.getElementById('resetOnesButton').addEventListener('click', () => this.handleResetOnes());
+            document.getElementById('addFlashcardButton').addEventListener('click', () => this.showAddFlashcardDialog());
+
+            // File operations
+            document.getElementById('textButton').addEventListener('click', () => this.handleTextSubmit());
+            document.getElementById('mdTextButton').addEventListener('click', () => this.handleMDText());
+            document.getElementById('clearTextareaButton').addEventListener('click', () => {
+                document.getElementById('csvTextArea').value = '';
+                alert('Textarea cleared!');
+            });
+            document.getElementById('importButton').addEventListener('click', () => document.getElementById('csvFileInput').click());
+            document.getElementById('exportButton').addEventListener('click', () => this.handleExport());
+            document.getElementById('fromClipboardButton').addEventListener('click', () => this.handleClipboardPaste());
+            document.getElementById('exportButtonToTextArea').addEventListener('click', () => this.handleExportToTextArea());
+
+            // JSON operations
+            document.getElementById('jsonTextButton').addEventListener('click', () => {
+                const textareaContent = document.getElementById('csvTextArea').value.trim();
+                
+                if (!textareaContent) {
+                    alert('Please paste JSON data into the textarea first!');
+                    return;
+                }
+                
+                try {
+                    // Try to parse the JSON content
+                    const jsonData = JSON.parse(textareaContent);
+                    
+                    // Pass the parsed JSON to the existing handler
+                    this.handleJsonImport(jsonData);
+                    
+                } catch (error) {
+                    console.error('Failed to parse JSON:', error);
+                    alert('Invalid JSON format. Please check your input and try again.');
+                }
+            });
+
+            document.getElementById('importJsonButton').addEventListener('click', () => document.getElementById('jsonFileInput').click());
+            
+            // File input handlers
+            document.getElementById('csvFileInput').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    this.fileName = file.name;
+                    document.getElementById('fileName').textContent = this.fileName;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const text = e.target.result;
+                        // Display the raw CSV content in the textarea
+                        document.getElementById('csvTextArea').value = text;
+                        // Ask user about adding ones
+                        const addOnes = confirm('Add 1s to the first column?');
+                        this.convertCSVToTable(text, addOnes);
+                    };
+                    reader.readAsText(file);
+                }
+            });
+
+            document.getElementById('jsonFileInput').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    this.fileName = file.name;
+                    document.getElementById('fileName').textContent = this.fileName;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const jsonData = JSON.parse(e.target.result);
+                            this.handleJsonImport(jsonData);
+                        } catch (error) {
+                            console.error('Failed to parse JSON:', error);
+                            alert('Invalid JSON file. Please check the format.');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            });
+
+            // Keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                    e.preventDefault(); // Prevent default scrolling
+                    this.handleNavigation(e.key === 'ArrowLeft' ? 'left' : 'right');
+                } else if (e.key === 'ArrowUp' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+                    // Prevent default scrolling
+                    e.preventDefault();
+                    
+                    // Get the text from the display box
+                    const mainText = this.displayTextMain.textContent;
+                    if (mainText) {
+                        // Use the same speakText method used when clicking the display box
+                        this.speakText(mainText, 1);
+                    }
+                } else if (e.key === 'Escape' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+                    // Make sure flashcard table is active when adding with Escape key
+                    if (this.activeTable !== 'flashcardTable') {
+                        this.switchActiveTable('flashcardTable');
+                    }
+                    
+                    // Show add flashcard dialog when Escape key is pressed
+                    this.showAddFlashcardDialog();
+                    
+                    // Save to Firebase after adding
+                    this.saveFlashcardsToFirebase();
+                } else if (languageShortcuts[e.key] && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+                    // Change language based on keyboard shortcut
+                    const languageSelect = document.getElementById('languageSelect');
+                    languageSelect.value = languageShortcuts[e.key];
+                    
+            
+                }
+            });
+
+            // Display box click
+            document.getElementById('displayBox').addEventListener('click', () => {
+                // Get the main text content
+                const mainText = this.displayTextMain.textContent;
+                
+                // Always speak the text based on the selected language
+                if (mainText) {
+                    // Use 1 as the cellIndex to use the selected language (not English)
+                    this.speakText(mainText, 1);
+                }
+                
+                // If we're in "click" mode, also toggle the bottom text visibility
+                if (this.displayMode === 'click') {
+                    const subText = document.getElementById('displayTextSub');
+                    subText.style.display = subText.style.display === 'none' ? 'block' : 'none';
+                }
+            });
+
+            // Initialize speech synthesis
+            speechSynthesis.addEventListener('voiceschanged', () => {
+                speechSynthesis.getVoices();
+            });
+        }
+
+        convertCSVToTable(text, addOnes = true) {
+            const delimiter = text.includes('\t') ? '\t' : ',';
+            
+            const rows = text.split('\n')
+                .filter(row => row.trim() !== '')
+                .map(row => {
+                    const cells = row.split(delimiter).map(cell => cell.trim());
+                    if (addOnes) {
+                        cells.unshift('1');
+                    }
+                    return cells;
+                });
+            
+            this.tableData = rows;
+            this.currentIndex = 0;
+            if (rows.length > 0) {
+                this.updateDisplayText(rows[0][1] || '', rows[0][2] || '');
+            }
+            this.renderTable();
+        }
+
+        handleNavigation(direction) {
+            // Always use flashcardData for navigation
+            const data = this.flashcardData;
+            
+            // Return if there's no data
+            if (data.length === 0) return;
+
+            let newIndex = this.currentIndex;
+            const maxAttempts = data.length;
+            let attempts = 0;
+
+            do {
+                if (direction === 'right') {
+                    newIndex = (newIndex + 1) % data.length;
+                } else {
+                    newIndex = newIndex > 0 ? newIndex - 1 : data.length - 1;
+                }
+                attempts++;
+                
+                if (data[newIndex][0] === '1' || attempts >= maxAttempts) {
+                    break;
+                }
+            } while (newIndex !== this.currentIndex);
+
+            if (data[newIndex][0] === '1' || attempts >= maxAttempts) {
+                this.currentIndex = newIndex;
+                this.updateDisplayText(
+                    data[newIndex][1] || '',
+                    data[newIndex][2] || ''
+                );
+                // Always render flashcardTable when navigating
+                this.renderFlashcardTable();
+                
+                // Highlight the row in the flashcardTable
+                const flashcardRows = this.flashcardTable.querySelectorAll('tr');
+                flashcardRows.forEach((row, index) => {
+                    if (index === this.currentIndex) {
+                        row.classList.add('selected-row');
+                    } else {
+                        row.classList.remove('selected-row');
+                    }
+                });
+            }
+        }
+
+        handleReverseColumns() {
+            this.tableData = this.tableData.map(row => {
+                const newRow = [...row];
+                [newRow[1], newRow[2]] = [newRow[2], newRow[1]];
+                return newRow;
+            });
+            
+            this.updateDisplayText(
+                this.tableData[this.currentIndex][1] || '',
+                this.tableData[this.currentIndex][2] || ''
+            );
+            this.renderTable();
+        }
+
+        handleResetOnes() {
+            this.tableData = this.tableData.map(row => {
+                const newRow = [...row];
+                newRow[0] = '1';
+                return newRow;
+            });
+            this.renderTable();
+        }
+
+        handleTextSubmit() {
+            const text = document.getElementById('csvTextArea').value;
+            
+            // Check if there's content to process
+            if (!text.trim()) {
+                alert('Please enter some CSV data first!');
+                return;
+            }
+            
+            // Check if the first non-empty row has at least two commas (three or more columns)
+            const firstRow = text.split('\n').find(row => row.trim() !== '');
+            
+            // If first row exists and has at least two commas (three columns), don't add extra 1s
+            // Otherwise, add them automatically
+            const hasThreeOrMoreColumns = firstRow && (firstRow.match(/,/g) || []).length >= 2;
+            const addOnes = !hasThreeOrMoreColumns;
+            
+            // Convert the CSV to table with appropriate settings
+            this.convertCSVToTable(text, addOnes);
+        }
+        
+        // Process .MD file content into flashcards
+        handleMDText() {
+            let text = document.getElementById('csvTextArea').value;
+            
+            // Check if there's content to process
+            if (!text.trim()) {
+                // If textarea is empty, try to read from clipboard
+                navigator.clipboard.readText()
+                    .then(clipboardText => {
+                        if (clipboardText.trim()) {
+                            // Set the clipboard content to the textarea
+                            document.getElementById('csvTextArea').value = clipboardText;
+                            // Now process the clipboard content as MD text
+                            this.parseMarkdownToTable(clipboardText);
+                        } else {
+                            alert('Both textarea and clipboard are empty. Please enter some MD content first!');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Failed to read clipboard contents:', err);
+                        alert('Please enter some MD content first or check clipboard permissions!');
+                    });
+                return;
+            }
+            
+            // Parse the MD content into flashcard data
+            this.parseMarkdownToTable(text);
+        }
+        
+        // Parse markdown-style text with mixed languages into table data
+        parseMarkdownToTable(text) {
+            // Split text into lines
+            const lines = text.split('\n');
+            const tableRows = [];
+            
+            // Process each line
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                
+                // Skip empty lines
+                if (!line) continue;
+                
+                // Skip Markdown formatting lines (headers, horizontal rules, etc.)
+                if (line.startsWith('#') || line.startsWith('---') || line.startsWith('```')) {
+                    continue;
+                }
+                
+                // Keep entire line as a single entry
+                tableRows.push(['1', line, '']);
+            }
+            
+            // Update table data with the processed rows
+            this.tableData = tableRows;
+            
+            // Set current index to 0 and update display
+            if (tableRows.length > 0) {
+                this.currentIndex = 0;
+                this.updateDisplayText(tableRows[0][1] || '', tableRows[0][2] || '');
+                this.renderTable();
+                
+                // Switch to CSV Table view for the imported data
+                document.getElementById('switchToCsvButton').click();
+                
+                alert(`Processed ${tableRows.length} entries from markdown content`);
+            } else {
+                alert('No usable entries found in the markdown content.');
+            }
+        }
+
+        handleClipboardPaste() {
+            navigator.clipboard.readText()
+                .then(text => {
+                    const textarea = document.getElementById('csvTextArea');
+                    textarea.value = text;
+                    
+                    // Use this.handleTextSubmit instead of handleTextSubmit
+                    this.handleTextSubmit();
+                })
+                .catch(err => {
+                    console.error('Failed to read clipboard contents:', err);
+                    alert('Unable to access clipboard. Please check browser permissions.');
+                });
+        }
+
+        handleExport() {
+            if (this.tableData.length === 0) {
+                alert('No data to export!');
+                return;
+            }
+            
+            const csvContent = this.tableData.map(row => row.join(',')).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            if (navigator.msSaveBlob) {
+                navigator.msSaveBlob(blob, 'table_export.csv');
+            } else {
+                link.href = URL.createObjectURL(blob);
+                link.download = 'table_export.csv';
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        handleJsonImport(jsonData) {
+            // Validate that the JSON has the expected format
+            if (!jsonData || typeof jsonData !== 'object') {
+                alert('Invalid JSON format. Expected an object.');
+                return;
+            }
+            
+            // Check if the JSON format matches expected structure
+            let validFormat = false;
+            let contentToUse = null;
+            
+            // Check for the first valid entry and use its content
+            for (const key in jsonData) {
+                if (jsonData[key] && 
+                    typeof jsonData[key] === 'object' && 
+                    jsonData[key].title && 
+                    typeof jsonData[key].title === 'string' &&
+                    jsonData[key].content && 
+                    typeof jsonData[key].content === 'string') {
+                    
+                    validFormat = true;
+                    contentToUse = jsonData[key].content;
+                    break;
+                }
+            }
+            
+            if (!validFormat) {
+                alert('Invalid JSON format. Expected format: { "key": { "title": "string", "content": "string" }, ... }');
+                return;
+            }
+            
+            if (!contentToUse) {
+                alert('JSON file is empty or has no valid content.');
+                return;
+            }
+            
+            // Set the textarea content and process it directly
+            const textArea = document.getElementById('csvTextArea');
+            textArea.value = contentToUse;
+            this.handleTextSubmit();
+            
+            alert('JSON data imported successfully!');
+        }
+
+        handleCellClick(rowIndex, cellIndex, cell) {
+            this.currentIndex = rowIndex;
+            this.updateDisplayText(
+                this.tableData[rowIndex][1] || '',
+                this.tableData[rowIndex][2] || ''
+            );
+            
+            if (cellIndex === 0) {
+                if (cell === '1' || cell === '2') {
+                    this.tableData[rowIndex][cellIndex] = cell === '1' ? '2' : '1';
+                    this.renderTable();
+                }
+            } else if (cellIndex === 1 || cellIndex === 2) {
+                this.speakText(cell, cellIndex);
+            }
+        }
+
+        speakText(text, cellIndex) {
+            if (!text) return;
+            
+            // Don't truncate at colon, speak the entire text
+            let textToSpeak = text;
+            // Remove parentheses if they exist
+            textToSpeak = textToSpeak.replace(/[()]/g, '').trim();
+            
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            
+            // For first column text (left side), use the selected language
+            // For second column text (right side), always use English
+            utterance.lang = cellIndex === 2 ? 'en-US' : document.getElementById('languageSelect').value;
+            utterance.rate = parseFloat(document.getElementById('rateSelect').value);
+            
+            const voices = speechSynthesis.getVoices();
+            const selectedLang = document.getElementById('languageSelect').value;
+            
+            // Handle Chinese voices
+            if ((selectedLang === 'zh-CN' || selectedLang === 'zh-HK') && cellIndex !== 2) {
+                // For Mandarin (zh-CN)
+                if (selectedLang === 'zh-CN') {
+                    // Try to find Google Chinese voice first
+                    const chineseVoice = voices.find(voice => 
+                        voice.name.includes('Google') && voice.lang.includes('zh-CN'));
+                    if (chineseVoice) {
+                        utterance.voice = chineseVoice;
+                    }
+                }
+                // For Cantonese (zh-HK)
+                else if (selectedLang === 'zh-HK') {
+                    // Try to find a Cantonese voice
+                    const cantoneseVoice = voices.find(voice => 
+                        voice.lang.includes('zh-HK') || voice.name.includes('Hong Kong'));
+                    if (cantoneseVoice) {
+                        utterance.voice = cantoneseVoice;
+                    }
+                }
+            }
+            
+            // Handle Korean voice selection
+            else if (selectedLang === 'ko-KR' && cellIndex !== 2) {
+                const koreanVoice = voices.find(voice => voice.name === 'Google 한국의');
+                if (koreanVoice) {
+                    utterance.voice = koreanVoice;
+                }
+            }
+            
+            speechSynthesis.speak(utterance);
+        }
+        
+        // Update the display text in the main display box
+        updateDisplayText(mainText, subText) {
+            this.displayTextMain.textContent = mainText || '';
+            this.displayTextSub.textContent = subText || '';
+            this.updateDisplayBox();
+        }
+        
+        // Update the display box based on the current display mode
+        updateDisplayBox() {
+            if (this.displayMode === 'show') {
+                this.displayTextSub.style.display = 'block';
+                this.displayTextSub.style.opacity = '1';
+            } else if (this.displayMode === 'hide') {
+                this.displayTextSub.style.display = 'none';
+            } else if (this.displayMode === 'click') {
+                // For click mode, initially hide the bottom text
+                this.displayTextSub.style.display = 'none';
+                // Make sure the cursor shows it's clickable
+                document.getElementById('displayBox').style.cursor = 'pointer';
+            }
+        }
+        
+        // Render the table with the current data
+        renderTable() {
+            // Clear the table
+            this.csvTable.innerHTML = '';
+            
+            // Populate the table with the data
+            this.tableData.forEach((row, rowIndex) => {
+                const tr = document.createElement('tr');
+                
+                // Add selected-row class if this is the current row
+                if (rowIndex === this.currentIndex) {
+                    tr.classList.add('selected-row');
+                }
+                
+                row.forEach((cell, cellIndex) => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    td.addEventListener('click', () => this.handleCellClick(rowIndex, cellIndex, cell));
+                    tr.appendChild(td);
+                });
+                
+                this.csvTable.appendChild(tr);
+            });
+        }
+        
+        // Load flashcards from Firebase
+        loadFlashcardsFromFirebase() {
+            const flashcardsRef = ref(database, `${flashcardsDatabaseName}/`);
+            
+            get(flashcardsRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    // Convert Firebase snapshot to array format compatible with our table
+                    const data = snapshot.val();
+                    this.flashcardData = [];
+                    
+                    // Iterate through the Firebase data and format it for our table
+                    Object.keys(data).forEach(key => {
+                        const card = data[key];
+                        this.flashcardData.push(['1', card.word, card.meaning]);
+                    });
+                    
+                    // If we have flashcards, render the flashcard table
+                    if (this.flashcardData.length > 0) {
+                        this.renderFlashcardTable();
+                    }
+                    
+                    console.log('Loaded', this.flashcardData.length, 'flashcards from Firebase');
+                } else {
+                    console.log('No flashcards found in Firebase');
+                }
+            }).catch((error) => {
+                console.error('Error loading flashcards from Firebase:', error);
+            });
+        }
+        
+        // Save flashcards to Firebase
+        saveFlashcardsToFirebase() {
+            // Always save the flashcardData to Firebase, regardless of active table
+            const dataToSave = this.flashcardData;
+            
+            // Create an object to store flashcards
+            const flashcardsObj = {};
+            
+            // Convert array data to object format for Firebase
+            dataToSave.forEach((row, index) => {
+                if (row.length >= 3) {
+                    flashcardsObj[`card_${index}`] = {
+                        word: row[1],
+                        meaning: row[2],
+                        status: row[0] // '1' or '2' from first column
+                    };
+                }
+            });
+            
+            // Save to Firebase
+            set(ref(database, `${flashcardsDatabaseName}/`), flashcardsObj)
+                .then(() => {
+                    console.log('Flashcards saved to Firebase successfully!');
+                })
+                .catch((error) => {
+                    console.error('Error saving flashcards to Firebase:', error);
+                });
+        }
+        
+        // Remove the last flashcard from the table and Firebase
+        removeLastFlashcard() {
+            // Check if there are any flashcards to remove
+            if (this.flashcardData.length === 0) {
+                alert('No flashcards to remove!');
+                return;
+            }
+            
+            // Create and append the dialog to the document for confirmation
+            const dialogOverlay = document.createElement('div');
+            dialogOverlay.className = 'dialog-overlay';
+            
+            const dialogContainer = document.createElement('div');
+            dialogContainer.className = 'dialog-container';
+            
+            // Create dialog content
+            const dialogTitle = document.createElement('div');
+            dialogTitle.className = 'dialog-title';
+            dialogTitle.textContent = 'Remove Last Flashcard';
+            
+            // Get the last flashcard details to show in the confirmation
+            const lastFlashcard = this.flashcardData[this.flashcardData.length - 1];
+            const word = lastFlashcard[1] || '';
+            const meaning = lastFlashcard[2] || '';
+            
+            const dialogText = document.createElement('p');
+            dialogText.innerHTML = `Are you sure you want to remove the last flashcard?<br><br>
+                <strong>${word}</strong>: ${meaning}`;
+            
+            const buttonsContainer = document.createElement('div');
+            buttonsContainer.className = 'dialog-buttons';
+            
+            const cancelButton = document.createElement('button');
+            cancelButton.className = 'dialog-button cancel';
+            cancelButton.textContent = 'Cancel';
+            cancelButton.addEventListener('click', () => {
+                document.body.removeChild(dialogOverlay);
+            });
+            
+            const confirmButton = document.createElement('button');
+            confirmButton.className = 'dialog-button';
+            confirmButton.style.backgroundColor = '#F97316';
+            confirmButton.textContent = 'Remove';
+            confirmButton.addEventListener('click', () => {
+                // Remove the dialog
+                document.body.removeChild(dialogOverlay);
+                
+                // Remove the last flashcard from the array
+                this.flashcardData.pop();
+                
+                // Update the current index if needed
+                if (this.currentIndex >= this.flashcardData.length) {
+                    this.currentIndex = Math.max(0, this.flashcardData.length - 1);
+                }
+                
+                // Update display text if there are still flashcards
+                if (this.flashcardData.length > 0) {
+                    this.updateDisplayText(
+                        this.flashcardData[this.currentIndex][1] || '',
+                        this.flashcardData[this.currentIndex][2] || ''
+                    );
+                } else {
+                    this.updateDisplayText('', '');
+                }
+                
+                // Render the updated table
+                this.renderFlashcardTable();
+                
+                // Save changes to Firebase
+                this.saveFlashcardsToFirebase();
+                
+                alert('Last flashcard has been removed!');
+            });
+            
+            // Assemble the dialog
+            buttonsContainer.appendChild(cancelButton);
+            buttonsContainer.appendChild(confirmButton);
+            
+            dialogContainer.appendChild(dialogTitle);
+            dialogContainer.appendChild(dialogText);
+            dialogContainer.appendChild(buttonsContainer);
+            
+            dialogOverlay.appendChild(dialogContainer);
+            document.body.appendChild(dialogOverlay);
+        }
+        
+        // Clear all flashcards from Firebase and local data
+        clearAllFlashcards() {
+            // Create and append the dialog to the document for confirmation
+            const dialogOverlay = document.createElement('div');
+            dialogOverlay.className = 'dialog-overlay';
+            
+            const dialogContainer = document.createElement('div');
+            dialogContainer.className = 'dialog-container';
+            
+            // Create dialog content
+            const dialogTitle = document.createElement('div');
+            dialogTitle.className = 'dialog-title';
+            dialogTitle.textContent = 'Clear All Flashcards';
+            
+            const dialogText = document.createElement('p');
+            dialogText.textContent = 'Are you sure you want to delete ALL flashcards? This action cannot be undone.';
+            
+            const buttonsContainer = document.createElement('div');
+            buttonsContainer.className = 'dialog-buttons';
+            
+            const cancelButton = document.createElement('button');
+            cancelButton.className = 'dialog-button cancel';
+            cancelButton.textContent = 'Cancel';
+            cancelButton.addEventListener('click', () => {
+                document.body.removeChild(dialogOverlay);
+            });
+            
+            const confirmButton = document.createElement('button');
+            confirmButton.className = 'dialog-button';
+            confirmButton.style.backgroundColor = '#EF4444';
+            confirmButton.textContent = 'Clear All';
+            confirmButton.addEventListener('click', () => {
+                // Remove the dialog
+                document.body.removeChild(dialogOverlay);
+                
+                // Clear local data
+                this.flashcardData = [];
+                
+                // Clear Firebase data by setting to empty object
+                set(ref(database, `${flashcardsDatabaseName}/`), {})
+                    .then(() => {
+                        console.log('All flashcards cleared from Firebase successfully!');
+                        
+                        // Render empty table
+                        this.renderFlashcardTable();
+                        
+                        // Update display text
+                        this.updateDisplayText('', '');
+                        
+                        alert('All flashcards have been cleared!');
+                    })
+                    .catch((error) => {
+                        console.error('Error clearing flashcards from Firebase:', error);
+                        alert('Error: Could not clear flashcards from Firebase. ' + error.message);
+                    });
+            });
+            
+            // Assemble the dialog
+            buttonsContainer.appendChild(cancelButton);
+            buttonsContainer.appendChild(confirmButton);
+            
+            dialogContainer.appendChild(dialogTitle);
+            dialogContainer.appendChild(dialogText);
+            dialogContainer.appendChild(buttonsContainer);
+            
+            dialogOverlay.appendChild(dialogContainer);
+            document.body.appendChild(dialogOverlay);
+        }
+        
+        // Switch between CSV Table and Flashcard Table
+        switchActiveTable(tableName) {
+            // Update active table
+            this.activeTable = tableName;
+            
+            // Update display based on which table is active
+            if (tableName === 'csvTable') {
+                // Update display with current CSV entry if available
+                if (this.tableData.length > 0) {
+                    this.updateDisplayText(
+                        this.tableData[this.currentIndex][1] || '',
+                        this.tableData[this.currentIndex][2] || ''
+                    );
+                }
+            } else {
+                // Update display with current flashcard entry if available
+                if (this.flashcardData.length > 0) {
+                    this.updateDisplayText(
+                        this.flashcardData[this.currentIndex][1] || '',
+                        this.flashcardData[this.currentIndex][2] || ''
+                    );
+                }
+            }
+            
+            // Update rendering
+            this.renderCurrentTable();
+            
+            // Highlight the active table visually (optional)
+            document.getElementById('csvTable').style.border = 
+                this.activeTable === 'csvTable' ? '2px solid #3B82F6' : '1px solid #ccc';
+            document.getElementById('flashcardTable').style.border = 
+                this.activeTable === 'flashcardTable' ? '2px solid #3B82F6' : '1px solid #ccc';
+        }
+        
+        // Render the appropriate table based on active selection
+        renderCurrentTable() {
+            if (this.activeTable === 'csvTable') {
+                this.renderTable();
+            } else {
+                this.renderFlashcardTable();
+            }
+        }
+        
+        // Render flashcard table specifically
+        renderFlashcardTable() {
+            // Clear the table
+            this.flashcardTable.innerHTML = '';
+            
+            // Populate the table with the flashcard data
+            this.flashcardData.forEach((row, rowIndex) => {
+                const tr = document.createElement('tr');
+                
+                // Add selected-row class if this is the current row
+                if (rowIndex === this.currentIndex) {
+                    tr.classList.add('selected-row');
+                }
+                
+                row.forEach((cell, cellIndex) => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    td.addEventListener('click', () => this.handleFlashcardCellClick(rowIndex, cellIndex, cell));
+                    tr.appendChild(td);
+                });
+                
+                this.flashcardTable.appendChild(tr);
+            });
+        }
+        
+        // Handle clicks on cells in the flashcard table
+        handleFlashcardCellClick(rowIndex, cellIndex, cell) {
+            this.currentIndex = rowIndex;
+            this.updateDisplayText(
+                this.flashcardData[rowIndex][1] || '',
+                this.flashcardData[rowIndex][2] || ''
+            );
+            
+            if (cellIndex === 0) {
+                if (cell === '1' || cell === '2') {
+                    this.flashcardData[rowIndex][cellIndex] = cell === '1' ? '2' : '1';
+                    this.renderFlashcardTable();
+                    // Save changes to Firebase when status changes
+                    this.saveFlashcardsToFirebase();
+                }
+            } else if (cellIndex === 1 || cellIndex === 2) {
+                this.speakText(cell, cellIndex);
+            }
+        }
+        
+        // Add flashcard dialog method
+        showAddFlashcardDialog() {
+            // Create and append the dialog to the document
+            const dialogOverlay = document.createElement('div');
+            dialogOverlay.className = 'dialog-overlay';
+            
+            const dialogContainer = document.createElement('div');
+            dialogContainer.className = 'dialog-container';
+            
+            // Create dialog content
+            const dialogTitle = document.createElement('div');
+            dialogTitle.className = 'dialog-title';
+            dialogTitle.textContent = 'Add New Flashcard';
+            
+            const wordInput = document.createElement('input');
+            wordInput.type = 'text';
+            wordInput.className = 'dialog-input';
+            wordInput.placeholder = 'Enter word';
+            
+            const meaningInput = document.createElement('input');
+            meaningInput.type = 'text';
+            meaningInput.className = 'dialog-input';
+            meaningInput.placeholder = 'Enter meaning';
+            
+            const buttonsContainer = document.createElement('div');
+            buttonsContainer.className = 'dialog-buttons';
+            
+            const cancelButton = document.createElement('button');
+            cancelButton.className = 'dialog-button cancel';
+            cancelButton.textContent = 'Cancel';
+            cancelButton.addEventListener('click', () => {
+                document.body.removeChild(dialogOverlay);
+            });
+            
+            const addButton = document.createElement('button');
+            addButton.className = 'dialog-button';
+            addButton.textContent = 'Add Flashcard';
+            addButton.addEventListener('click', () => {
+                const word = wordInput.value.trim();
+                const meaning = meaningInput.value.trim();
+                
+                if (word && meaning) {
+                    // Add new row to the appropriate table with '1' in the first column
+                    const newRow = ['1', word, meaning];
+                    
+                    if (this.activeTable === 'flashcardTable') {
+                        this.flashcardData.push(newRow);
+                        this.currentIndex = this.flashcardData.length - 1;
+                        
+                        // Save to Firebase when adding a new flashcard
+                        this.saveFlashcardsToFirebase();
+                    } else {
+                        this.tableData.push(newRow);
+                        this.currentIndex = this.tableData.length - 1;
+                    }
+                    
+                    // Update display text to show the new entry
+                    this.updateDisplayText(word, meaning);
+                    
+                    // Render the active table again to include the new row
+                    this.renderCurrentTable();
+                    
+                    // Remove the dialog
+                    document.body.removeChild(dialogOverlay);
+                    
+                    // Scroll to the bottom of the appropriate table to show the new entry
+                    const tableElement = this.activeTable === 'flashcardTable' ? 
+                        this.flashcardTable.parentElement : 
+                        this.csvTable.parentElement;
+                    
+                    tableElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                } else {
+                    alert('Please enter both word and meaning');
+                }
+            });
+            
+            // Assemble the dialog
+            buttonsContainer.appendChild(cancelButton);
+            buttonsContainer.appendChild(addButton);
+            
+            dialogContainer.appendChild(dialogTitle);
+            dialogContainer.appendChild(wordInput);
+            dialogContainer.appendChild(meaningInput);
+            dialogContainer.appendChild(buttonsContainer);
+            
+            dialogOverlay.appendChild(dialogContainer);
+            document.body.appendChild(dialogOverlay);
+            
+            // Focus the first input
+            wordInput.focus();
+            
+            // Handle keyboard events in the dialog
+            const handleDialogKeydown = (e) => {
+                if (e.key === 'Enter') {
+                    // Trigger add button click when Enter is pressed
+                    addButton.click();
+                } else if (e.key === 'Escape') {
+                    // Close the dialog when Escape is pressed
+                    cancelButton.click();
+                }
+            };
+            
+            // Add keyboard event listeners to the input fields
+            wordInput.addEventListener('keydown', handleDialogKeydown);
+            meaningInput.addEventListener('keydown', handleDialogKeydown);
+        }
+    }
+    
+    // Initialize the CSV Viewer
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM Content Loaded - initializing application');
+        
+        // Create CSV Viewer instance
+        window.csvViewer = new CSVViewer();
+        
+        // Set the display options dropdown to match the default display mode
+        document.getElementById('displayOptions').value = 'click';
+        
+        console.log('CSV Viewer initialized');
+        
+        // Handle the clipboard content and speech functionality
+        const handleClipboardToSpeech = () => {
+            console.log('Handling clipboard to speech button click');
+            // Get the CSV Viewer instance
+            const csvViewer = window.csvViewer;
+            if (!csvViewer) {
+                console.error('CSV Viewer instance not found');
+                alert('Application not properly initialized. Please refresh the page.');
+                return;
+            }
+            
+            // Read from clipboard
+            navigator.clipboard.readText()
+                .then(text => {
+                    // Process the text
+                    let processedText = text.trim();
+                    
+                    // Check if the text contains translation separators (comma or tab)
+                    let mainText, subText;
+                    
+                    if (processedText.includes('\t')) {
+                        // Split by tab if present
+                        [mainText, subText] = processedText.split('\t', 2).map(t => t.trim());
+                    } else if (processedText.includes(',')) {
+                        // Split by comma if present
+                        [mainText, subText] = processedText.split(',', 2).map(t => t.trim());
+                    } else {
+                        // If no separator, use the entire text as main text
+                        mainText = processedText;
+                        subText = '';
+                    }
+                    
+                    console.log('Clipboard parsed - main:', mainText, 'sub:', subText);
+                    
+                    // Update the display with clipboard content
+                    csvViewer.updateDisplayText(mainText || '', subText || '');
+                    
+                    // Speak the text in the selected language
+                    if (mainText) {
+                        csvViewer.speakText(mainText, 1); // Use column index 1 to use the selected language
+                    }
+                    
+                    // Automatically add to the table without confirmation
+                    const newRow = ['1', mainText || '', subText || ''];
+                    csvViewer.tableData.push(newRow);
+                    csvViewer.currentIndex = csvViewer.tableData.length - 1;
+                    csvViewer.renderTable();
+                })
+                .catch(err => {
+                    console.error('Failed to read clipboard contents:', err);
+                    alert('Unable to access clipboard. Please check browser permissions.');
+                });
+        };
+        
+        // Add Paste & Speak button after the Right button
+        const rightButton = document.getElementById('rightButton');
+        if (rightButton && rightButton.parentNode) {
+            console.log('Found right button, adding clipboard button');
+            
+            // Create Paste & Speak button (as in clipboard_to_speech.md)
+            const clipboardSpeechButton = document.createElement('button');
+            clipboardSpeechButton.className = 'import-button';
+            clipboardSpeechButton.id = 'clipboardSpeechButton';
+            clipboardSpeechButton.textContent = 'Paste & Speak';
+            rightButton.parentNode.insertBefore(clipboardSpeechButton, rightButton.nextSibling);
+            clipboardSpeechButton.addEventListener('click', handleClipboardToSpeech);
+        } else {
+            console.error('Right button not found, cannot add clipboard button');
+        }
+        
+        // Setup keyboard shortcut
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+Shift+V for Paste & Speak 
+            if (e.ctrlKey && e.shiftKey && e.key === 'V') {
+                e.preventDefault();
+                handleClipboardToSpeech();
+            }
+        });
+        
+        console.log('Application initialization complete');
+        
+        // Add event listeners for the AI prompt buttons
+        document.getElementById('extractVocabButton').addEventListener('click', () => {
+            const textareaContent = document.getElementById('csvTextArea').value.trim();
+            if (!textareaContent) {
+                alert('Please enter some text in the textarea first!');
+                return;
+            }
+            
+            const promptTemplate = `Extract vocabulary from this Chinese text or dialogue:
+
+${textareaContent}
+                
+Chinese Text: 
+
+For each vocabulary word:
+1. Extract the Chinese character(s)
+2. Provide the English translation/meaning
+
+Format the result as a CSV with two columns (Chinese,English):
+- One word pair per line
+- No quotation marks around entries
+- No numbering or bullets
+- Include all words including names, greetings, and pronouns
+
+Example format:
+Chinese,English
+您好,Hello (formal)
+我,I/me
+姓,surname
+
+Please provide only the CSV formatted output without any additional text.`;
+
+            copyToClipboard(promptTemplate, 'Extract Vocab prompt copied to clipboard!');
+        });
+        
+        document.getElementById('createDialogueButton').addEventListener('click', () => {
+            const textareaContent = document.getElementById('csvTextArea').value.trim();
+            if (!textareaContent) {
+                alert('Please enter some text in the textarea first!');
+                return;
+            }
+            
+            const promptTemplate = `Create a practice dialogue based on this Chinese text:
+
+${textareaContent}
+
+Create a dialogue that:
+1. Uses vocabulary and grammar from the text
+2. Includes pinyin and English translation
+3. Has 5-10 exchanges between speakers
+4. Is appropriate for (beginner, elementary, intermediate, advanced, native) level`;
+
+            copyToClipboard(promptTemplate, 'Create Dialogue prompt copied to clipboard!');
+        });
+        
+        document.getElementById('analyzeGrammarButton').addEventListener('click', () => {
+            const textareaContent = document.getElementById('csvTextArea').value.trim();
+            if (!textareaContent) {
+                alert('Please enter some text in the textarea first!');
+                return;
+            }
+            
+            const promptTemplate = `Analyze the grammar patterns in this Chinese text:
+
+${textareaContent}
+                
+Please provide:
+1. Identification of key grammar structures
+2. Explanation of each grammar pattern
+3. Additional example sentences using each pattern
+4. Common mistakes to avoid`;
+
+            copyToClipboard(promptTemplate, 'Analyze Grammar prompt copied to clipboard!');
+        });
+        
+        // Helper function to copy text to clipboard
+        function copyToClipboard(text, successMessage) {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    alert(successMessage);
+                })
+                .catch(err => {
+                    console.error('Failed to copy to clipboard:', err);
+                    
+                    // Fallback method
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    alert(successMessage);
+                });
+        }
+
+
+        // Find the button we just added
+    const splitDashButton = document.getElementById('splitDashButton');
+    
+    if (splitDashButton) {
+        splitDashButton.addEventListener('click', () => {
+            // Access the CSV Viewer instance
+            const csvViewer = window.csvViewer;
+            if (!csvViewer || !csvViewer.tableData) {
+                alert('No table data available to split!');
+                return;
+            }
+            
+            // Process each row in the table data
+            const processedData = csvViewer.tableData.map(row => {
+                // We only process rows that have at least 2 columns
+                if (row.length < 2) return row;
+                
+                const firstCol = row[0]; // Keep first column (usually '1' or '2')
+                const secondCol = row[1]; // The content that might have a dash
+                
+                // Check if second column contains a dash (both en-dash and hyphen)
+                if (secondCol && (secondCol.includes('–') || secondCol.includes('-'))) {
+                    // Split by either dash character (en-dash or hyphen)
+                    let parts;
+                    if (secondCol.includes('–')) {
+                        parts = secondCol.split('–').map(part => part.trim());
+                    } else {
+                        parts = secondCol.split('-').map(part => part.trim());
+                    }
+                    
+                    // Create new row with the parts split
+                    const newRow = [firstCol, parts[0]];
+                    
+                    // Add the second part if it exists
+                    if (parts.length > 1) {
+                        newRow.push(parts[1]);
+                    }
+                    
+                    // If there were more columns in the original row, add them after the split parts
+                    if (row.length > 2) {
+                        for (let i = 2; i < row.length; i++) {
+                            newRow.push(row[i]);
+                        }
+                    }
+                    
+                    return newRow;
+                }
+                
+                // If no dash, return the original row
+                return row;
+            });
+            
+            // Update the table data
+            csvViewer.tableData = processedData;
+            
+            // Update the display if current row was affected
+            const currentRow = csvViewer.tableData[csvViewer.currentIndex];
+            if (currentRow && currentRow.length >= 2) {
+                csvViewer.updateDisplayText(
+                    currentRow[1] || '', 
+                    currentRow[2] || ''
+                );
+            }
+            
+            // Render the updated table
+            csvViewer.renderTable();
+            
+            alert('Table data has been processed: dash-separated entries have been split!');
+        });
+    } else {
+        console.error('Could not find the Split Dash button with ID "splitDashButton".');
+    }
+    });
+    </script>
+</body>
+</html>
+
+
