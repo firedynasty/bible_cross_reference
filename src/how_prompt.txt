@@ -1,0 +1,20 @@
+⏺ I'll create the modified version of BibleApp.js with changes to keep the
+  current translation when loading saved position
+
+* no please rewrite those changes into a new created modified version of BibleApp.js with changes to keep the current when loading saved position.. something like that 
+
+instead of 
+
+
+ create file bibleApp_modified14.js in ./src I will copy and paste over
+
+
+
+> no I mean please rewrite the complete working BibleApp file with modifications 
+  to BibleApp_modified14.js see how I have different versions of 
+  Bible_modified.js's
+
+
+>>>
+
+Create a new file called BibleApp_modified15.js based on my current BibleApp.js, but with modifications to preserve the current translation when loading a saved position. Please write the complete, working code for this new file, not just the changes.
