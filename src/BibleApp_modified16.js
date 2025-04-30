@@ -1594,7 +1594,7 @@ const BibleApp = () => {
                        scrollSyncMode === 'faster' ? 'KJV Faster Sync' : 'KJV Slower Sync'}
                     </span>
                     <div className="ml-auto text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                      Press 'z' to scroll up, 'x' to scroll down
+                      Press 'x' to scroll up, 'z' to scroll down
                     </div>
                   </h2>
                   <div className="space-y-5">
