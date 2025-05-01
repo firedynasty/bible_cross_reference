@@ -54,7 +54,7 @@ const getBaseUrl = () => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onToggleTranslation, isMobileView }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -170,18 +170,6 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         <Save className="h-3 w-3 mr-1" />
         Save
       </button>
-      
-      {/* Toggle button between KJV/BBE - show only on mobile views */}
-      {isMobileView && (
-        <button
-          onClick={onToggleTranslation}
-          className="flex items-center px-2 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
-          title="Toggle between KJV and BBE translations"
-        >
-          <BookOpen className="h-3 w-3 mr-1" />
-          {currentTranslation === 'en_kjv.json' ? 'BBE' : 'KJV'}
-        </button>
-      )}
     </div>
   );
 };
@@ -339,11 +327,6 @@ const BibleApp = () => {
   // Add scroll sync mode state
   const [scrollSyncMode, setScrollSyncMode] = useState('exact'); // 'exact', 'faster', or 'slower'
   
-  // Mobile responsiveness states
-  const [showSidebar, setShowSidebar] = useState(true);
-  const [isMobileView, setIsMobileView] = useState(false);
-  const [showKJVOnMobile, setShowKJVOnMobile] = useState(false);
-  
   // Available translations
   const translations = React.useMemo(() => [
     { id: 'en_kjv.json', name: 'English - King James Version (KJV)' },
@@ -366,31 +349,6 @@ const BibleApp = () => {
   // Firebase loading status
   // eslint-disable-next-line no-unused-vars
   const [firebaseLoading, setFirebaseLoading] = useState(false);
-  
-  // Effect to detect mobile screen size and handle sidebar visibility
-  useEffect(() => {
-    const checkMobileView = () => {
-      const isMobile = window.innerWidth < 768; // Standard Tailwind md breakpoint
-      setIsMobileView(isMobile);
-      
-      // Auto-hide sidebar on mobile and reset KJV toggle
-      if (isMobile) {
-        setShowSidebar(false);
-        setShowKJVOnMobile(false);
-      } else {
-        setShowSidebar(true);
-      }
-    };
-    
-    // Initial check
-    checkMobileView();
-    
-    // Add resize listener
-    window.addEventListener('resize', checkMobileView);
-    
-    // Cleanup
-    return () => window.removeEventListener('resize', checkMobileView);
-  }, []);
   
   // Update current book abbrev when book changes
   useEffect(() => {
@@ -635,10 +593,7 @@ const BibleApp = () => {
     const primaryPane = chapterContentRef.current;
     const kjvPane = kjvContentRef.current;
     
-    // If either pane is missing, return a no-op cleanup function
-    if (!primaryPane || !kjvPane) {
-      return () => {}; // Return an empty function instead of false
-    }
+    if (!primaryPane || !kjvPane) return false;
     
     const handlePrimaryScroll = () => {
       if (isManuallyScrolling.current) return;
@@ -695,13 +650,8 @@ const BibleApp = () => {
     
     // Return a cleanup function
     return () => {
-      // Check if primaryPane still exists before attempting to remove listener
       if (primaryPane) {
-        try {
-          primaryPane.removeEventListener('scroll', handlePrimaryScroll);
-        } catch (e) {
-          console.log("Cleanup error (can be ignored):", e.message);
-        }
+        primaryPane.removeEventListener('scroll', handlePrimaryScroll);
       }
     };
   };
@@ -903,15 +853,8 @@ const BibleApp = () => {
       // Ensure last scroll position is reset
       lastPrimaryScrollPos.current = chapterContentRef.current?.scrollTop || 0;
       
-      // Setup the scroll sync - the returned cleanup function might be undefined
-      const cleanup = setupScrollSync();
-      
-      // Return a valid cleanup function that safely handles undefined
-      return () => {
-        if (typeof cleanup === 'function') {
-          cleanup();
-        }
-      };
+      // Setup the scroll sync
+      return setupScrollSync();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBook, selectedChapter, selectedTranslation, scrollSyncMode, loading]);
@@ -930,13 +873,7 @@ const BibleApp = () => {
         const cleanup = setupScrollSync();
         scrollSyncInitialized.current = true;
         console.log("Scroll sync initialized");
-        
-        // Store the cleanup function to be called when the component unmounts
-        return () => {
-          if (typeof cleanup === 'function') {
-            cleanup();
-          }
-        };
+        return cleanup;
       }, 500);
       
       return () => clearTimeout(timer);
@@ -955,26 +892,8 @@ const BibleApp = () => {
       lastPrimaryScrollPos.current = chapterContentRef.current.scrollTop;
     }
     
-    // Store any previous cleanup function
-    let cleanupFunction;
-    
     // Re-initialize immediately
-    try {
-      cleanupFunction = setupScrollSync();
-    } catch (e) {
-      console.log("Error setting up scroll sync:", e);
-    }
-    
-    // Return cleanup function for component unmount
-    return () => {
-      if (typeof cleanupFunction === 'function') {
-        try {
-          cleanupFunction();
-        } catch (e) {
-          console.log("Cleanup error in mode change (can be ignored):", e.message);
-        }
-      }
-    };
+    setupScrollSync();
   };
 
   // Load cross references from external JSON file
@@ -1136,26 +1055,6 @@ const BibleApp = () => {
     // Reset scroll sync state
     lastPrimaryScrollPos.current = 0;
     scrollSyncInitialized.current = false;
-  };
-  
-  // Toggle between KJV and BBE translations
-  const handleToggleTranslation = () => {
-    // Current position
-    const currentBookAbbrev = selectedBook?.abbrev;
-    const currentChapter = selectedChapter;
-    
-    // Store previous translation
-    setPreviousTranslation(selectedTranslation);
-    
-    // Toggle between KJV and BBE
-    const newTranslation = 
-      selectedTranslation === 'en_kjv.json' ? 'en_bbe.json' : 'en_kjv.json';
-    
-    // Update translation
-    setSelectedTranslation(newTranslation);
-    
-    // Log the toggle action for debugging
-    console.log(`Toggled translation from ${selectedTranslation} to ${newTranslation}`);
   };
   
   // Handle translation change
@@ -1556,60 +1455,34 @@ const BibleApp = () => {
   // Main render
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Book Selection Sidebar - Hidden on Mobile */}
-      {showSidebar && (
-        <div className={`${isMobileView ? 'absolute z-10 h-full' : 'w-80'} bg-white border-r border-gray-200 overflow-y-auto`}>
-          <div className="p-2 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold flex items-center">
-              <Book className="mr-1 h-4 w-4" />
-              Bible Books
-            </h2>
-            {isMobileView && (
-              <button 
-                onClick={() => setShowSidebar(false)}
-                className="p-1 rounded-full hover:bg-gray-200 focus:outline-none"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-          <div className="overflow-y-auto h-full">
-            {bibleData && bibleData.map(book => (
-              <button
-                key={book.abbrev}
-                onClick={() => {
-                  handleBookSelect(book.abbrev);
-                  if (isMobileView) setShowSidebar(false);
-                }}
-                className={`w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ${
-                  selectedBook && selectedBook.abbrev === book.abbrev ? 'bg-blue-100 font-medium' : ''
-                }`}
-              >
-                {book.book || getBookName(book.abbrev)}
-              </button>
-            ))}
-          </div>
+      {/* Book Selection Sidebar */}
+      <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
+        <div className="p-2 border-b border-gray-200">
+          <h2 className="text-lg font-semibold flex items-center">
+            <Book className="mr-1 h-4 w-4" />
+            Bible Books
+          </h2>
         </div>
-      )}
+        <div className="overflow-y-auto h-full">
+          {bibleData && bibleData.map(book => (
+            <button
+              key={book.abbrev}
+              onClick={() => handleBookSelect(book.abbrev)}
+              className={`w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ${
+                selectedBook && selectedBook.abbrev === book.abbrev ? 'bg-blue-100 font-medium' : ''
+              }`}
+            >
+              {book.book || getBookName(book.abbrev)}
+            </button>
+          ))}
+        </div>
+      </div>
       
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar with Navigation and Chapter Selection */}
         <div className="bg-white border-b border-gray-200 p-1 flex flex-wrap items-center justify-between">
           <div className="flex items-center space-x-2">
-            {/* Sidebar toggle button for mobile */}
-            {isMobileView && !showSidebar && (
-              <button 
-                onClick={() => setShowSidebar(true)} 
-                className="flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            )}
             <h1 className="text-xl font-bold ml-2">
               {selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : 'Select a Book'}
             </h1>
@@ -1656,8 +1529,6 @@ const BibleApp = () => {
               currentBook={selectedBook}
               currentChapter={selectedChapter}
               currentTranslation={selectedTranslation}
-              onToggleTranslation={handleToggleTranslation}
-              isMobileView={isMobileView}
             />
           </div>
           
@@ -1715,10 +1586,10 @@ const BibleApp = () => {
           </div>
         </div>
         
-        {/* Bible Text and KJV Split View - Responsive layout for mobile */}
+        {/* Bible Text and KJV Split View */}
         <div className="flex-1 flex overflow-hidden">
           {/* Bible Text Display */}
-          <div ref={chapterContentRef} className={`${isMobileView ? 'w-full' : 'w-1/2'} overflow-y-auto p-4 md:p-8 bg-white relative`}>
+          <div ref={chapterContentRef} className="w-1/2 overflow-y-auto p-8 bg-white relative">
             {selectedBook && selectedChapter > 0 && (
               <div>
                 <h2 className="text-3xl font-semibold flex items-center mb-5">
@@ -1726,15 +1597,6 @@ const BibleApp = () => {
                     <path d="M12 7v14"></path>
                     <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path>
                   </svg>
-                  
-                  {isMobileView && !showKJVOnMobile && (
-                    <button 
-                      onClick={() => setShowKJVOnMobile(true)}
-                      className="ml-3 px-3 py-1 text-sm bg-blue-500 text-white rounded-md shadow-sm"
-                    >
-                      Show KJV
-                    </button>
-                  )}
                   {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter}
                   {selectedTranslation !== 'en_kjv.json' && (
                     <span className="ml-2 text-gray-500">
@@ -1851,24 +1713,13 @@ const BibleApp = () => {
             )}
           </div>
           
-          {/* KJV Bible Panel - Toggle visibility on mobile */}
-          {(!isMobileView || showKJVOnMobile) && (
-            <div className={`${isMobileView ? 'w-full absolute inset-0 z-20' : 'w-1/2'} border-l border-gray-200 bg-gray-50 flex flex-col`}>
-              {/* KJV Bible Text Display */}
-              <div ref={kjvContentRef} className="flex-1 p-8 overflow-y-auto bg-white">
-                {selectedBook && selectedChapter > 0 && (
+          {/* KJV Bible Panel */}
+          <div className="w-1/2 border-l border-gray-200 bg-gray-50 flex flex-col">
+            {/* KJV Bible Text Display */}
+            <div ref={kjvContentRef} className="flex-1 p-8 overflow-y-auto bg-white">
+              {selectedBook && selectedChapter > 0 && (
                 <div>
                   <h2 className="text-3xl mr-2 font-semibold mb-5 flex items-center">
-                    {isMobileView && (
-                      <button 
-                        onClick={() => setShowKJVOnMobile(false)}
-                        className="mr-2 p-1 rounded-full hover:bg-gray-200"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                      </button>
-                    )}
                     {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter} <span className="text-gray-500 ml-2">(KJV)</span>
                     <span className="ml-3 px-2 py-1 rounded text-xs" 
                       style={{
@@ -1881,18 +1732,8 @@ const BibleApp = () => {
                       {scrollSyncMode === 'exact' ? 'Exact Sync' : 
                        scrollSyncMode === 'faster' ? 'KJV Faster Sync' : 'KJV Slower Sync'}
                     </span>
-                    <div className="ml-auto flex items-center">
-                      <div className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded mr-2">
-                        Keys: 'z', 'x', 'c', 'v'
-                      </div>
-                      {isMobileView && (
-                        <button 
-                          onClick={() => setShowKJVOnMobile(!showKJVOnMobile)} 
-                          className="px-2 py-1 bg-blue-500 text-white rounded text-sm"
-                        >
-                          {showKJVOnMobile ? "Hide KJV" : "Show KJV"}
-                        </button>
-                      )}
+                    <div className="ml-auto text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                      Keys: 'z', 'x', 'c', 'v'
                     </div>
                   </h2>
                   <div className="space-y-5">
@@ -1936,8 +1777,8 @@ const BibleApp = () => {
                       })()
                     )}
                   </div>
-              
-              {/* Navigation buttons for KJV panel */}
+                  
+                  {/* Navigation buttons for KJV panel */}
                   <div className="mt-10 flex justify-between pb-4">
                     {selectedChapter > 1 ? (
                       <button 
@@ -1967,7 +1808,6 @@ const BibleApp = () => {
               )}
             </div>
           </div>
-        )}
         </div>
       </div>
     </div>

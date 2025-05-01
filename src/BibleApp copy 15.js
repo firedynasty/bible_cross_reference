@@ -54,7 +54,7 @@ const getBaseUrl = () => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onToggleTranslation, isMobileView }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -170,18 +170,6 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         <Save className="h-3 w-3 mr-1" />
         Save
       </button>
-      
-      {/* Toggle button between KJV/BBE - show only on mobile views */}
-      {isMobileView && (
-        <button
-          onClick={onToggleTranslation}
-          className="flex items-center px-2 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
-          title="Toggle between KJV and BBE translations"
-        >
-          <BookOpen className="h-3 w-3 mr-1" />
-          {currentTranslation === 'en_kjv.json' ? 'BBE' : 'KJV'}
-        </button>
-      )}
     </div>
   );
 };
@@ -635,10 +623,7 @@ const BibleApp = () => {
     const primaryPane = chapterContentRef.current;
     const kjvPane = kjvContentRef.current;
     
-    // If either pane is missing, return a no-op cleanup function
-    if (!primaryPane || !kjvPane) {
-      return () => {}; // Return an empty function instead of false
-    }
+    if (!primaryPane || !kjvPane) return false;
     
     const handlePrimaryScroll = () => {
       if (isManuallyScrolling.current) return;
@@ -695,13 +680,8 @@ const BibleApp = () => {
     
     // Return a cleanup function
     return () => {
-      // Check if primaryPane still exists before attempting to remove listener
       if (primaryPane) {
-        try {
-          primaryPane.removeEventListener('scroll', handlePrimaryScroll);
-        } catch (e) {
-          console.log("Cleanup error (can be ignored):", e.message);
-        }
+        primaryPane.removeEventListener('scroll', handlePrimaryScroll);
       }
     };
   };
@@ -903,15 +883,8 @@ const BibleApp = () => {
       // Ensure last scroll position is reset
       lastPrimaryScrollPos.current = chapterContentRef.current?.scrollTop || 0;
       
-      // Setup the scroll sync - the returned cleanup function might be undefined
-      const cleanup = setupScrollSync();
-      
-      // Return a valid cleanup function that safely handles undefined
-      return () => {
-        if (typeof cleanup === 'function') {
-          cleanup();
-        }
-      };
+      // Setup the scroll sync
+      return setupScrollSync();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBook, selectedChapter, selectedTranslation, scrollSyncMode, loading]);
@@ -930,13 +903,7 @@ const BibleApp = () => {
         const cleanup = setupScrollSync();
         scrollSyncInitialized.current = true;
         console.log("Scroll sync initialized");
-        
-        // Store the cleanup function to be called when the component unmounts
-        return () => {
-          if (typeof cleanup === 'function') {
-            cleanup();
-          }
-        };
+        return cleanup;
       }, 500);
       
       return () => clearTimeout(timer);
@@ -955,26 +922,8 @@ const BibleApp = () => {
       lastPrimaryScrollPos.current = chapterContentRef.current.scrollTop;
     }
     
-    // Store any previous cleanup function
-    let cleanupFunction;
-    
     // Re-initialize immediately
-    try {
-      cleanupFunction = setupScrollSync();
-    } catch (e) {
-      console.log("Error setting up scroll sync:", e);
-    }
-    
-    // Return cleanup function for component unmount
-    return () => {
-      if (typeof cleanupFunction === 'function') {
-        try {
-          cleanupFunction();
-        } catch (e) {
-          console.log("Cleanup error in mode change (can be ignored):", e.message);
-        }
-      }
-    };
+    setupScrollSync();
   };
 
   // Load cross references from external JSON file
@@ -1136,26 +1085,6 @@ const BibleApp = () => {
     // Reset scroll sync state
     lastPrimaryScrollPos.current = 0;
     scrollSyncInitialized.current = false;
-  };
-  
-  // Toggle between KJV and BBE translations
-  const handleToggleTranslation = () => {
-    // Current position
-    const currentBookAbbrev = selectedBook?.abbrev;
-    const currentChapter = selectedChapter;
-    
-    // Store previous translation
-    setPreviousTranslation(selectedTranslation);
-    
-    // Toggle between KJV and BBE
-    const newTranslation = 
-      selectedTranslation === 'en_kjv.json' ? 'en_bbe.json' : 'en_kjv.json';
-    
-    // Update translation
-    setSelectedTranslation(newTranslation);
-    
-    // Log the toggle action for debugging
-    console.log(`Toggled translation from ${selectedTranslation} to ${newTranslation}`);
   };
   
   // Handle translation change
@@ -1656,8 +1585,6 @@ const BibleApp = () => {
               currentBook={selectedBook}
               currentChapter={selectedChapter}
               currentTranslation={selectedTranslation}
-              onToggleTranslation={handleToggleTranslation}
-              isMobileView={isMobileView}
             />
           </div>
           
