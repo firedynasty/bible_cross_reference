@@ -17,4 +17,4 @@ instead of
 
 >>>
 
-Create a new file called BibleApp_modified15.js based on my current BibleApp.js, but with modifications to preserve the current translation when loading a saved position. Please write the complete, working code for this new file, not just the changes.
+Create a new file called BibleApp_modified16.js based on my current BibleApp.js in the folder src, but with these new modifications. Please write the complete, working code for this new file, not just the changes.
