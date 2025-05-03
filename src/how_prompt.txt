@@ -20,4 +20,7 @@ instead of
 Create a new file called BibleApp_modified16.js based on my current BibleApp.js in the folder src, but with these new modifications. Please write the complete, working code for this new file, not just the changes.
 
 
-Create a new file called redirect_modified2.html based on my current redirect.html but with these new modifications. Please write the complete, working code for this new file, not just the changes.
+Create a new file called BibleApp_modified17.js based on my current BibleApp.js but with these new modifications. Please write the complete, working code for this new file, not just the changes.
+
+
+can you can add functionality to hide the left sidebar pane that goes to Bible Chapters when viewing on mobile. Can you implement a responsive design that automatically hides the sidebar on mobile devices so I only have two panes, in BibleApp.js
