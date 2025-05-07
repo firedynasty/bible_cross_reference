@@ -226,39 +226,20 @@ const NavigationPlaceholder = ({
   return (
     <div className="relative">
       {/* Current Location Display */}
-      <div className="flex items-center bg-blue-50 px-2 py-1 rounded-md text-blue-800 text-sm">
-        {/* Dark Mode Toggle Button - Moved to beginning */}
-        <button
-          onClick={() => onDarkModeToggle && onDarkModeToggle()}
-          className={`px-2 py-0.5 rounded focus:outline-none ${
-            isDarkMode 
-              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' 
-              : 'bg-gray-700 text-white hover:bg-gray-800'
-          }`}
-          title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
-        >
-          {isDarkMode ? 'Light' : 'Dark'}
-        </button>
-        
-        {/* MP3 Audio Button - Moved before Primary */}
-        <button
-          onClick={() => onAudioClick && onAudioClick()}
-          className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-purple-100 text-purple-700 hover:bg-purple-200"
-          title="Listen to audio for this chapter"
-        >
-          MP3
-        </button>
-        
-        {/* Primary text - Now after buttons */}
-        <span className="ml-3">Primary:</span>
+      <div className="flex items-center bg-gray-100 px-2 py-1 rounded-md text-gray-700 text-sm">
+        <span>Primary:</span>
         <span className="font-medium mx-1">{book.book || getBookName(book.abbrev)}</span>
         <ChevronRight className="h-3 w-3 mx-1" />
         <span className="font-medium">Ch {chapter}</span>
         
-        {/* Scroll Sync Buttons - All hidden but functionality is retained */}
+        {/* Scroll Sync Buttons */}
         <button 
           onClick={() => onSyncModeChange('exact')}
-          className="hidden ml-2 px-2 py-0.5 rounded focus:outline-none bg-blue-600 text-white"
+          className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
+            syncMode === 'exact' 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+          }`}
           title="Sync KJV scroll at the same speed as primary pane"
         >
           Exact
@@ -313,6 +294,28 @@ const NavigationPlaceholder = ({
             <span className="text-sm">KJV</span>
           </label>
         </div>
+        
+        {/* MP3 Audio Button */}
+        <button
+          onClick={() => onAudioClick && onAudioClick()}
+          className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-purple-100 text-purple-700 hover:bg-purple-200"
+          title="Listen to audio for this chapter"
+        >
+          MP3
+        </button>
+        
+        {/* Dark Mode Toggle Button */}
+        <button
+          onClick={() => onDarkModeToggle && onDarkModeToggle()}
+          className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
+            isDarkMode 
+              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' 
+              : 'bg-gray-700 text-white hover:bg-gray-800'
+          }`}
+          title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {isDarkMode ? 'Light' : 'Dark'}
+        </button>
         
         {/* History Button */}
         <button 
@@ -436,9 +439,6 @@ const BibleApp = () => {
   
   // State to track dark/light mode
   const [isDarkMode, setIsDarkMode] = useState(false);
-  
-  // State to track scroll position for mobile view during translation changes
-  const [mobileScrollPosition, setMobileScrollPosition] = useState(0);
 
   // Effect to detect mobile and tablet screen sizes and handle sidebar visibility
   useEffect(() => {
@@ -478,35 +478,6 @@ const BibleApp = () => {
     // Cleanup
     return () => window.removeEventListener('resize', checkDeviceView);
   }, []);
-  
-  // Effect to handle mobile scroll position restoration when the component is fully rendered
-  useEffect(() => {
-    // Only in mobile view and when the content is loaded
-    if (isMobileView && !loading && chapterContentRef?.current) {
-      // Try to restore the scroll position one more time after the component has fully rendered
-      try {
-        const storedScrollPosition = localStorage.getItem('mobileScrollPosition');
-        if (storedScrollPosition && parseInt(storedScrollPosition) > 0) {
-          const scrollPosition = parseInt(storedScrollPosition);
-          console.log("Component rendered, attempting final scroll restore:", scrollPosition);
-          
-          // Use a slightly longer delay to ensure everything is rendered
-          setTimeout(() => {
-            // Double check that ref is still valid when the timeout fires
-            if (chapterContentRef?.current) {
-              chapterContentRef.current.scrollTop = scrollPosition;
-              // Only update sync ref if it's initialized
-              if (lastPrimaryScrollPos) {
-                lastPrimaryScrollPos.current = scrollPosition;
-              }
-            }
-          }, 500);
-        }
-      } catch (e) {
-        console.warn("Error in final scroll position restoration:", e);
-      }
-    }
-  }, [isMobileView, loading]);
   
   // Update current book abbrev when book changes
   useEffect(() => {
@@ -704,8 +675,7 @@ const BibleApp = () => {
           isViewingCrossRef,
           scrollSyncMode,
           stickyPane,
-          isDarkMode,
-          mobileScrollPosition: isMobileView ? chapterContentRef.current?.scrollTop || 0 : 0
+          isDarkMode
         };
         localStorage.setItem('bibleReaderState', JSON.stringify(stateToSave));
       } catch (e) {
@@ -1079,49 +1049,6 @@ const BibleApp = () => {
         
         // Reset the scroll sync initialized flag
         scrollSyncInitialized.current = false;
-        
-        // In mobile view, restore the scroll position from our dedicated localStorage item
-        if (isMobileView && chapterContentRef?.current) {
-          try {
-            // Explicitly get the stored scroll position from localStorage
-            const storedScrollPosition = localStorage.getItem('mobileScrollPosition');
-            
-            if (storedScrollPosition && parseInt(storedScrollPosition) > 0) {
-              const scrollPosition = parseInt(storedScrollPosition);
-              console.log("Found stored mobile scroll position:", scrollPosition);
-              
-              // Use a series of attempts to restore the scroll position
-              // This improves reliability across different devices
-              const restoreScroll = (attempts = 0) => {
-                if (attempts >= 10) return; // Stop after 10 attempts
-                
-                setTimeout(() => {
-                  // Additional safety check to ensure ref is still valid
-                  if (chapterContentRef?.current) {
-                    console.log(`Attempt ${attempts+1} to restore scroll to ${scrollPosition}`);
-                    chapterContentRef.current.scrollTop = scrollPosition;
-                    
-                    // If we're not at the right position yet, try again
-                    if (Math.abs(chapterContentRef.current.scrollTop - scrollPosition) > 10) {
-                      restoreScroll(attempts + 1);
-                    } else {
-                      console.log("Successfully restored scroll position");
-                      // Update ref for scroll sync if it exists
-                      if (lastPrimaryScrollPos) {
-                        lastPrimaryScrollPos.current = scrollPosition;
-                      }
-                    }
-                  }
-                }, 100 * (attempts + 1)); // Increasing delays: 100ms, 200ms, 300ms, etc.
-              };
-              
-              // Start the restoration attempts
-              restoreScroll();
-            }
-          } catch (e) {
-            console.warn("Error restoring mobile scroll position:", e);
-          }
-        }
       } catch (err) {
         console.error("Failed to load data:", err);
         // Fix error message if it's referring to the old Hebrew Bible file
@@ -1466,20 +1393,6 @@ const BibleApp = () => {
     // Store previous translation before changing
     setPreviousTranslation(selectedTranslation);
     
-    // In mobile view, explicitly save the scroll position to localStorage right now
-    // Use optional chaining to avoid null reference errors
-    if (isMobileView && chapterContentRef?.current) {
-      try {
-        const currentScroll = chapterContentRef.current.scrollTop || 0;
-        console.log("Explicitly saving mobile scroll position to localStorage:", currentScroll);
-        
-        // Directly save to localStorage for immediate persistence
-        localStorage.setItem('mobileScrollPosition', String(currentScroll));
-      } catch (e) {
-        console.warn("Error saving scroll position to localStorage:", e);
-      }
-    }
-    
     // Update translation
     const newTranslation = e.target.value;
     setSelectedTranslation(newTranslation);
@@ -1497,11 +1410,6 @@ const BibleApp = () => {
         parsedState.translation = newTranslation;
         parsedState.scrollSyncMode = scrollSyncMode;
         parsedState.stickyPane = stickyPane;
-        
-        // For mobile view, store the scroll position
-        if (isMobileView) {
-          parsedState.mobileScrollPosition = mobileScrollPosition;
-        }
         
         // Preserve primary reading state
         if (primaryReading.book) {
@@ -1527,8 +1435,7 @@ const BibleApp = () => {
           },
           isViewingCrossRef,
           scrollSyncMode,
-          stickyPane,
-          mobileScrollPosition: isMobileView ? mobileScrollPosition : 0
+          stickyPane
         };
         localStorage.setItem('bibleReaderState', JSON.stringify(stateToSave));
       }
@@ -1536,28 +1443,16 @@ const BibleApp = () => {
       console.warn("Error updating translation in localStorage:", e);
     }
     
-    // In mobile view, preserve scroll position; in desktop view, scroll to top
-    if (!isMobileView) {
-      // Only scroll to top in desktop view
-      if (chapterContentRef?.current) {
-        chapterContentRef.current.scrollTop = 0;
-      }
-      if (kjvContentRef?.current) {
-        kjvContentRef.current.scrollTop = 0;
-      }
-      
-      // Reset scroll sync state if initialized
-      if (lastPrimaryScrollPos) {
-        lastPrimaryScrollPos.current = 0;
-      }
-    } else {
-      // In mobile view, we'll keep the scroll position as is
-      console.log("Mobile view: preserving scroll position during translation change");
-      
-      // IMPORTANT: We don't reset the scroll position in mobile view
-      // The stored value in localStorage will be used after loading completes
+    // Scroll both panels to top when translation changes
+    if (chapterContentRef.current) {
+      chapterContentRef.current.scrollTop = 0;
+    }
+    if (kjvContentRef.current) {
+      kjvContentRef.current.scrollTop = 0;
     }
     
+    // Reset scroll sync state
+    lastPrimaryScrollPos.current = 0;
     scrollSyncInitialized.current = false;
   };
 
@@ -2165,7 +2060,12 @@ const BibleApp = () => {
                   <a href="https://cdpn.io/pen/debug/OPJBXKj" target="_blank" rel="noopener noreferrer" className="ml-3 text-blue-500 hover:text-blue-700">
                     <Link className="h-6 w-6" />
                   </a>
-                  <span className="ml-3 px-2 py-1 rounded text-xs bg-blue-50 text-blue-800">
+                  <span className="ml-3 px-2 py-1 rounded text-xs" 
+                    style={{
+                      backgroundColor: '#dbeafe',
+                      color: '#1d4ed8'
+                    }}
+                  >
                     Exact Sync
                   </span>
                 </h2>
@@ -2295,7 +2195,12 @@ const BibleApp = () => {
                       </button>
                     )}
                     {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter} <span className="text-gray-500 ml-2">(KJV)</span>
-                    <span className="ml-3 px-2 py-1 rounded text-xs bg-blue-50 text-blue-800">
+                    <span className="ml-3 px-2 py-1 rounded text-xs" 
+                      style={{
+                        backgroundColor: '#dbeafe',
+                        color: '#1d4ed8'
+                      }}
+                    >
                       Exact Sync
                     </span>
                     <div className="ml-auto flex items-center">

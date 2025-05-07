@@ -54,7 +54,7 @@ const getBaseUrl = () => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onToggleTranslation, isMobileView, isTabletView, stickyPane, isDarkMode }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onToggleTranslation, isMobileView, isTabletView, stickyPane }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -140,7 +140,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
   return (
     <div className="flex items-center space-x-2">
       <select
-        className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
+        className="border border-gray-300 rounded p-1 text-sm bg-white"
         value={selectedKey}
         onChange={(e) => setSelectedKey(e.target.value)}
       >
@@ -155,7 +155,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       <button
         onClick={() => onSelect(selectedKey)}
         disabled={!selectedKey || loading}
-        className={`flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded hover:bg-blue-600 transition-colors disabled:${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
+        className="flex items-center px-2 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300"
         title="Load saved position"
       >
         <Database className="h-3 w-3 mr-1" />
@@ -165,7 +165,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       <button
         onClick={handleSave}
         disabled={loading}
-        className={`flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-green-700' : 'bg-green-500'} text-white rounded hover:bg-green-600 transition-colors disabled:${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
+        className="flex items-center px-2 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 transition-colors disabled:bg-gray-300"
         title="Save current position"
       >
         <Save className="h-3 w-3 mr-1" />
@@ -176,7 +176,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       {isMobileView && !isTabletView && (
         <button
           onClick={onToggleTranslation}
-          className={`flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-purple-700' : 'bg-purple-500'} text-white rounded hover:bg-purple-600 transition-colors`}
+          className="flex items-center px-2 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
           title="Toggle between KJV and BBE translations"
         >
           <BookOpen className="h-3 w-3 mr-1" />
@@ -197,9 +197,7 @@ const NavigationPlaceholder = ({
   syncMode, 
   onStickyPaneChange, 
   stickyPane,
-  onAudioClick,
-  onDarkModeToggle,
-  isDarkMode
+  onAudioClick
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -226,39 +224,20 @@ const NavigationPlaceholder = ({
   return (
     <div className="relative">
       {/* Current Location Display */}
-      <div className="flex items-center bg-blue-50 px-2 py-1 rounded-md text-blue-800 text-sm">
-        {/* Dark Mode Toggle Button - Moved to beginning */}
-        <button
-          onClick={() => onDarkModeToggle && onDarkModeToggle()}
-          className={`px-2 py-0.5 rounded focus:outline-none ${
-            isDarkMode 
-              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' 
-              : 'bg-gray-700 text-white hover:bg-gray-800'
-          }`}
-          title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
-        >
-          {isDarkMode ? 'Light' : 'Dark'}
-        </button>
-        
-        {/* MP3 Audio Button - Moved before Primary */}
-        <button
-          onClick={() => onAudioClick && onAudioClick()}
-          className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-purple-100 text-purple-700 hover:bg-purple-200"
-          title="Listen to audio for this chapter"
-        >
-          MP3
-        </button>
-        
-        {/* Primary text - Now after buttons */}
-        <span className="ml-3">Primary:</span>
+      <div className="flex items-center bg-gray-100 px-2 py-1 rounded-md text-gray-700 text-sm">
+        <span>Primary:</span>
         <span className="font-medium mx-1">{book.book || getBookName(book.abbrev)}</span>
         <ChevronRight className="h-3 w-3 mx-1" />
         <span className="font-medium">Ch {chapter}</span>
         
-        {/* Scroll Sync Buttons - All hidden but functionality is retained */}
+        {/* Scroll Sync Buttons */}
         <button 
           onClick={() => onSyncModeChange('exact')}
-          className="hidden ml-2 px-2 py-0.5 rounded focus:outline-none bg-blue-600 text-white"
+          className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
+            syncMode === 'exact' 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+          }`}
           title="Sync KJV scroll at the same speed as primary pane"
         >
           Exact
@@ -313,6 +292,15 @@ const NavigationPlaceholder = ({
             <span className="text-sm">KJV</span>
           </label>
         </div>
+        
+        {/* MP3 Audio Button */}
+        <button
+          onClick={() => onAudioClick && onAudioClick()}
+          className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-purple-100 text-purple-700 hover:bg-purple-200"
+          title="Listen to audio for this chapter"
+        >
+          MP3 Audio
+        </button>
         
         {/* History Button */}
         <button 
@@ -433,12 +421,6 @@ const BibleApp = () => {
   
   // State to track if device is tablet (separate from mobile)
   const [isTabletView, setIsTabletView] = useState(false);
-  
-  // State to track dark/light mode
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  
-  // State to track scroll position for mobile view during translation changes
-  const [mobileScrollPosition, setMobileScrollPosition] = useState(0);
 
   // Effect to detect mobile and tablet screen sizes and handle sidebar visibility
   useEffect(() => {
@@ -478,35 +460,6 @@ const BibleApp = () => {
     // Cleanup
     return () => window.removeEventListener('resize', checkDeviceView);
   }, []);
-  
-  // Effect to handle mobile scroll position restoration when the component is fully rendered
-  useEffect(() => {
-    // Only in mobile view and when the content is loaded
-    if (isMobileView && !loading && chapterContentRef?.current) {
-      // Try to restore the scroll position one more time after the component has fully rendered
-      try {
-        const storedScrollPosition = localStorage.getItem('mobileScrollPosition');
-        if (storedScrollPosition && parseInt(storedScrollPosition) > 0) {
-          const scrollPosition = parseInt(storedScrollPosition);
-          console.log("Component rendered, attempting final scroll restore:", scrollPosition);
-          
-          // Use a slightly longer delay to ensure everything is rendered
-          setTimeout(() => {
-            // Double check that ref is still valid when the timeout fires
-            if (chapterContentRef?.current) {
-              chapterContentRef.current.scrollTop = scrollPosition;
-              // Only update sync ref if it's initialized
-              if (lastPrimaryScrollPos) {
-                lastPrimaryScrollPos.current = scrollPosition;
-              }
-            }
-          }, 500);
-        }
-      } catch (e) {
-        console.warn("Error in final scroll position restoration:", e);
-      }
-    }
-  }, [isMobileView, loading]);
   
   // Update current book abbrev when book changes
   useEffect(() => {
@@ -703,16 +656,14 @@ const BibleApp = () => {
           },
           isViewingCrossRef,
           scrollSyncMode,
-          stickyPane,
-          isDarkMode,
-          mobileScrollPosition: isMobileView ? chapterContentRef.current?.scrollTop || 0 : 0
+          stickyPane
         };
         localStorage.setItem('bibleReaderState', JSON.stringify(stateToSave));
       } catch (e) {
         console.warn("Error saving state to localStorage:", e);
       }
     }
-  }, [selectedBook, selectedChapter, selectedTranslation, primaryReading, isViewingCrossRef, scrollSyncMode, stickyPane, isDarkMode]);
+  }, [selectedBook, selectedChapter, selectedTranslation, primaryReading, isViewingCrossRef, scrollSyncMode, stickyPane]);
 
   // Initialize Firebase database keys if they don't exist
   useEffect(() => {
@@ -1015,11 +966,6 @@ const BibleApp = () => {
               setStickyPane(parsedState.stickyPane);
             }
             
-            // Restore dark mode setting if available
-            if (parsedState.isDarkMode !== undefined) {
-              setIsDarkMode(parsedState.isDarkMode);
-            }
-            
             // Check if the saved translation is still available
             const isTranslationAvailable = translations.some(t => t.id === savedTranslation);
             
@@ -1079,49 +1025,6 @@ const BibleApp = () => {
         
         // Reset the scroll sync initialized flag
         scrollSyncInitialized.current = false;
-        
-        // In mobile view, restore the scroll position from our dedicated localStorage item
-        if (isMobileView && chapterContentRef?.current) {
-          try {
-            // Explicitly get the stored scroll position from localStorage
-            const storedScrollPosition = localStorage.getItem('mobileScrollPosition');
-            
-            if (storedScrollPosition && parseInt(storedScrollPosition) > 0) {
-              const scrollPosition = parseInt(storedScrollPosition);
-              console.log("Found stored mobile scroll position:", scrollPosition);
-              
-              // Use a series of attempts to restore the scroll position
-              // This improves reliability across different devices
-              const restoreScroll = (attempts = 0) => {
-                if (attempts >= 10) return; // Stop after 10 attempts
-                
-                setTimeout(() => {
-                  // Additional safety check to ensure ref is still valid
-                  if (chapterContentRef?.current) {
-                    console.log(`Attempt ${attempts+1} to restore scroll to ${scrollPosition}`);
-                    chapterContentRef.current.scrollTop = scrollPosition;
-                    
-                    // If we're not at the right position yet, try again
-                    if (Math.abs(chapterContentRef.current.scrollTop - scrollPosition) > 10) {
-                      restoreScroll(attempts + 1);
-                    } else {
-                      console.log("Successfully restored scroll position");
-                      // Update ref for scroll sync if it exists
-                      if (lastPrimaryScrollPos) {
-                        lastPrimaryScrollPos.current = scrollPosition;
-                      }
-                    }
-                  }
-                }, 100 * (attempts + 1)); // Increasing delays: 100ms, 200ms, 300ms, etc.
-              };
-              
-              // Start the restoration attempts
-              restoreScroll();
-            }
-          } catch (e) {
-            console.warn("Error restoring mobile scroll position:", e);
-          }
-        }
       } catch (err) {
         console.error("Failed to load data:", err);
         // Fix error message if it's referring to the old Hebrew Bible file
@@ -1273,11 +1176,6 @@ const BibleApp = () => {
     
     // Open the audio in a new window
     window.open(audioUrl, '_blank');
-  };
-  
-  // Toggle between dark and light mode
-  const toggleDarkMode = () => {
-    setIsDarkMode(prevMode => !prevMode);
   };
 
   // Load cross references from external JSON file
@@ -1466,20 +1364,6 @@ const BibleApp = () => {
     // Store previous translation before changing
     setPreviousTranslation(selectedTranslation);
     
-    // In mobile view, explicitly save the scroll position to localStorage right now
-    // Use optional chaining to avoid null reference errors
-    if (isMobileView && chapterContentRef?.current) {
-      try {
-        const currentScroll = chapterContentRef.current.scrollTop || 0;
-        console.log("Explicitly saving mobile scroll position to localStorage:", currentScroll);
-        
-        // Directly save to localStorage for immediate persistence
-        localStorage.setItem('mobileScrollPosition', String(currentScroll));
-      } catch (e) {
-        console.warn("Error saving scroll position to localStorage:", e);
-      }
-    }
-    
     // Update translation
     const newTranslation = e.target.value;
     setSelectedTranslation(newTranslation);
@@ -1497,11 +1381,6 @@ const BibleApp = () => {
         parsedState.translation = newTranslation;
         parsedState.scrollSyncMode = scrollSyncMode;
         parsedState.stickyPane = stickyPane;
-        
-        // For mobile view, store the scroll position
-        if (isMobileView) {
-          parsedState.mobileScrollPosition = mobileScrollPosition;
-        }
         
         // Preserve primary reading state
         if (primaryReading.book) {
@@ -1527,8 +1406,7 @@ const BibleApp = () => {
           },
           isViewingCrossRef,
           scrollSyncMode,
-          stickyPane,
-          mobileScrollPosition: isMobileView ? mobileScrollPosition : 0
+          stickyPane
         };
         localStorage.setItem('bibleReaderState', JSON.stringify(stateToSave));
       }
@@ -1536,28 +1414,16 @@ const BibleApp = () => {
       console.warn("Error updating translation in localStorage:", e);
     }
     
-    // In mobile view, preserve scroll position; in desktop view, scroll to top
-    if (!isMobileView) {
-      // Only scroll to top in desktop view
-      if (chapterContentRef?.current) {
-        chapterContentRef.current.scrollTop = 0;
-      }
-      if (kjvContentRef?.current) {
-        kjvContentRef.current.scrollTop = 0;
-      }
-      
-      // Reset scroll sync state if initialized
-      if (lastPrimaryScrollPos) {
-        lastPrimaryScrollPos.current = 0;
-      }
-    } else {
-      // In mobile view, we'll keep the scroll position as is
-      console.log("Mobile view: preserving scroll position during translation change");
-      
-      // IMPORTANT: We don't reset the scroll position in mobile view
-      // The stored value in localStorage will be used after loading completes
+    // Scroll both panels to top when translation changes
+    if (chapterContentRef.current) {
+      chapterContentRef.current.scrollTop = 0;
+    }
+    if (kjvContentRef.current) {
+      kjvContentRef.current.scrollTop = 0;
     }
     
+    // Reset scroll sync state
+    lastPrimaryScrollPos.current = 0;
     scrollSyncInitialized.current = false;
   };
 
@@ -1968,10 +1834,10 @@ const BibleApp = () => {
 
   // Main render
   return (
-    <div className={`flex h-screen ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+    <div className="flex h-screen bg-gray-100">
       {/* Book Selection Sidebar - Hidden on Mobile and Tablet */}
       {showSidebar && (
-        <div className={`${isMobileView || isTabletView ? 'absolute z-10 h-full' : 'w-80'} ${isDarkMode ? 'bg-gray-800 text-white border-r border-gray-700' : 'bg-white border-r border-gray-200'} overflow-y-auto`}>
+        <div className={`${isMobileView || isTabletView ? 'absolute z-10 h-full' : 'w-80'} bg-white border-r border-gray-200 overflow-y-auto`}>
           <div className="p-2 border-b border-gray-200 flex justify-between items-center">
             <h2 className="text-lg font-semibold flex items-center">
               <Book className="mr-1 h-4 w-4" />
@@ -2010,7 +1876,7 @@ const BibleApp = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar with Navigation and Chapter Selection */}
-        <div className={`${isDarkMode ? 'bg-gray-800 text-white border-b border-gray-700' : 'bg-white border-b border-gray-200'} p-1 flex flex-wrap items-center justify-between`}>
+        <div className="bg-white border-b border-gray-200 p-1 flex flex-wrap items-center justify-between">
           <div className="flex items-center space-x-2">
             {/* Sidebar toggle button for mobile and tablet */}
             {(isMobileView || isTabletView) && !showSidebar && (
@@ -2033,7 +1899,7 @@ const BibleApp = () => {
                 <select 
                   value={selectedChapter}
                   onChange={(e) => handleChapterSelect(parseInt(e.target.value))}
-                  className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded px-1 py-0 text-sm w-12`}
+                  className="border border-gray-300 rounded px-1 py-0 text-sm w-12"
                 >
                   {selectedBook.chapters.map((_, index) => (
                     <option key={index + 1} value={index + 1}>
@@ -2049,7 +1915,7 @@ const BibleApp = () => {
               <select 
                 value={selectedTranslation}
                 onChange={handleTranslationChange}
-                className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded px-2 py-1 text-sm max-w-xs`}
+                className="border border-gray-300 rounded px-2 py-1 text-sm bg-white max-w-xs"
                 style={{ width: "auto" }}
               >
                 {translations.map(translation => (
@@ -2073,7 +1939,6 @@ const BibleApp = () => {
               isMobileView={isMobileView}
               isTabletView={isTabletView}
               stickyPane={stickyPane}
-              isDarkMode={isDarkMode}
             />
           </div>
           
@@ -2088,8 +1953,6 @@ const BibleApp = () => {
               stickyPane={stickyPane}
               onStickyPaneChange={handleStickyPaneChange}
               onAudioClick={handleAudioButtonClick}
-              onDarkModeToggle={toggleDarkMode}
-              isDarkMode={isDarkMode}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
                   const bookObj = bibleData.find(b => b.abbrev === book);
@@ -2139,7 +2002,7 @@ const BibleApp = () => {
         {/* Bible Text and KJV Split View - Responsive layout for different devices */}
         <div className="flex-1 flex overflow-hidden">
           {/* Bible Text Display */}
-          <div ref={chapterContentRef} className={`${isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'} relative`}>
+          <div ref={chapterContentRef} className={`${isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 bg-white relative`}>
             {selectedBook && selectedChapter > 0 && (
               <div>
                 <h2 className="text-3xl font-semibold flex items-center mb-5">
@@ -2165,7 +2028,12 @@ const BibleApp = () => {
                   <a href="https://cdpn.io/pen/debug/OPJBXKj" target="_blank" rel="noopener noreferrer" className="ml-3 text-blue-500 hover:text-blue-700">
                     <Link className="h-6 w-6" />
                   </a>
-                  <span className="ml-3 px-2 py-1 rounded text-xs bg-blue-50 text-blue-800">
+                  <span className="ml-3 px-2 py-1 rounded text-xs" 
+                    style={{
+                      backgroundColor: '#dbeafe',
+                      color: '#1d4ed8'
+                    }}
+                  >
                     Exact Sync
                   </span>
                 </h2>
@@ -2180,13 +2048,11 @@ const BibleApp = () => {
                         key={index} 
                         id={`verse-${verseNumber}`}
                         className={`leading-relaxed p-4 rounded-md transition-colors text-2xl ${
-                          hasReference 
-                            ? isDarkMode ? 'hover:bg-blue-900' : 'hover:bg-blue-50' 
-                            : ''
+                          hasReference ? 'hover:bg-blue-50' : ''
                         }`}
                       >
                         <p className="flex">
-                          <span className={`font-bold mr-4 text-2xl ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
+                          <span className="font-bold text-blue-600 mr-4 text-2xl">{verseNumber}</span>
                           <span className="flex-1">{verse}</span>
                           
                           {hasReference && (
@@ -2202,28 +2068,18 @@ const BibleApp = () => {
                         
                         {/* Cross-reference popup */}
                         {showCrossRef === refKey && (
-                          <div className={`mt-4 p-5 rounded-md shadow-sm ${
-                            isDarkMode 
-                              ? 'bg-blue-900 border border-blue-700' 
-                              : 'bg-blue-50 border border-blue-200'
-                          }`}>
+                          <div className="mt-4 p-5 bg-blue-50 border border-blue-200 rounded-md shadow-sm">
                             <h4 className="font-medium mb-4 text-2xl">Cross References:</h4>
                             <ul className="space-y-4">
                               {crossReferences[refKey].map((ref, i) => (
                                 <li key={i} className="text-xl">
                                   <button 
                                     onClick={() => handleCrossRefNavigate(ref)}
-                                    className={`font-medium ${
-                                      isDarkMode 
-                                        ? 'text-blue-300 hover:text-blue-200' 
-                                        : 'text-blue-600 hover:text-blue-800'
-                                    }`}
+                                    className="text-blue-600 hover:text-blue-800 font-medium"
                                   >
                                     {getBookName(ref.book)} {ref.chapter}:{ref.verse}
                                   </button>
-                                  <p className={`mt-2 ${
-                                    isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                                  }`}>{ref.text}</p>
+                                  <p className="text-gray-700 mt-2">{ref.text}</p>
                                 </li>
                               ))}
                             </ul>
@@ -2280,7 +2136,7 @@ const BibleApp = () => {
           {(!isMobileView || isTabletView || showKJVOnMobile) && (
             <div className={`${isMobileView && !isTabletView ? 'w-full absolute inset-0 z-20' : 'w-1/2'} border-l border-gray-200 bg-gray-50 flex flex-col`}>
               {/* KJV Bible Text Display */}
-              <div ref={kjvContentRef} className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'}`}>
+              <div ref={kjvContentRef} className="flex-1 p-8 overflow-y-auto bg-white">
                 {selectedBook && selectedChapter > 0 && (
                 <div>
                   <h2 className="text-3xl mr-2 font-semibold mb-5 flex items-center">
@@ -2295,7 +2151,12 @@ const BibleApp = () => {
                       </button>
                     )}
                     {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter} <span className="text-gray-500 ml-2">(KJV)</span>
-                    <span className="ml-3 px-2 py-1 rounded text-xs bg-blue-50 text-blue-800">
+                    <span className="ml-3 px-2 py-1 rounded text-xs" 
+                      style={{
+                        backgroundColor: '#dbeafe',
+                        color: '#1d4ed8'
+                      }}
+                    >
                       Exact Sync
                     </span>
                     <div className="ml-auto flex items-center">
@@ -2334,7 +2195,7 @@ const BibleApp = () => {
                                 className="leading-relaxed p-4 rounded-md transition-colors text-2xl"
                               >
                                 <p className="flex">
-                                  <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
+                                  <span className="font-bold text-blue-600 mr-4">{verseNumber}</span>
                                   <span className="flex-1">{verse}</span>
                                 </p>
                               </div>
