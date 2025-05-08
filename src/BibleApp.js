@@ -172,17 +172,15 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         Save
       </button>
       
-      {/* Toggle button between KJV/BBE - show only on mobile views (not tablets) */}
-      {isMobileView && !isTabletView && (
-        <button
-          onClick={onToggleTranslation}
-          className={`flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-purple-700' : 'bg-purple-500'} text-white rounded hover:bg-purple-600 transition-colors`}
-          title="Toggle between KJV and BBE translations"
-        >
-          <BookOpen className="h-3 w-3 mr-1" />
-          {currentTranslation === 'en_kjv.json' ? 'BBE' : 'KJV'}
-        </button>
-      )}
+      {/* Toggle button between KJV/BBE */}
+      <button
+        onClick={onToggleTranslation}
+        className={`flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-purple-700' : 'bg-purple-500'} text-white rounded hover:bg-purple-600 transition-colors`}
+        title="Toggle between KJV and BBE translations"
+      >
+        <BookOpen className="h-3 w-3 mr-1" />
+        {currentTranslation === 'en_kjv.json' ? 'BBE' : 'KJV'}
+      </button>
     </div>
   );
 };
@@ -712,7 +710,7 @@ const BibleApp = () => {
         console.warn("Error saving state to localStorage:", e);
       }
     }
-  }, [selectedBook, selectedChapter, selectedTranslation, primaryReading, isViewingCrossRef, scrollSyncMode, stickyPane, isDarkMode]);
+  }, [selectedBook, selectedChapter, selectedTranslation, primaryReading, isViewingCrossRef, scrollSyncMode, stickyPane, isDarkMode, isMobileView]);
 
   // Initialize Firebase database keys if they don't exist
   useEffect(() => {
@@ -1446,9 +1444,48 @@ const BibleApp = () => {
     // Store previous translation
     setPreviousTranslation(selectedTranslation);
     
+    // In mobile view, explicitly save the scroll position to localStorage right now
+    if (isMobileView && chapterContentRef?.current) {
+      try {
+        const currentScroll = chapterContentRef.current.scrollTop || 0;
+        console.log("Saving mobile scroll position before toggle:", currentScroll);
+        
+        // Directly save to localStorage for immediate persistence
+        localStorage.setItem('mobileScrollPosition', String(currentScroll));
+        
+        // Also update the React state to keep it in sync
+        setMobileScrollPosition(currentScroll);
+      } catch (e) {
+        console.warn("Error saving scroll position to localStorage:", e);
+      }
+    }
+    
     // Toggle between KJV and BBE
     const newTranslation = 
       selectedTranslation === 'en_kjv.json' ? 'en_bbe.json' : 'en_kjv.json';
+    
+    // Update the saved state with the new translation but preserve position
+    try {
+      const savedState = localStorage.getItem('bibleReaderState');
+      if (savedState) {
+        const parsedState = JSON.parse(savedState);
+        
+        // Update translation while preserving other state
+        parsedState.translation = newTranslation;
+        
+        // For mobile view, explicitly update the scroll position
+        if (isMobileView && chapterContentRef?.current) {
+          const currentScroll = chapterContentRef.current.scrollTop || 0;
+          parsedState.mobileScrollPosition = currentScroll;
+          // Update the state so it's consistent
+          setMobileScrollPosition(currentScroll);
+        }
+        
+        localStorage.setItem('bibleReaderState', JSON.stringify(parsedState));
+      }
+    } catch (e) {
+      console.warn("Error updating bibleReaderState in localStorage:", e);
+    }
     
     // Update translation
     setSelectedTranslation(newTranslation);
