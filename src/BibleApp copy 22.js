@@ -115,7 +115,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
   // Handle saving current position to selected key
   const handleSave = () => {
     if (!selectedKey) {
-      console.warn('Save aborted: No position key selected');
+      alert('Please select a position key first!');
       return;
     }
 
@@ -373,7 +373,6 @@ const BibleApp = () => {
   const [selectedChapter, setSelectedChapter] = useState(1);
   const [crossReferences, setCrossReferences] = useState({});
   const [showCrossRef, setShowCrossRef] = useState(null);
-  const [nextChapterClickCount, setNextChapterClickCount] = useState(0);
   
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
@@ -638,14 +637,14 @@ const BibleApp = () => {
               // Fall back to direct navigation
               if (workingBook === selectedBook) {
                 console.log("Using selected book");
-                handleChapterSelect(currentChapter + 1, true);
+                handleChapterSelect(currentChapter + 1);
               } else {
                 console.log("Setting selected book and chapter");
                 // Need to set the book first if it's not already selected
                 setSelectedBook(workingBook);
                 // Wait for book to be set before changing chapter
                 setTimeout(() => {
-                  handleChapterSelect(currentChapter + 1, true);
+                  handleChapterSelect(currentChapter + 1);
                 }, 100);
               }
             }
@@ -664,7 +663,7 @@ const BibleApp = () => {
                 const nextBook = bibleData[currentBookIndex + 1];
                 console.log("Going to next book:", nextBook.book || getBookName(nextBook.abbrev));
                 setSelectedBook(nextBook);
-                handleChapterSelect(1, true);
+                handleChapterSelect(1);
               }
             }
           }
@@ -896,9 +895,6 @@ const BibleApp = () => {
 
   // Load Bible data and cross-references on component mount
   useEffect(() => {
-    // Reset the Next Chapter click counter when the component mounts
-    setNextChapterClickCount(0);
-    
     const loadData = async () => {
       try {
         setLoading(true);
@@ -1083,14 +1079,11 @@ const BibleApp = () => {
         scrollSyncInitialized.current = false;
         
         // In mobile view, restore the scroll position from our dedicated localStorage item
-        // But only restore scroll if we're not just changing chapters with Next Chapter button
         if (isMobileView && chapterContentRef?.current) {
           try {
             // Explicitly get the stored scroll position from localStorage
             const storedScrollPosition = localStorage.getItem('mobileScrollPosition');
             
-            // Next Chapter button navigation will have already cleared this,
-            // so it will only restore position when toggling translations or coming back to the app
             if (storedScrollPosition && parseInt(storedScrollPosition) > 0) {
               const scrollPosition = parseInt(storedScrollPosition);
               console.log("Found stored mobile scroll position:", scrollPosition);
@@ -1420,38 +1413,9 @@ const BibleApp = () => {
   };
   
   // Handle chapter selection
-  const handleChapterSelect = (chapterNum, fromNextChapterButton = false) => {
+  const handleChapterSelect = (chapterNum) => {
     setSelectedChapter(chapterNum);
     setShowCrossRef(null); // Hide any cross-reference popup
-    
-    // Handle Next Chapter button click counting and auto-save
-    if (fromNextChapterButton) {
-      const newCount = nextChapterClickCount + 1;
-      setNextChapterClickCount(newCount);
-      
-      // If this is the second click, trigger auto-save without resetting counter
-      if (newCount >= 2) {
-        try {
-          console.log("Auto-saving to position 1");
-          
-          // Direct save using the Firebase save function
-          // Create position data object
-          const positionData = JSON.stringify({
-            bookAbbrev: selectedBook?.abbrev,
-            chapter: chapterNum, // Use the new chapter we're navigating to
-            translation: selectedTranslation,
-            timestamp: Date.now(),
-            stickyPane: stickyPane
-          });
-          
-          // Call the save function directly
-          handleFirebasePositionSave("1-position", positionData);
-        } catch (error) {
-          console.error("Error during auto-save:", error);
-        }
-        // Note: Counter is not reset here - it will only reset on page load
-      }
-    }
     
     // Update primary reading
     if (selectedBook) {
@@ -1468,13 +1432,6 @@ const BibleApp = () => {
     }
     if (kjvContentRef.current) {
       kjvContentRef.current.scrollTop = 0;
-    }
-    
-    // When navigating between chapters, we want to start at the top of the page
-    // Only clear this if coming from the Next Chapter button
-    if (fromNextChapterButton) {
-      localStorage.removeItem('mobileScrollPosition');
-      setMobileScrollPosition(0);
     }
     
     // Reset scroll sync state
@@ -1694,7 +1651,7 @@ const BibleApp = () => {
   // Handle selecting a position from Firebase
   const handleFirebasePositionSelect = async (key) => {
     if (!key) {
-      console.warn('Position select aborted: No position key selected');
+      alert('Please select a position first!');
       return;
     }
 
@@ -1757,22 +1714,22 @@ const BibleApp = () => {
             lastPrimaryScrollPos.current = 0;
             scrollSyncInitialized.current = false;
             
-            // Log success message instead of showing alert
-            console.log(`Position loaded: ${getBookName(positionData.bookAbbrev)} ${positionData.chapter || 1}`);
+            // Show success message
+            alert(`Position loaded: ${getBookName(positionData.bookAbbrev)} ${positionData.chapter || 1}`);
           } else {
-            console.warn(`Book '${positionData.bookAbbrev}' not found in the current Bible data.`);
+            alert(`Book '${positionData.bookAbbrev}' not found in the current Bible data.`);
           }
         } else {
-          console.warn('Invalid position data format.');
+          alert('Invalid position data format.');
         }
       } else {
-        console.warn('No position data found for the selected key.');
+        alert('No position data found for the selected key.');
       }
       
       setFirebaseLoading(false);
     } catch (error) {
       console.error('Error loading position from Firebase:', error);
-      console.warn(`Error loading position: ${error.message}`);
+      alert(`Error loading position: ${error.message}`);
       setFirebaseLoading(false);
     }
   };
@@ -1780,7 +1737,7 @@ const BibleApp = () => {
   // Handle saving a position to Firebase
   const handleFirebasePositionSave = async (key, positionData) => {
     if (!key) {
-      console.warn('Save aborted: No position key selected');
+      alert('Please select a position first!');
       return;
     }
 
@@ -1793,11 +1750,11 @@ const BibleApp = () => {
       // Save the position data
       await set(positionRef, positionData);
       
-      // Log success instead of showing alert
-      console.log(`Position saved to key ${key.split('-')[0]}`);
+      alert(`Position saved to key ${key.split('-')[0]}!`);
       setFirebaseLoading(false);
     } catch (error) {
       console.error('Error saving position to Firebase:', error);
+      alert(`Error saving position: ${error.message}`);
       setFirebaseLoading(false);
     }
   };
@@ -2338,7 +2295,7 @@ const BibleApp = () => {
                   {selectedBook && selectedChapter < selectedBook.chapters.length && (
                     <button 
                       onClick={() => {
-                        handleChapterSelect(selectedChapter + 1, true);
+                        handleChapterSelect(selectedChapter + 1);
                         // Sync KJV panel scroll with primary panel
                         if (kjvContentRef.current) {
                           setTimeout(() => {
@@ -2452,7 +2409,7 @@ const BibleApp = () => {
                     {selectedBook && selectedChapter < selectedBook.chapters.length && (
                       <button 
                         onClick={() => {
-                          handleChapterSelect(selectedChapter + 1, true);
+                          handleChapterSelect(selectedChapter + 1);
                         }}
                         className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
