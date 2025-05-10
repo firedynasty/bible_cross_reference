@@ -54,7 +54,7 @@ const getBaseUrl = () => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onToggleTranslation, isMobileView, isTabletView, stickyPane, isDarkMode, autoSavePosition, onAutoSavePositionChange }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onToggleTranslation, isMobileView, isTabletView, stickyPane, isDarkMode }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -141,17 +141,6 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
     <div className="flex items-center space-x-2">
       <select
         className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
-        value={autoSavePosition}
-        onChange={(e) => onAutoSavePositionChange && onAutoSavePositionChange(e.target.value)}
-        title="Select position for auto-save"
-      >
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-      </select>
-      <select
-        className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
         value={selectedKey}
         onChange={(e) => setSelectedKey(e.target.value)}
       >
@@ -190,7 +179,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         title="Toggle between KJV and BBE translations"
       >
         <BookOpen className="h-3 w-3 mr-1" />
-        {currentTranslation === 'en_kjv.json' ? 'BBE (v)' : 'KJV (v)'}
+        {currentTranslation === 'en_kjv.json' ? 'BBE' : 'KJV'}
       </button>
     </div>
   );
@@ -385,8 +374,7 @@ const BibleApp = () => {
   const [crossReferences, setCrossReferences] = useState({});
   const [showCrossRef, setShowCrossRef] = useState(null);
   const [nextChapterClickCount, setNextChapterClickCount] = useState(0);
-  const [autoSavePosition, setAutoSavePosition] = useState("1");
-
+  
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
   const kjvContentRef = useRef(null);
@@ -541,8 +529,26 @@ const BibleApp = () => {
         setPreviousTranslation(selectedTranslation);
         setSelectedTranslation('en_bbe.json');
       }
-      // 'z' or 'm' key - page down in either mobile or desktop view
-      else if ((e.key === 'z' || e.key === 'm') && chapterContentRef.current) {
+      // 'z' key - scroll KJV pane up (equivalent to 2 up arrow presses)
+      else if (e.key === 'z' && kjvContentRef.current) {
+        // Calculate the scroll amount (2x normal scroll)
+        const scrollAmount = 100; // approximate height of 2 lines
+        kjvContentRef.current.scrollTop = Math.max(0, kjvContentRef.current.scrollTop - scrollAmount);
+        e.preventDefault();
+      }
+      // 'x' key - scroll KJV pane down (equivalent to 2 down arrow presses)
+      else if (e.key === 'x' && kjvContentRef.current) {
+        // Calculate the scroll amount (2x normal scroll)
+        const scrollAmount = 100; // approximate height of 2 lines
+        const newPosition = kjvContentRef.current.scrollTop + scrollAmount;
+        
+        // Ensure we don't exceed the maximum scroll position
+        const maxScroll = kjvContentRef.current.scrollHeight - kjvContentRef.current.clientHeight;
+        kjvContentRef.current.scrollTop = Math.min(maxScroll, newPosition);
+        e.preventDefault();
+      }
+      // 'c' key - page down in both panes simultaneously
+      else if (e.key === 'c' && chapterContentRef.current && kjvContentRef.current) {
         // Calculate page height (approx viewport height)
         const pageHeight = chapterContentRef.current.clientHeight * 0.9; // 90% of viewport
         
@@ -552,33 +558,25 @@ const BibleApp = () => {
         try {
           // Calculate relative scroll positions
           const primaryPane = chapterContentRef.current;
-
+          const kjvPane = kjvContentRef.current;
+          
+          // No need to calculate primary scroll percentage before scrolling
+            
           // Scroll primary pane
           const primaryNewPosition = primaryPane.scrollTop + pageHeight;
           const primaryMaxScroll = primaryPane.scrollHeight - primaryPane.clientHeight;
           primaryPane.scrollTop = Math.min(primaryMaxScroll, primaryNewPosition);
-
-          // In mobile view, we're done after scrolling the primary pane
-          if (!isMobileView && kjvContentRef.current) {
-            const kjvPane = kjvContentRef.current;
-
-            // Calculate new scroll percentage after scrolling
-            const newPrimaryScrollPercentage = primaryPane.scrollTop /
-              (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
-
-            // Apply the exact same percentage to KJV pane
-            kjvPane.scrollTop = newPrimaryScrollPercentage *
-              (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
-          }
-
+          
+          // Calculate new scroll percentage after scrolling
+          const newPrimaryScrollPercentage = primaryPane.scrollTop / 
+            (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
+          
+          // Apply the exact same percentage to KJV pane
+          kjvPane.scrollTop = newPrimaryScrollPercentage * 
+            (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
+            
           // Update last scroll position for sync algorithm
           lastPrimaryScrollPos.current = primaryPane.scrollTop;
-
-          // In mobile view, update the mobile scroll position in localStorage
-          if (isMobileView) {
-            localStorage.setItem('mobileScrollPosition', primaryPane.scrollTop.toString());
-            setMobileScrollPosition(primaryPane.scrollTop);
-          }
         } finally {
           // Reset the flag after a short delay
           setTimeout(() => {
@@ -588,13 +586,9 @@ const BibleApp = () => {
         
         e.preventDefault();
       }
-      // 'v' key - toggle between KJV and BBE translations
+      // 'v' key - go to next chapter when available by simulating a click on the Next Chapter button
       else if (e.key === 'v') {
-        handleToggleTranslation();
-      }
-      // 'x' key - go to next chapter when available by simulating a click on the Next Chapter button (moved from 'v')
-      else if (e.key === 'x') {
-        console.log("X key pressed");
+        console.log("V key pressed");
         console.log("Current book:", selectedBook);
         console.log("Current chapter:", selectedChapter);
         console.log("Primary Reading:", primaryReading);
@@ -1438,8 +1432,8 @@ const BibleApp = () => {
       // If this is the second click, trigger auto-save without resetting counter
       if (newCount >= 2) {
         try {
-          console.log(`Auto-saving to position ${autoSavePosition}`);
-
+          console.log("Auto-saving to position 1");
+          
           // Direct save using the Firebase save function
           // Create position data object
           const positionData = JSON.stringify({
@@ -1449,9 +1443,9 @@ const BibleApp = () => {
             timestamp: Date.now(),
             stickyPane: stickyPane
           });
-
-          // Call the save function directly with the selected position
-          handleFirebasePositionSave(`${autoSavePosition}-position`, positionData);
+          
+          // Call the save function directly
+          handleFirebasePositionSave("1-position", positionData);
         } catch (error) {
           console.error("Error during auto-save:", error);
         }
@@ -2149,8 +2143,8 @@ const BibleApp = () => {
           
           {/* Firebase Position Controls */}
           <div className="flex items-center mr-2">
-            <FirebaseKeySelector
-              onSelect={handleFirebasePositionSelect}
+            <FirebaseKeySelector 
+              onSelect={handleFirebasePositionSelect} 
               onSave={handleFirebasePositionSave}
               currentBook={selectedBook}
               currentChapter={selectedChapter}
@@ -2160,8 +2154,6 @@ const BibleApp = () => {
               isTabletView={isTabletView}
               stickyPane={stickyPane}
               isDarkMode={isDarkMode}
-              autoSavePosition={autoSavePosition}
-              onAutoSavePositionChange={setAutoSavePosition}
             />
           </div>
           
@@ -2356,7 +2348,7 @@ const BibleApp = () => {
                       }}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
-                      Next Chapter (x) &gt;
+                      Next Chapter &gt;
                     </button>
                   )}
                 </div>
@@ -2388,7 +2380,7 @@ const BibleApp = () => {
                     </span>
                     <div className="ml-auto flex items-center">
                       <div className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded mr-2">
-                        Keys: 'z'/'m', 'x', 'v'
+                        Keys: 'z', 'x', 'c', 'v'
                       </div>
                       {isMobileView && !isTabletView && (
                         <button 
@@ -2464,7 +2456,7 @@ const BibleApp = () => {
                         }}
                         className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
-                        Next Chapter (x) &gt;
+                        Next Chapter &gt;
                       </button>
                     )}
                   </div>
