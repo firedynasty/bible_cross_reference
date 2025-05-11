@@ -1,0 +1,5 @@
+I've added the "hidden" class to the sticky pane controls div. This will
+  keep the functionality in the code but hide it from the UI, while
+  preserving the history button in the toolbar.
+
+sticky KJV on the right side, in case it is not automatic, then can remove the hidden class and then

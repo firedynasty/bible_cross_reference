@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Book, Link, ChevronRight, History, BookOpen, Save, Database } from 'lucide-react';
 
 // Import Firebase modules
@@ -190,7 +190,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         title="Toggle between KJV and BBE translations"
       >
         <BookOpen className="h-3 w-3 mr-1" />
-        {currentTranslation === 'en_kjv.json' ? 'BBE' : 'KJV'}
+        {currentTranslation === 'en_kjv.json' ? 'BBE (v)' : 'KJV (v)'}
       </button>
     </div>
   );
@@ -212,160 +212,7 @@ const NavigationPlaceholder = ({
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [autoScrollActive, setAutoScrollActive] = useState(false);
-  const [scrollIntervalSeconds, setScrollIntervalSeconds] = useState(13);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const audioContextRef = useRef(null);
-  // Reference to track the last time auto-scroll was executed
-  const lastScrollTimeRef = useRef(Date.now());
-
-  // Function to reset the scroll timer (used in the auto-scroll useEffect)
-  const resetScrollTimer = () => {
-    lastScrollTimeRef.current = Date.now();
-  };
-
-  // Function to play a subtle beep sound
-  const playSubtleBeep = useCallback(() => {
-    // Only play sound if enabled
-    if (!soundEnabled) return;
-
-    try {
-      // Create audio context on first use (must be triggered by user action)
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      }
-
-      const context = audioContextRef.current;
-
-      // Create oscillator
-      const oscillator = context.createOscillator();
-      const gainNode = context.createGain();
-
-      // Connect nodes
-      oscillator.connect(gainNode);
-      gainNode.connect(context.destination);
-
-      // Configure sound properties
-      oscillator.type = 'sine'; // sine waves are smoother than square or sawtooth
-      oscillator.frequency.value = 800; // gentle higher frequency
-      gainNode.gain.value = 0.05; // very quiet (values from 0 to 1)
-
-      // Schedule envelope for super-short beep
-      gainNode.gain.setValueAtTime(0.05, context.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.15);
-
-      // Play and stop
-      oscillator.start();
-      oscillator.stop(context.currentTime + 0.15);
-    } catch (error) {
-      console.error('Error playing notification sound:', error);
-    }
-  }, [soundEnabled]);
-
-  // Functions to adjust scroll speed
-  const increaseScrollSpeed = useCallback(() => {
-    setScrollIntervalSeconds(prev => Math.max(1, prev - 1));
-  }, []);
-
-  const decreaseScrollSpeed = useCallback(() => {
-    setScrollIntervalSeconds(prev => prev + 1);
-  }, []);
-
-  // Function to simulate pressing 'z' key
-  const simulateZKeyPress = useCallback(() => {
-    const event = new KeyboardEvent('keydown', {
-      key: 'z',
-      code: 'KeyZ',
-      keyCode: 90,
-      which: 90,
-      bubbles: true,
-      cancelable: true
-    });
-    document.dispatchEvent(event);
-  }, []);
-
-  // Track whether this is the first scroll after toggle
-  const firstScrollAfterToggleRef = useRef(true);
-
-  // Reset the first scroll flag when auto-scroll state changes
-  useEffect(() => {
-    if (autoScrollActive) {
-      firstScrollAfterToggleRef.current = true;
-    }
-  }, [autoScrollActive]);
-
-  // Set up auto-scroll interval
-  useEffect(() => {
-    let intervalId;
-
-    if (autoScrollActive) {
-      intervalId = setInterval(() => {
-        // Get current time
-        const now = Date.now();
-        // Only scroll if enough time has passed since last scroll or manual action
-        if (now - lastScrollTimeRef.current >= scrollIntervalSeconds * 1000) {
-          // Create or retrieve the last scroll positions object
-          if (!window.lastScrollPositions) {
-            window.lastScrollPositions = {};
-          }
-
-          // Get scroll positions before scrolling
-          const beforeScrollPositions = {};
-          const scrollContainers = document.querySelectorAll('.overflow-y-auto');
-          scrollContainers.forEach(container => {
-            const id = container.id || container.className;
-            beforeScrollPositions[id] = container.scrollTop;
-          });
-
-          // Always simulate key press to attempt scrolling
-          simulateZKeyPress();
-
-          // Small delay to allow scroll to occur
-          setTimeout(() => {
-            // Check if any scrolling actually happened
-            let didScroll = false;
-
-            scrollContainers.forEach(container => {
-              const id = container.id || container.className;
-              const beforePos = beforeScrollPositions[id] || 0;
-              const afterPos = container.scrollTop;
-
-              // If any container scrolled
-              if (Math.abs(afterPos - beforePos) > 1) {
-                didScroll = true;
-              }
-
-              // Update for next time
-              window.lastScrollPositions[id] = afterPos;
-            });
-
-            // Play sound if we scrolled OR this is the first scroll after toggle
-            if (didScroll || firstScrollAfterToggleRef.current) {
-              playSubtleBeep();
-              // Reset first scroll flag after using it
-              firstScrollAfterToggleRef.current = false;
-            }
-          }, 50); // Small delay to detect scroll
-
-          // Update last scroll time regardless
-          resetScrollTimer();
-        }
-      }, 1000); // Check every second
-    }
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [autoScrollActive, simulateZKeyPress, scrollIntervalSeconds, playSubtleBeep, firstScrollAfterToggleRef]);
-
-  // Reset auto-scroll timer when chapter changes
-  useEffect(() => {
-    if (book) {
-      // Reset the scroll timer when the chapter changes
-      resetScrollTimer();
-    }
-  }, [book, chapter]);
-
+  
   // Update navigation history only when manually selecting a book or chapter
   // We'll track this separately from cross-reference navigation
   useEffect(() => {
@@ -450,7 +297,7 @@ const NavigationPlaceholder = ({
         </button>
         
         {/* Sticky Pane Controls */}
-        <div className="hidden ml-4 flex items-center border-l border-gray-300 pl-2">
+        <div className="ml-4 flex items-center border-l border-gray-300 pl-2">
           <span className="text-sm text-gray-600">Sticky:</span>
           <label className="ml-2 flex items-center cursor-pointer">
             <input
@@ -477,79 +324,13 @@ const NavigationPlaceholder = ({
         </div>
         
         {/* History Button */}
-        <button
+        <button 
           onClick={() => setShowHistory(!showHistory)}
           className="ml-2 p-0.5 rounded-full hover:bg-gray-200 focus:outline-none"
           title="Navigation history"
         >
           <History className="h-3 w-3" />
         </button>
-
-        {/* Continuous Scroll Button */}
-        <button
-          onClick={() => {
-            // Toggle auto-scroll state
-            setAutoScrollActive(!autoScrollActive);
-          }}
-          className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
-            autoScrollActive
-              ? 'bg-green-600 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-          title="Toggle auto-scroll with interval timer"
-        >
-          {autoScrollActive ? 'AUTOSCROLL ON' : 'AUTOSCROLL OFF'}
-        </button>
-
-        {/* Scroll Speed Controls */}
-        <div className="ml-2 flex items-center">
-          <button
-            onClick={decreaseScrollSpeed}
-            className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-l text-xs font-bold"
-            title="Decrease scroll speed"
-            disabled={!autoScrollActive}
-          >
-            -
-          </button>
-          <span className="px-2 py-1 bg-gray-100 text-xs font-medium">
-            {scrollIntervalSeconds}s
-          </span>
-          <button
-            onClick={increaseScrollSpeed}
-            className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-r text-xs font-bold"
-            title="Increase scroll speed"
-            disabled={!autoScrollActive}
-          >
-            +
-          </button>
-        </div>
-
-        {/* Sound Toggle */}
-        <div className="ml-2 flex items-center border-l border-gray-300 pl-2">
-          <span className="text-xs text-gray-600 mr-1">SOUND:</span>
-          <label className="flex items-center cursor-pointer">
-            <input
-              type="radio"
-              name="soundToggle"
-              value="on"
-              checked={soundEnabled}
-              onChange={() => setSoundEnabled(true)}
-              className="mr-1"
-            />
-            <span className="text-xs">ON</span>
-          </label>
-          <label className="ml-2 flex items-center cursor-pointer">
-            <input
-              type="radio"
-              name="soundToggle"
-              value="off"
-              checked={!soundEnabled}
-              onChange={() => setSoundEnabled(false)}
-              className="mr-1"
-            />
-            <span className="text-xs">OFF</span>
-          </label>
-        </div>
       </div>
       
       {/* Navigation History Dropdown */}
@@ -760,58 +541,19 @@ const BibleApp = () => {
         setPreviousTranslation(selectedTranslation);
         setSelectedTranslation('en_bbe.json');
       }
-      // 'x' key - page up in either mobile or desktop view
-      else if (e.key === 'x' && chapterContentRef.current) {
-        // Calculate page height (approx viewport height)
-        const pageHeight = chapterContentRef.current.clientHeight * 0.9; // 90% of viewport
-
-        // Set the flag to prevent feedback loops
-        isManuallyScrollingRef.current = true;
-
-        try {
-          // Calculate relative scroll positions
-          const primaryPane = chapterContentRef.current;
-
-          // Scroll primary pane up
-          const primaryNewPosition = primaryPane.scrollTop - pageHeight; // Subtract instead of add
-          primaryPane.scrollTop = Math.max(0, primaryNewPosition); // Ensure we don't scroll past the top
-
-          // In mobile view, we're done after scrolling the primary pane
-          if (!isMobileView && kjvContentRef.current) {
-            const kjvPane = kjvContentRef.current;
-
-            // Calculate new scroll percentage after scrolling
-            const newPrimaryScrollPercentage = primaryPane.scrollTop /
-              (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
-
-            // Apply the exact same percentage to KJV pane
-            kjvPane.scrollTop = newPrimaryScrollPercentage *
-              (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
-          }
-
-          e.preventDefault();
-        } catch (error) {
-          console.error("Error during keyboard scroll:", error);
-        } finally {
-          // Reset the flag
-          setTimeout(() => {
-            isManuallyScrollingRef.current = false;
-          }, 50);
-        }
-      }
       // 'z' or 'm' key - page down in either mobile or desktop view
       else if ((e.key === 'z' || e.key === 'm') && chapterContentRef.current) {
         // Calculate page height (approx viewport height)
         const pageHeight = chapterContentRef.current.clientHeight * 0.9; // 90% of viewport
-
+        
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
-
+        
         try {
           // Calculate relative scroll positions
           const primaryPane = chapterContentRef.current;
 
-          // Scroll primary pane down
+          // Scroll primary pane
           const primaryNewPosition = primaryPane.scrollTop + pageHeight;
           const primaryMaxScroll = primaryPane.scrollHeight - primaryPane.clientHeight;
           primaryPane.scrollTop = Math.min(primaryMaxScroll, primaryNewPosition);
@@ -846,52 +588,103 @@ const BibleApp = () => {
         
         e.preventDefault();
       }
-      // 'v' key - go to next chapter when available by simulating a click on the Next Chapter button
+      // 'v' key - toggle between KJV and BBE translations
       else if (e.key === 'v') {
-        console.log("V key pressed for Next Chapter");
-
-        // Simplified approach: directly find and click the Next Chapter button
-        const nextChapterButtons = Array.from(document.querySelectorAll('button'))
-          .filter(button => button.textContent.includes('Next Chapter'));
-
-        if (nextChapterButtons.length > 0) {
-          console.log("Found Next Chapter button, clicking it");
-          nextChapterButtons[0].click();
-        } else if (bibleData && bibleData.length > 0) {
-          console.log("No Next Chapter button found, navigating programmatically");
-
-          // Initialize book if not selected
-          if (!selectedBook) {
-            console.log("No book selected, selecting first book");
-            const firstBook = bibleData[0];
-            setSelectedBook(firstBook);
-            handleChapterSelect(1, true);
-          } else {
-            // Navigate to next chapter or book
-            const currentChapter = selectedChapter || 1;
-
-            if (currentChapter < selectedBook.chapters.length) {
-              // Go to next chapter in current book
-              console.log(`Going to next chapter: ${currentChapter + 1}`);
-              handleChapterSelect(currentChapter + 1, true);
+        handleToggleTranslation();
+      }
+      // 'x' key - go to next chapter when available by simulating a click on the Next Chapter button (moved from 'v')
+      else if (e.key === 'x') {
+        console.log("X key pressed");
+        console.log("Current book:", selectedBook);
+        console.log("Current chapter:", selectedChapter);
+        console.log("Primary Reading:", primaryReading);
+        
+        // Make sure we have a valid book to work with
+        const workingBook = selectedBook || primaryReading.book || 
+                           (bibleData && bibleData.length > 0 ? bibleData[0] : null);
+                           
+        console.log("Working book:", workingBook);
+        
+        if (workingBook) {
+          // If no chapter is selected, default to chapter 1
+          const currentChapter = selectedChapter || primaryReading.chapter || 1;
+          
+          console.log("Working chapter:", currentChapter);
+          console.log("Total chapters:", workingBook.chapters.length);
+          
+          // Check if we can go to the next chapter
+          if (currentChapter < workingBook.chapters.length) {
+            console.log("Can go to next chapter");
+            
+            // Try to find and click the Next Chapter button
+            const buttons = document.querySelectorAll('button');
+            console.log("Found buttons:", buttons.length);
+            
+            // Log a few example buttons for debugging
+            for (let i = 0; i < Math.min(buttons.length, 5); i++) {
+              console.log(`Button ${i} text:`, buttons[i].textContent);
+            }
+            
+            // Check if any button contains the text "Next Chapter >"
+            let nextChapterButton = null;
+            for (const button of buttons) {
+              if (button.textContent.includes('Next Chapter')) {
+                nextChapterButton = button;
+                console.log("Found Next Chapter button:", button);
+                break;
+              }
+            }
+            
+            if (nextChapterButton) {
+              console.log("Clicking Next Chapter button");
+              nextChapterButton.click();
             } else {
-              // Try to go to next book
-              const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
-
+              console.log("Next Chapter button not found, using direct navigation");
+              
+              // Fall back to direct navigation
+              if (workingBook === selectedBook) {
+                console.log("Using selected book");
+                handleChapterSelect(currentChapter + 1, true);
+              } else {
+                console.log("Setting selected book and chapter");
+                // Need to set the book first if it's not already selected
+                setSelectedBook(workingBook);
+                // Wait for book to be set before changing chapter
+                setTimeout(() => {
+                  handleChapterSelect(currentChapter + 1, true);
+                }, 100);
+              }
+            }
+          } else {
+            console.log("Already at the last chapter of this book");
+            
+            // Optionally auto-advance to the next book
+            if (bibleData && bibleData.length > 0) {
+              // Find the current book's index
+              const currentBookIndex = bibleData.findIndex(b => 
+                b.abbrev === workingBook.abbrev
+              );
+              
+              // If there's a next book, go to it
               if (currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1) {
                 const nextBook = bibleData[currentBookIndex + 1];
-                console.log(`Going to next book: ${nextBook.book || getBookName(nextBook.abbrev)}`);
+                console.log("Going to next book:", nextBook.book || getBookName(nextBook.abbrev));
                 setSelectedBook(nextBook);
-                setTimeout(() => {
-                  handleChapterSelect(1, true);
-                }, 100);
+                handleChapterSelect(1, true);
               }
             }
           }
         } else {
-          console.log("Bible data not loaded yet");
+          console.log("No valid book found");
+          
+          // If there's no book selected at all, select the first book
+          if (bibleData && bibleData.length > 0) {
+            console.log("Selecting first book");
+            setSelectedBook(bibleData[0]);
+            setSelectedChapter(1);
+          }
         }
-
+        
         e.preventDefault();
       }
     };
@@ -1631,14 +1424,12 @@ const BibleApp = () => {
       scrollSyncInitialized.current = false;
     }
   };
-
+  
   // Handle chapter selection
   const handleChapterSelect = (chapterNum, fromNextChapterButton = false) => {
     setSelectedChapter(chapterNum);
     setShowCrossRef(null); // Hide any cross-reference popup
-
-    // No need to reset auto-scroll timer here - will be handled in NavigationPlaceholder component
-
+    
     // Handle Next Chapter button click counting and auto-save
     if (fromNextChapterButton) {
       const newCount = nextChapterClickCount + 1;
@@ -2565,7 +2356,7 @@ const BibleApp = () => {
                       }}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
-                      Next Chapter (v) &gt;
+                      Next Chapter (x) &gt;
                     </button>
                   )}
                 </div>
@@ -2597,7 +2388,7 @@ const BibleApp = () => {
                     </span>
                     <div className="ml-auto flex items-center">
                       <div className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded mr-2">
-                        Keys: 'z'/'m', 'x'
+                        Keys: 'z'/'m', 'x', 'v'
                       </div>
                       {isMobileView && !isTabletView && (
                         <button 
@@ -2673,7 +2464,7 @@ const BibleApp = () => {
                         }}
                         className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
-                        Next Chapter (v) &gt;
+                        Next Chapter (x) &gt;
                       </button>
                     )}
                   </div>
