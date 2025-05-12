@@ -164,8 +164,12 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       </select>
       
       <button
-        onClick={() => onSelect(selectedKey)}
-        disabled={!selectedKey || loading}
+        onClick={() => {
+          // If no position selected, use the auto-save position value and append '-position'
+          const keyToUse = selectedKey || (autoSavePosition ? `${autoSavePosition}-position` : '');
+          onSelect(keyToUse);
+        }}
+        disabled={loading}
         className={`flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded hover:bg-blue-600 transition-colors disabled:${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
         title="Load saved position"
       >
