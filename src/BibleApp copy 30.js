@@ -828,36 +828,33 @@ const BibleApp = () => {
         setPreviousTranslation(selectedTranslation);
         setSelectedTranslation('en_bbe.json');
       }
-      // 'x' key - page up with KJV pane as reference point
-      else if (e.key === 'x' && kjvContentRef.current) {
+      // 'x' key - page up in either mobile or desktop view
+      else if (e.key === 'x' && chapterContentRef.current) {
         // Calculate page height (approx viewport height)
-        const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
+        const pageHeight = chapterContentRef.current.clientHeight * 0.9; // 90% of viewport
 
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
 
         try {
-          // Calculate relative scroll positions - KJV is now the reference pane
-          const kjvPane = kjvContentRef.current;
+          // Calculate relative scroll positions
+          const primaryPane = chapterContentRef.current;
 
-          // Scroll KJV pane up
-          const kjvNewPosition = kjvPane.scrollTop - pageHeight; // Subtract for up
-          kjvPane.scrollTop = Math.max(0, kjvNewPosition); // Ensure we don't scroll past the top
+          // Scroll primary pane up
+          const primaryNewPosition = primaryPane.scrollTop - pageHeight; // Subtract instead of add
+          primaryPane.scrollTop = Math.max(0, primaryNewPosition); // Ensure we don't scroll past the top
 
-          // In mobile view, we can skip synchronizing with primary pane
-          if (!isMobileView && chapterContentRef.current) {
-            const primaryPane = chapterContentRef.current;
+          // In mobile view, we're done after scrolling the primary pane
+          if (!isMobileView && kjvContentRef.current) {
+            const kjvPane = kjvContentRef.current;
 
-            // Calculate new scroll percentage of KJV after scrolling
-            const newKjvScrollPercentage = kjvPane.scrollTop /
-              (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
-
-            // Apply the same percentage to primary pane
-            primaryPane.scrollTop = newKjvScrollPercentage *
+            // Calculate new scroll percentage after scrolling
+            const newPrimaryScrollPercentage = primaryPane.scrollTop /
               (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
 
-            // Update last scroll position for sync algorithm
-            lastPrimaryScrollPos.current = primaryPane.scrollTop;
+            // Apply the exact same percentage to KJV pane
+            kjvPane.scrollTop = newPrimaryScrollPercentage *
+              (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
           }
 
           e.preventDefault();
@@ -870,43 +867,43 @@ const BibleApp = () => {
           }, 50);
         }
       }
-      // 'z' or 'm' key - page down with KJV pane as reference point
-      else if ((e.key === 'z' || e.key === 'm') && kjvContentRef.current) {
+      // 'z' or 'm' key - page down in either mobile or desktop view
+      else if ((e.key === 'z' || e.key === 'm') && chapterContentRef.current) {
         // Calculate page height (approx viewport height)
-        const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
+        const pageHeight = chapterContentRef.current.clientHeight * 0.9; // 90% of viewport
 
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
 
         try {
-          // Calculate relative scroll positions - KJV is now the reference pane
-          const kjvPane = kjvContentRef.current;
+          // Calculate relative scroll positions
+          const primaryPane = chapterContentRef.current;
 
-          // Scroll KJV pane down
-          const kjvNewPosition = kjvPane.scrollTop + pageHeight;
-          const kjvMaxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
-          kjvPane.scrollTop = Math.min(kjvMaxScroll, kjvNewPosition);
+          // Scroll primary pane down
+          const primaryNewPosition = primaryPane.scrollTop + pageHeight;
+          const primaryMaxScroll = primaryPane.scrollHeight - primaryPane.clientHeight;
+          primaryPane.scrollTop = Math.min(primaryMaxScroll, primaryNewPosition);
 
-          // In mobile view, we can skip synchronizing with primary pane
-          if (!isMobileView && chapterContentRef.current) {
-            const primaryPane = chapterContentRef.current;
+          // In mobile view, we're done after scrolling the primary pane
+          if (!isMobileView && kjvContentRef.current) {
+            const kjvPane = kjvContentRef.current;
 
-            // Calculate new scroll percentage of KJV after scrolling
-            const newKjvScrollPercentage = kjvPane.scrollTop /
-              (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
-
-            // Apply the same percentage to primary pane
-            primaryPane.scrollTop = newKjvScrollPercentage *
+            // Calculate new scroll percentage after scrolling
+            const newPrimaryScrollPercentage = primaryPane.scrollTop /
               (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
 
-            // Update last scroll position for sync algorithm
-            lastPrimaryScrollPos.current = primaryPane.scrollTop;
+            // Apply the exact same percentage to KJV pane
+            kjvPane.scrollTop = newPrimaryScrollPercentage *
+              (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
           }
+
+          // Update last scroll position for sync algorithm
+          lastPrimaryScrollPos.current = primaryPane.scrollTop;
 
           // In mobile view, update the mobile scroll position in localStorage
           if (isMobileView) {
-            localStorage.setItem('mobileScrollPosition', chapterContentRef.current?.scrollTop.toString() || '0');
-            setMobileScrollPosition(chapterContentRef.current?.scrollTop || 0);
+            localStorage.setItem('mobileScrollPosition', primaryPane.scrollTop.toString());
+            setMobileScrollPosition(primaryPane.scrollTop);
           }
         } finally {
           // Reset the flag after a short delay
@@ -914,7 +911,7 @@ const BibleApp = () => {
             isManuallyScrollingRef.current = false;
           }, 50);
         }
-
+        
         e.preventDefault();
       }
       // 'v' key - go to next chapter when available by simulating a click on the Next Chapter button
