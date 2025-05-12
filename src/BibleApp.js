@@ -264,11 +264,19 @@ const NavigationPlaceholder = ({
 
   // Functions to adjust scroll speed
   const increaseScrollSpeed = useCallback(() => {
-    setScrollIntervalSeconds(prev => Math.max(1, prev - 1));
+    setScrollIntervalSeconds(prev => {
+      const newVal = Math.max(1, prev - 1);
+      console.log(`Making scrolling faster: ${prev}s → ${newVal}s`);
+      return newVal;
+    });
   }, []);
 
   const decreaseScrollSpeed = useCallback(() => {
-    setScrollIntervalSeconds(prev => prev + 1);
+    setScrollIntervalSeconds(prev => {
+      const newVal = prev + 1;
+      console.log(`Making scrolling slower: ${prev}s → ${newVal}s`);
+      return newVal;
+    });
   }, []);
 
   // Function to simulate pressing 'z' key
@@ -449,7 +457,7 @@ const NavigationPlaceholder = ({
           KJV slower
         </button>
         
-        {/* Sticky Pane Controls */}
+        {/* Sticky Pane Controls (hidden) */}
         <div className="hidden ml-4 flex items-center border-l border-gray-300 pl-2">
           <span className="text-sm text-gray-600">Sticky:</span>
           <label className="ml-2 flex items-center cursor-pointer">
@@ -538,14 +546,7 @@ const NavigationPlaceholder = ({
           {/* Scroll Speed Controls */}
           <div className="ml-2 flex items-center">
             <button
-              onClick={() => {
-                // "-" button should decrease the number (make scrolling faster)
-                setScrollIntervalSeconds(prev => {
-                  const newVal = Math.max(1, prev - 1);
-                  console.log(`Making scrolling faster: ${prev}s → ${newVal}s`);
-                  return newVal;
-                });
-              }}
+              onClick={increaseScrollSpeed}
               className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-l text-xs font-bold"
               title="Make scrolling faster (decrease interval)"
             >
@@ -555,14 +556,7 @@ const NavigationPlaceholder = ({
               {scrollIntervalSeconds}s
             </span>
             <button
-              onClick={() => {
-                // "+" button should increase the number (make scrolling slower)
-                setScrollIntervalSeconds(prev => {
-                  const newVal = prev + 1;
-                  console.log(`Making scrolling slower: ${prev}s → ${newVal}s`);
-                  return newVal;
-                });
-              }}
+              onClick={decreaseScrollSpeed}
               className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-r text-xs font-bold"
               title="Make scrolling slower (increase interval)"
             >
@@ -678,7 +672,7 @@ const BibleApp = () => {
   const [scrollSyncMode, setScrollSyncMode] = useState('exact'); // 'exact', 'faster', or 'slower'
   
   // Add sticky pane control (which pane controls the other)
-  const [stickyPane, setStickyPane] = useState('primary'); // 'primary' or 'kjv'
+  const [stickyPane, setStickyPane] = useState('kjv'); // 'primary' or 'kjv'
   
   // Mobile responsiveness states
   const [showSidebar, setShowSidebar] = useState(true);
@@ -992,7 +986,7 @@ const BibleApp = () => {
               chapter: 1,
               translation: 'en_kjv.json',
               timestamp: Date.now(),
-              stickyPane: 'primary'
+              stickyPane: 'kjv'
             });
             
             await set(keyRef, initialData);
@@ -1272,10 +1266,8 @@ const BibleApp = () => {
               setScrollSyncMode(savedScrollSyncMode);
             }
             
-            // Restore sticky pane setting if available
-            if (parsedState.stickyPane) {
-              setStickyPane(parsedState.stickyPane);
-            }
+            // Always use KJV as the sticky pane
+            setStickyPane('kjv');
             
             // Restore dark mode setting if available
             if (parsedState.isDarkMode !== undefined) {
