@@ -388,7 +388,7 @@ const NavigationPlaceholder = ({
   return (
     <div className="relative">
       {/* Current Location Display */}
-      <div className="flex flex-wrap gap-y-2 items-center bg-blue-50 px-2 py-1 rounded-md text-blue-800 text-sm">
+      <div className="flex items-center bg-blue-50 px-2 py-1 rounded-md text-blue-800 text-sm">
         {/* Dark Mode Toggle Button - Moved to beginning */}
         <button
           onClick={() => onDarkModeToggle && onDarkModeToggle()}
@@ -485,117 +485,70 @@ const NavigationPlaceholder = ({
           <History className="h-3 w-3" />
         </button>
 
-        {/* Mobile-friendly breakpoint for autoscroll controls */}
-        <div className="md:hidden w-full"></div>
+        {/* Continuous Scroll Button */}
+        <button
+          onClick={() => {
+            // Toggle auto-scroll state
+            setAutoScrollActive(!autoScrollActive);
+          }}
+          className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+            autoScrollActive
+              ? 'bg-green-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+          title="Toggle auto-scroll with interval timer"
+        >
+          {autoScrollActive ? 'AUTOSCROLL ON' : 'AUTOSCROLL OFF'}
+        </button>
 
-        {/* AutoScroll controls group - wrapped for responsive behavior */}
-        <div className="flex flex-nowrap items-center ml-2">
-          {/* Continuous Scroll Button */}
+        {/* Scroll Speed Controls */}
+        <div className="ml-2 flex items-center">
           <button
-            onClick={() => {
-              // Toggle auto-scroll state
-              const newAutoScrollState = !autoScrollActive;
-              setAutoScrollActive(newAutoScrollState);
-              console.log("Auto-scroll toggled to:", newAutoScrollState);
-
-              // Pre-initialize audio context with silent sound if turning ON
-              if (!autoScrollActive) {  // Current state is OFF, about to turn ON
-                try {
-                  if (!audioContextRef.current) {
-                    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-                  }
-
-                  // Play a silent sound to "warm up" the audio context
-                  const context = audioContextRef.current;
-                  const oscillator = context.createOscillator();
-                  const gainNode = context.createGain();
-                  oscillator.connect(gainNode);
-                  gainNode.connect(context.destination);
-
-                  // Make it silent
-                  gainNode.gain.value = 0.001;
-
-                  // Very short duration
-                  oscillator.start();
-                  oscillator.stop(context.currentTime + 0.001);
-
-                  console.log('Pre-initialized audio context for iOS compatibility');
-                } catch (error) {
-                  console.error('Error initializing audio context:', error);
-                }
-              }
-            }}
-            className={`px-2 py-1 rounded text-xs font-medium ${
-              autoScrollActive
-                ? 'bg-green-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-            title="Toggle auto-scroll with interval timer"
+            onClick={decreaseScrollSpeed}
+            className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-l text-xs font-bold"
+            title="Decrease scroll speed"
+            disabled={!autoScrollActive}
           >
-            {autoScrollActive ? 'AUTOSCROLL ON' : 'AUTOSCROLL OFF'}
+            -
           </button>
+          <span className="px-2 py-1 bg-gray-100 text-xs font-medium">
+            {scrollIntervalSeconds}s
+          </span>
+          <button
+            onClick={increaseScrollSpeed}
+            className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-r text-xs font-bold"
+            title="Increase scroll speed"
+            disabled={!autoScrollActive}
+          >
+            +
+          </button>
+        </div>
 
-          {/* Scroll Speed Controls */}
-          <div className="ml-2 flex items-center">
-            <button
-              onClick={() => {
-                // "-" button should decrease the number (make scrolling faster)
-                setScrollIntervalSeconds(prev => {
-                  const newVal = Math.max(1, prev - 1);
-                  console.log(`Making scrolling faster: ${prev}s → ${newVal}s`);
-                  return newVal;
-                });
-              }}
-              className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-l text-xs font-bold"
-              title="Make scrolling faster (decrease interval)"
-            >
-              -
-            </button>
-            <span className="px-2 py-1 bg-gray-100 text-xs font-medium">
-              {scrollIntervalSeconds}s
-            </span>
-            <button
-              onClick={() => {
-                // "+" button should increase the number (make scrolling slower)
-                setScrollIntervalSeconds(prev => {
-                  const newVal = prev + 1;
-                  console.log(`Making scrolling slower: ${prev}s → ${newVal}s`);
-                  return newVal;
-                });
-              }}
-              className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-r text-xs font-bold"
-              title="Make scrolling slower (increase interval)"
-            >
-              +
-            </button>
-          </div>
-
-          {/* Sound Toggle */}
-          <div className="ml-2 flex items-center border-l border-gray-300 pl-2">
-            <span className="text-xs text-gray-600 mr-1">SOUND:</span>
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="radio"
-                name="soundToggle"
-                value="on"
-                checked={soundEnabled}
-                onChange={() => setSoundEnabled(true)}
-                className="mr-1"
-              />
-              <span className="text-xs">ON</span>
-            </label>
-            <label className="ml-2 flex items-center cursor-pointer">
-              <input
-                type="radio"
-                name="soundToggle"
-                value="off"
-                checked={!soundEnabled}
-                onChange={() => setSoundEnabled(false)}
-                className="mr-1"
-              />
-              <span className="text-xs">OFF</span>
-            </label>
-          </div>
+        {/* Sound Toggle */}
+        <div className="ml-2 flex items-center border-l border-gray-300 pl-2">
+          <span className="text-xs text-gray-600 mr-1">SOUND:</span>
+          <label className="flex items-center cursor-pointer">
+            <input
+              type="radio"
+              name="soundToggle"
+              value="on"
+              checked={soundEnabled}
+              onChange={() => setSoundEnabled(true)}
+              className="mr-1"
+            />
+            <span className="text-xs">ON</span>
+          </label>
+          <label className="ml-2 flex items-center cursor-pointer">
+            <input
+              type="radio"
+              name="soundToggle"
+              value="off"
+              checked={!soundEnabled}
+              onChange={() => setSoundEnabled(false)}
+              className="mr-1"
+            />
+            <span className="text-xs">OFF</span>
+          </label>
         </div>
       </div>
       
