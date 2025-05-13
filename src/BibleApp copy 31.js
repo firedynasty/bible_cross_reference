@@ -621,15 +621,6 @@ const NavigationPlaceholder = ({
               <span className="text-xs">KJV</span>
             </label>
           </div>
-
-          {/* Z Key Scroll Button */}
-          <button
-            onClick={simulateZKeyPress}
-            className="ml-2 px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
-            title="Scroll down one page (same as pressing 'z' key)"
-          >
-            PAGE DOWN
-          </button>
         </div>
       </div>
       
