@@ -821,10 +821,21 @@ const BibleApp = () => {
   useEffect(() => {
     // Flag to prevent scroll event feedback loops
     const isManuallyScrollingRef = isManuallyScrolling;
-    
+
     const handleKeyDown = (e) => {
+      // '/' key - toggle autoscroll
+      if (e.key === '/') {
+        // Find and click the autoscroll button
+        const autoscrollButton = Array.from(document.querySelectorAll('button'))
+          .find(button => button.textContent.includes('AUTOSCROLL'));
+
+        if (autoscrollButton) {
+          autoscrollButton.click();
+        }
+        e.preventDefault();
+      }
       // '[' key - go back to previous translation (before BBE)
-      if (e.key === '[' && selectedTranslation === 'en_bbe.json') {
+      else if (e.key === '[' && selectedTranslation === 'en_bbe.json') {
         setSelectedTranslation(previousTranslation);
       }
       // ']' key - switch to BBE
