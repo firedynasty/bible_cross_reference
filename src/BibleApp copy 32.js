@@ -285,9 +285,6 @@ const NavigationPlaceholder = ({
 
   // Function to simulate pressing 'z' key
   const simulateZKeyPress = useCallback(() => {
-    // Reset the scroll timer first, to prevent too-rapid autoscrolling
-    resetScrollTimer();
-
     const event = new KeyboardEvent('keydown', {
       key: 'z',
       code: 'KeyZ',
@@ -297,7 +294,7 @@ const NavigationPlaceholder = ({
       cancelable: true
     });
     document.dispatchEvent(event);
-  }, [resetScrollTimer]);
+  }, []);
 
   // Track whether this is the first scroll after toggle
   const firstScrollAfterToggleRef = useRef(true);
@@ -843,18 +840,6 @@ const BibleApp = () => {
 
         if (autoscrollButton) {
           autoscrollButton.click();
-        }
-        e.preventDefault();
-      }
-      // 'Escape' key - scroll to top of both panels
-      else if (e.key === 'Escape') {
-        // Scroll primary panel to top
-        if (chapterContentRef.current) {
-          chapterContentRef.current.scrollTop = 0;
-        }
-        // Scroll KJV panel to top
-        if (kjvContentRef.current) {
-          kjvContentRef.current.scrollTop = 0;
         }
         e.preventDefault();
       }
@@ -2642,7 +2627,7 @@ const BibleApp = () => {
                 {/* Chapter Navigation - Simple inline approach */}
                 <div className="mt-10 flex justify-between pb-4">
                   {selectedChapter > 1 ? (
-                    <button
+                    <button 
                       onClick={() => {
                         handleChapterSelect(selectedChapter - 1);
                         // Sync KJV panel scroll with primary panel
@@ -2659,26 +2644,9 @@ const BibleApp = () => {
                   ) : (
                     <div></div>
                   )}
-
-                  {/* Home button to scroll to top */}
-                  <button
-                    onClick={() => {
-                      // Scroll primary panel to top
-                      if (chapterContentRef.current) {
-                        chapterContentRef.current.scrollTop = 0;
-                      }
-                      // Sync KJV panel scroll
-                      if (kjvContentRef.current) {
-                        kjvContentRef.current.scrollTop = 0;
-                      }
-                    }}
-                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
-                  >
-                    Home (esc)
-                  </button>
-
+                  
                   {selectedBook && selectedChapter < selectedBook.chapters.length && (
-                    <button
+                    <button 
                       onClick={() => {
                         handleChapterSelect(selectedChapter + 1, true);
                         // Sync KJV panel scroll with primary panel
@@ -2779,7 +2747,7 @@ const BibleApp = () => {
               {/* Navigation buttons for KJV panel */}
                   <div className="mt-10 flex justify-between pb-4">
                     {selectedChapter > 1 ? (
-                      <button
+                      <button 
                         onClick={() => {
                           handleChapterSelect(selectedChapter - 1);
                         }}
@@ -2790,26 +2758,9 @@ const BibleApp = () => {
                     ) : (
                       <div></div>
                     )}
-
-                    {/* Home button to scroll to top */}
-                    <button
-                      onClick={() => {
-                        // Scroll KJV panel to top
-                        if (kjvContentRef.current) {
-                          kjvContentRef.current.scrollTop = 0;
-                        }
-                        // Sync primary panel scroll
-                        if (chapterContentRef.current) {
-                          chapterContentRef.current.scrollTop = 0;
-                        }
-                      }}
-                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
-                    >
-                      Home (esc)
-                    </button>
-
+                    
                     {selectedBook && selectedChapter < selectedBook.chapters.length && (
-                      <button
+                      <button 
                         onClick={() => {
                           handleChapterSelect(selectedChapter + 1, true);
                         }}
