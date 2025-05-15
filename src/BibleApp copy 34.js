@@ -726,7 +726,7 @@ const BibleApp = () => {
   // Mobile responsiveness states
   const [showSidebar, setShowSidebar] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
-  const [showKJVOnMobile, setShowKJVOnMobile] = useState(true);
+  const [showKJVOnMobile, setShowKJVOnMobile] = useState(false);
   
   // Available translations
   const translations = React.useMemo(() => [
@@ -778,20 +778,14 @@ const BibleApp = () => {
         setShowSidebar(false);
       } else {
         setShowSidebar(true);
-        // Always show both panes in desktop mode
-        setShowKJVOnMobile(true);
       }
       
-      // Show Pane 2 (KJV/BBE) by default on mobile
+      // Auto-hide KJV on true mobile only, not on tablets
       if (isMobile) {
-        // If a preference is stored in localStorage, use that
-        const storedPanePreference = localStorage.getItem('mobilePanePreference');
-        if (storedPanePreference) {
-          setShowKJVOnMobile(storedPanePreference === 'pane2');
-        } else {
-          // Default to showing pane 2
-          setShowKJVOnMobile(true);
-        }
+        setShowKJVOnMobile(false);
+      } else if (isTablet) {
+        // For tablets, we want both panes visible
+        setShowKJVOnMobile(true);
       }
     };
     
@@ -2611,7 +2605,7 @@ const BibleApp = () => {
         {/* Bible Text and KJV Split View - Responsive layout for different devices */}
         <div className="flex-1 flex overflow-hidden">
           {/* Bible Text Display */}
-          <div ref={chapterContentRef} className={`${isMobileView && !isTabletView && showKJVOnMobile ? 'hidden' : isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'} relative`}>
+          <div ref={chapterContentRef} className={`${isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'} relative`}>
             {selectedBook && selectedChapter > 0 && (
               <div>
                 <h2 className="text-3xl font-semibold flex items-center mb-5">
@@ -2622,14 +2616,10 @@ const BibleApp = () => {
                   
                   {isMobileView && !isTabletView && !showKJVOnMobile && (
                     <button 
-                      onClick={() => {
-                        setShowKJVOnMobile(true);
-                        // Save preference
-                        localStorage.setItem('mobilePanePreference', 'pane2');
-                      }}
+                      onClick={() => setShowKJVOnMobile(true)}
                       className="ml-3 px-3 py-1 text-sm bg-blue-500 text-white rounded-md shadow-sm"
                     >
-                      Show Pane 2
+                      Show KJV
                     </button>
                   )}
                   {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter}
@@ -2769,9 +2759,9 @@ const BibleApp = () => {
             )}
           </div>
           
-          {/* Right Pane Bible Panel - Toggle visibility on mobile, always show on tablet and desktop */}
+          {/* KJV Bible Panel - Toggle visibility on mobile, always show on tablet and desktop */}
           {(!isMobileView || isTabletView || showKJVOnMobile) && (
-            <div className={`${isMobileView && !isTabletView ? 'w-full' : 'w-1/2'} border-l border-gray-200 bg-gray-50 flex flex-col`}>
+            <div className={`${isMobileView && !isTabletView ? 'w-full absolute inset-0 z-20' : 'w-1/2'} border-l border-gray-200 bg-gray-50 flex flex-col`}>
               {/* KJV Bible Text Display */}
               <div ref={kjvContentRef} className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'}`}>
                 {selectedBook && selectedChapter > 0 && (
@@ -2779,14 +2769,12 @@ const BibleApp = () => {
                   <h2 className="text-3xl mr-2 font-semibold mb-5 flex items-center">
                     {isMobileView && !isTabletView && (
                       <button 
-                        onClick={() => {
-                          setShowKJVOnMobile(false);
-                          // Save preference
-                          localStorage.setItem('mobilePanePreference', 'pane1');
-                        }}
-                        className="mr-3 px-3 py-1 text-sm bg-blue-500 text-white rounded-md shadow-sm"
+                        onClick={() => setShowKJVOnMobile(false)}
+                        className="mr-2 p-1 rounded-full hover:bg-gray-200"
                       >
-                        Show Pane 1
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
                       </button>
                     )}
                     {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter} <span className="text-gray-500 ml-2">({rightPaneTranslation === 'en_kjv.json' ? 'KJV' : 'BBE'})</span>
@@ -2798,6 +2786,14 @@ const BibleApp = () => {
                         Keys: 'z'/'m', 'x'
                       </div>
                       
+                      {isMobileView && !isTabletView && (
+                        <button 
+                          onClick={() => setShowKJVOnMobile(!showKJVOnMobile)} 
+                          className="px-2 py-1 bg-blue-500 text-white rounded text-sm"
+                        >
+                          {showKJVOnMobile ? "Hide KJV" : "Show KJV"}
+                        </button>
+                      )}
                     </div>
                   </h2>
                   <div className="space-y-5">

@@ -187,17 +187,14 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         Save
       </button>
       
-      {/* Toggle button for right pane translation */}
+      {/* Toggle button between KJV/BBE */}
       <button
         onClick={onToggleTranslation}
         className={`flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-purple-700' : 'bg-purple-500'} text-white rounded hover:bg-purple-600 transition-colors`}
-        title="Toggle between KJV and BBE translations for right pane"
+        title="Toggle between KJV and BBE translations"
       >
-        <span className="flex items-center">
-          <BookOpen className="h-3 w-3" />
-          <span className="text-xs font-bold ml-0.5 mr-1">2</span>
-        </span>
-        KJV/BBE
+        <BookOpen className="h-3 w-3 mr-1" />
+        {currentTranslation === 'en_kjv.json' ? 'BBE' : 'KJV'}
       </button>
     </div>
   );
@@ -708,14 +705,11 @@ const BibleApp = () => {
     chapter: 1
   });
   
-  // Add translation support for left pane
+  // Add translation support
   const [selectedTranslation, setSelectedTranslation] = useState('en_kjv.json');
   
-  // Add translation support for right pane (default to KJV)
-  const [rightPaneTranslation, setRightPaneTranslation] = useState('en_kjv.json');
-  
-  // Store right pane Bible data
-  const [rightPaneBibleData, setRightPaneBibleData] = useState(null);
+  // Store KJV Bible data separately
+  const [kjvBibleData, setKjvBibleData] = useState(null);
   
   // Add scroll sync mode state
   const [scrollSyncMode, setScrollSyncMode] = useState('exact'); // 'exact', 'faster', or 'slower'
@@ -726,7 +720,7 @@ const BibleApp = () => {
   // Mobile responsiveness states
   const [showSidebar, setShowSidebar] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
-  const [showKJVOnMobile, setShowKJVOnMobile] = useState(true);
+  const [showKJVOnMobile, setShowKJVOnMobile] = useState(false);
   
   // Available translations
   const translations = React.useMemo(() => [
@@ -778,20 +772,14 @@ const BibleApp = () => {
         setShowSidebar(false);
       } else {
         setShowSidebar(true);
-        // Always show both panes in desktop mode
-        setShowKJVOnMobile(true);
       }
       
-      // Show Pane 2 (KJV/BBE) by default on mobile
+      // Auto-hide KJV on true mobile only, not on tablets
       if (isMobile) {
-        // If a preference is stored in localStorage, use that
-        const storedPanePreference = localStorage.getItem('mobilePanePreference');
-        if (storedPanePreference) {
-          setShowKJVOnMobile(storedPanePreference === 'pane2');
-        } else {
-          // Default to showing pane 2
-          setShowKJVOnMobile(true);
-        }
+        setShowKJVOnMobile(false);
+      } else if (isTablet) {
+        // For tablets, we want both panes visible
+        setShowKJVOnMobile(true);
       }
     };
     
@@ -1341,43 +1329,35 @@ const BibleApp = () => {
         console.log("Data loaded using", usingApiEndpoint ? "API endpoint" : "direct file access");
         setBibleData(bibleData);
         
-        // Load right pane Bible data (either KJV or BBE based on rightPaneTranslation)
-        try {
-          console.log(`Loading right pane Bible data (${rightPaneTranslation}) for the second panel`);
-          const rightPaneResponse = await fetch(`${baseUrl}/${rightPaneTranslation}`);
-          
-          if (!rightPaneResponse.ok) {
-            // Try API endpoint as fallback
-            const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : baseUrl;
-            const rightPaneApiResponse = await fetch(`${apiBaseUrl}/api/json/${rightPaneTranslation}`);
+        // Load KJV Bible data if the current translation is not KJV
+        if (selectedTranslation !== 'en_kjv.json') {
+          try {
+            console.log("Loading KJV Bible data for the second panel");
+            const kjvResponse = await fetch(`${baseUrl}/en_kjv.json`);
             
-            if (!rightPaneApiResponse.ok) {
-              throw new Error(`Failed to load right pane Bible data (${rightPaneTranslation})`);
-            }
-            
-            const rightPaneData = await rightPaneApiResponse.json();
-            setRightPaneBibleData(rightPaneData);
-          } else {
-            const rightPaneData = await rightPaneResponse.json();
-            setRightPaneBibleData(rightPaneData);
-          }
-        } catch (rightPaneError) {
-          console.error(`Failed to load right pane Bible data (${rightPaneTranslation}):`, rightPaneError);
-          // Use the current Bible data as fallback if the translations match
-          if (selectedTranslation === rightPaneTranslation) {
-            setRightPaneBibleData(bibleData);
-          } else {
-            // Try to use KJV as a fallback
-            try {
-              const fallbackResponse = await fetch(`${baseUrl}/en_kjv.json`);
-              if (fallbackResponse.ok) {
-                const fallbackData = await fallbackResponse.json();
-                setRightPaneBibleData(fallbackData);
+            if (!kjvResponse.ok) {
+              // Try API endpoint as fallback
+              const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : baseUrl;
+              const kjvApiResponse = await fetch(`${apiBaseUrl}/api/json/en_kjv.json`);
+              
+              if (!kjvApiResponse.ok) {
+                throw new Error("Failed to load KJV Bible data");
               }
-            } catch (fallbackError) {
-              console.error("Failed to load fallback right pane data:", fallbackError);
+              
+              const kjvData = await kjvApiResponse.json();
+              setKjvBibleData(kjvData);
+            } else {
+              const kjvData = await kjvResponse.json();
+              setKjvBibleData(kjvData);
             }
+          } catch (kjvError) {
+            console.error("Failed to load KJV Bible data:", kjvError);
+            // Use the current Bible data as fallback
+            setKjvBibleData(bibleData);
           }
+        } else {
+          // If current translation is already KJV, use the same data
+          setKjvBibleData(bibleData);
         }
         
         // Load saved reading position from localStorage or default to Genesis
@@ -1527,7 +1507,7 @@ const BibleApp = () => {
     
     loadData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, rightPaneTranslation]);
+  }, [selectedTranslation]);
   
   // Setup scroll synchronization when content, mode, or sticky pane changes
   useEffect(() => {
@@ -1869,31 +1849,47 @@ const BibleApp = () => {
     scrollSyncInitialized.current = false;
   };
   
-  // Toggle between KJV and BBE translations for right pane
+  // Toggle between KJV and BBE translations
   const handleToggleTranslation = () => {
-    // Save current scroll position of right pane
-    let currentScroll = 0;
-    if (kjvContentRef?.current) {
+    // Store previous translation
+    setPreviousTranslation(selectedTranslation);
+    
+    // In mobile view, explicitly save the scroll position to localStorage right now
+    if (isMobileView && chapterContentRef?.current) {
       try {
-        currentScroll = kjvContentRef.current.scrollTop || 0;
-        console.log("Saving right pane scroll position before toggle:", currentScroll);
+        const currentScroll = chapterContentRef.current.scrollTop || 0;
+        console.log("Saving mobile scroll position before toggle:", currentScroll);
+        
+        // Directly save to localStorage for immediate persistence
+        localStorage.setItem('mobileScrollPosition', String(currentScroll));
+        
+        // Also update the React state to keep it in sync
+        setMobileScrollPosition(currentScroll);
       } catch (e) {
-        console.warn("Error getting right pane scroll position:", e);
+        console.warn("Error saving scroll position to localStorage:", e);
       }
     }
     
-    // Toggle between KJV and BBE for right pane
+    // Toggle between KJV and BBE
     const newTranslation = 
-      rightPaneTranslation === 'en_kjv.json' ? 'en_bbe.json' : 'en_kjv.json';
+      selectedTranslation === 'en_kjv.json' ? 'en_bbe.json' : 'en_kjv.json';
     
-    // Update the saved state with the new right pane translation but preserve position
+    // Update the saved state with the new translation but preserve position
     try {
       const savedState = localStorage.getItem('bibleReaderState');
       if (savedState) {
         const parsedState = JSON.parse(savedState);
         
-        // Add right pane translation to saved state
-        parsedState.rightPaneTranslation = newTranslation;
+        // Update translation while preserving other state
+        parsedState.translation = newTranslation;
+        
+        // For mobile view, explicitly update the scroll position
+        if (isMobileView && chapterContentRef?.current) {
+          const currentScroll = chapterContentRef.current.scrollTop || 0;
+          parsedState.mobileScrollPosition = currentScroll;
+          // Update the state so it's consistent
+          setMobileScrollPosition(currentScroll);
+        }
         
         localStorage.setItem('bibleReaderState', JSON.stringify(parsedState));
       }
@@ -1901,30 +1897,11 @@ const BibleApp = () => {
       console.warn("Error updating bibleReaderState in localStorage:", e);
     }
     
-    // Update right pane translation
-    setRightPaneTranslation(newTranslation);
+    // Update translation
+    setSelectedTranslation(newTranslation);
     
     // Log the toggle action for debugging
-    console.log(`Toggled right pane translation from ${rightPaneTranslation} to ${newTranslation}`);
-    
-    // Restore scroll position after a short delay to allow render
-    setTimeout(() => {
-      if (kjvContentRef?.current) {
-        try {
-          // Calculate relative scroll position (percentage)
-          const rightPaneHeight = kjvContentRef.current.scrollHeight;
-          const relativeScrollPercentage = rightPaneHeight > 0 ? (currentScroll / rightPaneHeight) : 0;
-          
-          // Apply the same percentage to the new content
-          const newScrollPosition = kjvContentRef.current.scrollHeight * relativeScrollPercentage;
-          kjvContentRef.current.scrollTop = newScrollPosition;
-          
-          console.log("Restored right pane scroll to relative position:", relativeScrollPercentage, "actual position:", newScrollPosition);
-        } catch (e) {
-          console.warn("Error restoring right pane scroll position:", e);
-        }
-      }
-    }, 100);
+    console.log(`Toggled translation from ${selectedTranslation} to ${newTranslation}`);
   };
   
   // Handle translation change
@@ -2611,7 +2588,7 @@ const BibleApp = () => {
         {/* Bible Text and KJV Split View - Responsive layout for different devices */}
         <div className="flex-1 flex overflow-hidden">
           {/* Bible Text Display */}
-          <div ref={chapterContentRef} className={`${isMobileView && !isTabletView && showKJVOnMobile ? 'hidden' : isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'} relative`}>
+          <div ref={chapterContentRef} className={`${isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'} relative`}>
             {selectedBook && selectedChapter > 0 && (
               <div>
                 <h2 className="text-3xl font-semibold flex items-center mb-5">
@@ -2622,14 +2599,10 @@ const BibleApp = () => {
                   
                   {isMobileView && !isTabletView && !showKJVOnMobile && (
                     <button 
-                      onClick={() => {
-                        setShowKJVOnMobile(true);
-                        // Save preference
-                        localStorage.setItem('mobilePanePreference', 'pane2');
-                      }}
+                      onClick={() => setShowKJVOnMobile(true)}
                       className="ml-3 px-3 py-1 text-sm bg-blue-500 text-white rounded-md shadow-sm"
                     >
-                      Show Pane 2
+                      Show KJV
                     </button>
                   )}
                   {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter}
@@ -2769,9 +2742,9 @@ const BibleApp = () => {
             )}
           </div>
           
-          {/* Right Pane Bible Panel - Toggle visibility on mobile, always show on tablet and desktop */}
+          {/* KJV Bible Panel - Toggle visibility on mobile, always show on tablet and desktop */}
           {(!isMobileView || isTabletView || showKJVOnMobile) && (
-            <div className={`${isMobileView && !isTabletView ? 'w-full' : 'w-1/2'} border-l border-gray-200 bg-gray-50 flex flex-col`}>
+            <div className={`${isMobileView && !isTabletView ? 'w-full absolute inset-0 z-20' : 'w-1/2'} border-l border-gray-200 bg-gray-50 flex flex-col`}>
               {/* KJV Bible Text Display */}
               <div ref={kjvContentRef} className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'}`}>
                 {selectedBook && selectedChapter > 0 && (
@@ -2779,17 +2752,15 @@ const BibleApp = () => {
                   <h2 className="text-3xl mr-2 font-semibold mb-5 flex items-center">
                     {isMobileView && !isTabletView && (
                       <button 
-                        onClick={() => {
-                          setShowKJVOnMobile(false);
-                          // Save preference
-                          localStorage.setItem('mobilePanePreference', 'pane1');
-                        }}
-                        className="mr-3 px-3 py-1 text-sm bg-blue-500 text-white rounded-md shadow-sm"
+                        onClick={() => setShowKJVOnMobile(false)}
+                        className="mr-2 p-1 rounded-full hover:bg-gray-200"
                       >
-                        Show Pane 1
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
                       </button>
                     )}
-                    {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter} <span className="text-gray-500 ml-2">({rightPaneTranslation === 'en_kjv.json' ? 'KJV' : 'BBE'})</span>
+                    {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter} <span className="text-gray-500 ml-2">(KJV)</span>
                     <span className="ml-3 px-2 py-1 rounded text-xs bg-blue-50 text-blue-800">
                       Exact Sync
                     </span>
@@ -2797,12 +2768,19 @@ const BibleApp = () => {
                       <div className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded mr-2">
                         Keys: 'z'/'m', 'x'
                       </div>
-                      
+                      {isMobileView && !isTabletView && (
+                        <button 
+                          onClick={() => setShowKJVOnMobile(!showKJVOnMobile)} 
+                          className="px-2 py-1 bg-blue-500 text-white rounded text-sm"
+                        >
+                          {showKJVOnMobile ? "Hide KJV" : "Show KJV"}
+                        </button>
+                      )}
                     </div>
                   </h2>
                   <div className="space-y-5">
-                    {/* Modified to handle right pane translation */}
-                    {rightPaneBibleData && selectedBook && (
+                    {/* Modified to handle Hebrew-KJV mapping */}
+                    {kjvBibleData && selectedBook && (
                       (() => {
                         // For Hebrew translations, use the mapping
                         let bookAbbrev = selectedBook.abbrev;
@@ -2810,15 +2788,15 @@ const BibleApp = () => {
                           bookAbbrev = getKjvBookAbbrev(bookAbbrev);
                         }
                         
-                        const rightPaneBook = rightPaneBibleData.find(b => b.abbrev === bookAbbrev);
-                        if (rightPaneBook && rightPaneBook.chapters[selectedChapter - 1]) {
-                          return rightPaneBook.chapters[selectedChapter - 1].map((verse, index) => {
+                        const kjvBook = kjvBibleData.find(b => b.abbrev === bookAbbrev);
+                        if (kjvBook && kjvBook.chapters[selectedChapter - 1]) {
+                          return kjvBook.chapters[selectedChapter - 1].map((verse, index) => {
                             const verseNumber = index + 1;
                             
                             return (
                               <div 
                                 key={index} 
-                                id={`right-pane-verse-${verseNumber}`}
+                                id={`kjv-verse-${verseNumber}`}
                                 className="leading-relaxed p-4 rounded-md transition-colors text-2xl"
                               >
                                 <p className="flex">
@@ -2831,9 +2809,9 @@ const BibleApp = () => {
                         } else {
                           return (
                             <div className="p-4 text-amber-600">
-                              <p>Could not find matching {rightPaneTranslation === 'en_kjv.json' ? 'KJV' : 'BBE'} text for this book/chapter.</p>
+                              <p>Could not find matching KJV text for this book/chapter.</p>
                               <p className="mt-2 text-sm">
-                                Book code: {selectedBook.abbrev}
+                                Hebrew book code: {selectedBook.abbrev}, mapped to KJV: {bookAbbrev}
                               </p>
                             </div>
                           );

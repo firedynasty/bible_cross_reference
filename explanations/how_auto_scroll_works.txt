@@ -1,0 +1,141 @@
+# How Auto-Scroll Works in the Bible Cross Reference App
+
+The auto-scroll feature provides an automated way to scroll through Bible passages at a customizable pace. Here's a detailed explanation of how it works:
+
+## Core Components
+
+1. **Toggle Control**: A button in the toolbar that switches the auto-scroll feature ON or OFF.
+
+2. **Speed Control**: 
+   - Plus (+) and minus (-) buttons to adjust the scroll speed
+   - A numerical display showing the current interval in seconds (default: 13 seconds)
+
+3. **Sound Feature**:
+   - A subtle audio beep plays when each auto-scroll occurs
+   - Can be toggled ON/OFF via radio buttons
+
+## Technical Implementation
+
+### 1. State Management
+The feature uses several React state variables:
+- `autoScrollActive` - Boolean that tracks whether auto-scroll is enabled
+- `scrollIntervalSeconds` - Number that stores the interval between scrolls (in seconds)
+- `soundEnabled` - Boolean that determines whether sounds play with each scroll
+- `lastScrollTimeRef` - A reference that tracks when the last scroll occurred
+
+### 2. Key Simulation
+The auto-scroll works by simulating a keypress event for the 'z' key, which triggers the existing scroll functionality:
+```javascript
+const simulateZKeyPress = useCallback(() => {
+  const event = new KeyboardEvent('keydown', {
+    key: 'z',
+    code: 'KeyZ',
+    keyCode: 90,
+    which: 90,
+    bubbles: true,
+    cancelable: true
+  });
+  document.dispatchEvent(event);
+}, []);
+```
+
+### 3. Timer System
+A React useEffect hook sets up an interval that checks whether enough time has passed since the last scroll:
+```javascript
+useEffect(() => {
+  let intervalId;
+  
+  if (autoScrollActive) {
+    intervalId = setInterval(() => {
+      // Get current time
+      const now = Date.now();
+      // Only scroll if enough time has passed
+      if (now - lastScrollTimeRef.current >= scrollIntervalSeconds * 1000) {
+        simulateZKeyPress();
+        // Play sound when scrolling
+        playSubtleBeep();
+        // Update last scroll time
+        lastScrollTimeRef.current = now;
+      }
+    }, 1000); // Check every second
+  }
+  
+  return () => {
+    if (intervalId) clearInterval(intervalId);
+  };
+}, [autoScrollActive, simulateZKeyPress, scrollIntervalSeconds, playSubtleBeep]);
+```
+
+### 4. Navigation Integration
+When navigating to a new chapter, the timer automatically resets to prevent immediate scrolling:
+```javascript
+// Reset auto-scroll timer when chapter changes
+useEffect(() => {
+  if (book) {
+    // Reset the scroll timer when the chapter changes
+    lastScrollTimeRef.current = Date.now();
+  }
+}, [book, chapter]);
+```
+
+### 5. Sound System
+A subtle audio beep plays with each scroll action (if enabled):
+```javascript
+const playSubtleBeep = useCallback(() => {
+  // Only play sound if enabled
+  if (!soundEnabled) return;
+  
+  try {
+    // Create audio context on first use
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    
+    const context = audioContextRef.current;
+    
+    // Create oscillator for sound generation
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+    
+    // Configure sound properties (gentle, quiet beep)
+    oscillator.type = 'sine';
+    oscillator.frequency.value = 800;
+    gainNode.gain.value = 0.05;
+    
+    // Connect audio nodes
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+    
+    // Play very short beep
+    gainNode.gain.setValueAtTime(0.05, context.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.15);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.15);
+  } catch (error) {
+    console.error('Error playing notification sound:', error);
+  }
+}, [soundEnabled]);
+```
+
+## User Interface Elements
+
+1. **Scroll Toggle Button**: Shows "SCROLL ON" (green) or "SCROLL OFF" (gray)
+
+2. **Speed Controls**:
+   - Minus (-) button to decrease scroll speed (increase interval time)
+   - Display showing current interval in seconds
+   - Plus (+) button to increase scroll speed (decrease interval time)
+
+3. **Sound Toggle**:
+   - Radio buttons labeled "SOUND: ON OFF"
+   - Default is ON
+
+## Behavior Notes
+
+- The auto-scroll only triggers after waiting the full interval time
+- When navigating to a new chapter, the timer automatically resets
+- The sound feature provides audio feedback when scrolling occurs
+- Speed can be adjusted from very fast (1 second) to very slow (user preference)
+- All controls are conveniently located in the top toolbar
+
+This implementation creates a smooth, customizable reading experience that can be easily adjusted according to user preferences.
