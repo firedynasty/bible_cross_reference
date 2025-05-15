@@ -283,16 +283,16 @@ const NavigationPlaceholder = ({
     });
   }, []);
 
-  // Function to simulate pressing 'z' key
+  // Function to simulate pressing 'm' key (was 'z' previously)
   const simulateZKeyPress = useCallback(() => {
     // Reset the scroll timer first, to prevent too-rapid autoscrolling
     resetScrollTimer();
 
     const event = new KeyboardEvent('keydown', {
-      key: 'z',
-      code: 'KeyZ',
-      keyCode: 90,
-      which: 90,
+      key: 'm',
+      code: 'KeyM',
+      keyCode: 77,
+      which: 77,
       bubbles: true,
       cancelable: true
     });
@@ -629,7 +629,7 @@ const NavigationPlaceholder = ({
           <button
             onClick={simulateZKeyPress}
             className="ml-2 px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
-            title="Scroll down one page (same as pressing 'z' key)"
+            title="Scroll down one page (same as pressing 'm' key)"
           >
             PAGE DOWN
           </button>
@@ -867,8 +867,52 @@ const BibleApp = () => {
         setPreviousTranslation(selectedTranslation);
         setSelectedTranslation('en_bbe.json');
       }
-      // 'x' key - page up with KJV pane as reference point
+      // 'x' key - scroll down one line at a time in KJV pane (like 'z' but just one line)
       else if (e.key === 'x' && kjvContentRef.current) {
+        // Set the flag to prevent feedback loops
+        isManuallyScrollingRef.current = true;
+
+        try {
+          // Get KJV pane reference
+          const kjvPane = kjvContentRef.current;
+          
+          // Calculate line height - using verse element height as reference
+          // Default to a reasonable line height if we can't find a verse element
+          const lineHeight = 60; // Default is 60px (reasonable for text-2xl)
+          
+          // Scroll KJV pane down by one line
+          const kjvNewPosition = kjvPane.scrollTop + lineHeight;
+          const kjvMaxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
+          kjvPane.scrollTop = Math.min(kjvMaxScroll, kjvNewPosition);
+
+          // In mobile view, we can skip synchronizing with primary pane
+          if (!isMobileView && chapterContentRef.current) {
+            const primaryPane = chapterContentRef.current;
+
+            // Calculate new scroll percentage of KJV after scrolling
+            const newKjvScrollPercentage = kjvPane.scrollTop /
+              (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
+
+            // Apply the same percentage to primary pane
+            primaryPane.scrollTop = newKjvScrollPercentage *
+              (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
+
+            // Update last scroll position for sync algorithm
+            lastPrimaryScrollPos.current = primaryPane.scrollTop;
+          }
+
+          e.preventDefault();
+        } catch (error) {
+          console.error("Error during keyboard scroll:", error);
+        } finally {
+          // Reset the flag
+          setTimeout(() => {
+            isManuallyScrollingRef.current = false;
+          }, 50);
+        }
+      }
+      // 'z' key - page up with KJV pane as reference point (formerly 'x' functionality)
+      else if (e.key === 'z' && kjvContentRef.current) {
         // Calculate page height (approx viewport height)
         const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
 
@@ -909,8 +953,8 @@ const BibleApp = () => {
           }, 50);
         }
       }
-      // 'z' or 'm' key - page down with KJV pane as reference point
-      else if ((e.key === 'z' || e.key === 'm') && kjvContentRef.current) {
+      // 'm' key - page down with KJV pane as reference point
+      else if (e.key === 'm' && kjvContentRef.current) {
         // Calculate page height (approx viewport height)
         const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
 
