@@ -227,9 +227,9 @@ const NavigationPlaceholder = ({
   const lastScrollTimeRef = useRef(Date.now());
 
   // Function to reset the scroll timer (used in the auto-scroll useEffect)
-  const resetScrollTimer = () => {
+  const resetScrollTimer = useCallback(() => {
     lastScrollTimeRef.current = Date.now();
-  };
+  }, []);
 
   // Function to play a subtle beep sound
   const playSubtleBeep = useCallback(() => {
@@ -726,6 +726,7 @@ const BibleApp = () => {
   // Mobile responsiveness states
   const [showSidebar, setShowSidebar] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
+  const [isFullScreenMode, setIsFullScreenMode] = useState(false);
   const [showKJVOnMobile, setShowKJVOnMobile] = useState(true);
   
   // Available translations
@@ -923,8 +924,8 @@ const BibleApp = () => {
           }, 50);
         }
       }
-      // 'z' key - page up with KJV pane as reference point (formerly 'x' functionality)
-      else if (e.key === 'z' && kjvContentRef.current) {
+      // 'o' key - page up with KJV pane as reference point (formerly 'x' functionality)
+      else if (e.key === 'o' && kjvContentRef.current) {
         // Calculate page height (approx viewport height)
         const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
 
@@ -965,8 +966,8 @@ const BibleApp = () => {
           }, 50);
         }
       }
-      // 'm' key - page down with KJV pane as reference point
-      else if (e.key === 'm' && kjvContentRef.current) {
+      // 'p' key - page down with KJV pane as reference point
+      else if (e.key === 'p' && kjvContentRef.current) {
         // Calculate page height (approx viewport height)
         const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
 
@@ -1012,8 +1013,26 @@ const BibleApp = () => {
 
         e.preventDefault();
       }
-      // 'v' key - go to next chapter when available by simulating a click on the Next Chapter button
-      else if (e.key === 'v') {
+      // 'z' key - go to previous chapter when available by simulating a click on the Previous Chapter button
+      else if (e.key === 'z') {
+        console.log("Z key pressed for Previous Chapter");
+
+        // Find and click the Previous Chapter button
+        const prevChapterButtons = Array.from(document.querySelectorAll('button'))
+          .filter(button => button.textContent.includes('Previous Chapter'));
+
+        if (prevChapterButtons.length > 0) {
+          console.log("Found Previous Chapter button, clicking it");
+          prevChapterButtons[0].click();
+        } else if (bibleData && bibleData.length > 0 && selectedChapter > 1) {
+          // Manual handling if button not found but chapter > 1
+          handleChapterSelect(selectedChapter - 1);
+        }
+
+        e.preventDefault();
+      }
+      // 'm' key - go to next chapter when available by simulating a click on the Next Chapter button
+      else if (e.key === 'm') {
         console.log("V key pressed for Next Chapter");
 
         // Simplified approach: directly find and click the Next Chapter button
@@ -2447,16 +2466,15 @@ const BibleApp = () => {
               <Book className="mr-1 h-4 w-4" />
               Bible Books
             </h2>
-            {(isMobileView || isTabletView) && (
-              <button 
-                onClick={() => setShowSidebar(false)}
-                className="p-1 rounded-full hover:bg-gray-200 focus:outline-none"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
+            {/* Allow hiding sidebar in all views */}
+            <button 
+              onClick={() => setShowSidebar(false)}
+              className="p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
           <div className="overflow-y-auto h-full">
             {bibleData && bibleData.map(book => (
@@ -2464,7 +2482,8 @@ const BibleApp = () => {
                 key={book.abbrev}
                 onClick={() => {
                   handleBookSelect(book.abbrev);
-                  if (isMobileView || isTabletView) setShowSidebar(false);
+                  // Always close sidebar after book selection
+                  setShowSidebar(false);
                 }}
                 className={`w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ${
                   selectedBook && selectedBook.abbrev === book.abbrev ? 'bg-blue-100 font-medium' : ''
@@ -2482,8 +2501,8 @@ const BibleApp = () => {
         {/* Top Bar with Navigation and Chapter Selection */}
         <div className={`${isDarkMode ? 'bg-gray-800 text-white border-b border-gray-700' : 'bg-white border-b border-gray-200'} p-1 flex flex-wrap items-center justify-between`}>
           <div className="flex items-center space-x-2">
-            {/* Sidebar toggle button for mobile and tablet */}
-            {(isMobileView || isTabletView) && !showSidebar && (
+            {/* Sidebar toggle button for mobile, tablet and full screen */}
+            {!showSidebar && (
               <button 
                 onClick={() => setShowSidebar(true)} 
                 className="flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100"
@@ -2725,7 +2744,7 @@ const BibleApp = () => {
                       }}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
-                      &lt; Previous Chapter
+                      &lt; Previous Chapter (z)
                     </button>
                   ) : (
                     <div></div>
@@ -2761,7 +2780,7 @@ const BibleApp = () => {
                       }}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
-                      Next Chapter (v) &gt;
+                      Next Chapter (m) &gt;
                     </button>
                   )}
                 </div>
@@ -2795,7 +2814,7 @@ const BibleApp = () => {
                     </span>
                     <div className="ml-auto flex items-center">
                       <div className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded mr-2">
-                        Keys: 'z'/'m', 'x'
+                        Keys: 'o', 'p'
                       </div>
                       
                     </div>
@@ -2851,7 +2870,7 @@ const BibleApp = () => {
                         }}
                         className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
-                        &lt; Previous Chapter
+                        &lt; Previous Chapter (z)
                       </button>
                     ) : (
                       <div></div>
@@ -2881,7 +2900,7 @@ const BibleApp = () => {
                         }}
                         className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
-                        Next Chapter (v) &gt;
+                        Next Chapter (m) &gt;
                       </button>
                     )}
                   </div>
