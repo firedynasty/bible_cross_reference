@@ -286,16 +286,16 @@ const NavigationPlaceholder = ({
     });
   }, []);
 
-  // Function to simulate pressing 'm' key (was 'z' previously)
+  // Function to simulate pressing 'p' key for page down
   const simulateZKeyPress = useCallback(() => {
     // Reset the scroll timer first, to prevent too-rapid autoscrolling
     resetScrollTimer();
 
     const event = new KeyboardEvent('keydown', {
-      key: 'm',
-      code: 'KeyM',
-      keyCode: 77,
-      which: 77,
+      key: 'p',
+      code: 'KeyP',
+      keyCode: 80,
+      which: 80,
       bubbles: true,
       cancelable: true
     });
@@ -374,7 +374,7 @@ const NavigationPlaceholder = ({
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [autoScrollActive, simulateZKeyPress, scrollIntervalSeconds, playSubtleBeep, firstScrollAfterToggleRef]);
+  }, [autoScrollActive, simulateZKeyPress, scrollIntervalSeconds, playSubtleBeep, firstScrollAfterToggleRef, resetScrollTimer]);
 
   // Reset auto-scroll timer when chapter changes
   useEffect(() => {
@@ -382,7 +382,7 @@ const NavigationPlaceholder = ({
       // Reset the scroll timer when the chapter changes
       resetScrollTimer();
     }
-  }, [book, chapter]);
+  }, [book, chapter, resetScrollTimer]);
 
   // Update navigation history only when manually selecting a book or chapter
   // We'll track this separately from cross-reference navigation
@@ -407,10 +407,19 @@ const NavigationPlaceholder = ({
     <div className="relative">
       {/* Current Location Display */}
       <div className="flex flex-wrap gap-y-2 items-center bg-blue-50 px-2 py-1 rounded-md text-blue-800 text-sm">
-        {/* Dark Mode Toggle Button - Moved to beginning */}
+        {/* Page Down Button - Moved to front */}
+        <button
+          onClick={simulateZKeyPress}
+          className="px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
+          title="Scroll down one page (same as pressing 'p' key)"
+        >
+          PAGE DOWN
+        </button>
+        
+        {/* Dark Mode Toggle Button */}
         <button
           onClick={() => onDarkModeToggle && onDarkModeToggle()}
-          className={`px-2 py-0.5 rounded focus:outline-none ${
+          className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
             isDarkMode 
               ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' 
               : 'bg-gray-700 text-white hover:bg-gray-800'
@@ -628,14 +637,6 @@ const NavigationPlaceholder = ({
             </label>
           </div>
 
-          {/* Z Key Scroll Button */}
-          <button
-            onClick={simulateZKeyPress}
-            className="ml-2 px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
-            title="Scroll down one page (same as pressing 'm' key)"
-          >
-            PAGE DOWN
-          </button>
         </div>
       </div>
       
@@ -726,7 +727,6 @@ const BibleApp = () => {
   // Mobile responsiveness states
   const [showSidebar, setShowSidebar] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
-  const [isFullScreenMode, setIsFullScreenMode] = useState(false);
   const [showKJVOnMobile, setShowKJVOnMobile] = useState(true);
   
   // Available translations
