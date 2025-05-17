@@ -221,7 +221,7 @@ const NavigationPlaceholder = ({
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [autoScrollActive, setAutoScrollActive] = useState(false);
-  const [scrollIntervalSeconds, setScrollIntervalSeconds] = useState(13);
+  const [scrollIntervalSeconds, setScrollIntervalSeconds] = useState(32);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [countdownTimer, setCountdownTimer] = useState(0);
   const audioContextRef = useRef(null);
@@ -778,7 +778,7 @@ const BibleApp = () => {
   const [stickyPane, setStickyPane] = useState('kjv'); // 'primary' or 'kjv'
   
   // Mobile responsiveness states
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
   const [showKJVOnMobile, setShowKJVOnMobile] = useState(true);
   
@@ -827,12 +827,11 @@ const BibleApp = () => {
       // For mobile view features, we only want phones, not tablets
       setIsMobileView(isMobile);
       
-      // Auto-hide sidebar on mobile and tablet devices
-      if (isMobile || isTablet) {
-        setShowSidebar(false);
-      } else {
-        setShowSidebar(true);
-        // Always show both panes in desktop mode
+      // Keep sidebar hidden on all devices by default
+      setShowSidebar(false);
+      
+      // Always show both panes in desktop mode
+      if (!isMobile && !isTablet) {
         setShowKJVOnMobile(true);
       }
       
@@ -933,8 +932,13 @@ const BibleApp = () => {
         setPreviousTranslation(selectedTranslation);
         setSelectedTranslation('en_bbe.json');
       }
-      // 'x' key - scroll down one line at a time in KJV pane (like 'z' but just one line)
-      else if (e.key === 'x' && kjvContentRef.current) {
+      // 'x' key or Down Arrow - scroll down one line at a time in KJV pane (like 'z' but just one line)
+      else if ((e.key === 'x' || e.key === 'ArrowDown') && kjvContentRef.current) {
+        // Reset the countdown timer if autoscroll is active
+        if (resetScrollTimerRef.current) {
+          resetScrollTimerRef.current();
+        }
+        
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
 
@@ -977,6 +981,55 @@ const BibleApp = () => {
           }, 50);
         }
       }
+      // Up Arrow - scroll up one line at a time in KJV pane (opposite of 'x' key)
+      else if (e.key === 'ArrowUp' && kjvContentRef.current) {
+        // Reset the countdown timer if autoscroll is active
+        if (resetScrollTimerRef.current) {
+          resetScrollTimerRef.current();
+        }
+        
+        // Set the flag to prevent feedback loops
+        isManuallyScrollingRef.current = true;
+
+        try {
+          // Get KJV pane reference
+          const kjvPane = kjvContentRef.current;
+          
+          // Calculate line height - using verse element height as reference
+          // Default to a reasonable line height if we can't find a verse element
+          const lineHeight = 60; // Default is 60px (reasonable for text-2xl)
+          
+          // Scroll KJV pane up by one line
+          const kjvNewPosition = kjvPane.scrollTop - lineHeight;
+          kjvPane.scrollTop = Math.max(0, kjvNewPosition); // Ensure we don't scroll past the top
+
+          // In mobile view, we can skip synchronizing with primary pane
+          if (!isMobileView && chapterContentRef.current) {
+            const primaryPane = chapterContentRef.current;
+
+            // Calculate new scroll percentage of KJV after scrolling
+            const newKjvScrollPercentage = kjvPane.scrollTop /
+              (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
+
+            // Apply the same percentage to primary pane
+            primaryPane.scrollTop = newKjvScrollPercentage *
+              (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
+
+            // Update last scroll position for sync algorithm
+            lastPrimaryScrollPos.current = primaryPane.scrollTop;
+          }
+
+          e.preventDefault();
+        } catch (error) {
+          console.error("Error during keyboard scroll:", error);
+        } finally {
+          // Reset the flag
+          setTimeout(() => {
+            isManuallyScrollingRef.current = false;
+          }, 50);
+        }
+      }
+      
       // 'o' key - page up with KJV pane as reference point (formerly 'x' functionality)
       else if (e.key === 'o' && kjvContentRef.current) {
         // Calculate page height (approx viewport height)
