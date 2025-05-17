@@ -215,13 +215,15 @@ const NavigationPlaceholder = ({
   stickyPane,
   onAudioClick,
   onDarkModeToggle,
-  isDarkMode
+  isDarkMode,
+  resetScrollTimerRef
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [autoScrollActive, setAutoScrollActive] = useState(false);
   const [scrollIntervalSeconds, setScrollIntervalSeconds] = useState(13);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [countdownTimer, setCountdownTimer] = useState(0);
   const audioContextRef = useRef(null);
   // Reference to track the last time auto-scroll was executed
   const lastScrollTimeRef = useRef(Date.now());
@@ -229,7 +231,18 @@ const NavigationPlaceholder = ({
   // Function to reset the scroll timer (used in the auto-scroll useEffect)
   const resetScrollTimer = useCallback(() => {
     lastScrollTimeRef.current = Date.now();
-  }, []);
+    // Reset countdown to the full interval when timer is reset
+    if (autoScrollActive) {
+      setCountdownTimer(scrollIntervalSeconds);
+    }
+  }, [autoScrollActive, scrollIntervalSeconds]);
+  
+  // Make resetScrollTimer available to parent via ref
+  useEffect(() => {
+    if (resetScrollTimerRef) {
+      resetScrollTimerRef.current = resetScrollTimer;
+    }
+  }, [resetScrollTimer, resetScrollTimerRef]);
 
   // Function to play a subtle beep sound
   const playSubtleBeep = useCallback(() => {
@@ -365,8 +378,10 @@ const NavigationPlaceholder = ({
             }
           }, 50); // Small delay to detect scroll
 
-          // Update last scroll time regardless
+          // Update last scroll time regardless and reset countdown
           resetScrollTimer();
+          // Update the countdown to the full interval
+          setCountdownTimer(scrollIntervalSeconds);
         }
       }, 1000); // Check every second
     }
@@ -374,7 +389,7 @@ const NavigationPlaceholder = ({
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [autoScrollActive, simulateZKeyPress, scrollIntervalSeconds, playSubtleBeep, firstScrollAfterToggleRef, resetScrollTimer]);
+  }, [autoScrollActive, simulateZKeyPress, scrollIntervalSeconds, playSubtleBeep, firstScrollAfterToggleRef, resetScrollTimer, setCountdownTimer]);
 
   // Reset auto-scroll timer when chapter changes
   useEffect(() => {
@@ -383,6 +398,34 @@ const NavigationPlaceholder = ({
       resetScrollTimer();
     }
   }, [book, chapter, resetScrollTimer]);
+  
+  // Countdown timer effect
+  useEffect(() => {
+    let countdownId;
+    
+    if (autoScrollActive) {
+      // Initialize the countdown to show remaining time
+      const timeElapsed = (Date.now() - lastScrollTimeRef.current) / 1000;
+      const remainingTime = Math.max(1, Math.ceil(scrollIntervalSeconds - timeElapsed));
+      setCountdownTimer(remainingTime);
+      
+      // Update the countdown every second
+      countdownId = setInterval(() => {
+        // Calculate remaining time directly from the last scroll time
+        const elapsed = (Date.now() - lastScrollTimeRef.current) / 1000;
+        const remaining = Math.max(0, Math.ceil(scrollIntervalSeconds - elapsed));
+        
+        setCountdownTimer(remaining);
+      }, 1000);
+    } else {
+      // Reset countdown when autoscroll is turned off
+      setCountdownTimer(0);
+    }
+    
+    return () => {
+      if (countdownId) clearInterval(countdownId);
+    };
+  }, [autoScrollActive, scrollIntervalSeconds, lastScrollTimeRef]);
 
   // Update navigation history only when manually selecting a book or chapter
   // We'll track this separately from cross-reference navigation
@@ -636,7 +679,16 @@ const NavigationPlaceholder = ({
               <span className="text-xs">KJV</span>
             </label>
           </div>
-
+          
+          {/* Countdown timer display - only shown when autoscroll is active */}
+          {autoScrollActive && (
+            <div className="ml-2 flex items-center border-l border-gray-300 pl-2">
+              <span className="text-xs text-gray-600 mr-1">COUNTDOWN:</span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                {countdownTimer}s
+              </span>
+            </div>
+          )}
         </div>
       </div>
       
@@ -701,6 +753,7 @@ const BibleApp = () => {
   const scrollSyncInitialized = useRef(false);
   const lastPrimaryScrollPos = useRef(0);
   const lastKjvScrollPos = useRef(0);
+  const resetScrollTimerRef = useRef(null);
   
   // State to track primary reading vs cross-reference viewing
   const [isViewingCrossRef, setIsViewingCrossRef] = useState(false);
@@ -968,6 +1021,11 @@ const BibleApp = () => {
       }
       // 'p' key - page down with KJV pane as reference point
       else if (e.key === 'p' && kjvContentRef.current) {
+        // Reset the countdown timer if autoscroll is active
+        if (resetScrollTimerRef.current) {
+          resetScrollTimerRef.current();
+        }
+        
         // Calculate page height (approx viewport height)
         const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
 
@@ -2581,6 +2639,7 @@ const BibleApp = () => {
               onAudioClick={handleAudioButtonClick}
               onDarkModeToggle={toggleDarkMode}
               isDarkMode={isDarkMode}
+              resetScrollTimerRef={resetScrollTimerRef}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
                   const bookObj = bibleData.find(b => b.abbrev === book);
