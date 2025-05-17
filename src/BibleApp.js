@@ -222,7 +222,7 @@ const NavigationPlaceholder = ({
   const [showHistory, setShowHistory] = useState(false);
   const [autoScrollActive, setAutoScrollActive] = useState(false);
   const [scrollIntervalSeconds, setScrollIntervalSeconds] = useState(32);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(false);
   const [countdownTimer, setCountdownTimer] = useState(0);
   const audioContextRef = useRef(null);
   // Reference to track the last time auto-scroll was executed
@@ -469,7 +469,7 @@ const NavigationPlaceholder = ({
           }`}
           title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
         >
-          {isDarkMode ? 'Light' : 'Dark'}
+          {isDarkMode ? 'Light (d)' : 'Dark (d)'}
         </button>
         
         {/* MP3 Audio Button - Moved before Primary */}
@@ -478,7 +478,7 @@ const NavigationPlaceholder = ({
           className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-purple-100 text-purple-700 hover:bg-purple-200"
           title="Listen to audio for this chapter"
         >
-          MP3
+          MP3 (3)
         </button>
         
         {/* Primary text - Now after buttons */}
@@ -900,8 +900,30 @@ const BibleApp = () => {
     const isManuallyScrollingRef = isManuallyScrolling;
 
     const handleKeyDown = (e) => {
+      // '-' key - make scrolling faster (decrease interval)
+      if (e.key === '-') {
+        // Find the '-' button that makes scrolling faster and click it
+        const fasterButton = Array.from(document.querySelectorAll('button'))
+          .find(button => button.title && button.title.includes('Make scrolling faster') && button.textContent.trim() === '-');
+
+        if (fasterButton) {
+          fasterButton.click();
+        }
+        e.preventDefault();
+      }
+      // '=' key - make scrolling slower (increase interval)
+      else if (e.key === '=') {
+        // Find the '+' button that makes scrolling slower and click it
+        const slowerButton = Array.from(document.querySelectorAll('button'))
+          .find(button => button.title && button.title.includes('Make scrolling slower') && button.textContent.trim() === '+');
+
+        if (slowerButton) {
+          slowerButton.click();
+        }
+        e.preventDefault();
+      }
       // '/' key - toggle autoscroll
-      if (e.key === '/') {
+      else if (e.key === '/') {
         // Find and click the autoscroll button
         const autoscrollButton = Array.from(document.querySelectorAll('button'))
           .find(button => button.textContent.includes('AUTOSCROLL'));
@@ -1132,6 +1154,39 @@ const BibleApp = () => {
           handleChapterSelect(selectedChapter - 1);
         }
 
+        e.preventDefault();
+      }
+      // '3' key - simulate clicking the MP3 button
+      else if (e.key === '3' || e.keyCode === 51) {
+        // Find and click the MP3 button
+        const mp3Button = Array.from(document.querySelectorAll('button'))
+          .find(button => button.title && button.title.includes('Listen to audio for this chapter') && button.textContent.includes('MP3'));
+        
+        if (mp3Button) {
+          mp3Button.click();
+        } else {
+          // If we can't find the button but handleAudioButtonClick is defined, call it directly
+          handleAudioButtonClick();
+        }
+        
+        e.preventDefault();
+      }
+      // 'd' key - toggle dark mode
+      else if (e.key === 'd' || e.keyCode === 68) {
+        // Find and click the dark mode toggle button
+        const darkModeButton = Array.from(document.querySelectorAll('button'))
+          .find(button => 
+            (button.title && (button.title.includes('Switch to light mode') || button.title.includes('Switch to dark mode'))) && 
+            (button.textContent.includes('Dark') || button.textContent.includes('Light'))
+          );
+        
+        if (darkModeButton) {
+          darkModeButton.click();
+        } else {
+          // If we can't find the button but toggleDarkMode is defined, call it directly
+          toggleDarkMode();
+        }
+        
         e.preventDefault();
       }
       // 'm' key - go to next chapter when available by simulating a click on the Next Chapter button
