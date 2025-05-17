@@ -799,7 +799,7 @@ const BibleApp = () => {
   const [, setCurrentBookAbbrev] = useState(null);
   
   // Store previous translation for keyboard shortcuts
-  const [previousTranslation, setPreviousTranslation] = useState('en_kjv.json');
+  // Removed previousTranslation state as it's no longer needed
 
   // Firebase loading status
   // eslint-disable-next-line no-unused-vars
@@ -923,15 +923,7 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // '[' key - go back to previous translation (before BBE)
-      else if (e.key === '[' && selectedTranslation === 'en_bbe.json') {
-        setSelectedTranslation(previousTranslation);
-      }
-      // ']' key - switch to BBE
-      else if (e.key === ']' && selectedTranslation !== 'en_bbe.json') {
-        setPreviousTranslation(selectedTranslation);
-        setSelectedTranslation('en_bbe.json');
-      }
+      // Removed '[' and ']' key handlers for translation switching
       // 'x' key or Down Arrow - scroll down one line at a time in KJV pane (like 'z' but just one line)
       else if ((e.key === 'x' || e.key === 'ArrowDown') && kjvContentRef.current) {
         // Reset the countdown timer if autoscroll is active
@@ -2063,8 +2055,7 @@ const BibleApp = () => {
     const currentBookAbbrev = selectedBook?.abbrev;
     const currentChapter = selectedChapter;
     
-    // Store previous translation before changing
-    setPreviousTranslation(selectedTranslation);
+    // Removed storing previous translation as it's no longer needed
     
     // In mobile view, explicitly save the scroll position to localStorage right now
     // Use optional chaining to avoid null reference errors
