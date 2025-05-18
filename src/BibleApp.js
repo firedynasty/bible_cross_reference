@@ -689,6 +689,28 @@ const NavigationPlaceholder = ({
               </span>
             </div>
           )}
+          
+          {/* Up Arrow Key Button */}
+          <div className="ml-2 flex items-center border-l border-gray-300 pl-2">
+            <button
+              onClick={() => {
+                // Simulate an ArrowUp key press event
+                const event = new KeyboardEvent('keydown', {
+                  key: 'ArrowUp',
+                  code: 'ArrowUp',
+                  keyCode: 38,
+                  which: 38,
+                  bubbles: true,
+                  cancelable: true
+                });
+                document.dispatchEvent(event);
+              }}
+              className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+              title="Scroll up one line (Up Arrow)"
+            >
+              ↑
+            </button>
+          </div>
         </div>
       </div>
       
