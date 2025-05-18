@@ -558,6 +558,35 @@ const NavigationPlaceholder = ({
         {/* Mobile-friendly breakpoint for autoscroll controls */}
         <div className="md:hidden w-full"></div>
 
+        {/* Duplicate Page Down Button */}
+        <button
+          onClick={simulateZKeyPress}
+          className="ml-2 px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
+          title="Scroll down one page (same as pressing 'p' key)"
+        >
+          PAGE DOWN
+        </button>
+        
+        {/* Down Arrow Button */}
+        <button
+          onClick={() => {
+            // Simulate an ArrowDown key press event
+            const event = new KeyboardEvent('keydown', {
+              key: 'ArrowDown',
+              code: 'ArrowDown',
+              keyCode: 40,
+              which: 40,
+              bubbles: true,
+              cancelable: true
+            });
+            document.dispatchEvent(event);
+          }}
+          className="ml-2 px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+          title="Scroll down one line (Down Arrow)"
+        >
+          ↓
+        </button>
+            
         {/* AutoScroll controls group - wrapped for responsive behavior */}
         <div className="flex flex-nowrap items-center ml-2">
           {/* Continuous Scroll Button */}
@@ -710,6 +739,7 @@ const NavigationPlaceholder = ({
             >
               ↑
             </button>
+            
           </div>
         </div>
       </div>
