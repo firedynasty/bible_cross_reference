@@ -1096,8 +1096,13 @@ const BibleApp = () => {
         }
       }
       
-      // 'o' key - page up with KJV pane as reference point (formerly 'x' functionality)
-      else if (e.key === 'o' && kjvContentRef.current) {
+      // 'o' key or PageUp key - page up with KJV pane as reference point
+      else if ((e.key === 'o' || e.key === 'PageUp') && kjvContentRef.current) {
+        // Reset the countdown timer if autoscroll is active
+        if (resetScrollTimerRef.current) {
+          resetScrollTimerRef.current();
+        }
+        
         // Calculate page height (approx viewport height)
         const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
 
@@ -1138,8 +1143,8 @@ const BibleApp = () => {
           }, 50);
         }
       }
-      // 'p' key - page down with KJV pane as reference point
-      else if (e.key === 'p' && kjvContentRef.current) {
+      // 'p' key or PageDown key - page down with KJV pane as reference point
+      else if ((e.key === 'p' || e.key === 'PageDown') && kjvContentRef.current) {
         // Reset the countdown timer if autoscroll is active
         if (resetScrollTimerRef.current) {
           resetScrollTimerRef.current();
