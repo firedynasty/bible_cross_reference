@@ -153,7 +153,15 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       <select
         className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
         value={selectedKey}
-        onChange={(e) => setSelectedKey(e.target.value)}
+        onChange={(e) => {
+          const newKey = e.target.value;
+          setSelectedKey(newKey);
+          
+          // Automatically load the selected position
+          if (newKey) {
+            onSelect(newKey);
+          }
+        }}
       >
         <option value="">Select position...</option>
         {savedPositions.map((position) => (
@@ -162,20 +170,6 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
           </option>
         ))}
       </select>
-      
-      <button
-        onClick={() => {
-          // If no position selected, use the auto-save position value and append '-position'
-          const keyToUse = selectedKey || (autoSavePosition ? `${autoSavePosition}-position` : '');
-          onSelect(keyToUse);
-        }}
-        disabled={loading}
-        className={`flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded hover:bg-blue-600 transition-colors disabled:${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
-        title="Load saved position"
-      >
-        <Database className="h-3 w-3 mr-1" />
-        Load
-      </button>
       
       <button
         onClick={handleSave}
@@ -759,6 +753,26 @@ const NavigationPlaceholder = ({
               ↑
             </button>
             
+            {/* Wider Page Down Button */}
+            <button
+              onClick={() => {
+                // Simulate pressing 'p' key for page down
+                const event = new KeyboardEvent('keydown', {
+                  key: 'p',
+                  code: 'KeyP',
+                  keyCode: 80,
+                  which: 80,
+                  bubbles: true,
+                  cancelable: true
+                });
+                document.dispatchEvent(event);
+              }}
+              className="ml-2 px-6 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
+              title="Scroll down one page (same as pressing 'p' key)"
+              style={{ width: "calc(1.5 * 5rem)" }}
+            >
+              PAGE DOWN
+            </button>
           </div>
         </div>
       </div>
@@ -2978,6 +2992,7 @@ const BibleApp = () => {
                       Next Chapter (m) &gt;
                     </button>
                   )}
+                  
                 </div>
               </div>
             )}
