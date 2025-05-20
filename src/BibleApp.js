@@ -555,19 +555,18 @@ const NavigationPlaceholder = ({
           <History className="h-3 w-3" />
         </button>
 
-        {/* Mobile-friendly breakpoint for autoscroll controls */}
-        <div className="md:hidden w-full"></div>
-
-        {/* Duplicate Page Down Button */}
+        {/* We've removed the mobile line break div to allow buttons to overflow on mobile */}
+        
+        {/* Duplicate Page Down Button - removed ml-2 to allow overflow without margin */}
         <button
           onClick={simulateZKeyPress}
-          className="ml-2 px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
+          className="px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
           title="Scroll down one page (same as pressing 'p' key)"
         >
           PAGE DOWN
         </button>
         
-        {/* Down Arrow Button */}
+        {/* Down Arrow Button - removed ml-2 to allow overflow without margin */}
         <button
           onClick={() => {
             // Simulate an ArrowDown key press event
@@ -581,12 +580,15 @@ const NavigationPlaceholder = ({
             });
             document.dispatchEvent(event);
           }}
-          className="ml-2 px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+          className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
           title="Scroll down one line (Down Arrow)"
         >
           ↓
         </button>
             
+        {/* Mobile-friendly breakpoint for autoscroll controls */}
+        <div className="md:hidden w-full"></div>
+        
         {/* AutoScroll controls group - wrapped for responsive behavior */}
         <div className="flex flex-nowrap items-center ml-2">
           {/* Continuous Scroll Button */}

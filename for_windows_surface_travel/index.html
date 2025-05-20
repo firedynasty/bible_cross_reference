@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="description" content="Offline Bible Cross Reference App" />
+  <title>Bible App - Offline Mode</title>
+  <script>
+    // Block network access attempts by intercepting fetch requests
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options) {
+      // Only allow local file URLs, block external network requests
+      if (url.startsWith('http:') || url.startsWith('https:')) {
+        console.warn('Network request blocked:', url);
+        return Promise.reject(new Error('Network requests disabled in offline mode'));
+      }
+      return originalFetch(url, options);
+    };
+  </script>
+  <!-- Include compiled React app from the build folder -->
+  <link href="../build/static/css/main.chunk.css" rel="stylesheet">
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+  
+  <!-- Include the compiled React app scripts -->
+  <script src="../build/static/js/runtime-main.js"></script>
+  <script src="../build/static/js/vendors.chunk.js"></script>
+  <script src="../build/static/js/main.chunk.js"></script>
+
+  <script>
+    // Override window.location.hostname to make the app think it's running locally
+    Object.defineProperty(window.location, 'hostname', {
+      get: function() { return 'localhost'; }
+    });
+    
+    // Disable server listening by overriding listen methods
+    if (window.require && window.require('http')) {
+      const originalListen = window.require('http').Server.prototype.listen;
+      window.require('http').Server.prototype.listen = function() {
+        console.log('Server listening disabled in offline mode');
+        return this;
+      };
+    }
+    
+    // Force app to load data from local files only
+    window.addEventListener('load', function() {
+      console.log('App running in offline mode - network access disabled');
+    });
+  </script>
+</body>
+</html>
