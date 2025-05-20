@@ -181,19 +181,24 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         Save
       </button>
       
-      {/* Load selected translation for pane 1 */}
+      {/* Page Down button (Page DN) */}
       <button
         onClick={() => {
-          onApplyTranslationToPane1(selectedDropdownTranslation);
+          // Dispatch a 'p' key press event directly
+          const event = new KeyboardEvent('keydown', {
+            key: 'p',
+            code: 'KeyP',
+            keyCode: 80,
+            which: 80,
+            bubbles: true,
+            cancelable: true
+          });
+          document.dispatchEvent(event);
         }}
-        className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-indigo-700' : 'bg-indigo-500'} text-white rounded hover:bg-indigo-600 transition-colors`}
-        title="Apply selected translation to primary pane"
+        className="ml-2 px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
+        title="Scroll down one page (same as pressing 'p' key)"
       >
-        <span className="flex items-center">
-          <BookOpen className="h-3 w-3" />
-          <span className="text-xs font-bold ml-0.5 mr-1">1</span>
-        </span>
-        Apply
+        Page DN
       </button>
 
       {/* Apply translation to pane 2 */}
@@ -207,6 +212,21 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         <span className="flex items-center">
           <BookOpen className="h-3 w-3" />
           <span className="text-xs font-bold ml-0.5 mr-1">2</span>
+        </span>
+        Apply
+      </button>
+
+      {/* Load selected translation for pane 1 */}
+      <button
+        onClick={() => {
+          onApplyTranslationToPane1(selectedDropdownTranslation);
+        }}
+        className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-indigo-700' : 'bg-indigo-500'} text-white rounded hover:bg-indigo-600 transition-colors`}
+        title="Apply selected translation to primary pane"
+      >
+        <span className="flex items-center">
+          <BookOpen className="h-3 w-3" />
+          <span className="text-xs font-bold ml-0.5 mr-1">1</span>
         </span>
         Apply
       </button>
@@ -2171,7 +2191,7 @@ const BibleApp = () => {
     // Log the change action for debugging
     console.log(`Changed right pane translation to ${translationValue}`);
     
-    // Restore scroll position after a short delay to allow render
+    // Restore scroll position after a longer delay to allow render and content loading
     setTimeout(() => {
       if (kjvContentRef?.current) {
         try {
@@ -2184,11 +2204,24 @@ const BibleApp = () => {
           kjvContentRef.current.scrollTop = newScrollPosition;
           
           console.log("Restored right pane scroll to relative position:", relativeScrollPercentage, "actual position:", newScrollPosition);
+          
+          // Double-check scroll position after a bit more time to ensure content is fully loaded
+          setTimeout(() => {
+            if (kjvContentRef?.current && kjvContentRef.current.scrollHeight > 0) {
+              // Apply the percentage again to make sure it stuck
+              const finalScrollPosition = kjvContentRef.current.scrollHeight * relativeScrollPercentage;
+              if (Math.abs(kjvContentRef.current.scrollTop - finalScrollPosition) > 10) {
+                // Only adjust if significantly different
+                kjvContentRef.current.scrollTop = finalScrollPosition;
+                console.log("Re-applied scroll position to ensure accuracy:", finalScrollPosition);
+              }
+            }
+          }, 300);
         } catch (e) {
           console.warn("Error restoring right pane scroll position:", e);
         }
       }
-    }, 100);
+    }, 200);
   };
   
   // Apply selected translation from dropdown to the primary pane
