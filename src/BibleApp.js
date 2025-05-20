@@ -54,7 +54,7 @@ const getBaseUrl = () => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onToggleTranslation, isMobileView, isTabletView, stickyPane, isDarkMode, autoSavePosition, onAutoSavePositionChange }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, isMobileView, isTabletView, stickyPane, isDarkMode, autoSavePosition, onAutoSavePositionChange }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -187,17 +187,34 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         Save
       </button>
       
-      {/* Toggle button for right pane translation */}
+      {/* Load selected translation for pane 1 */}
       <button
-        onClick={onToggleTranslation}
-        className={`flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-purple-700' : 'bg-purple-500'} text-white rounded hover:bg-purple-600 transition-colors`}
-        title="Toggle between KJV and BBE translations for right pane"
+        onClick={() => {
+          onApplyTranslationToPane1(selectedDropdownTranslation);
+        }}
+        className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-indigo-700' : 'bg-indigo-500'} text-white rounded hover:bg-indigo-600 transition-colors`}
+        title="Apply selected translation to primary pane"
+      >
+        <span className="flex items-center">
+          <BookOpen className="h-3 w-3" />
+          <span className="text-xs font-bold ml-0.5 mr-1">1</span>
+        </span>
+        Apply
+      </button>
+
+      {/* Apply translation to pane 2 */}
+      <button
+        onClick={() => {
+          onApplyTranslationToPane2(selectedDropdownTranslation);
+        }}
+        className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-purple-700' : 'bg-purple-500'} text-white rounded hover:bg-purple-600 transition-colors`}
+        title="Apply selected translation to secondary pane"
       >
         <span className="flex items-center">
           <BookOpen className="h-3 w-3" />
           <span className="text-xs font-bold ml-0.5 mr-1">2</span>
         </span>
-        KJV/BBE
+        Apply
       </button>
     </div>
   );
@@ -818,6 +835,7 @@ const BibleApp = () => {
   
   // Add translation support for left pane
   const [selectedTranslation, setSelectedTranslation] = useState('en_kjv.json');
+  const [selectedDropdownTranslation, setSelectedDropdownTranslation] = useState('en_kjv.json');
   
   // Add translation support for right pane (default to KJV)
   const [rightPaneTranslation, setRightPaneTranslation] = useState('en_kjv.json');
@@ -2105,22 +2123,18 @@ const BibleApp = () => {
     scrollSyncInitialized.current = false;
   };
   
-  // Toggle between KJV and BBE translations for right pane
-  const handleToggleTranslation = () => {
+  // Apply selected translation from dropdown to the secondary pane (pane 2)
+  const handleApplySelectedTranslationToPane2 = (translationValue) => {
     // Save current scroll position of right pane
     let currentScroll = 0;
     if (kjvContentRef?.current) {
       try {
         currentScroll = kjvContentRef.current.scrollTop || 0;
-        console.log("Saving right pane scroll position before toggle:", currentScroll);
+        console.log("Saving right pane scroll position before changing translation:", currentScroll);
       } catch (e) {
         console.warn("Error getting right pane scroll position:", e);
       }
     }
-    
-    // Toggle between KJV and BBE for right pane
-    const newTranslation = 
-      rightPaneTranslation === 'en_kjv.json' ? 'en_bbe.json' : 'en_kjv.json';
     
     // Update the saved state with the new right pane translation but preserve position
     try {
@@ -2129,7 +2143,7 @@ const BibleApp = () => {
         const parsedState = JSON.parse(savedState);
         
         // Add right pane translation to saved state
-        parsedState.rightPaneTranslation = newTranslation;
+        parsedState.rightPaneTranslation = translationValue;
         
         localStorage.setItem('bibleReaderState', JSON.stringify(parsedState));
       }
@@ -2138,10 +2152,10 @@ const BibleApp = () => {
     }
     
     // Update right pane translation
-    setRightPaneTranslation(newTranslation);
+    setRightPaneTranslation(translationValue);
     
-    // Log the toggle action for debugging
-    console.log(`Toggled right pane translation from ${rightPaneTranslation} to ${newTranslation}`);
+    // Log the change action for debugging
+    console.log(`Changed right pane translation to ${translationValue}`);
     
     // Restore scroll position after a short delay to allow render
     setTimeout(() => {
@@ -2163,107 +2177,68 @@ const BibleApp = () => {
     }, 100);
   };
   
-  // Handle translation change
-  const handleTranslationChange = (e) => {
-    // Save current position before changing translation
-    const currentBookAbbrev = selectedBook?.abbrev;
-    const currentChapter = selectedChapter;
-    
-    // Removed storing previous translation as it's no longer needed
-    
-    // In mobile view, explicitly save the scroll position to localStorage right now
-    // Use optional chaining to avoid null reference errors
-    if (isMobileView && chapterContentRef?.current) {
+  // Apply selected translation from dropdown to the primary pane
+  const handleApplySelectedTranslationToPane1 = (translationValue) => {
+    // Save current scroll position of primary pane
+    let currentScroll = 0;
+    if (chapterContentRef?.current) {
       try {
-        const currentScroll = chapterContentRef.current.scrollTop || 0;
-        console.log("Explicitly saving mobile scroll position to localStorage:", currentScroll);
-        
-        // Directly save to localStorage for immediate persistence
-        localStorage.setItem('mobileScrollPosition', String(currentScroll));
+        currentScroll = chapterContentRef.current.scrollTop || 0;
+        console.log("Saving primary pane scroll position before changing translation:", currentScroll);
       } catch (e) {
-        console.warn("Error saving scroll position to localStorage:", e);
+        console.warn("Error getting primary pane scroll position:", e);
       }
     }
     
-    // Update translation
-    const newTranslation = e.target.value;
-    setSelectedTranslation(newTranslation);
-    
-    // The full state restoration will happen in the useEffect that loads Bible data
-    // We're just making sure we preserve these values during the translation change
+    // Update the saved state with the new primary pane translation but preserve position
     try {
-      // Update the saved state with the new translation but preserve position
       const savedState = localStorage.getItem('bibleReaderState');
       if (savedState) {
         const parsedState = JSON.parse(savedState);
-        // Update with current values in case they changed
-        parsedState.bookAbbrev = currentBookAbbrev;
-        parsedState.chapter = currentChapter;
-        parsedState.translation = newTranslation;
-        parsedState.scrollSyncMode = scrollSyncMode;
-        parsedState.stickyPane = stickyPane;
         
-        // For mobile view, store the scroll position
-        if (isMobileView) {
-          parsedState.mobileScrollPosition = mobileScrollPosition;
-        }
-        
-        // Preserve primary reading state
-        if (primaryReading.book) {
-          parsedState.primaryReading = {
-            bookAbbrev: primaryReading.book.abbrev,
-            chapter: primaryReading.chapter
-          };
-        }
-        
-        // Preserve cross-reference viewing state
-        parsedState.isViewingCrossRef = isViewingCrossRef;
+        // Update primary pane translation in saved state
+        parsedState.translation = translationValue;
         
         localStorage.setItem('bibleReaderState', JSON.stringify(parsedState));
-      } else {
-        // If no saved state exists, create one
-        const stateToSave = {
-          bookAbbrev: currentBookAbbrev,
-          chapter: currentChapter,
-          translation: newTranslation,
-          primaryReading: {
-            bookAbbrev: primaryReading.book?.abbrev,
-            chapter: primaryReading.chapter
-          },
-          isViewingCrossRef,
-          scrollSyncMode,
-          stickyPane,
-          mobileScrollPosition: isMobileView ? mobileScrollPosition : 0
-        };
-        localStorage.setItem('bibleReaderState', JSON.stringify(stateToSave));
       }
     } catch (e) {
-      console.warn("Error updating translation in localStorage:", e);
+      console.warn("Error updating bibleReaderState in localStorage:", e);
     }
     
-    // In mobile view, preserve scroll position; in desktop view, scroll to top
-    if (!isMobileView) {
-      // Only scroll to top in desktop view
+    // Update primary pane translation
+    setSelectedTranslation(translationValue);
+    
+    // Log the change action for debugging
+    console.log(`Changed primary pane translation to ${translationValue}`);
+    
+    // Restore scroll position after a short delay to allow render
+    setTimeout(() => {
       if (chapterContentRef?.current) {
-        chapterContentRef.current.scrollTop = 0;
+        try {
+          // Calculate relative scroll position (percentage)
+          const primaryPaneHeight = chapterContentRef.current.scrollHeight;
+          const relativeScrollPercentage = primaryPaneHeight > 0 ? (currentScroll / primaryPaneHeight) : 0;
+          
+          // Apply the same percentage to the new content
+          const newScrollPosition = chapterContentRef.current.scrollHeight * relativeScrollPercentage;
+          chapterContentRef.current.scrollTop = newScrollPosition;
+          
+          console.log("Restored primary pane scroll to relative position:", relativeScrollPercentage, "actual position:", newScrollPosition);
+        } catch (e) {
+          console.warn("Error restoring primary pane scroll position:", e);
+        }
       }
-      if (kjvContentRef?.current) {
-        kjvContentRef.current.scrollTop = 0;
-      }
-      
-      // Reset scroll sync state if initialized
-      if (lastPrimaryScrollPos) {
-        lastPrimaryScrollPos.current = 0;
-      }
-    } else {
-      // In mobile view, we'll keep the scroll position as is
-      console.log("Mobile view: preserving scroll position during translation change");
-      
-      // IMPORTANT: We don't reset the scroll position in mobile view
-      // The stored value in localStorage will be used after loading completes
-    }
-    
-    scrollSyncInitialized.current = false;
+    }, 100);
+  };
+  
+  // This is now only used to update the visual selection in the dropdown
+  // The actual translation change happens in handleApplySelectedTranslationToPane1
+  const handleTranslationChange = (e) => {
+    // Just update the dropdown value without changing the actual translation
+    const value = e.target.value;
+    console.log("Dropdown selection changed to:", value);
+    setSelectedDropdownTranslation(value);
+    // The actual translation change will happen when the user clicks the "Apply" button
   };
 
   // Handle click on a verse to navigate to a cross-reference
@@ -2752,10 +2727,11 @@ const BibleApp = () => {
             <div className="flex items-center ml-2">
               <BookOpen className="mr-1 h-4 w-4 text-blue-600" />
               <select 
-                value={selectedTranslation}
+                value={selectedDropdownTranslation}
                 onChange={handleTranslationChange}
                 className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded px-2 py-1 text-sm max-w-xs`}
                 style={{ width: "auto" }}
+                id="translationSelector"
               >
                 {translations.map(translation => (
                   <option key={translation.id} value={translation.id}>
@@ -2774,7 +2750,9 @@ const BibleApp = () => {
               currentBook={selectedBook}
               currentChapter={selectedChapter}
               currentTranslation={selectedTranslation}
-              onToggleTranslation={handleToggleTranslation}
+              onApplyTranslationToPane1={handleApplySelectedTranslationToPane1}
+              onApplyTranslationToPane2={handleApplySelectedTranslationToPane2}
+              selectedDropdownTranslation={selectedDropdownTranslation}
               isMobileView={isMobileView}
               isTabletView={isTabletView}
               stickyPane={stickyPane}
