@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { Book, Link, ChevronRight, History, BookOpen, Save, Database } from 'lucide-react';
 
 // Import Firebase modules
@@ -245,6 +246,7 @@ const NavigationPlaceholder = ({
   onStickyPaneChange, 
   stickyPane,
   onAudioClick,
+  onClipboardClick,
   onDarkModeToggle,
   isDarkMode,
   resetScrollTimerRef
@@ -510,6 +512,15 @@ const NavigationPlaceholder = ({
           title="Listen to audio for this chapter"
         >
           MP3 (3)
+        </button>
+        
+        {/* To Clipboard Button */}
+        <button
+          onClick={() => onClipboardClick && onClipboardClick()}
+          className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-green-100 text-green-700 hover:bg-green-200"
+          title="Copy VLC command to clipboard for this chapter"
+        >
+          To Clip (t)
         </button>
         
         {/* Primary text - Now after buttons */}
@@ -918,6 +929,7 @@ const BibleApp = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   
   // State to track scroll position for mobile view during translation changes
+  // eslint-disable-next-line no-unused-vars
   const [mobileScrollPosition, setMobileScrollPosition] = useState(0);
 
   // Effect to detect mobile and tablet screen sizes and handle sidebar visibility
@@ -1278,6 +1290,21 @@ const BibleApp = () => {
         } else {
           // If we can't find the button but handleAudioButtonClick is defined, call it directly
           handleAudioButtonClick();
+        }
+        
+        e.preventDefault();
+      }
+      // 't' key - simulate clicking the To Clip button
+      else if (e.key === 't' || e.keyCode === 84) {
+        // Find and click the To Clip button
+        const clipButton = Array.from(document.querySelectorAll('button'))
+          .find(button => button.title && button.title.includes('Copy VLC command') && button.textContent.includes('To Clip'));
+        
+        if (clipButton) {
+          clipButton.click();
+        } else {
+          // If we can't find the button but handleClipboardButtonClick is defined, call it directly
+          handleClipboardButtonClick();
         }
         
         e.preventDefault();
@@ -1953,6 +1980,25 @@ const BibleApp = () => {
     window.open(audioUrl, '_blank');
   };
   
+  // Handle clipboard button click to copy VLC command
+  const handleClipboardButtonClick = () => {
+    if (!selectedBook) return;
+    
+    // Get the VLC command text for the current book and chapter
+    const clipText = getClipUrl(selectedBook.abbrev, selectedChapter);
+    
+    // Copy to clipboard using the Clipboard API
+    navigator.clipboard.writeText(clipText)
+      .then(() => {
+        // Show a temporary tooltip or notification
+        alert(`Copied to clipboard: ${clipText}`);
+      })
+      .catch(err => {
+        console.error('Failed to copy text: ', err);
+        alert('Failed to copy to clipboard. ' + err);
+      });
+  };
+  
   // Toggle between dark and light mode
   const toggleDarkMode = () => {
     setIsDarkMode(prevMode => !prevMode);
@@ -2543,6 +2589,85 @@ const BibleApp = () => {
     // Construct the URL
     return `https://www.biblegateway.com/audio/mclean/kjv/${bgAbbrev}.${chapter}`;
   };
+  
+  // Get chapter text to send to the clipboard for a given book and chapter
+  const getClipUrl = (bookAbbrev, chapter) => {
+    // Map from our book abbreviations to full book names
+    const bgAbbrevMapForMp3 = {
+      'gn': 'Genesis',
+      'ex': 'Exodus',
+      'lv': 'Leviticus',
+      'nm': 'Numbers',
+      'dt': 'Deuteronomy',
+      'js': 'Joshua',
+      'jud': 'Judges',
+      'rt': 'Ruth',
+      '1sm': '1Samuel',
+      '2sm': '2Samuel',
+      '1kgs': '1Kings',
+      '2kgs': '2Kings',
+      '1ch': '1Chronicles',
+      '2ch': '2Chronicles',
+      'ezr': 'Ezra',
+      'ne': 'Nehemiah',
+      'et': 'Esther',
+      'job': 'Job',
+      'ps': 'Psalms',
+      'prv': 'Proverbs',
+      'ec': 'Ecclesiastes',
+      'so': 'Song',
+      'is': 'Isaiah',
+      'jr': 'Jeremiah',
+      'lm': 'Lamentations',
+      'ez': 'Ezekiel',
+      'dn': 'Daniel',
+      'ho': 'Hosea',
+      'jl': 'Joel',
+      'am': 'Amos',
+      'ob': 'Obadiah',
+      'jn': 'Jonah',
+      'mi': 'Micah',
+      'na': 'Nahum',
+      'hk': 'Habakkuk',
+      'zp': 'Zephaniah',
+      'hg': 'Haggai',
+      'zc': 'Zechariah',
+      'ml': 'Malachi',
+      'mt': 'Matthew',
+      'mk': 'Mark',
+      'lk': 'Luke',
+      'jo': 'John',
+      'act': 'Acts',
+      'rm': 'Romans',
+      '1co': '1Corinthians',
+      '2co': '2Corinthians',
+      'gl': 'Galatians',
+      'eph': 'Ephesians',
+      'ph': 'Philippians',
+      'cl': 'Colossians',
+      '1ts': '1Thessalonians',
+      '2ts': '2Thessalonians',
+      '1tm': '1Timothy',
+      '2tm': '2Timothy',
+      'tt': 'Titus',
+      'phm': 'Philemon',
+      'hb': 'Hebrews',
+      'jm': 'James',
+      '1pe': '1Peter',
+      '2pe': '2Peter',
+      '1jo': '1John',
+      '2jo': '2John',
+      '3jo': '3John',
+      'jd': 'Jude',
+      're': 'Revelation'
+    };
+    
+    // Get the full book name
+    const bookName = bgAbbrevMapForMp3[bookAbbrev] || bookAbbrev;
+    
+    // Construct the clipboard text in the format "Open_VLC BookName/BookNameChapter.mp3"
+    return `Open_VLC ${bookName}/${bookName}${chapter}.mp3`;
+  };
 
   // If still loading
   if (loading) {
@@ -2820,6 +2945,7 @@ const BibleApp = () => {
               stickyPane={stickyPane}
               onStickyPaneChange={handleStickyPaneChange}
               onAudioClick={handleAudioButtonClick}
+              onClipboardClick={handleClipboardButtonClick}
               onDarkModeToggle={toggleDarkMode}
               isDarkMode={isDarkMode}
               resetScrollTimerRef={resetScrollTimerRef}
