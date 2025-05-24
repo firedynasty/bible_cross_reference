@@ -1327,9 +1327,9 @@ const BibleApp = () => {
         
         e.preventDefault();
       }
-      // 'm' key - go to next chapter when available by simulating a click on the Next Chapter button
-      else if (e.key === 'm') {
-        console.log("V key pressed for Next Chapter");
+      // 'm' or ',' key - go to next chapter when available by simulating a click on the Next Chapter button
+      else if (e.key === 'm' || e.key === ',') {
+        console.log("M or comma key pressed for Next Chapter");
 
         // Simplified approach: directly find and click the Next Chapter button
         const nextChapterButtons = Array.from(document.querySelectorAll('button'))
@@ -3148,7 +3148,7 @@ const BibleApp = () => {
                       }}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
-                      Next Chapter (m) &gt;
+                      Next Chapter (m ,) &gt;
                     </button>
                   )}
                   
@@ -3269,7 +3269,7 @@ const BibleApp = () => {
                         }}
                         className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
-                        Next Chapter (m) &gt;
+                        Next Chapter (m ,) &gt;
                       </button>
                     )}
                   </div>
