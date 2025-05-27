@@ -675,7 +675,7 @@ const NavigationPlaceholder = ({
             }`}
             title="Toggle auto-scroll with interval timer"
           >
-            {autoScrollActive ? 'AUTOSCROLL ON (/)' : 'AUTOSCROLL OFF (/)'}
+            {autoScrollActive ? 'AUTOSCROLL ON (esc)' : 'AUTOSCROLL OFF (esc)'}
           </button>
 
           {/* Scroll Speed Controls */}
@@ -1040,26 +1040,14 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // '/' key - toggle autoscroll
-      else if (e.key === '/') {
+      // 'Escape' key - toggle autoscroll
+      else if (e.key === 'Escape') {
         // Find and click the autoscroll button
         const autoscrollButton = Array.from(document.querySelectorAll('button'))
           .find(button => button.textContent.includes('AUTOSCROLL'));
 
         if (autoscrollButton) {
           autoscrollButton.click();
-        }
-        e.preventDefault();
-      }
-      // 'Escape' key - scroll to top of both panels
-      else if (e.key === 'Escape') {
-        // Scroll primary panel to top
-        if (chapterContentRef.current) {
-          chapterContentRef.current.scrollTop = 0;
-        }
-        // Scroll KJV panel to top
-        if (kjvContentRef.current) {
-          kjvContentRef.current.scrollTop = 0;
         }
         e.preventDefault();
       }
@@ -1327,8 +1315,8 @@ const BibleApp = () => {
         
         e.preventDefault();
       }
-      // 'm' or ',' key - go to next chapter when available by simulating a click on the Next Chapter button
-      else if (e.key === 'm' || e.key === ',') {
+      // 'm', ',', or ';' key - go to next chapter when available by simulating a click on the Next Chapter button
+      else if (e.key === 'm' || e.key === ',' || e.key === ';') {
         console.log("M or comma key pressed for Next Chapter");
 
         // Simplified approach: directly find and click the Next Chapter button
