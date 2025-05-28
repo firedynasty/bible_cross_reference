@@ -480,18 +480,45 @@ const NavigationPlaceholder = ({
           <History className="h-3 w-3" />
         </button>
 
+        <div className="relative">
+          <button
+            onClick={() => setShowPromptDropdown(!showPromptDropdown)}
+            className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-green-100 text-green-700 hover:bg-green-200 text-xs"
+            title="Copy Bible study prompts to clipboard"
+          >
+            Study Prompts ▼
+          </button>
+          
+          {showPromptDropdown && (
+            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg z-50">
+              <div className="py-1">
+                {bibleStudyPrompts.map((prompt) => (
+                  <button
+                    key={prompt.id}
+                    onClick={() => handlePromptClipboard(prompt.template)}
+                    className="block w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                    title={`Copy ${prompt.label} prompt to clipboard`}
+                  >
+                    {prompt.id}. {prompt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* We've removed the mobile line break div to allow buttons to overflow on mobile */}
         
-        {/* Duplicate Page Down Button - removed ml-2 to allow overflow without margin */}
+        {/* Duplicate Page Down Button */}
         <button
           onClick={simulateZKeyPress}
-          className="px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
+          className="hidden md:block ml-2 px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
           title="Scroll down one page (same as pressing 'p' key)"
         >
           PAGE DOWN
         </button>
         
-        {/* Down Arrow Button - removed ml-2 to allow overflow without margin */}
+        {/* Down Arrow Button */}
         <button
           onClick={() => {
             // Simulate an ArrowDown key press event
@@ -505,48 +532,14 @@ const NavigationPlaceholder = ({
             });
             document.dispatchEvent(event);
           }}
-          className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+          className="hidden md:block ml-2 px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
           title="Scroll down one line (Down Arrow)"
         >
           ↓
         </button>
-            
-        {/* Mobile-friendly breakpoint for autoscroll controls */}
-        <div className="md:hidden w-full"></div>
-        
-        {/* AutoScroll controls group - wrapped for responsive behavior */}
-        <div className="flex flex-nowrap items-center ml-2">
 
-          {/* Bible Study Prompts Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowPromptDropdown(!showPromptDropdown)}
-              className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-green-100 text-green-700 hover:bg-green-200 text-xs"
-              title="Copy Bible study prompts to clipboard"
-            >
-              Study Prompts ▼
-            </button>
-            
-            {showPromptDropdown && (
-              <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg z-50">
-                <div className="py-1">
-                  {bibleStudyPrompts.map((prompt) => (
-                    <button
-                      key={prompt.id}
-                      onClick={() => handlePromptClipboard(prompt.template)}
-                      className="block w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                      title={`Copy ${prompt.label} prompt to clipboard`}
-                    >
-                      {prompt.id}. {prompt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Scroll Control Radio Buttons - unhidden */}
-          <div className="ml-2 flex items-center border-l border-gray-300 pl-2">
+        {/* Scroll Control Radio Buttons - unhidden */}
+        <div className="hidden md:flex ml-2 items-center border-l border-gray-300 pl-2">
             <span className="text-xs text-gray-600 mr-1">SCROLL:</span>
             <label className="flex items-center cursor-pointer">
               <input
@@ -574,7 +567,7 @@ const NavigationPlaceholder = ({
           
           
           {/* Up Arrow Key Button */}
-          <div className="ml-2 flex items-center border-l border-gray-300 pl-2">
+          <div className="hidden md:flex ml-2 items-center border-l border-gray-300 pl-2">
             <button
               onClick={() => {
                 // Simulate an ArrowUp key press event
@@ -594,28 +587,28 @@ const NavigationPlaceholder = ({
               ↑
             </button>
             
-            {/* Wider Page Down Button */}
-            <button
-              onClick={() => {
-                // Simulate pressing 'p' key for page down
-                const event = new KeyboardEvent('keydown', {
-                  key: 'p',
-                  code: 'KeyP',
-                  keyCode: 80,
-                  which: 80,
-                  bubbles: true,
-                  cancelable: true
-                });
-                document.dispatchEvent(event);
-              }}
-              className="ml-2 px-6 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
-              title="Scroll down one page (same as pressing 'p' key)"
-              style={{ width: "calc(1.5 * 5rem)" }}
-            >
-              PAGE DOWN
-            </button>
           </div>
-        </div>
+          
+          {/* Page Down Button */}
+          <button
+            onClick={() => {
+              // Simulate pressing 'p' key for page down
+              const event = new KeyboardEvent('keydown', {
+                key: 'p',
+                code: 'KeyP',
+                keyCode: 80,
+                which: 80,
+                bubbles: true,
+                cancelable: true
+              });
+              document.dispatchEvent(event);
+            }}
+            className="hidden md:block ml-2 px-6 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
+            title="Scroll down one page (same as pressing 'p' key)"
+            style={{ width: "calc(7.5rem)" }}
+          >
+            PAGE DOWN
+          </button>
       </div>
       
       {/* Navigation History Dropdown */}
