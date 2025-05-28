@@ -252,81 +252,6 @@ const NavigationPlaceholder = ({
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [showPromptDropdown, setShowPromptDropdown] = useState(false);
-
-  // Bible study prompt options
-  const bibleStudyPrompts = [
-    {
-      id: 1,
-      label: "Meditation Connection",
-      template: "Meditation Connection, For {book} {chapter}, tell me what is the theme connect to meditation like breathe in out"
-    },
-    {
-      id: 2,
-      label: "Literary & Structure Analysis",
-      template: 'Literary & Structure Analysis: For {book} {chapter}, "Analyze the literary structure, rhetorical devices, and narrative techniques used in this chapter - how do elements like repetition, imagery, parallelism, chiasm, or progression of ideas work together to reinforce the central message and create emotional or theological impact?"'
-    },
-    {
-      id: 3,
-      label: "Historical & Cultural Context",
-      template: 'Historical & Cultural Context: For {book} {chapter}, "Explore the historical setting, cultural practices, social structures, and contextual factors that shaped this chapter - how do understanding the original audience, historical circumstances, and cultural background illuminate the meaning and significance of the text?"'
-    },
-    {
-      id: 4,
-      label: "Theological & Doctrinal",
-      template: 'Theological & Doctrinal: For {book} {chapter}, "What does this chapter reveal about the nature and character of God, humanity\'s relationship with the divine, and major theological themes like covenant, salvation, justice, or redemption - and how do these teachings connect to or develop broader biblical doctrine?"'
-    },
-    {
-      id: 5,
-      label: "Practical Application",
-      template: 'Practical Application: For {book} {chapter}, "Given the original context and timeless principles in this chapter, what specific life situations, moral decisions, relationship dynamics, or spiritual challenges does this text address, and how can its wisdom be authentically applied to contemporary personal and communal life?"'
-    },
-    {
-      id: 6,
-      label: "Comparative Analysis",
-      template: 'Comparative Analysis: For {book} {chapter}, "How does this chapter\'s themes, language, imagery, and theological content compare and contrast with similar passages throughout Scripture, what unique contribution does it make to biblical literature, and how do different translations or interpretative traditions handle its key concepts?"'
-    },
-    {
-      id: 7,
-      label: "Spiritual Formation",
-      template: 'Spiritual Formation: For {book} {chapter}, "How can this chapter inform and transform personal spiritual practices like prayer, meditation, worship, and discipleship - what spiritual disciplines does it model or encourage, and how might regular engagement with its content shape character and faith development?"'
-    },
-    {
-      id: 8,
-      label: "Creative Engagement",
-      template: 'Creative Engagement: For {book} {chapter}, "If you were to reimagine this chapter through contemporary storytelling, artistic expression, or modern parallels, what would it look like, what current situations mirror its dynamics, and how might creative interpretation help unlock its relevance for today\'s audience?"'
-    }
-  ];
-
-  // Handle copying Bible study prompt to clipboard
-  const handlePromptClipboard = useCallback((promptTemplate) => {
-    if (!book) return;
-    
-    const bookName = book.book || getBookName(book.abbrev);
-    const finalPrompt = promptTemplate.replace('{book}', bookName).replace('{chapter}', `Chapter ${chapter}`);
-    
-    navigator.clipboard.writeText(finalPrompt)
-      .then(() => {
-        alert(`Copied to clipboard: ${finalPrompt}`);
-        setShowPromptDropdown(false);
-      })
-      .catch(err => {
-        console.error('Failed to copy text: ', err);
-        alert('Failed to copy to clipboard. ' + err);
-      });
-  }, [book, chapter, getBookName]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showPromptDropdown && !event.target.closest('.relative')) {
-        setShowPromptDropdown(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showPromptDropdown]);
 
   // Function to simulate pressing 'p' key for page down
   const simulateZKeyPress = useCallback(() => {
@@ -517,33 +442,7 @@ const NavigationPlaceholder = ({
         {/* AutoScroll controls group - wrapped for responsive behavior */}
         <div className="flex flex-nowrap items-center ml-2">
 
-          {/* Bible Study Prompts Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowPromptDropdown(!showPromptDropdown)}
-              className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-green-100 text-green-700 hover:bg-green-200 text-xs"
-              title="Copy Bible study prompts to clipboard"
-            >
-              Study Prompts ▼
-            </button>
-            
-            {showPromptDropdown && (
-              <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg z-50">
-                <div className="py-1">
-                  {bibleStudyPrompts.map((prompt) => (
-                    <button
-                      key={prompt.id}
-                      onClick={() => handlePromptClipboard(prompt.template)}
-                      className="block w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                      title={`Copy ${prompt.label} prompt to clipboard`}
-                    >
-                      {prompt.id}. {prompt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+
 
           {/* Scroll Control Radio Buttons - unhidden */}
           <div className="ml-2 flex items-center border-l border-gray-300 pl-2">
