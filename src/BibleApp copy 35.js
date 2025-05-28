@@ -248,13 +248,95 @@ const NavigationPlaceholder = ({
   onAudioClick,
   onClipboardClick,
   onDarkModeToggle,
-  isDarkMode
+  isDarkMode,
+  resetScrollTimerRef
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [autoScrollActive, setAutoScrollActive] = useState(false);
+  const [scrollIntervalSeconds, setScrollIntervalSeconds] = useState(32);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [countdownTimer, setCountdownTimer] = useState(0);
+  const audioContextRef = useRef(null);
+  // Reference to track the last time auto-scroll was executed
+  const lastScrollTimeRef = useRef(Date.now());
+
+  // Function to reset the scroll timer (used in the auto-scroll useEffect)
+  const resetScrollTimer = useCallback(() => {
+    lastScrollTimeRef.current = Date.now();
+    // Reset countdown to the full interval when timer is reset
+    if (autoScrollActive) {
+      setCountdownTimer(scrollIntervalSeconds);
+    }
+  }, [autoScrollActive, scrollIntervalSeconds]);
+  
+  // Make resetScrollTimer available to parent via ref
+  useEffect(() => {
+    if (resetScrollTimerRef) {
+      resetScrollTimerRef.current = resetScrollTimer;
+    }
+  }, [resetScrollTimer, resetScrollTimerRef]);
+
+  // Function to play a subtle beep sound
+  const playSubtleBeep = useCallback(() => {
+    // Only play sound if enabled
+    if (!soundEnabled) return;
+
+    try {
+      // Create audio context on first use (must be triggered by user action)
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      const context = audioContextRef.current;
+
+      // Create oscillator
+      const oscillator = context.createOscillator();
+      const gainNode = context.createGain();
+
+      // Connect nodes
+      oscillator.connect(gainNode);
+      gainNode.connect(context.destination);
+
+      // Configure sound properties
+      oscillator.type = 'sine'; // sine waves are smoother than square or sawtooth
+      oscillator.frequency.value = 800; // gentle higher frequency
+      gainNode.gain.value = 0.05; // very quiet (values from 0 to 1)
+
+      // Schedule envelope for super-short beep
+      gainNode.gain.setValueAtTime(0.05, context.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.15);
+
+      // Play and stop
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.15);
+    } catch (error) {
+      console.error('Error playing notification sound:', error);
+    }
+  }, [soundEnabled]);
+
+  // Functions to adjust scroll speed
+  const increaseScrollSpeed = useCallback(() => {
+    setScrollIntervalSeconds(prev => {
+      const newVal = Math.max(1, prev - 1);
+      console.log(`Making scrolling faster: ${prev}s → ${newVal}s`);
+      return newVal;
+    });
+  }, []);
+
+  const decreaseScrollSpeed = useCallback(() => {
+    setScrollIntervalSeconds(prev => {
+      const newVal = prev + 1;
+      console.log(`Making scrolling slower: ${prev}s → ${newVal}s`);
+      return newVal;
+    });
+  }, []);
 
   // Function to simulate pressing 'p' key for page down
   const simulateZKeyPress = useCallback(() => {
+    // Reset the scroll timer first, to prevent too-rapid autoscrolling
+    resetScrollTimer();
+
     const event = new KeyboardEvent('keydown', {
       key: 'p',
       code: 'KeyP',
@@ -264,9 +346,119 @@ const NavigationPlaceholder = ({
       cancelable: true
     });
     document.dispatchEvent(event);
-  }, []);
+  }, [resetScrollTimer]);
 
+  // Track whether this is the first scroll after toggle
+  const firstScrollAfterToggleRef = useRef(true);
 
+  // Reset the first scroll flag when auto-scroll state changes
+  useEffect(() => {
+    if (autoScrollActive) {
+      firstScrollAfterToggleRef.current = true;
+    }
+  }, [autoScrollActive]);
+
+  // Set up auto-scroll interval
+  useEffect(() => {
+    let intervalId;
+
+    if (autoScrollActive) {
+      intervalId = setInterval(() => {
+        // Get current time
+        const now = Date.now();
+        // Only scroll if enough time has passed since last scroll or manual action
+        if (now - lastScrollTimeRef.current >= scrollIntervalSeconds * 1000) {
+          // Create or retrieve the last scroll positions object
+          if (!window.lastScrollPositions) {
+            window.lastScrollPositions = {};
+          }
+
+          // Get scroll positions before scrolling
+          const beforeScrollPositions = {};
+          const scrollContainers = document.querySelectorAll('.overflow-y-auto');
+          scrollContainers.forEach(container => {
+            const id = container.id || container.className;
+            beforeScrollPositions[id] = container.scrollTop;
+          });
+
+          // Always simulate key press to attempt scrolling
+          simulateZKeyPress();
+
+          // Small delay to allow scroll to occur
+          setTimeout(() => {
+            // Check if any scrolling actually happened
+            let didScroll = false;
+
+            scrollContainers.forEach(container => {
+              const id = container.id || container.className;
+              const beforePos = beforeScrollPositions[id] || 0;
+              const afterPos = container.scrollTop;
+
+              // If any container scrolled
+              if (Math.abs(afterPos - beforePos) > 1) {
+                didScroll = true;
+              }
+
+              // Update for next time
+              window.lastScrollPositions[id] = afterPos;
+            });
+
+            // Play sound if we scrolled OR this is the first scroll after toggle
+            if (didScroll || firstScrollAfterToggleRef.current) {
+              playSubtleBeep();
+              // Reset first scroll flag after using it
+              firstScrollAfterToggleRef.current = false;
+            }
+          }, 50); // Small delay to detect scroll
+
+          // Update last scroll time regardless and reset countdown
+          resetScrollTimer();
+          // Update the countdown to the full interval
+          setCountdownTimer(scrollIntervalSeconds);
+        }
+      }, 1000); // Check every second
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [autoScrollActive, simulateZKeyPress, scrollIntervalSeconds, playSubtleBeep, firstScrollAfterToggleRef, resetScrollTimer, setCountdownTimer]);
+
+  // Reset auto-scroll timer when chapter changes
+  useEffect(() => {
+    if (book) {
+      // Reset the scroll timer when the chapter changes
+      resetScrollTimer();
+    }
+  }, [book, chapter, resetScrollTimer]);
+  
+  // Countdown timer effect
+  useEffect(() => {
+    let countdownId;
+    
+    if (autoScrollActive) {
+      // Initialize the countdown to show remaining time
+      const timeElapsed = (Date.now() - lastScrollTimeRef.current) / 1000;
+      const remainingTime = Math.max(1, Math.ceil(scrollIntervalSeconds - timeElapsed));
+      setCountdownTimer(remainingTime);
+      
+      // Update the countdown every second
+      countdownId = setInterval(() => {
+        // Calculate remaining time directly from the last scroll time
+        const elapsed = (Date.now() - lastScrollTimeRef.current) / 1000;
+        const remaining = Math.max(0, Math.ceil(scrollIntervalSeconds - elapsed));
+        
+        setCountdownTimer(remaining);
+      }, 1000);
+    } else {
+      // Reset countdown when autoscroll is turned off
+      setCountdownTimer(0);
+    }
+    
+    return () => {
+      if (countdownId) clearInterval(countdownId);
+    };
+  }, [autoScrollActive, scrollIntervalSeconds, lastScrollTimeRef]);
 
   // Update navigation history only when manually selecting a book or chapter
   // We'll track this separately from cross-reference navigation
@@ -441,8 +633,98 @@ const NavigationPlaceholder = ({
         
         {/* AutoScroll controls group - wrapped for responsive behavior */}
         <div className="flex flex-nowrap items-center ml-2">
+          {/* Continuous Scroll Button */}
+          <button
+            onClick={() => {
+              // Toggle auto-scroll state
+              const newAutoScrollState = !autoScrollActive;
+              setAutoScrollActive(newAutoScrollState);
+              console.log("Auto-scroll toggled to:", newAutoScrollState);
 
+              // Pre-initialize audio context with silent sound if turning ON
+              if (!autoScrollActive) {  // Current state is OFF, about to turn ON
+                try {
+                  if (!audioContextRef.current) {
+                    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+                  }
 
+                  // Play a silent sound to "warm up" the audio context
+                  const context = audioContextRef.current;
+                  const oscillator = context.createOscillator();
+                  const gainNode = context.createGain();
+                  oscillator.connect(gainNode);
+                  gainNode.connect(context.destination);
+
+                  // Make it silent
+                  gainNode.gain.value = 0.001;
+
+                  // Very short duration
+                  oscillator.start();
+                  oscillator.stop(context.currentTime + 0.001);
+
+                  console.log('Pre-initialized audio context for iOS compatibility');
+                } catch (error) {
+                  console.error('Error initializing audio context:', error);
+                }
+              }
+            }}
+            className={`px-2 py-1 rounded text-xs font-medium ${
+              autoScrollActive
+                ? 'bg-green-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+            title="Toggle auto-scroll with interval timer"
+          >
+            {autoScrollActive ? 'AUTOSCROLL ON (esc)' : 'AUTOSCROLL OFF (esc)'}
+          </button>
+
+          {/* Scroll Speed Controls */}
+          <div className="ml-2 flex items-center">
+            <button
+              onClick={increaseScrollSpeed}
+              className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-l text-xs font-bold"
+              title="Make scrolling faster (decrease interval)"
+            >
+              -
+            </button>
+            <span className="px-2 py-1 bg-gray-100 text-xs font-medium">
+              {scrollIntervalSeconds}s
+            </span>
+            <button
+              onClick={decreaseScrollSpeed}
+              className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-r text-xs font-bold"
+              title="Make scrolling slower (increase interval)"
+            >
+              +
+            </button>
+          </div>
+
+          {/* Sound Toggle */}
+          <div className="ml-2 flex items-center border-l border-gray-300 pl-2">
+            <span className="text-xs text-gray-600 mr-1">SOUND:</span>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="soundToggle"
+                value="on"
+                checked={soundEnabled}
+                onChange={() => setSoundEnabled(true)}
+                className="mr-1"
+              />
+              <span className="text-xs">ON</span>
+            </label>
+            <label className="ml-2 flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="soundToggle"
+                value="off"
+                checked={!soundEnabled}
+                onChange={() => setSoundEnabled(false)}
+                className="mr-1"
+              />
+              <span className="text-xs">OFF</span>
+            </label>
+          </div>
 
           {/* Scroll Control Radio Buttons - unhidden */}
           <div className="ml-2 flex items-center border-l border-gray-300 pl-2">
@@ -471,6 +753,15 @@ const NavigationPlaceholder = ({
             </label>
           </div>
           
+          {/* Countdown timer display - only shown when autoscroll is active */}
+          {autoScrollActive && (
+            <div className="ml-2 flex items-center border-l border-gray-300 pl-2">
+              <span className="text-xs text-gray-600 mr-1">COUNTDOWN:</span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                {countdownTimer}s
+              </span>
+            </div>
+          )}
           
           {/* Up Arrow Key Button */}
           <div className="ml-2 flex items-center border-l border-gray-300 pl-2">
@@ -727,9 +1018,46 @@ const BibleApp = () => {
     const isManuallyScrollingRef = isManuallyScrolling;
 
     const handleKeyDown = (e) => {
+      // '-' key - make scrolling faster (decrease interval)
+      if (e.key === '-') {
+        // Find the '-' button that makes scrolling faster and click it
+        const fasterButton = Array.from(document.querySelectorAll('button'))
+          .find(button => button.title && button.title.includes('Make scrolling faster') && button.textContent.trim() === '-');
+
+        if (fasterButton) {
+          fasterButton.click();
+        }
+        e.preventDefault();
+      }
+      // '=' key - make scrolling slower (increase interval)
+      else if (e.key === '=') {
+        // Find the '+' button that makes scrolling slower and click it
+        const slowerButton = Array.from(document.querySelectorAll('button'))
+          .find(button => button.title && button.title.includes('Make scrolling slower') && button.textContent.trim() === '+');
+
+        if (slowerButton) {
+          slowerButton.click();
+        }
+        e.preventDefault();
+      }
+      // 'Escape' key - toggle autoscroll
+      else if (e.key === 'Escape') {
+        // Find and click the autoscroll button
+        const autoscrollButton = Array.from(document.querySelectorAll('button'))
+          .find(button => button.textContent.includes('AUTOSCROLL'));
+
+        if (autoscrollButton) {
+          autoscrollButton.click();
+        }
+        e.preventDefault();
+      }
       // Removed '[' and ']' key handlers for translation switching
       // 'x' key or Down Arrow - scroll down one line at a time in KJV pane (like 'z' but just one line)
-      if ((e.key === 'x' || e.key === 'ArrowDown') && kjvContentRef.current) {
+      else if ((e.key === 'x' || e.key === 'ArrowDown') && kjvContentRef.current) {
+        // Reset the countdown timer if autoscroll is active
+        if (resetScrollTimerRef.current) {
+          resetScrollTimerRef.current();
+        }
         
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
@@ -775,6 +1103,10 @@ const BibleApp = () => {
       }
       // Up Arrow - scroll up one line at a time in KJV pane (opposite of 'x' key)
       else if (e.key === 'ArrowUp' && kjvContentRef.current) {
+        // Reset the countdown timer if autoscroll is active
+        if (resetScrollTimerRef.current) {
+          resetScrollTimerRef.current();
+        }
         
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
@@ -820,6 +1152,10 @@ const BibleApp = () => {
       
       // 'o' key or PageUp key - page up with KJV pane as reference point
       else if ((e.key === 'o' || e.key === 'PageUp') && kjvContentRef.current) {
+        // Reset the countdown timer if autoscroll is active
+        if (resetScrollTimerRef.current) {
+          resetScrollTimerRef.current();
+        }
         
         // Calculate page height (approx viewport height)
         const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
@@ -863,6 +1199,10 @@ const BibleApp = () => {
       }
       // 'p' key or PageDown key - page down with KJV pane as reference point
       else if ((e.key === 'p' || e.key === 'PageDown') && kjvContentRef.current) {
+        // Reset the countdown timer if autoscroll is active
+        if (resetScrollTimerRef.current) {
+          resetScrollTimerRef.current();
+        }
         
         // Calculate page height (approx viewport height)
         const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
