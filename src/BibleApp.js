@@ -55,7 +55,7 @@ const getBaseUrl = () => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, isMobileView, isTabletView, stickyPane, isDarkMode, autoSavePosition, onAutoSavePositionChange }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, isMobileView, isTabletView, stickyPane, isDarkMode, autoSavePosition, onAutoSavePositionChange, onNextChapter, bibleData, setSelectedBook }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -217,20 +217,29 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         Apply
       </button>
 
-      {/* Load selected translation for pane 1 */}
+      {/* Next Chapter button */}
       <button
         onClick={() => {
-          onApplyTranslationToPane1(selectedDropdownTranslation);
+          if (currentBook && currentChapter < currentBook.chapters.length) {
+            onNextChapter(currentChapter + 1, true);
+          } else if (bibleData && bibleData.length > 0) {
+            // Try to go to next book
+            const currentBookIndex = bibleData.findIndex(b => b.abbrev === currentBook?.abbrev);
+            if (currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1) {
+              const nextBook = bibleData[currentBookIndex + 1];
+              setSelectedBook(nextBook);
+              setTimeout(() => {
+                onNextChapter(1, true);
+              }, 100);
+            }
+          }
         }}
-        className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-indigo-700' : 'bg-indigo-500'} text-white rounded hover:bg-indigo-600 transition-colors`}
-        title="Apply selected translation to primary pane"
+        className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-green-700' : 'bg-green-500'} text-white rounded hover:bg-green-600 transition-colors`}
+        title="Go to next chapter (same as pressing 'm' key)"
       >
-        <span className="flex items-center">
-          <BookOpen className="h-3 w-3" />
-          <span className="text-xs font-bold ml-0.5 mr-1">1</span>
-        </span>
-        Apply
+        Next Ch
       </button>
+
     </div>
   );
 };
@@ -2653,6 +2662,21 @@ const BibleApp = () => {
                   </option>
                 ))}
               </select>
+              
+              {/* Load selected translation for pane 1 */}
+              <button
+                onClick={() => {
+                  handleApplySelectedTranslationToPane1(selectedDropdownTranslation);
+                }}
+                className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-indigo-700' : 'bg-indigo-500'} text-white rounded hover:bg-indigo-600 transition-colors`}
+                title="Apply selected translation to primary pane"
+              >
+                <span className="flex items-center">
+                  <BookOpen className="h-3 w-3" />
+                  <span className="text-xs font-bold ml-0.5 mr-1">1</span>
+                </span>
+                Apply
+              </button>
             </div>
           </div>
           
@@ -2673,6 +2697,9 @@ const BibleApp = () => {
               isDarkMode={isDarkMode}
               autoSavePosition={autoSavePosition}
               onAutoSavePositionChange={setAutoSavePosition}
+              onNextChapter={handleChapterSelect}
+              bibleData={bibleData}
+              setSelectedBook={setSelectedBook}
             />
           </div>
           
