@@ -217,6 +217,26 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         Apply
       </button>
 
+      {/* Extra Page Down button (duplicate) */}
+      <button
+        onClick={() => {
+          // Dispatch a 'p' key press event directly
+          const event = new KeyboardEvent('keydown', {
+            key: 'p',
+            code: 'KeyP',
+            keyCode: 80,
+            which: 80,
+            bubbles: true,
+            cancelable: true
+          });
+          document.dispatchEvent(event);
+        }}
+        className="ml-2 px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
+        title="Scroll down one page (same as pressing 'p' key)"
+      >
+        Page DN
+      </button>
+
       {/* Next Chapter button */}
       <button
         onClick={() => {
