@@ -277,22 +277,11 @@ const NavigationPlaceholder = ({
   onAudioClick,
   onClipboardClick,
   onDarkModeToggle,
-  isDarkMode,
-  touchScrollMode,
-  onTouchScrollModeChange
+  isDarkMode
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showPromptDropdown, setShowPromptDropdown] = useState(false);
-  const [showTouchDropdown, setShowTouchDropdown] = useState(false);
-
-  // Touch scroll mode options
-  const touchScrollModes = [
-    { id: 'disabled', label: 'Disabled', description: 'Normal click behavior' },
-    { id: 'right-only', label: 'Right Pane', description: 'Touch right pane triggers page down' },
-    { id: 'both-panes', label: 'Both Panes', description: 'Touch either pane triggers page down' },
-    { id: 'right-reduced', label: 'Right Reduced', description: 'Touch right pane with smaller scroll' }
-  ];
 
   // Bible study prompt options
   const bibleStudyPrompts = [
@@ -362,14 +351,11 @@ const NavigationPlaceholder = ({
       if (showPromptDropdown && !event.target.closest('.relative')) {
         setShowPromptDropdown(false);
       }
-      if (showTouchDropdown && !event.target.closest('.relative')) {
-        setShowTouchDropdown(false);
-      }
     };
     
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showPromptDropdown, showTouchDropdown]);
+  }, [showPromptDropdown]);
 
   // Function to simulate pressing 'p' key for page down
   const simulateZKeyPress = useCallback(() => {
@@ -607,40 +593,6 @@ const NavigationPlaceholder = ({
               <span className="text-xs">KJV</span>
             </label>
           </div>
-
-          {/* Touch Scroll Configuration Dropdown */}
-          <div className="hidden md:flex ml-2 items-center border-l border-gray-300 pl-2 relative">
-            <span className="text-xs text-gray-600 mr-1">TOUCH:</span>
-            <button
-              onClick={() => setShowTouchDropdown(!showTouchDropdown)}
-              className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded border flex items-center"
-            >
-              {touchScrollModes.find(mode => mode.id === touchScrollMode)?.label || 'Disabled'}
-              <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            
-            {showTouchDropdown && (
-              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 min-w-48">
-                {touchScrollModes.map((mode) => (
-                  <button
-                    key={mode.id}
-                    onClick={() => {
-                      onTouchScrollModeChange(mode.id);
-                      setShowTouchDropdown(false);
-                    }}
-                    className={`block w-full text-left px-3 py-2 text-xs hover:bg-gray-100 ${
-                      touchScrollMode === mode.id ? 'bg-blue-50 text-blue-700' : ''
-                    }`}
-                  >
-                    <div className="font-medium">{mode.label}</div>
-                    <div className="text-gray-500">{mode.description}</div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
           
           
           {/* Up Arrow Key Button */}
@@ -807,9 +759,6 @@ const BibleApp = () => {
   
   // State to track dark/light mode
   const [isDarkMode, setIsDarkMode] = useState(false);
-  
-  // State to track touch scroll mode
-  const [touchScrollMode, setTouchScrollMode] = useState('disabled');
   
   // State to track scroll position for mobile view during translation changes
   // eslint-disable-next-line no-unused-vars
@@ -1288,11 +1237,6 @@ const BibleApp = () => {
           }, 50);
         }
       }
-      // Escape key - Home functionality (reset all scroll positions and state)
-      else if (e.key === 'Escape') {
-        handleHomeReset();
-        e.preventDefault();
-      }
     };
     
     window.addEventListener('keydown', handleKeyDown);
@@ -1505,81 +1449,6 @@ const BibleApp = () => {
       }
     };
   };
-
-  // Touch scroll functions
-  const handleTouchPageDown = useCallback((scrollAmount = 0.9) => {
-    if (!kjvContentRef.current) return;
-    
-    const pageHeight = kjvContentRef.current.clientHeight * scrollAmount;
-    isManuallyScrolling.current = true;
-
-    try {
-      const kjvPane = kjvContentRef.current;
-      const kjvNewPosition = kjvPane.scrollTop + pageHeight;
-      const kjvMaxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
-      kjvPane.scrollTop = Math.min(kjvMaxScroll, kjvNewPosition);
-
-      if (!isMobileView && chapterContentRef.current) {
-        const primaryPane = chapterContentRef.current;
-        const newKjvScrollPercentage = kjvPane.scrollTop / (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
-        primaryPane.scrollTop = newKjvScrollPercentage * (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
-        lastPrimaryScrollPos.current = primaryPane.scrollTop;
-      }
-
-      if (isMobileView) {
-        localStorage.setItem('mobileScrollPosition', chapterContentRef.current?.scrollTop.toString() || '0');
-        setMobileScrollPosition(chapterContentRef.current?.scrollTop || 0);
-      }
-    } finally {
-      setTimeout(() => {
-        isManuallyScrolling.current = false;
-      }, 50);
-    }
-  }, [isMobileView, setMobileScrollPosition]);
-
-  const handlePaneClick = useCallback((event, pane) => {
-    // Don't trigger scroll if clicking on a button or interactive element
-    if (event.target.tagName === 'BUTTON' || 
-        event.target.closest('button') ||
-        event.target.tagName === 'INPUT' ||
-        event.target.tagName === 'SELECT' ||
-        event.target.tagName === 'A' ||
-        event.target.closest('a')) {
-      return;
-    }
-
-    if (touchScrollMode === 'disabled') return;
-    
-    if (touchScrollMode === 'right-only' && pane === 'left') return;
-    
-    const scrollAmount = touchScrollMode === 'right-reduced' && pane === 'right' ? 0.5 : 0.9;
-    handleTouchPageDown(scrollAmount);
-  }, [touchScrollMode, handleTouchPageDown]);
-
-  // Centralized Home function to reset all scroll positions and state
-  const handleHomeReset = useCallback(() => {
-    // Reset scroll positions for both panes
-    if (chapterContentRef.current) {
-      chapterContentRef.current.scrollTop = 0;
-    }
-    if (kjvContentRef.current) {
-      kjvContentRef.current.scrollTop = 0;
-    }
-    
-    // Reset mobile scroll position state and localStorage
-    if (isMobileView) {
-      localStorage.setItem('mobileScrollPosition', '0');
-      setMobileScrollPosition(0);
-    }
-    
-    // Reset scroll sync tracking variables
-    lastPrimaryScrollPos.current = 0;
-    lastKjvScrollPos.current = 0;
-    scrollSyncInitialized.current = false;
-    
-    // Reset manual scrolling flag
-    isManuallyScrolling.current = false;
-  }, [isMobileView, setMobileScrollPosition]);
 
   // Load Bible data and cross-references on component mount
   useEffect(() => {
@@ -2959,8 +2828,6 @@ const BibleApp = () => {
               onClipboardClick={handleClipboardButtonClick}
               onDarkModeToggle={toggleDarkMode}
               isDarkMode={isDarkMode}
-              touchScrollMode={touchScrollMode}
-              onTouchScrollModeChange={setTouchScrollMode}
               resetScrollTimerRef={resetScrollTimerRef}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
@@ -3011,12 +2878,7 @@ const BibleApp = () => {
         {/* Bible Text and KJV Split View - Responsive layout for different devices */}
         <div className="flex-1 flex overflow-hidden">
           {/* Bible Text Display */}
-          <div 
-            ref={chapterContentRef} 
-            className={`${isMobileView && !isTabletView && showKJVOnMobile ? 'hidden' : isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'} relative`}
-            onClick={(event) => handlePaneClick(event, 'left')}
-            style={{ cursor: touchScrollMode !== 'disabled' && touchScrollMode === 'both-panes' ? 'pointer' : 'default' }}
-          >
+          <div ref={chapterContentRef} className={`${isMobileView && !isTabletView && showKJVOnMobile ? 'hidden' : isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'} relative`}>
             {selectedBook && selectedChapter > 0 && (
               <div>
                 <h2 className="text-3xl font-semibold flex items-center mb-5">
@@ -3120,9 +2982,13 @@ const BibleApp = () => {
                   {selectedChapter > 1 ? (
                     <button
                       onClick={() => {
-                        handleChapterSelect(selectedChapter - 1, true);
-                        // Reset all scroll state immediately
-                        handleHomeReset();
+                        handleChapterSelect(selectedChapter - 1);
+                        // Sync KJV panel scroll with primary panel
+                        if (kjvContentRef.current) {
+                          setTimeout(() => {
+                            kjvContentRef.current.scrollTop = 0;
+                          }, 100);
+                        }
                       }}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
@@ -3134,7 +3000,16 @@ const BibleApp = () => {
 
                   {/* Home button to scroll to top */}
                   <button
-                    onClick={handleHomeReset}
+                    onClick={() => {
+                      // Scroll primary panel to top
+                      if (chapterContentRef.current) {
+                        chapterContentRef.current.scrollTop = 0;
+                      }
+                      // Sync KJV panel scroll
+                      if (kjvContentRef.current) {
+                        kjvContentRef.current.scrollTop = 0;
+                      }
+                    }}
                     className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                   >
                     Home (esc)
@@ -3166,12 +3041,7 @@ const BibleApp = () => {
           {(!isMobileView || isTabletView || showKJVOnMobile) && (
             <div className={`${isMobileView && !isTabletView ? 'w-full' : 'w-1/2'} border-l border-gray-200 bg-gray-50 flex flex-col`}>
               {/* KJV Bible Text Display */}
-              <div 
-                ref={kjvContentRef} 
-                className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'}`}
-                onClick={(event) => handlePaneClick(event, 'right')}
-                style={{ cursor: touchScrollMode !== 'disabled' && (touchScrollMode === 'right-only' || touchScrollMode === 'both-panes' || touchScrollMode === 'right-reduced') ? 'pointer' : 'default' }}
-              >
+              <div ref={kjvContentRef} className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'}`}>
                 {selectedBook && selectedChapter > 0 && (
                 <div>
                   <h2 className="text-3xl mr-2 font-semibold mb-5 flex items-center">
@@ -3245,16 +3115,7 @@ const BibleApp = () => {
                     {selectedChapter > 1 ? (
                       <button
                         onClick={() => {
-                          // Clear mobile scroll position immediately to prevent restoration
-                          localStorage.removeItem('mobileScrollPosition');
-                          setMobileScrollPosition(0);
-                          
-                          handleChapterSelect(selectedChapter - 1, true);
-                          
-                          // Reset all scroll state after content loads
-                          setTimeout(() => {
-                            handleHomeReset();
-                          }, 100);
+                          handleChapterSelect(selectedChapter - 1);
                         }}
                         className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
@@ -3266,7 +3127,16 @@ const BibleApp = () => {
 
                     {/* Home button to scroll to top */}
                     <button
-                      onClick={handleHomeReset}
+                      onClick={() => {
+                        // Scroll KJV panel to top
+                        if (kjvContentRef.current) {
+                          kjvContentRef.current.scrollTop = 0;
+                        }
+                        // Sync primary panel scroll
+                        if (chapterContentRef.current) {
+                          chapterContentRef.current.scrollTop = 0;
+                        }
+                      }}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
                       Home (esc)
@@ -3275,16 +3145,7 @@ const BibleApp = () => {
                     {selectedBook && selectedChapter < selectedBook.chapters.length && (
                       <button
                         onClick={() => {
-                          // Clear mobile scroll position immediately to prevent restoration
-                          localStorage.removeItem('mobileScrollPosition');
-                          setMobileScrollPosition(0);
-                          
                           handleChapterSelect(selectedChapter + 1, true);
-                          
-                          // Reset all scroll state after content loads
-                          setTimeout(() => {
-                            handleHomeReset();
-                          }, 100);
                         }}
                         className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
