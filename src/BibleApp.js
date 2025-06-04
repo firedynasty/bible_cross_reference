@@ -279,20 +279,13 @@ const NavigationPlaceholder = ({
   onDarkModeToggle,
   isDarkMode,
   touchScrollMode,
-  onTouchScrollModeChange
+  onTouchScrollModeChange,
+  touchScrollModes
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showPromptDropdown, setShowPromptDropdown] = useState(false);
   const [showTouchDropdown, setShowTouchDropdown] = useState(false);
-
-  // Touch scroll mode options
-  const touchScrollModes = [
-    { id: 'disabled', label: 'Disabled', description: 'Normal click behavior' },
-    { id: 'right-only', label: 'Right Pane', description: 'Touch right pane triggers page down' },
-    { id: 'both-panes', label: 'Both Panes', description: 'Touch either pane triggers page down' },
-    { id: 'right-reduced', label: 'Right Reduced', description: 'Touch right pane with smaller scroll' }
-  ];
 
   // Bible study prompt options
   const bibleStudyPrompts = [
@@ -431,13 +424,20 @@ const NavigationPlaceholder = ({
           {isDarkMode ? 'Light (d)' : 'Dark (d)'}
         </button>
         
-        {/* MP3 Audio Button - Moved before Primary */}
+        {/* Touch Options Cycling Button */}
         <button
-          onClick={() => onAudioClick && onAudioClick()}
-          className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-purple-100 text-purple-700 hover:bg-purple-200"
-          title="Listen to audio for this chapter"
+          onClick={() => {
+            const currentIndex = touchScrollModes.findIndex(mode => mode.id === touchScrollMode);
+            const nextIndex = (currentIndex + 1) % touchScrollModes.length;
+            onTouchScrollModeChange(touchScrollModes[nextIndex].id);
+          }}
+          className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center"
+          title={`Current: ${touchScrollModes.find(mode => mode.id === touchScrollMode)?.label || 'Unknown'} - Click to cycle through touch options`}
         >
-          MP3 (3)
+          {touchScrollModes.find(mode => mode.id === touchScrollMode)?.label || 'Disabled'}
+          <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
         </button>
         
         {/* To Clipboard Button */}
@@ -811,6 +811,14 @@ const BibleApp = () => {
   // State to track touch scroll mode
   const [touchScrollMode, setTouchScrollMode] = useState('disabled');
   
+  // Touch scroll mode options
+  const touchScrollModes = [
+    { id: 'disabled', label: 'Disabled', description: 'Normal click behavior' },
+    { id: 'right-only', label: 'Right Pane', description: 'Touch right pane triggers page down' },
+    { id: 'both-panes', label: 'Both Panes', description: 'Touch either pane triggers page down' },
+    { id: 'right-reduced', label: 'Right Reduced', description: 'Touch right pane with smaller scroll' }
+  ];
+  
   // State to track scroll position for mobile view during translation changes
   // eslint-disable-next-line no-unused-vars
   const [mobileScrollPosition, setMobileScrollPosition] = useState(0);
@@ -1101,18 +1109,11 @@ const BibleApp = () => {
 
         e.preventDefault();
       }
-      // '3' key - simulate clicking the MP3 button
+      // '3' key - cycle through touch options
       else if (e.key === '3' || e.keyCode === 51) {
-        // Find and click the MP3 button
-        const mp3Button = Array.from(document.querySelectorAll('button'))
-          .find(button => button.title && button.title.includes('Listen to audio for this chapter') && button.textContent.includes('MP3'));
-        
-        if (mp3Button) {
-          mp3Button.click();
-        } else {
-          // If we can't find the button but handleAudioButtonClick is defined, call it directly
-          handleAudioButtonClick();
-        }
+        const currentIndex = touchScrollModes.findIndex(mode => mode.id === touchScrollMode);
+        const nextIndex = (currentIndex + 1) % touchScrollModes.length;
+        setTouchScrollMode(touchScrollModes[nextIndex].id);
         
         e.preventDefault();
       }
@@ -2961,6 +2962,7 @@ const BibleApp = () => {
               isDarkMode={isDarkMode}
               touchScrollMode={touchScrollMode}
               onTouchScrollModeChange={setTouchScrollMode}
+              touchScrollModes={touchScrollModes}
               resetScrollTimerRef={resetScrollTimerRef}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
