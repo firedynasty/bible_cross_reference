@@ -217,25 +217,6 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         Apply
       </button>
 
-      {/* Extra Page Down button (duplicate) */}
-      <button
-        onClick={() => {
-          // Dispatch a 'p' key press event directly
-          const event = new KeyboardEvent('keydown', {
-            key: 'p',
-            code: 'KeyP',
-            keyCode: 80,
-            which: 80,
-            bubbles: true,
-            cancelable: true
-          });
-          document.dispatchEvent(event);
-        }}
-        className="ml-2 px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
-        title="Scroll down one page (same as pressing 'p' key)"
-      >
-        Page DN
-      </button>
 
       {/* Next Chapter button */}
       <button
@@ -364,18 +345,6 @@ const NavigationPlaceholder = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showPromptDropdown, showTouchDropdown]);
 
-  // Function to simulate pressing 'p' key for page down
-  const simulateZKeyPress = useCallback(() => {
-    const event = new KeyboardEvent('keydown', {
-      key: 'p',
-      code: 'KeyP',
-      keyCode: 80,
-      which: 80,
-      bubbles: true,
-      cancelable: true
-    });
-    document.dispatchEvent(event);
-  }, []);
 
 
 
@@ -402,14 +371,6 @@ const NavigationPlaceholder = ({
     <div className="relative">
       {/* Current Location Display */}
       <div className="flex flex-wrap gap-y-2 items-center bg-blue-50 px-2 py-1 rounded-md text-blue-800 text-sm">
-        {/* Page Down Button - Moved to front */}
-        <button
-          onClick={simulateZKeyPress}
-          className="px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
-          title="Scroll down one page (same as pressing 'p' key)"
-        >
-          PAGE DOWN
-        </button>
         
         {/* Dark Mode Toggle Button */}
         <button
@@ -552,14 +513,6 @@ const NavigationPlaceholder = ({
 
         {/* We've removed the mobile line break div to allow buttons to overflow on mobile */}
         
-        {/* Duplicate Page Down Button */}
-        <button
-          onClick={simulateZKeyPress}
-          className="hidden md:block ml-2 px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
-          title="Scroll down one page (same as pressing 'p' key)"
-        >
-          PAGE DOWN
-        </button>
         
         {/* Down Arrow Button */}
         <button
@@ -666,26 +619,6 @@ const NavigationPlaceholder = ({
             
           </div>
           
-          {/* Page Down Button */}
-          <button
-            onClick={() => {
-              // Simulate pressing 'p' key for page down
-              const event = new KeyboardEvent('keydown', {
-                key: 'p',
-                code: 'KeyP',
-                keyCode: 80,
-                which: 80,
-                bubbles: true,
-                cancelable: true
-              });
-              document.dispatchEvent(event);
-            }}
-            className="hidden md:block ml-2 px-6 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
-            title="Scroll down one page (same as pressing 'p' key)"
-            style={{ width: "calc(7.5rem)" }}
-          >
-            PAGE DOWN
-          </button>
       </div>
       
       {/* Navigation History Dropdown */}
