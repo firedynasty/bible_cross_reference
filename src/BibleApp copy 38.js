@@ -55,20 +55,13 @@ const getBaseUrl = () => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, isMobileView, isTabletView, stickyPane, isDarkMode, autoSavePosition, onAutoSavePositionChange, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, isMobileView, isTabletView, stickyPane, isDarkMode, autoSavePosition, onAutoSavePositionChange, onNextChapter, bibleData, setSelectedBook }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
 
   // Load saved positions from Firebase
   useEffect(() => {
-    // Only load Firebase data if Firebase is enabled
-    if (!firebaseEnabled) {
-      setLoading(false);
-      setSavedPositions([]);
-      return;
-    }
-
     const loadFirebaseKeys = async () => {
       try {
         setLoading(true);
@@ -102,7 +95,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
     };
 
     loadFirebaseKeys();
-  }, [firebaseEnabled]);
+  }, []);
 
   // Format saved position for display
   const formatPositionDisplay = (position) => {
@@ -249,20 +242,6 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         title="Go to next chapter (same as pressing 'm' key)"
       >
         Next Ch
-      </button>
-
-      {/* Firebase Toggle Button */}
-      <button
-        onClick={() => onFirebaseToggle && onFirebaseToggle(!firebaseEnabled)}
-        className={`ml-2 flex items-center px-2 py-1 text-sm rounded transition-colors ${
-          firebaseEnabled 
-            ? (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-500 text-white hover:bg-blue-600')
-            : (isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-400 text-gray-700 hover:bg-gray-500')
-        }`}
-        title={`Firebase loading is ${firebaseEnabled ? 'ON' : 'OFF'} - Click to toggle`}
-      >
-        <Database className="h-3 w-3 mr-1" />
-        DB {firebaseEnabled ? 'ON' : 'OFF'}
       </button>
 
     </div>
@@ -769,9 +748,6 @@ const BibleApp = () => {
   
   // State to track dark/light mode
   const [isDarkMode, setIsDarkMode] = useState(false);
-  
-  // State to track Firebase loading toggle
-  const [firebaseEnabled, setFirebaseEnabled] = useState(false);
   
   // State to track touch scroll mode
   const [touchScrollMode, setTouchScrollMode] = useState('right-only');
@@ -2908,8 +2884,6 @@ const BibleApp = () => {
               onNextChapter={handleChapterSelect}
               bibleData={bibleData}
               setSelectedBook={setSelectedBook}
-              firebaseEnabled={firebaseEnabled}
-              onFirebaseToggle={setFirebaseEnabled}
             />
           </div>
           
