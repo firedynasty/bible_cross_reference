@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { Book, Link, ChevronRight, History, BookOpen, Save, Database } from 'lucide-react';
+import TextToSpeech from './components/TextToSpeech';
 
 // Import Firebase modules
 import { initializeApp } from 'firebase/app';
@@ -285,7 +286,8 @@ const NavigationPlaceholder = ({
   isDarkMode,
   touchScrollMode,
   onTouchScrollModeChange,
-  touchScrollModes
+  touchScrollModes,
+  rightPaneBibleData
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -430,20 +432,27 @@ const NavigationPlaceholder = ({
           </svg>
         </button>
         
-        {/* To Clipboard Button */}
+        {/* Text to Speech Component */}
+        <TextToSpeech 
+          rightPaneBibleData={rightPaneBibleData}
+          currentBook={book.abbrev}
+          currentChapter={chapter}
+        />
+        
+        {/* To Clipboard Button - Hidden */}
         <button
           onClick={() => onClipboardClick && onClipboardClick()}
-          className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-green-100 text-green-700 hover:bg-green-200"
+          className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-green-100 text-green-700 hover:bg-green-200 hidden"
           title="Copy VLC command to clipboard for this chapter"
         >
           To Clip (t)
         </button>
         
-        {/* Primary text - Now after buttons */}
-        <span className="ml-3">Primary:</span>
-        <span className="font-medium mx-1">{book.book || getBookName(book.abbrev)}</span>
-        <ChevronRight className="h-3 w-3 mx-1" />
-        <span className="font-medium">Ch {chapter}</span>
+        {/* Primary text - Hidden */}
+        <span className="ml-3 hidden">Primary:</span>
+        <span className="font-medium mx-1 hidden">{book.book || getBookName(book.abbrev)}</span>
+        <ChevronRight className="h-3 w-3 mx-1 hidden" />
+        <span className="font-medium hidden">Ch {chapter}</span>
         
         {/* Scroll Sync Buttons - All hidden but functionality is retained */}
         <button 
@@ -504,10 +513,10 @@ const NavigationPlaceholder = ({
           </label>
         </div>
         
-        {/* History Button */}
+        {/* History Button - Hidden */}
         <button
           onClick={() => setShowHistory(!showHistory)}
-          className="ml-2 p-0.5 rounded-full hover:bg-gray-200 focus:outline-none"
+          className="ml-2 p-0.5 rounded-full hover:bg-gray-200 focus:outline-none hidden"
           title="Navigation history"
         >
           <History className="h-3 w-3" />
@@ -2930,6 +2939,7 @@ const BibleApp = () => {
               touchScrollMode={touchScrollMode}
               onTouchScrollModeChange={setTouchScrollMode}
               touchScrollModes={touchScrollModes}
+              rightPaneBibleData={rightPaneBibleData}
               resetScrollTimerRef={resetScrollTimerRef}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {

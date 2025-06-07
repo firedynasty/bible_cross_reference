@@ -1,0 +1,122 @@
+{
+  "description": "Sample Bible data structure from en_kjv.json",
+  "sample_data": [
+    {
+      "abbrev": "gn",
+      "chapters": [
+        [
+          "In the beginning God created the heaven and the earth.",
+          "And the earth was without form, and void; and darkness {was} upon the face of the deep. And the Spirit of God moved upon the face of the waters.",
+          "And God said, Let there be light: and there was light.",
+          "And God saw the light, that {it was} good: and God divided the light from the darkness. {the light from...: Heb. between the light and between the darkness}",
+          "And God called the light Day, and the darkness he called Night. And the evening and the morning were the first day. {And the evening...: Heb. And the evening was, and the morning was etc.}"
+        ],
+        [
+          "Thus the heavens and the earth were finished, and all the host of them.",
+          "And on the seventh day God ended his work which he had made; and he rested on the seventh day from all his work which he had made.",
+          "And God blessed the seventh day, and sanctified it: because that in it he had rested from all his work which God created and made. {created...: Heb. created to make}"
+        ]
+      ]
+    },
+    {
+      "abbrev": "ex",
+      "chapters": [
+        [
+          "Now these {are} the names of the children of Israel, which came into Egypt; every man and his household came with Jacob.",
+          "Reuben, Simeon, Levi, and Judah,",
+          "Issachar, Zebulun, and Benjamin,"
+        ]
+      ]
+    }
+  ],
+  "structure_explanation": {
+    "top_level": "Array of book objects",
+    "book_object": {
+      "abbrev": "String - book abbreviation (e.g., 'gn' for Genesis)",
+      "chapters": "Array of chapter arrays"
+    },
+    "chapter_array": "Array of verse strings (0-indexed but displayed as 1-indexed)",
+    "verse_string": "Plain text string containing the verse content"
+  },
+  "access_patterns": {
+    "get_book": "bibleData.find(book => book.abbrev === 'gn')",
+    "get_chapter": "book.chapters[chapterNumber - 1]",
+    "get_verse": "chapter[verseNumber - 1]",
+    "get_specific_verse": "bibleData.find(b => b.abbrev === 'gn').chapters[0][0]"
+  },
+  "book_abbreviations": {
+    "gn": "Genesis",
+    "ex": "Exodus", 
+    "lv": "Leviticus",
+    "nm": "Numbers",
+    "dt": "Deuteronomy",
+    "js": "Joshua",
+    "jg": "Judges",
+    "rt": "Ruth",
+    "1sm": "1 Samuel",
+    "2sm": "2 Samuel",
+    "1kg": "1 Kings",
+    "2kg": "2 Kings",
+    "1ch": "1 Chronicles",
+    "2ch": "2 Chronicles",
+    "ezr": "Ezra",
+    "ne": "Nehemiah",
+    "et": "Esther",
+    "jb": "Job",
+    "ps": "Psalms",
+    "pr": "Proverbs",
+    "ec": "Ecclesiastes",
+    "sg": "Song of Songs",
+    "is": "Isaiah",
+    "je": "Jeremiah",
+    "lm": "Lamentations",
+    "ez": "Ezekiel",
+    "dn": "Daniel",
+    "ho": "Hosea",
+    "jl": "Joel",
+    "am": "Amos",
+    "ob": "Obadiah",
+    "jnh": "Jonah",
+    "mi": "Micah",
+    "na": "Nahum",
+    "hb": "Habakkuk",
+    "zp": "Zephaniah",
+    "hg": "Haggai",
+    "zc": "Zechariah",
+    "ml": "Malachi",
+    "mt": "Matthew",
+    "mk": "Mark",
+    "lk": "Luke",
+    "jn": "John",
+    "ac": "Acts",
+    "ro": "Romans",
+    "1co": "1 Corinthians",
+    "2co": "2 Corinthians",
+    "ga": "Galatians",
+    "ep": "Ephesians",
+    "ph": "Philippians",
+    "cl": "Colossians",
+    "1th": "1 Thessalonians",
+    "2th": "2 Thessalonians",
+    "1tm": "1 Timothy",
+    "2tm": "2 Timothy",
+    "ti": "Titus",
+    "pm": "Philemon",
+    "he": "Hebrews",
+    "jm": "James",
+    "1pt": "1 Peter",
+    "2pt": "2 Peter",
+    "1jn": "1 John",
+    "2jn": "2 John",
+    "3jn": "3 John",
+    "jd": "Jude",
+    "rv": "Revelation"
+  },
+  "tts_considerations": {
+    "clean_text": "Verses contain clean text suitable for TTS",
+    "annotations": "Some verses contain annotations in {curly braces} that could be filtered out for TTS",
+    "verse_boundaries": "Each verse is a separate string, enabling verse-by-verse reading",
+    "chapter_boundaries": "Chapters are separate arrays, enabling chapter-by-chapter reading",
+    "book_boundaries": "Books are separate objects, enabling book-by-book reading"
+  }
+}
