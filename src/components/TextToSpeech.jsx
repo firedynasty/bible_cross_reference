@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Play, SkipForward, BookOpen } from 'lucide-react';
 
 const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
@@ -7,6 +7,21 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [readToEnd, setReadToEnd] = useState(false);
+  const [currentUtterance, setCurrentUtterance] = useState(null);
+  const [shouldContinueAfterCurrent, setShouldContinueAfterCurrent] = useState(false);
+  
+  // Use refs to access current values in closures
+  const readToEndRef = useRef(readToEnd);
+  const shouldContinueRef = useRef(shouldContinueAfterCurrent);
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    readToEndRef.current = readToEnd;
+  }, [readToEnd]);
+  
+  useEffect(() => {
+    shouldContinueRef.current = shouldContinueAfterCurrent;
+  }, [shouldContinueAfterCurrent]);
 
   // Load available voices when component mounts - this is the key difference
   useEffect(() => {
@@ -44,6 +59,17 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
   useEffect(() => {
     setSelectedVerse(1);
   }, [currentBook, currentChapter]);
+
+  // Stop current reading when Read to End toggle is turned OFF
+  useEffect(() => {
+    if (!readToEnd && isSpeaking && currentUtterance) {
+      speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setCurrentUtterance(null);
+      setShouldContinueAfterCurrent(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readToEnd]);
 
   // Clean text for TTS (remove annotations in curly braces and parentheses)
   const cleanTextForTTS = (text) => {
@@ -113,18 +139,28 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
       utterance.voice = englishVoice;
     }
 
-    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setCurrentUtterance(utterance);
+    };
     utterance.onend = () => {
       setIsSpeaking(false);
-      // If "Read to End" is enabled and we're not at the last verse, continue to next verse
-      if (readToEnd && verseNumber < maxVerses) {
+      setCurrentUtterance(null);
+      // Use refs to get current values, not closure values
+      // This ensures the toggle can stop auto-reading mid-stream
+      // Also check shouldContinueAfterCurrent for mid-speech toggle activation
+      if ((readToEndRef.current || shouldContinueRef.current) && verseNumber < maxVerses) {
         const nextVerse = verseNumber + 1;
         setSelectedVerse(nextVerse);
+        setShouldContinueAfterCurrent(false); // Reset the flag
         // Small delay before reading next verse
         setTimeout(() => speakVerse(nextVerse), 500);
       }
     };
-    utterance.onerror = () => setIsSpeaking(false);
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setCurrentUtterance(null);
+    };
 
     speechSynthesis.speak(utterance);
   };
@@ -143,6 +179,8 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
   const stopSpeaking = () => {
     speechSynthesis.cancel();
     setIsSpeaking(false);
+    setCurrentUtterance(null);
+    setShouldContinueAfterCurrent(false);
   };
 
   if (!verses.length) return null;
@@ -216,7 +254,15 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
 
       {/* Read to End Toggle Button */}
       <button
-        onClick={() => setReadToEnd(!readToEnd)}
+        onClick={() => {
+          // If currently speaking and toggle is OFF, turn it ON and set flag to continue
+          if (isSpeaking && !readToEnd) {
+            setReadToEnd(true);
+            setShouldContinueAfterCurrent(true);
+          } else {
+            setReadToEnd(!readToEnd);
+          }
+        }}
         className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs transition-colors ${
           readToEnd 
             ? 'bg-orange-500 text-white hover:bg-orange-600'
