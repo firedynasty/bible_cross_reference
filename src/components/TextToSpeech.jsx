@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Play, SkipForward } from 'lucide-react';
+import { ChevronDown, Play, SkipForward, BookOpen } from 'lucide-react';
 
 const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [availableVoices, setAvailableVoices] = useState([]);
+  const [readToEnd, setReadToEnd] = useState(false);
 
   // Load available voices when component mounts - this is the key difference
   useEffect(() => {
@@ -113,7 +114,16 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
     }
 
     utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      // If "Read to End" is enabled and we're not at the last verse, continue to next verse
+      if (readToEnd && verseNumber < maxVerses) {
+        const nextVerse = verseNumber + 1;
+        setSelectedVerse(nextVerse);
+        // Small delay before reading next verse
+        setTimeout(() => speakVerse(nextVerse), 500);
+      }
+    };
     utterance.onerror = () => setIsSpeaking(false);
 
     speechSynthesis.speak(utterance);
@@ -202,6 +212,20 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
       >
         <SkipForward className="w-3 h-3 mr-1" />
         Next
+      </button>
+
+      {/* Read to End Toggle Button */}
+      <button
+        onClick={() => setReadToEnd(!readToEnd)}
+        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs transition-colors ${
+          readToEnd 
+            ? 'bg-orange-500 text-white hover:bg-orange-600'
+            : 'bg-gray-400 text-gray-700 hover:bg-gray-500'
+        }`}
+        title={`Read to end is ${readToEnd ? 'ON' : 'OFF'} - Click to toggle`}
+      >
+        <BookOpen className="w-3 h-3 mr-1" />
+        Read to End {readToEnd ? 'ON' : 'OFF'}
       </button>
     </div>
   );
