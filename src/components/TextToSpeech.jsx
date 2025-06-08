@@ -398,11 +398,9 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     if (!verses[verseNumber - 1]) return;
     
     const verseText = verses[verseNumber - 1];
-    const bookName = rightPaneBibleData?.find(b => b.abbrev === currentBook)?.name || currentBook;
-    const formattedText = `${bookName} ${currentChapter}:${verseNumber} - ${verseText}`;
     
     try {
-      await navigator.clipboard.writeText(formattedText);
+      await navigator.clipboard.writeText(verseText);
     } catch (err) {
       console.error('Failed to copy to clipboard:', err);
     }
