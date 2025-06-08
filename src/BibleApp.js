@@ -1272,7 +1272,7 @@ const BibleApp = () => {
       else if (e.key === '/' || e.keyCode === 191) {
         // Find and click the Read to End toggle button
         const readToEndButton = Array.from(document.querySelectorAll('button'))
-          .find(btn => btn.textContent.includes('Read to End'));
+          .find(btn => btn.textContent.includes('Read2End'));
         
         if (readToEndButton) {
           readToEndButton.click();
@@ -3190,7 +3190,7 @@ const BibleApp = () => {
                     </span>
                     <div className="ml-auto flex items-center">
                       <div className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded mr-2">
-                        Keys: 'o', 'p'
+                        Keys: 'o', 'p', '0'
                       </div>
                       
                     </div>

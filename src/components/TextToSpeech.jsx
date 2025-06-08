@@ -280,9 +280,11 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter, rightPa
     const languageInfo = getLanguageFromTranslation(rightPaneTranslation || 'en_kjv.json');
     utterance.lang = languageInfo.lang;
     
-    // Set speech rate based on language - Hebrew needs slower rate
+    // Set speech rate based on language
     if (languageInfo.lang.startsWith('he-')) {
       utterance.rate = 0.5; // Slower rate for Hebrew
+    } else if (languageInfo.lang.startsWith('en-')) {
+      utterance.rate = 0.9; // Faster rate for English
     } else {
       utterance.rate = 0.7; // Default rate for other languages
     }
