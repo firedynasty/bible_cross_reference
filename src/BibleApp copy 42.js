@@ -193,18 +193,24 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         Save
       </button>
       
-      {/* Firebase Toggle Button */}
+      {/* Page Down button (Page DN) */}
       <button
-        onClick={() => onFirebaseToggle && onFirebaseToggle(!firebaseEnabled)}
-        className={`ml-2 flex items-center px-2 py-1 text-sm rounded transition-colors ${
-          firebaseEnabled 
-            ? (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-500 text-white hover:bg-blue-600')
-            : (isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-400 text-gray-700 hover:bg-gray-500')
-        }`}
-        title={`Firebase loading is ${firebaseEnabled ? 'ON' : 'OFF'} - Click to toggle`}
+        onClick={() => {
+          // Dispatch a 'p' key press event directly
+          const event = new KeyboardEvent('keydown', {
+            key: 'p',
+            code: 'KeyP',
+            keyCode: 80,
+            which: 80,
+            bubbles: true,
+            cancelable: true
+          });
+          document.dispatchEvent(event);
+        }}
+        className="ml-2 px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
+        title="Scroll down one page (same as pressing 'p' key)"
       >
-        <Database className="h-3 w-3 mr-1" />
-        {firebaseEnabled ? 'ON' : 'OFF'}
+        Page DN
       </button>
 
       {/* Apply translation to pane 2 */}
@@ -244,6 +250,20 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         title="Go to next chapter (same as pressing 'm' key)"
       >
         Next Ch
+      </button>
+
+      {/* Firebase Toggle Button */}
+      <button
+        onClick={() => onFirebaseToggle && onFirebaseToggle(!firebaseEnabled)}
+        className={`ml-2 flex items-center px-2 py-1 text-sm rounded transition-colors ${
+          firebaseEnabled 
+            ? (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-500 text-white hover:bg-blue-600')
+            : (isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-400 text-gray-700 hover:bg-gray-500')
+        }`}
+        title={`Firebase loading is ${firebaseEnabled ? 'ON' : 'OFF'} - Click to toggle`}
+      >
+        <Database className="h-3 w-3 mr-1" />
+        DB {firebaseEnabled ? 'ON' : 'OFF'}
       </button>
 
     </div>
@@ -2890,21 +2910,6 @@ const BibleApp = () => {
                   <span className="text-xs font-bold ml-0.5 mr-1">1</span>
                 </span>
                 Apply
-              </button>
-
-              {/* Load selected translation for pane 2 (for read) */}
-              <button
-                onClick={() => {
-                  handleApplySelectedTranslationToPane2(selectedDropdownTranslation);
-                }}
-                className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-purple-700' : 'bg-purple-500'} text-white rounded hover:bg-purple-600 transition-colors`}
-                title="Apply selected translation to secondary pane"
-              >
-                <span className="flex items-center">
-                  <BookOpen className="h-3 w-3" />
-                  <span className="text-xs font-bold ml-0.5 mr-1">2</span>
-                </span>
-                Apply (for read)
               </button>
             </div>
           </div>
