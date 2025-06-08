@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { ChevronDown, Play, SkipForward } from 'lucide-react';
 
-const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation }) => {
+const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation }, ref) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -246,6 +246,52 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter, rightPa
     setSelectedVerse(1);
   }, [currentBook, currentChapter]);
 
+  // Listen for keyboard navigation events
+  useEffect(() => {
+    const handleVerseNavigation = (event) => {
+      if (event.detail.direction === 'previous' && selectedVerse > 1) {
+        setSelectedVerse(selectedVerse - 1);
+      } else if (event.detail.direction === 'next' && selectedVerse < maxVerses) {
+        setSelectedVerse(selectedVerse + 1);
+      }
+    };
+
+    const handleReadCurrentVerse = () => {
+      // Stop current speech if any, then read the selected verse
+      if (isSpeaking) {
+        stopSpeaking();
+        // Small delay to ensure speech is stopped before starting new one
+        setTimeout(() => speakVerse(), 100);
+      } else {
+        speakVerse();
+      }
+    };
+
+    window.addEventListener('navigateVerse', handleVerseNavigation);
+    window.addEventListener('readCurrentVerse', handleReadCurrentVerse);
+    
+    return () => {
+      window.removeEventListener('navigateVerse', handleVerseNavigation);
+      window.removeEventListener('readCurrentVerse', handleReadCurrentVerse);
+    };
+  }, [selectedVerse, maxVerses, isSpeaking]);
+
+  // Expose navigation functions to parent component
+  useImperativeHandle(ref, () => ({
+    goToPreviousVerse: () => {
+      if (selectedVerse > 1) {
+        const prevVerse = selectedVerse - 1;
+        setSelectedVerse(prevVerse);
+      }
+    },
+    goToNextVerse: () => {
+      if (selectedVerse < maxVerses) {
+        const nextVerse = selectedVerse + 1;
+        setSelectedVerse(nextVerse);
+      }
+    }
+  }), [selectedVerse, maxVerses]);
+
   // Stop current reading when Read to End toggle is turned OFF
   useEffect(() => {
     if (!readToEnd && isSpeaking && currentUtterance) {
@@ -308,15 +354,17 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter, rightPa
     utterance.onend = () => {
       setIsSpeaking(false);
       setCurrentUtterance(null);
-      // Use refs to get current values, not closure values
-      // This ensures the toggle can stop auto-reading mid-stream
-      // Also check shouldContinueAfterCurrent for mid-speech toggle activation
-      if ((readToEndRef.current || shouldContinueRef.current) && verseNumber < maxVerses) {
+      // Auto-increment to next verse after reading current verse
+      // This happens whether Read2End is on or just clicked Read button
+      if (verseNumber < maxVerses) {
         const nextVerse = verseNumber + 1;
         setSelectedVerse(nextVerse);
         setShouldContinueAfterCurrent(false); // Reset the flag
-        // Small delay before reading next verse
-        setTimeout(() => speakVerse(nextVerse), 500);
+        // If Read2End is enabled, continue reading the next verse
+        if (readToEndRef.current || shouldContinueRef.current) {
+          // Small delay before reading next verse
+          setTimeout(() => speakVerse(nextVerse), 500);
+        }
       }
     };
     utterance.onerror = () => {
@@ -464,6 +512,6 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter, rightPa
       </button>
     </div>
   );
-};
+});
 
 export default TextToSpeech;

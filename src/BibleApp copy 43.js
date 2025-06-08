@@ -705,7 +705,6 @@ const BibleApp = () => {
   const lastPrimaryScrollPos = useRef(0);
   const lastKjvScrollPos = useRef(0);
   const resetScrollTimerRef = useRef(null);
-  const textToSpeechRef = useRef(null);
   
   // State to track primary reading vs cross-reference viewing
   const [isViewingCrossRef, setIsViewingCrossRef] = useState(false);
@@ -1259,31 +1258,6 @@ const BibleApp = () => {
           readToEndButton.click();
           console.log("/ key pressed - toggled Read to End");
         }
-        e.preventDefault();
-      }
-      // Left Arrow - go to previous verse
-      else if (e.key === 'ArrowLeft') {
-        // Dispatch custom event to navigate to previous verse
-        const event = new CustomEvent('navigateVerse', {
-          detail: { direction: 'previous' }
-        });
-        window.dispatchEvent(event);
-        e.preventDefault();
-      }
-      // Right Arrow - go to next verse
-      else if (e.key === 'ArrowRight') {
-        // Dispatch custom event to navigate to next verse
-        const event = new CustomEvent('navigateVerse', {
-          detail: { direction: 'next' }
-        });
-        window.dispatchEvent(event);
-        e.preventDefault();
-      }
-      // Enter key - read the currently selected verse
-      else if (e.key === 'Enter') {
-        // Dispatch custom event to read current verse
-        const event = new CustomEvent('readCurrentVerse');
-        window.dispatchEvent(event);
         e.preventDefault();
       }
       // Escape key - Home functionality (reset all scroll positions and state)
