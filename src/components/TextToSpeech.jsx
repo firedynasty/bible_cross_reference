@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Play, SkipForward, BookOpen } from 'lucide-react';
+import { ChevronDown, Play, SkipForward } from 'lucide-react';
 
 const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation }) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
