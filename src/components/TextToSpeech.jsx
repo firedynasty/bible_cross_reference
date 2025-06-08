@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Play, SkipForward, BookOpen } from 'lucide-react';
 
-const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
+const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation }) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -22,6 +22,192 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
   useEffect(() => {
     shouldContinueRef.current = shouldContinueAfterCurrent;
   }, [shouldContinueAfterCurrent]);
+
+  // Language detection based on Bible translation
+  const getLanguageFromTranslation = (translation) => {
+    const langMap = {
+      'en_kjv.json': { lang: 'en-US', name: 'English' },
+      'en_bbe.json': { lang: 'en-US', name: 'English' },
+      'zh_cuv_cantonese.json': { lang: 'zh-HK', name: 'Cantonese' },
+      'zh_cuv_chinese.json': { lang: 'zh-CN', name: 'Chinese' },
+      'es_rvr.json': { lang: 'es-ES', name: 'Spanish' },
+      'fr_apee.json': { lang: 'fr-FR', name: 'French' },
+      'ko_ko.json': { lang: 'ko-KR', name: 'Korean' },
+      'he_heb_no_strong.json': { lang: 'he-IL', name: 'Hebrew' },
+      'he_heb_strong.json': { lang: 'he-IL', name: 'Hebrew' }
+    };
+    return langMap[translation] || { lang: 'en-US', name: 'English' };
+  };
+
+  // Smart voice selection for different languages
+  const selectBestVoice = (targetLang, voices) => {
+    const langCode = targetLang.split('-')[0]; // Get base language code (e.g., 'zh' from 'zh-CN')
+    
+    // Different strategies for each language
+    switch (langCode) {
+      case 'en':
+        // English voice selection (existing logic)
+        let englishVoice = voices.find(voice =>
+          (voice.lang.includes('en-') && voice.name.includes('Enhanced')) ||
+          (voice.lang.includes('en-') && voice.name.includes('Premium'))
+        );
+        if (!englishVoice) {
+          englishVoice = voices.find(voice =>
+            voice.lang.includes('en-') && voice.name.includes('Google')
+          );
+        }
+        if (!englishVoice) {
+          const qualityVoiceNames = ['Daniel', 'Samantha', 'Alex', 'Karen', 'Microsoft David'];
+          for (const name of qualityVoiceNames) {
+            const foundVoice = voices.find(voice =>
+              voice.lang.includes('en-') && voice.name.includes(name)
+            );
+            if (foundVoice) {
+              englishVoice = foundVoice;
+              break;
+            }
+          }
+        }
+        if (!englishVoice) {
+          englishVoice = voices.find(voice => voice.lang.includes('en-'));
+        }
+        return englishVoice;
+
+      case 'zh':
+        // Chinese voice selection
+        let chineseVoice;
+        if (targetLang.includes('HK') || targetLang.includes('cantonese')) {
+          // Prefer Cantonese voices
+          chineseVoice = voices.find(voice => 
+            voice.lang.includes('zh-HK') || voice.name.toLowerCase().includes('cantonese')
+          );
+        }
+        if (!chineseVoice) {
+          // Try Google Chinese voices first
+          chineseVoice = voices.find(voice =>
+            voice.lang.includes('zh-') && voice.name.includes('Google')
+          );
+        }
+        if (!chineseVoice) {
+          // Avoid problematic voices and find quality Chinese voices
+          const avoidNames = ['Eddy', 'Grandpa', 'Grandma'];
+          chineseVoice = voices.find(voice =>
+            voice.lang.includes('zh-') && 
+            !avoidNames.some(avoid => voice.name.includes(avoid))
+          );
+        }
+        if (!chineseVoice) {
+          // Any Chinese voice as fallback
+          chineseVoice = voices.find(voice => voice.lang.includes('zh-'));
+        }
+        return chineseVoice;
+
+      case 'es':
+        // Spanish voice selection
+        let spanishVoice = voices.find(voice =>
+          voice.lang.includes('es-') && voice.name.includes('Google')
+        );
+        if (!spanishVoice) {
+          spanishVoice = voices.find(voice =>
+            voice.lang.includes('es-') && 
+            (voice.name.includes('Enhanced') || voice.name.includes('Premium'))
+          );
+        }
+        if (!spanishVoice) {
+          const qualitySpanishNames = ['Jorge', 'Maria', 'Diego', 'Paloma'];
+          for (const name of qualitySpanishNames) {
+            const foundVoice = voices.find(voice =>
+              voice.lang.includes('es-') && voice.name.includes(name)
+            );
+            if (foundVoice) {
+              spanishVoice = foundVoice;
+              break;
+            }
+          }
+        }
+        if (!spanishVoice) {
+          spanishVoice = voices.find(voice => voice.lang.includes('es-'));
+        }
+        return spanishVoice;
+
+      case 'fr':
+        // French voice selection
+        let frenchVoice = voices.find(voice =>
+          voice.lang.includes('fr-') && voice.name.includes('Google')
+        );
+        if (!frenchVoice) {
+          frenchVoice = voices.find(voice =>
+            voice.lang.includes('fr-') && 
+            (voice.name.includes('Enhanced') || voice.name.includes('Premium'))
+          );
+        }
+        if (!frenchVoice) {
+          const qualityFrenchNames = ['Thomas', 'Aurelie', 'Marie'];
+          for (const name of qualityFrenchNames) {
+            const foundVoice = voices.find(voice =>
+              voice.lang.includes('fr-') && voice.name.includes(name)
+            );
+            if (foundVoice) {
+              frenchVoice = foundVoice;
+              break;
+            }
+          }
+        }
+        if (!frenchVoice) {
+          frenchVoice = voices.find(voice => voice.lang.includes('fr-'));
+        }
+        return frenchVoice;
+
+      case 'ko':
+        // Korean voice selection
+        let koreanVoice = voices.find(voice =>
+          voice.lang.includes('ko-') && voice.name.includes('Google')
+        );
+        if (!koreanVoice) {
+          koreanVoice = voices.find(voice =>
+            voice.lang.includes('ko-') && 
+            (voice.name.includes('Enhanced') || voice.name.includes('Premium'))
+          );
+        }
+        if (!koreanVoice) {
+          koreanVoice = voices.find(voice => voice.lang.includes('ko-'));
+        }
+        return koreanVoice;
+
+      case 'he':
+        // Hebrew voice selection
+        let hebrewVoice = voices.find(voice =>
+          voice.lang.includes('he-') && voice.name.includes('Google')
+        );
+        if (!hebrewVoice) {
+          hebrewVoice = voices.find(voice =>
+            voice.lang.includes('he-') && 
+            (voice.name.includes('Enhanced') || voice.name.includes('Premium'))
+          );
+        }
+        if (!hebrewVoice) {
+          // Look for specific high-quality Hebrew voices
+          const qualityHebrewNames = ['Carmit', 'Lior'];
+          for (const name of qualityHebrewNames) {
+            const foundVoice = voices.find(voice =>
+              voice.lang.includes('he-') && voice.name.includes(name)
+            );
+            if (foundVoice) {
+              hebrewVoice = foundVoice;
+              break;
+            }
+          }
+        }
+        if (!hebrewVoice) {
+          hebrewVoice = voices.find(voice => voice.lang.includes('he-'));
+        }
+        return hebrewVoice;
+
+      default:
+        // Fallback to English
+        return voices.find(voice => voice.lang.includes('en-'));
+    }
+  };
 
   // Load available voices when component mounts - this is the key difference
   useEffect(() => {
@@ -78,7 +264,7 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
     return text.replace(/\{[^}]*\}/g, '').replace(/[()]/g, '').trim();
   };
 
-  // Speak the selected verse - using the same logic as the reference app
+  // Speak the selected verse - now with multilingual support
   const speakVerse = (verseNumber = selectedVerse) => {
     if (!verses[verseNumber - 1] || isSpeaking) return;
 
@@ -90,53 +276,27 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
 
     const utterance = new SpeechSynthesisUtterance(verseText);
     
-    // Always use English - exactly like the reference app
-    utterance.lang = 'en-US';
-    utterance.rate = 0.7;
+    // Get the target language based on the selected translation
+    const languageInfo = getLanguageFromTranslation(rightPaneTranslation || 'en_kjv.json');
+    utterance.lang = languageInfo.lang;
+    
+    // Set speech rate based on language - Hebrew needs slower rate
+    if (languageInfo.lang.startsWith('he-')) {
+      utterance.rate = 0.5; // Slower rate for Hebrew
+    } else {
+      utterance.rate = 0.7; // Default rate for other languages
+    }
     
     const voices = availableVoices; // Use the loaded voices state
     
-    // Try to find a high-quality English voice in this order:
-    // 1. Premium voices (often have "Enhanced" in the name)
-    // 2. Google voices (generally high quality)
-    // 3. System voices with specific names known for clarity
-    // 4. Any en-US or en-GB voice
+    // Use the smart voice selection for the target language
+    const selectedVoice = selectBestVoice(languageInfo.lang, voices);
 
-    // Look for premium enhanced voices first
-    let englishVoice = voices.find(voice =>
-      (voice.lang.includes('en-') && voice.name.includes('Enhanced')) ||
-      (voice.lang.includes('en-') && voice.name.includes('Premium'))
-    );
-
-    // If no enhanced voice, try Google voices
-    if (!englishVoice) {
-      englishVoice = voices.find(voice =>
-        voice.lang.includes('en-') && voice.name.includes('Google')
-      );
-    }
-
-    // If no Google voice, try specific known high-quality voices
-    if (!englishVoice) {
-      const qualityVoiceNames = ['Daniel', 'Samantha', 'Alex', 'Karen', 'Microsoft David'];
-      for (const name of qualityVoiceNames) {
-        const foundVoice = voices.find(voice =>
-          voice.lang.includes('en-') && voice.name.includes(name)
-        );
-        if (foundVoice) {
-          englishVoice = foundVoice;
-          break;
-        }
-      }
-    }
-
-    // If still no voice, just get any English voice
-    if (!englishVoice) {
-      englishVoice = voices.find(voice => voice.lang.includes('en-'));
-    }
-
-    if (englishVoice) {
-      console.log(`Using English voice: ${englishVoice.name} (${englishVoice.lang})`);
-      utterance.voice = englishVoice;
+    if (selectedVoice) {
+      console.log(`Using ${languageInfo.name} voice: ${selectedVoice.name} (${selectedVoice.lang}) for translation: ${rightPaneTranslation}`);
+      utterance.voice = selectedVoice;
+    } else {
+      console.warn(`No suitable voice found for ${languageInfo.name} (${languageInfo.lang}), using default voice`);
     }
 
     utterance.onstart = () => {
@@ -183,7 +343,25 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
     setShouldContinueAfterCurrent(false);
   };
 
+  // Copy verse to clipboard
+  const copyVerseToClipboard = async (verseNumber) => {
+    if (!verses[verseNumber - 1]) return;
+    
+    const verseText = verses[verseNumber - 1];
+    const bookName = rightPaneBibleData?.find(b => b.abbrev === currentBook)?.name || currentBook;
+    const formattedText = `${bookName} ${currentChapter}:${verseNumber} - ${verseText}`;
+    
+    try {
+      await navigator.clipboard.writeText(formattedText);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
+  };
+
   if (!verses.length) return null;
+
+  // Get current language info for UI display
+  const currentLanguageInfo = getLanguageFromTranslation(rightPaneTranslation || 'en_kjv.json');
 
   return (
     <div className="flex items-center gap-2">
@@ -192,7 +370,7 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
         <button
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           className="px-2 py-0.5 rounded focus:outline-none bg-purple-100 text-purple-700 hover:bg-purple-200 flex items-center text-xs"
-          title="Select verse to read"
+          title={`Select verse to read in ${currentLanguageInfo.name}`}
         >
           Verse {selectedVerse}
           <ChevronDown className="w-3 h-3 ml-1" />
@@ -208,6 +386,8 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
                   onClick={() => {
                     setSelectedVerse(verseNumber);
                     setIsDropdownOpen(false);
+                    // Copy verse to clipboard
+                    copyVerseToClipboard(verseNumber);
                     // Automatically read the selected verse after a short delay
                     setTimeout(() => speakVerse(verseNumber), 100);
                   }}
@@ -231,7 +411,7 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
             ? 'bg-red-100 text-red-700 hover:bg-red-200' 
             : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
         }`}
-        title={isSpeaking ? "Stop reading" : "Read selected verse"}
+        title={isSpeaking ? "Stop reading" : `Read selected verse in ${currentLanguageInfo.name}`}
       >
         <Play className="w-3 h-3 mr-1" />
         {isSpeaking ? 'Stop' : 'Read'}
@@ -260,7 +440,15 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
             setReadToEnd(true);
             setShouldContinueAfterCurrent(true);
           } else {
-            setReadToEnd(!readToEnd);
+            const newReadToEndState = !readToEnd;
+            setReadToEnd(newReadToEndState);
+            
+            // If toggling ON and not currently speaking, trigger Read button after 100ms
+            if (newReadToEndState && !isSpeaking) {
+              setTimeout(() => {
+                speakVerse();
+              }, 100);
+            }
           }
         }}
         className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs transition-colors ${
@@ -268,10 +456,9 @@ const TextToSpeech = ({ rightPaneBibleData, currentBook, currentChapter }) => {
             ? 'bg-orange-500 text-white hover:bg-orange-600'
             : 'bg-gray-400 text-gray-700 hover:bg-gray-500'
         }`}
-        title={`Read to end is ${readToEnd ? 'ON' : 'OFF'} - Click to toggle`}
+        title={`Read to end is ${readToEnd ? 'ON' : 'OFF'} - Click to toggle or press '/' key`}
       >
-        <BookOpen className="w-3 h-3 mr-1" />
-        Read to End {readToEnd ? 'ON' : 'OFF'}
+        Read2End(/) {readToEnd ? 'ON' : 'OFF'}
       </button>
     </div>
   );

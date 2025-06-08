@@ -80,7 +80,8 @@ The loading process has multiple fallback mechanisms:
 The app supports these Bible translations:
 - `en_kjv.json` - English King James Version (KJV) 
 - `en_bbe.json` - English Bible in Basic English (BBE)
-- `zh_cuv.json` - Chinese Union Version (CUV)
+- `zh_cuv_cantonese.json` - Chinese Union Version (CUV), Cantonese
+- `zh_cuv_chinese.json` - Chinese Union Version (CUV), Chinese
 - `es_rvr.json` - Spanish Reina Valera Revisada (RVR)
 - `fr_apee.json` - French Louis Segond (APEE)
 - `ko_ko.json` - Korean Version
@@ -172,3 +173,10 @@ For text-to-speech implementation, the Bible data structure provides:
 - **Structured access**: Easy programmatic access to specific verses, chapters, or books
 - **Multiple translations**: Support for different language versions
 - **Verse-level granularity**: Ability to read individual verses or ranges of verses
+
+### Language-Specific TTS Support
+- **English**: Currently implemented with voice selection and automatic playback
+- **Chinese**: Two variants available for future TTS implementation:
+  - `zh_cuv_cantonese.json` - Intended for Cantonese TTS voices
+  - `zh_cuv_chinese.json` - Intended for Mandarin Chinese TTS voices
+- **Other languages**: Spanish, French, Korean, and Hebrew translations available for future multilingual TTS expansion

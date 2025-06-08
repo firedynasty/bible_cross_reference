@@ -287,9 +287,7 @@ const NavigationPlaceholder = ({
   touchScrollMode,
   onTouchScrollModeChange,
   touchScrollModes,
-  rightPaneBibleData,
-  rightPaneTranslation,
-  resetScrollTimerRef
+  rightPaneBibleData
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -466,7 +464,6 @@ const NavigationPlaceholder = ({
           rightPaneBibleData={rightPaneBibleData}
           currentBook={book.abbrev}
           currentChapter={chapter}
-          rightPaneTranslation={rightPaneTranslation}
         />
         
         {/* To Clipboard Button - Hidden */}
@@ -758,8 +755,7 @@ const BibleApp = () => {
   const translations = React.useMemo(() => [
     { id: 'en_kjv.json', name: 'English - King James Version (KJV)' },
     { id: 'en_bbe.json', name: 'English - Bible in Basic English (BBE)' },
-    { id: 'zh_cuv_cantonese.json', name: 'Chinese - CUV, Cantonese' },
-    { id: 'zh_cuv_chinese.json', name: 'Chinese - CUV, Chinese' },
+    { id: 'zh_cuv.json', name: 'Chinese - Chinese Union Version (CUV)' },
     { id: 'es_rvr.json', name: 'Spanish - Reina Valera Revisada (RVR)' },
     { id: 'fr_apee.json', name: 'French - Louis Segond (APEE)' },
     { id: 'ko_ko.json', name: 'Korean - Korean Version' },
@@ -1267,18 +1263,6 @@ const BibleApp = () => {
             isManuallyScrollingRef.current = false;
           }, 50);
         }
-      }
-      // '/' key - toggle Read to End button
-      else if (e.key === '/' || e.keyCode === 191) {
-        // Find and click the Read to End toggle button
-        const readToEndButton = Array.from(document.querySelectorAll('button'))
-          .find(btn => btn.textContent.includes('Read to End'));
-        
-        if (readToEndButton) {
-          readToEndButton.click();
-          console.log("/ key pressed - toggled Read to End");
-        }
-        e.preventDefault();
       }
       // Escape key - Home functionality (reset all scroll positions and state)
       else if (e.key === 'Escape') {
@@ -2957,7 +2941,6 @@ const BibleApp = () => {
               onTouchScrollModeChange={setTouchScrollMode}
               touchScrollModes={touchScrollModes}
               rightPaneBibleData={rightPaneBibleData}
-              rightPaneTranslation={rightPaneTranslation}
               resetScrollTimerRef={resetScrollTimerRef}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
@@ -3150,7 +3133,7 @@ const BibleApp = () => {
                       }}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
-                      Next Chapter (m,;) &gt;
+                      Next Chapter (m ,) &gt;
                     </button>
                   )}
                   
@@ -3285,7 +3268,7 @@ const BibleApp = () => {
                         }}
                         className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
-                        Next Chapter (m,;) &gt;
+                        Next Chapter (m ,) &gt;
                       </button>
                     )}
                   </div>

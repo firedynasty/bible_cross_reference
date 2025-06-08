@@ -1,0 +1,13 @@
+ - x or Arrow Down - scroll down one line
+  - Arrow Up - scroll up one line
+  - o or Page Up - page up
+  - p or Page Down - page down
+  - z - previous chapter
+  - m, ,, ; - next chapter
+  - 3 - cycle touch options
+  - t - clipboard
+  - d - toggle dark mode
+  - 0 - scroll up one line
+  - 9 - scroll down one line
+  - Escape - home/reset
+ - / toggle continuous read on /off
