@@ -312,13 +312,31 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
 
   // Speak the selected verse - now with multilingual support
   const speakVerse = (verseNumber = selectedVerse) => {
+    console.log('speakVerse called with verse:', verseNumber);
+    console.log('verses available:', verses.length);
+    console.log('isSpeaking:', isSpeaking);
+    
     if (!verses[verseNumber - 1] || isSpeaking) return;
 
     const verseText = cleanTextForTTS(verses[verseNumber - 1]);
+    console.log('verseText to speak:', verseText);
     if (!verseText) return;
 
-    // Stop any current speech
-    speechSynthesis.cancel();
+    // Check if speechSynthesis is available
+    if (!('speechSynthesis' in window)) {
+      console.error('Speech synthesis not supported');
+      return;
+    }
+
+    // Stop any current speech only if actually speaking
+    if (speechSynthesis.speaking) {
+      speechSynthesis.cancel();
+      // Add a small delay to ensure cancellation completes
+      setTimeout(() => {
+        speakVerse(verseNumber);
+      }, 100);
+      return;
+    }
 
     const utterance = new SpeechSynthesisUtterance(verseText);
     
@@ -348,10 +366,12 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     }
 
     utterance.onstart = () => {
+      console.log('Speech started successfully');
       setIsSpeaking(true);
       setCurrentUtterance(utterance);
     };
     utterance.onend = () => {
+      console.log('Speech ended');
       setIsSpeaking(false);
       setCurrentUtterance(null);
       // Auto-increment to next verse after reading current verse
@@ -367,12 +387,36 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         }
       }
     };
-    utterance.onerror = () => {
+    utterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event);
       setIsSpeaking(false);
       setCurrentUtterance(null);
     };
 
+    console.log('About to call speechSynthesis.speak()');
+    console.log('speechSynthesis.speaking:', speechSynthesis.speaking);
+    console.log('speechSynthesis.pending:', speechSynthesis.pending);
+    
+    // Set speaking state immediately since browser events might be unreliable
+    setIsSpeaking(true);
+    setCurrentUtterance(utterance);
+    
     speechSynthesis.speak(utterance);
+    
+    console.log('speechSynthesis.speak() called');
+    console.log('speechSynthesis.speaking after call:', speechSynthesis.speaking);
+    console.log('speechSynthesis.pending after call:', speechSynthesis.pending);
+    
+    // Check if speech actually started after a short delay
+    setTimeout(() => {
+      console.log('Checking speech status after 100ms:');
+      console.log('speechSynthesis.speaking:', speechSynthesis.speaking);
+      if (!speechSynthesis.speaking) {
+        console.log('Speech failed to start, resetting state');
+        setIsSpeaking(false);
+        setCurrentUtterance(null);
+      }
+    }, 100);
   };
 
   // Move to next verse and read it
@@ -387,10 +431,16 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
 
   // Stop current speech
   const stopSpeaking = () => {
+    console.log('stopSpeaking called');
     speechSynthesis.cancel();
-    setIsSpeaking(false);
-    setCurrentUtterance(null);
-    setShouldContinueAfterCurrent(false);
+    
+    // Force immediate state reset
+    setTimeout(() => {
+      setIsSpeaking(false);
+      setCurrentUtterance(null);
+      setShouldContinueAfterCurrent(false);
+      console.log('Speech stopped, state reset');
+    }, 0);
   };
 
   // Copy verse to clipboard
@@ -453,7 +503,14 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
 
       {/* Speak Button */}
       <button
-        onClick={() => isSpeaking ? stopSpeaking() : speakVerse()}
+        onClick={() => {
+          console.log('Read button clicked, isSpeaking:', isSpeaking);
+          if (isSpeaking) {
+            stopSpeaking();
+          } else {
+            speakVerse();
+          }
+        }}
         className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
           isSpeaking 
             ? 'bg-red-100 text-red-700 hover:bg-red-200' 
