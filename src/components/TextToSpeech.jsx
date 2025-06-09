@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { ChevronDown, Play, SkipForward } from 'lucide-react';
 
 const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation }, ref) => {
@@ -256,25 +256,12 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       }
     };
 
-    const handleReadCurrentVerse = () => {
-      // Stop current speech if any, then read the selected verse
-      if (isSpeaking) {
-        stopSpeaking();
-        // Small delay to ensure speech is stopped before starting new one
-        setTimeout(() => speakVerse(), 100);
-      } else {
-        speakVerse();
-      }
-    };
-
     window.addEventListener('navigateVerse', handleVerseNavigation);
-    window.addEventListener('readCurrentVerse', handleReadCurrentVerse);
     
     return () => {
       window.removeEventListener('navigateVerse', handleVerseNavigation);
-      window.removeEventListener('readCurrentVerse', handleReadCurrentVerse);
     };
-  }, [selectedVerse, maxVerses, isSpeaking]);
+  }, [selectedVerse, maxVerses]);
 
   // Expose navigation functions to parent component
   useImperativeHandle(ref, () => ({
@@ -311,7 +298,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   };
 
   // Speak the selected verse - now with multilingual support
-  const speakVerse = (verseNumber = selectedVerse) => {
+  const speakVerse = useCallback((verseNumber = selectedVerse) => {
     console.log('speakVerse called with verse:', verseNumber);
     console.log('verses available:', verses.length);
     console.log('isSpeaking:', isSpeaking);
@@ -417,20 +404,20 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         setCurrentUtterance(null);
       }
     }, 100);
-  };
+  }, [selectedVerse, verses, isSpeaking, rightPaneTranslation, availableVoices, maxVerses, readToEndRef, shouldContinueRef, setIsSpeaking, setCurrentUtterance, setSelectedVerse, setShouldContinueAfterCurrent]);
 
   // Move to next verse and read it
-  const nextVerseAndRead = () => {
+  const nextVerseAndRead = useCallback(() => {
     if (selectedVerse < maxVerses) {
       const nextVerse = selectedVerse + 1;
       setSelectedVerse(nextVerse);
       // Small delay to ensure state updates before speaking
       setTimeout(() => speakVerse(nextVerse), 100);
     }
-  };
+  }, [selectedVerse, maxVerses, speakVerse, setSelectedVerse]);
 
   // Stop current speech
-  const stopSpeaking = () => {
+  const stopSpeaking = useCallback(() => {
     console.log('stopSpeaking called');
     speechSynthesis.cancel();
     
@@ -441,7 +428,38 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       setShouldContinueAfterCurrent(false);
       console.log('Speech stopped, state reset');
     }, 0);
-  };
+  }, [setIsSpeaking, setCurrentUtterance, setShouldContinueAfterCurrent]);
+
+  // Listen for read current verse events
+  useEffect(() => {
+    const handleReadCurrentVerse = () => {
+      // Only start reading if not already speaking
+      if (!isSpeaking) {
+        speakVerse();
+      }
+    };
+
+    window.addEventListener('readCurrentVerse', handleReadCurrentVerse);
+    
+    return () => {
+      window.removeEventListener('readCurrentVerse', handleReadCurrentVerse);
+    };
+  }, [isSpeaking, speakVerse]);
+
+  // Listen for stop speech events
+  useEffect(() => {
+    const handleStopSpeech = () => {
+      if (isSpeaking) {
+        stopSpeaking();
+      }
+    };
+
+    window.addEventListener('stopSpeech', handleStopSpeech);
+    
+    return () => {
+      window.removeEventListener('stopSpeech', handleStopSpeech);
+    };
+  }, [isSpeaking, stopSpeaking]);
 
   // Copy verse to clipboard
   const copyVerseToClipboard = async (verseNumber) => {

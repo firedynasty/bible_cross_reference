@@ -650,7 +650,7 @@ const NavigationPlaceholder = ({
             <h3 className="font-medium text-lg">Reading History</h3>
           </div>
           <div className="max-h-80 overflow-y-auto">
-            {navigationHistory && [...navigationHistory].reverse().map((item, index) => (
+            {[...navigationHistory].reverse().map((item, index) => (
               <button
                 key={index}
                 onClick={() => {
@@ -705,6 +705,7 @@ const BibleApp = () => {
   const lastPrimaryScrollPos = useRef(0);
   const lastKjvScrollPos = useRef(0);
   const resetScrollTimerRef = useRef(null);
+  const textToSpeechRef = useRef(null);
   
   // State to track primary reading vs cross-reference viewing
   const [isViewingCrossRef, setIsViewingCrossRef] = useState(false);
@@ -862,31 +863,6 @@ const BibleApp = () => {
     }
   }, [selectedBook]);
   
-  // Helper function to get book name based on abbreviation
-  const getBookName = (abbrev) => {
-    const bookNames = {
-      'gn': 'Genesis', 'ex': 'Exodus', 'lv': 'Leviticus', 'nm': 'Numbers', 'dt': 'Deuteronomy',
-      'js': 'Joshua', 'jud': 'Judges', 'rt': 'Ruth', '1sm': '1 Samuel', '2sm': '2 Samuel',
-      '1kgs': '1 Kings', '2kgs': '2 Kings', '1ch': '1 Chronicles', '2ch': '2 Chronicles',
-      'ezr': 'Ezra', 'ne': 'Nehemiah', 'et': 'Esther', 'job': 'Job', 'ps': 'Psalms',
-      'prv': 'Proverbs', 'ec': 'Ecclesiastes', 'so': 'Song of Solomon', 'is': 'Isaiah',
-      'jr': 'Jeremiah', 'lm': 'Lamentations', 'ez': 'Ezekiel', 'dn': 'Daniel',
-      'ho': 'Hosea', 'jl': 'Joel', 'am': 'Amos', 'ob': 'Obadiah', 'jn': 'Jonah',
-      'mi': 'Micah', 'na': 'Nahum', 'hk': 'Habakkuk', 'zp': 'Zephaniah', 'hg': 'Haggai',
-      'zc': 'Zechariah', 'ml': 'Malachi', 'mt': 'Matthew', 'mk': 'Mark', 'lk': 'Luke',
-      'jo': 'John', 'act': 'Acts', 'rm': 'Romans', '1co': '1 Corinthians', '2co': '2 Corinthians',
-      'gl': 'Galatians', 'eph': 'Ephesians', 'ph': 'Philippians', 'cl': 'Colossians',
-      '1ts': '1 Thessalonians', '2ts': '2 Thessalonians', '1tm': '1 Timothy', '2tm': '2 Timothy',
-      'tt': 'Titus', 'phm': 'Philemon', 'hb': 'Hebrews', 'jm': 'James', '1pe': '1 Peter',
-      '2pe': '2 Peter', '1jo': '1 John', '2jo': '2 John', '3jo': '3 John', 'jd': 'Jude',
-      're': 'Revelation',
-      // Add mapping for Hebrew Bible abbrevs
-      'ge': 'Genesis'
-    };
-    
-    return bookNames[abbrev] || abbrev;
-  };
-
   // Add keyboard event handler for translation switching and KJV scrolling
   useEffect(() => {
     // Flag to prevent scroll event feedback loops
@@ -1136,116 +1112,48 @@ const BibleApp = () => {
       }
       // 'm', ',', or ';' key - go to next chapter when available by simulating a click on the Next Chapter button
       else if (e.key === 'm' || e.key === ',' || e.key === ';') {
-        console.log("Semicolon key pressed for Next Chapter");
-        console.log("Current state:", { 
-          selectedBook: selectedBook?.abbrev, 
-          selectedChapter, 
-          totalChapters: selectedBook?.chapters.length 
-        });
+        console.log("M or comma key pressed for Next Chapter");
 
         // Simplified approach: directly find and click the Next Chapter button
         const nextChapterButtons = Array.from(document.querySelectorAll('button'))
           .filter(button => button.textContent.includes('Next Chapter'));
 
-        console.log("Found Next Chapter buttons:", nextChapterButtons.length);
-
         if (nextChapterButtons.length > 0) {
           console.log("Found Next Chapter button, clicking it");
-          console.log("Current React state before button click:", {
-            selectedBook: selectedBook?.abbrev,
-            selectedChapter: selectedChapter
-          });
           nextChapterButtons[0].click();
-          
-          // Check state after a delay to see if it updated
-          setTimeout(() => {
-            console.log("React state 200ms after button click:", {
-              selectedBook: selectedBook?.abbrev,
-              selectedChapter: selectedChapter
-            });
-          }, 200);
-        } else {
-          console.log("No Next Chapter button found - this means we're at the last chapter");
-          console.log("Doing nothing (not advancing to next book or Genesis)");
-        }
+        } else if (bibleData && bibleData.length > 0) {
+          console.log("No Next Chapter button found, navigating programmatically");
 
-        e.preventDefault();
-      }
-
-      // 'j' key - go to next book (from any chapter)
-      else if (e.key === 'j') {
-        // Stop any ongoing speech before navigating
-        const stopSpeechEvent = new CustomEvent('stopSpeech');
-        window.dispatchEvent(stopSpeechEvent);
-        
-        console.log("=== J KEY PRESSED ===");
-        console.log("Current React state:", { 
-          selectedBook: selectedBook?.abbrev, 
-          selectedChapter, 
-          totalChapters: selectedBook?.chapters?.length 
-        });
-        
-        // Also check what the page visually shows vs React state
-        const pageTitle = document.querySelector('h2')?.textContent || 'Unknown';
-        console.log("Visual page title:", pageTitle);
-        console.log("React state vs Visual mismatch?", !pageTitle.includes(selectedBook?.abbrev || 'none'));
-
-        // Extract the actual current book from the visual display
-        let actualCurrentBook = null;
-        if (bibleData && bibleData.length > 0) {
-          // Try to find which book matches the visual title
-          for (const book of bibleData) {
-            const bookName = getBookName(book.abbrev);
-            if (pageTitle.includes(bookName)) {
-              actualCurrentBook = book;
-              break;
-            }
-          }
-        }
-
-        console.log("Actual current book from visual:", actualCurrentBook?.abbrev);
-
-        // Use the actual visual book instead of React state
-        const bookToUse = actualCurrentBook || selectedBook;
-        console.log("Using book for navigation:", bookToUse?.abbrev);
-
-        // Check if we can go to next book (not at last book)
-        if (bookToUse && bibleData && bibleData.length > 0) {
-          const currentBookIndex = bibleData.findIndex(b => b.abbrev === bookToUse.abbrev);
-          console.log("Current book index:", currentBookIndex);
-          console.log("Total books:", bibleData.length);
-          
-          if (currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1) {
-            const nextBook = bibleData[currentBookIndex + 1];
-            console.log("✓ Going to next book:", { 
-              currentBookIndex,
-              nextBookIndex: currentBookIndex + 1,
-              currentBook: bookToUse.abbrev, 
-              nextBook: nextBook.abbrev,
-              nextBookChapters: nextBook.chapters?.length 
-            });
-            
-            // Ensure the next book has valid chapter data
-            if (nextBook && nextBook.chapters && nextBook.chapters.length > 0) {
-              console.log("✓ Next book has valid data, navigating...");
-              setSelectedBook(nextBook);
-              // Update primaryReading immediately to keep TextToSpeech in sync
-              setPrimaryReading({
-                book: nextBook,
-                chapter: 1
-              });
-              setTimeout(() => {
-                console.log("✓ Calling handleChapterSelect(1, true) for next book");
-                handleChapterSelect(1, true);
-              }, 100);
-            } else {
-              console.error("❌ Next book has invalid chapter data:", nextBook);
-            }
+          // Initialize book if not selected
+          if (!selectedBook) {
+            console.log("No book selected, selecting first book");
+            const firstBook = bibleData[0];
+            setSelectedBook(firstBook);
+            handleChapterSelect(1, true);
           } else {
-            console.log("❌ At last book - cannot go to next book");
+            // Navigate to next chapter or book
+            const currentChapter = selectedChapter || 1;
+
+            if (currentChapter < selectedBook.chapters.length) {
+              // Go to next chapter in current book
+              console.log(`Going to next chapter: ${currentChapter + 1}`);
+              handleChapterSelect(currentChapter + 1, true);
+            } else {
+              // Try to go to next book
+              const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
+
+              if (currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1) {
+                const nextBook = bibleData[currentBookIndex + 1];
+                console.log(`Going to next book: ${nextBook.book || getBookName(nextBook.abbrev)}`);
+                setSelectedBook(nextBook);
+                setTimeout(() => {
+                  handleChapterSelect(1, true);
+                }, 100);
+              }
+            }
           }
         } else {
-          console.log("❌ No book selected or bible data not loaded");
+          console.log("Bible data not loaded yet");
         }
 
         e.preventDefault();
@@ -1378,12 +1286,9 @@ const BibleApp = () => {
         window.dispatchEvent(event);
         e.preventDefault();
       }
-      // Escape key - Home functionality (reset all scroll positions and state) + stop speech
+      // Escape key - Home functionality (reset all scroll positions and state)
       else if (e.key === 'Escape') {
         handleHomeReset();
-        // Also stop any ongoing speech
-        const event = new CustomEvent('stopSpeech');
-        window.dispatchEvent(event);
         e.preventDefault();
       }
     };
@@ -1849,24 +1754,15 @@ const BibleApp = () => {
         }
         
         // Set selected book (from saved state or default to first book)
-        console.log("=== INITIALIZING BOOK/CHAPTER STATE ===");
-        console.log("savedBook:", savedBook?.abbrev);
-        console.log("savedChapter:", savedChapter);
-        console.log("bibleData length:", bibleData?.length);
-        
         if (savedBook) {
-          console.log("✓ Using saved state - setting book:", savedBook.abbrev, "chapter:", savedChapter);
           setSelectedBook(savedBook);
           setSelectedChapter(savedChapter);
         } else if (bibleData && bibleData.length > 0) {
-          console.log("✓ Using default state - setting book:", bibleData[0].abbrev, "chapter: 1");
           setSelectedBook(bibleData[0]);
           setPrimaryReading({
             book: bibleData[0],
             chapter: 1
           });
-        } else {
-          console.log("❌ No state to set - no savedBook and no bibleData");
         }
         
         // Load cross-references from the JSON file, using the same method that worked for Bible data
@@ -2206,16 +2102,9 @@ const BibleApp = () => {
 
   // Handle book selection
   const handleBookSelect = (abbrev) => {
-    console.log("=== handleBookSelect called ===", {
-      abbrev,
-      currentSelectedBook: selectedBook?.abbrev,
-      currentSelectedChapter: selectedChapter
-    });
     if (bibleData) {
       const book = bibleData.find(b => b.abbrev === abbrev);
-      console.log("✓ setSelectedBook called with:", book?.abbrev);
       setSelectedBook(book);
-      console.log("✓ setSelectedChapter called with: 1");
       setSelectedChapter(1); // Reset to first chapter when book changes
       setShowCrossRef(null); // Hide any cross-reference popup
       
@@ -2242,14 +2131,7 @@ const BibleApp = () => {
 
   // Handle chapter selection
   const handleChapterSelect = (chapterNum, fromNextChapterButton = false) => {
-    console.log("=== handleChapterSelect called ===", {
-      chapterNum,
-      fromNextChapterButton,
-      currentSelectedBook: selectedBook?.abbrev,
-      currentSelectedChapter: selectedChapter
-    });
     setSelectedChapter(chapterNum);
-    console.log("✓ setSelectedChapter called with:", chapterNum);
     setShowCrossRef(null); // Hide any cross-reference popup
 
     // No need to reset auto-scroll timer here - will be handled in NavigationPlaceholder component
@@ -2879,6 +2761,31 @@ const BibleApp = () => {
     );
   }
 
+  // Helper function to get book name based on abbreviation
+  const getBookName = (abbrev) => {
+    const bookNames = {
+      'gn': 'Genesis', 'ex': 'Exodus', 'lv': 'Leviticus', 'nm': 'Numbers', 'dt': 'Deuteronomy',
+      'js': 'Joshua', 'jud': 'Judges', 'rt': 'Ruth', '1sm': '1 Samuel', '2sm': '2 Samuel',
+      '1kgs': '1 Kings', '2kgs': '2 Kings', '1ch': '1 Chronicles', '2ch': '2 Chronicles',
+      'ezr': 'Ezra', 'ne': 'Nehemiah', 'et': 'Esther', 'job': 'Job', 'ps': 'Psalms',
+      'prv': 'Proverbs', 'ec': 'Ecclesiastes', 'so': 'Song of Solomon', 'is': 'Isaiah',
+      'jr': 'Jeremiah', 'lm': 'Lamentations', 'ez': 'Ezekiel', 'dn': 'Daniel',
+      'ho': 'Hosea', 'jl': 'Joel', 'am': 'Amos', 'ob': 'Obadiah', 'jn': 'Jonah',
+      'mi': 'Micah', 'na': 'Nahum', 'hk': 'Habakkuk', 'zp': 'Zephaniah', 'hg': 'Haggai',
+      'zc': 'Zechariah', 'ml': 'Malachi', 'mt': 'Matthew', 'mk': 'Mark', 'lk': 'Luke',
+      'jo': 'John', 'act': 'Acts', 'rm': 'Romans', '1co': '1 Corinthians', '2co': '2 Corinthians',
+      'gl': 'Galatians', 'eph': 'Ephesians', 'ph': 'Philippians', 'cl': 'Colossians',
+      '1ts': '1 Thessalonians', '2ts': '2 Thessalonians', '1tm': '1 Timothy', '2tm': '2 Timothy',
+      'tt': 'Titus', 'phm': 'Philemon', 'hb': 'Hebrews', 'jm': 'James', '1pe': '1 Peter',
+      '2pe': '2 Peter', '1jo': '1 John', '2jo': '2 John', '3jo': '3 John', 'jd': 'Jude',
+      're': 'Revelation',
+      // Add mapping for Hebrew Bible abbrevs
+      'ge': 'Genesis'
+    };
+    
+    return bookNames[abbrev] || abbrev;
+  };
+
   // Map Hebrew book abbreviations to KJV abbreviations
   const getKjvBookAbbrev = (hebrewAbbrev) => {
     const abbrevMap = {
@@ -2971,7 +2878,7 @@ const BibleApp = () => {
                   onChange={(e) => handleChapterSelect(parseInt(e.target.value))}
                   className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded px-1 py-0 text-sm w-12`}
                 >
-                  {selectedBook && selectedBook.chapters && selectedBook.chapters.map((_, index) => (
+                  {selectedBook.chapters.map((_, index) => (
                     <option key={index + 1} value={index + 1}>
                       {index + 1}
                     </option>
@@ -2989,7 +2896,7 @@ const BibleApp = () => {
                 style={{ width: "auto" }}
                 id="translationSelector"
               >
-                {translations && translations.map(translation => (
+                {translations.map(translation => (
                   <option key={translation.id} value={translation.id}>
                     {translation.name}
                   </option>
@@ -3162,7 +3069,7 @@ const BibleApp = () => {
                   </span>
                 </h2>
                 <div className="space-y-5">
-                  {selectedBook && selectedBook.chapters && selectedBook.chapters[selectedChapter - 1] && selectedBook.chapters[selectedChapter - 1].map((verse, index) => {
+                  {selectedBook.chapters[selectedChapter - 1].map((verse, index) => {
                     const verseNumber = index + 1;
                     const refKey = `${selectedBook.abbrev}-${selectedChapter}-${verseNumber}`;
                     const hasReference = crossReferences[refKey] && crossReferences[refKey].length > 0;
@@ -3265,47 +3172,6 @@ const BibleApp = () => {
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
                       Next Chapter (m,;) &gt;
-                    </button>
-                  )}
-
-                  {/* Next Book button - appears when at last chapter but not at last book */}
-                  {selectedBook && selectedChapter === selectedBook.chapters?.length && bibleData && (() => {
-                    const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
-                    return currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1;
-                  })() && (
-                    <button
-                      onClick={() => {
-                        console.log("=== NEXT BOOK BUTTON CLICKED ===");
-                        const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
-                        console.log("Button - Current book index:", currentBookIndex);
-                        console.log("Button - Total books:", bibleData.length);
-                        
-                        if (currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1) {
-                          const nextBook = bibleData[currentBookIndex + 1];
-                          console.log("Button - Next Book found:", { 
-                            currentBookIndex,
-                            nextBookIndex: currentBookIndex + 1,
-                            currentBook: selectedBook.abbrev, 
-                            nextBook: nextBook.abbrev,
-                            nextBookChapters: nextBook.chapters?.length 
-                          });
-                          
-                          // Ensure the next book has valid chapter data
-                          if (nextBook && nextBook.chapters && nextBook.chapters.length > 0) {
-                            console.log("Button - Navigating to next book...");
-                            setSelectedBook(nextBook);
-                            setTimeout(() => {
-                              console.log("Button - Calling handleChapterSelect(1, true)");
-                              handleChapterSelect(1, true);
-                            }, 100);
-                          } else {
-                            console.error("Button - Next book has invalid chapter data:", nextBook);
-                          }
-                        }
-                      }}
-                      className="bg-white bg-opacity-80 border border-orange-300 hover:bg-orange-100 text-orange-700 font-bold rounded px-8 py-4 shadow text-xl"
-                    >
-                      Next Book (j) &gt;
                     </button>
                   )}
                   
@@ -3441,48 +3307,6 @@ const BibleApp = () => {
                         className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
                         Next Chapter (m,;) &gt;
-                      </button>
-                    )}
-
-                    {/* Next Book button - appears when at last chapter but not at last book */}
-                    {selectedBook && selectedChapter === selectedBook.chapters.length && bibleData && (() => {
-                      const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
-                      return currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1;
-                    })() && (
-                      <button
-                        onClick={() => {
-                          // Clear mobile scroll position immediately to prevent restoration
-                          localStorage.removeItem('mobileScrollPosition');
-                          setMobileScrollPosition(0);
-                          
-                          const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
-                          if (currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1) {
-                            const nextBook = bibleData[currentBookIndex + 1];
-                            console.log("Next Book clicked (KJV panel):", { 
-                              currentBook: selectedBook.abbrev, 
-                              nextBook: nextBook.abbrev,
-                              nextBookChapters: nextBook.chapters?.length 
-                            });
-                            
-                            // Ensure the next book has valid chapter data
-                            if (nextBook && nextBook.chapters && nextBook.chapters.length > 0) {
-                              setSelectedBook(nextBook);
-                              setTimeout(() => {
-                                handleChapterSelect(1, true);
-                              }, 100);
-                            } else {
-                              console.error("Next book has invalid chapter data:", nextBook);
-                            }
-                          }
-                          
-                          // Reset all scroll state after content loads
-                          setTimeout(() => {
-                            handleHomeReset();
-                          }, 100);
-                        }}
-                        className="bg-white bg-opacity-80 border border-orange-300 hover:bg-orange-100 text-orange-700 font-bold rounded px-8 py-4 shadow text-xl"
-                      >
-                        Next Book (j) &gt;
                       </button>
                     )}
                   </div>

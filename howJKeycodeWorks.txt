@@ -1,0 +1,57 @@
+Great question! The j key determines the next book by using the order of books in the 
+  bibleData array. Here's exactly how it works:
+
+  How the Next Book is Determined:
+
+  1. Bible Data Array Order
+
+  The bibleData array contains all 66 books of the Bible in their traditional order:
+  bibleData = [
+    {abbrev: 'gen', ...},  // Index 0 - Genesis
+    {abbrev: 'exo', ...},  // Index 1 - Exodus  
+    {abbrev: 'lev', ...},  // Index 2 - Leviticus
+    // ... continuing through...
+    {abbrev: 'gal', ...},  // Index 47 - Galatians
+    {abbrev: 'eph', ...},  // Index 48 - Ephesians
+    {abbrev: 'php', ...},  // Index 49 - Philippians
+    // ... all the way to...
+    {abbrev: 'rev', ...}   // Index 65 - Revelation
+  ]
+
+  2. Next Book Logic
+
+  // Find current book's position in the array
+  const currentBookIndex = bibleData.findIndex(b => b.abbrev === bookToUse.abbrev);
+
+  // Get the next book (current index + 1)
+  const nextBook = bibleData[currentBookIndex + 1];
+
+  3. Concrete Example:
+
+  - Current book: Galatians ('gal')
+  - Found at index: 47 in the bibleData array
+  - Next book index: 47 + 1 = 48
+  - Next book: bibleData[48] = Ephesians ('eph')
+
+  4. Boundary Check:
+
+  if (currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1)
+  - Prevents going past Revelation (the last book at index 65)
+  - Handles invalid books (if findIndex returns -1)
+
+  The Bible Order:
+
+  The bibleData follows the standard Protestant Bible order:
+  - Old Testament: Genesis → Malachi (39 books)
+  - New Testament: Matthew → Revelation (27 books)
+
+  So when you press j:
+  - Genesis → Exodus
+  - Galatians → Ephesians
+  - 2 Timothy → Titus
+  - Jude → Revelation
+  - Revelation → (does nothing - last book)
+
+  The order is completely determined by how the books are arranged in the bibleData array
+   that gets loaded when the app starts!
+
