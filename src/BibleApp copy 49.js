@@ -26,14 +26,6 @@ const database = getDatabase(app);
 // Firebase database name for Bible chapter positions
 const theVocabDatabaseName = 'BibleChapterDatabase';
 
-// External links for dropdown
-const linksOut = {
-  "60 bpm": "https://www.youtube.com/watch?v=gSmf7W3DUjs",
-  "80 bpm": "https://www.youtube.com/watch?v=cNhD7utblss&t=117s",
-  "Holy Spirit": "https://www.youtube.com/watch?v=QuY5YPORvfs&t=1823s",
-  "Test" : "https://www.google.com"
-};
-
 // Helper function to handle base URL for different environments
 const getBaseUrl = () => {
   // Explicitly log the hostname for debugging
@@ -283,7 +275,6 @@ const NavigationPlaceholder = ({
   const [showHistory, setShowHistory] = useState(false);
   const [showPromptDropdown, setShowPromptDropdown] = useState(false);
   const [showTouchDropdown, setShowTouchDropdown] = useState(false);
-  const [showLinksDropdown, setShowLinksDropdown] = useState(false);
 
   // Bible study prompt options
   const bibleStudyPrompts = [
@@ -593,7 +584,7 @@ const NavigationPlaceholder = ({
           </div>
 
           {/* Touch Scroll Configuration Dropdown */}
-          <div className="hidden ml-2 items-center border-l border-gray-300 pl-2 relative">
+          <div className="hidden md:flex ml-2 items-center border-l border-gray-300 pl-2 relative">
             <span className="text-xs text-gray-600 mr-1">TOUCH:</span>
             <button
               onClick={() => setShowTouchDropdown(!showTouchDropdown)}
@@ -648,34 +639,6 @@ const NavigationPlaceholder = ({
               ↑
             </button>
             
-            {/* External Links Dropdown */}
-            <div className="relative ml-2">
-              <button
-                onClick={() => setShowLinksDropdown(!showLinksDropdown)}
-                className="px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-xs font-bold"
-                title="External Links"
-              >
-                🔗
-              </button>
-              
-              {showLinksDropdown && (
-                <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                  {Object.entries(linksOut).map(([label, url]) => (
-                    <button
-                      key={label}
-                      onClick={() => {
-                        window.open(url, '_blank');
-                        setShowLinksDropdown(false);
-                      }}
-                      className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            
           </div>
           
       </div>
@@ -729,17 +692,7 @@ const BibleApp = () => {
   const [error, setError] = useState(null);
   const [selectedBook, setSelectedBook] = useState(null);
   const [selectedChapter, setSelectedChapter] = useState(1);
-  const [showBookDropdown, setShowBookDropdown] = useState(false);
-  const [pendingBookSelection, setPendingBookSelection] = useState(null);
-  const pendingBookRef = useRef(null);
   const [crossReferences, setCrossReferences] = useState({});
-  
-  // Debug effect to track pendingBookSelection changes
-  useEffect(() => {
-    console.log('pendingBookSelection state changed to:', pendingBookSelection?.abbrev);
-    console.log('Full pendingBookSelection object:', pendingBookSelection);
-    pendingBookRef.current = pendingBookSelection;
-  }, [pendingBookSelection]);
   const [showCrossRef, setShowCrossRef] = useState(null);
   const [nextChapterClickCount, setNextChapterClickCount] = useState(0);
   const [autoSavePosition, setAutoSavePosition] = useState("1");
@@ -1140,145 +1093,14 @@ const BibleApp = () => {
 
         e.preventDefault();
       }
-      
-      // '1' key - navigate up in book dropdown (previous book)
-      else if (e.key === '1' || e.keyCode === 49) {
-        console.log("=== 1 KEY PRESSED ===");
-        console.log("Current React state:", { 
-          selectedBook: selectedBook?.abbrev, 
-          selectedChapter, 
-          pendingBookSelection: pendingBookSelection?.abbrev
-        });
-        
-        // Also check what the page visually shows vs React state
-        const pageTitle = document.querySelector('h1')?.textContent || 'Unknown';
-        console.log("Visual page title:", pageTitle);
-        
-        // Extract the actual current book from the visual display or use pending/selected
-        let actualCurrentBook = null;
-        if (bibleData && bibleData.length > 0) {
-          // First try pending selection, then selected book, then visual title
-          if (pendingBookSelection) {
-            actualCurrentBook = pendingBookSelection;
-          } else if (selectedBook) {
-            actualCurrentBook = selectedBook;
-          } else {
-            // Try to find which book matches the visual title
-            for (const book of bibleData) {
-              const bookName = getBookName(book.abbrev);
-              if (pageTitle.includes(bookName)) {
-                actualCurrentBook = book;
-                break;
-              }
-            }
-          }
-        }
-
-        console.log("Actual current book:", actualCurrentBook?.abbrev);
-
-        // Navigate to previous book
-        if (actualCurrentBook && bibleData && bibleData.length > 0) {
-          const currentBookIndex = bibleData.findIndex(b => b.abbrev === actualCurrentBook.abbrev);
-          console.log("Current book index:", currentBookIndex);
-          console.log("Total books:", bibleData.length);
-          
-          if (currentBookIndex !== -1) {
-            const prevIndex = currentBookIndex > 0 ? currentBookIndex - 1 : bibleData.length - 1; // Wrap to last book
-            const prevBook = bibleData[prevIndex];
-            console.log("✓ Going to previous book:", { 
-              currentBookIndex,
-              prevIndex,
-              currentBook: actualCurrentBook.abbrev, 
-              prevBook: prevBook.abbrev
-            });
-            
-            setPendingBookSelection(prevBook);
-          }
-        } else {
-          console.log("❌ No book found, starting with Genesis");
-          setPendingBookSelection(bibleData[0]);
-        }
-
-        e.preventDefault();
-      }
-      
-      // '2' key - navigate down in book dropdown (next book)
-      else if (e.key === '2' || e.keyCode === 50) {
-        console.log("=== 2 KEY PRESSED ===");
-        console.log("Current React state:", { 
-          selectedBook: selectedBook?.abbrev, 
-          selectedChapter, 
-          pendingBookSelection: pendingBookSelection?.abbrev
-        });
-        
-        // Also check what the page visually shows vs React state
-        const pageTitle = document.querySelector('h1')?.textContent || 'Unknown';
-        console.log("Visual page title:", pageTitle);
-        
-        // Extract the actual current book from the visual display or use pending/selected
-        let actualCurrentBook = null;
-        if (bibleData && bibleData.length > 0) {
-          // First try pending selection, then selected book, then visual title
-          if (pendingBookSelection) {
-            actualCurrentBook = pendingBookSelection;
-          } else if (selectedBook) {
-            actualCurrentBook = selectedBook;
-          } else {
-            // Try to find which book matches the visual title
-            for (const book of bibleData) {
-              const bookName = getBookName(book.abbrev);
-              if (pageTitle.includes(bookName)) {
-                actualCurrentBook = book;
-                break;
-              }
-            }
-          }
-        }
-
-        console.log("Actual current book:", actualCurrentBook?.abbrev);
-
-        // Navigate to next book
-        if (actualCurrentBook && bibleData && bibleData.length > 0) {
-          const currentBookIndex = bibleData.findIndex(b => b.abbrev === actualCurrentBook.abbrev);
-          console.log("Current book index:", currentBookIndex);
-          console.log("Total books:", bibleData.length);
-          
-          if (currentBookIndex !== -1) {
-            const nextIndex = currentBookIndex < bibleData.length - 1 ? currentBookIndex + 1 : 0; // Wrap to first book
-            const nextBook = bibleData[nextIndex];
-            console.log("✓ Going to next book:", { 
-              currentBookIndex,
-              nextIndex,
-              currentBook: actualCurrentBook.abbrev, 
-              nextBook: nextBook.abbrev
-            });
-            
-            setPendingBookSelection(nextBook);
-          }
-        } else {
-          console.log("❌ No book found, starting with Genesis");
-          setPendingBookSelection(bibleData[0]);
-        }
-
-        e.preventDefault();
-      }
-      
-      // '3' key - apply/confirm book selection (like clicking return button)
+      // '3' key - cycle through touch options
       else if (e.key === '3' || e.keyCode === 51) {
-        console.log('Key "3" pressed immediately - state:', pendingBookSelection?.abbrev, 'ref:', pendingBookRef.current?.abbrev);
+        const currentIndex = touchScrollModes.findIndex(mode => mode.id === touchScrollMode);
+        const nextIndex = (currentIndex + 1) % touchScrollModes.length;
+        setTouchScrollMode(touchScrollModes[nextIndex].id);
         
-        // Try using the ref which should have the most current value
-        const currentPending = pendingBookRef.current;
-        if (currentPending) {
-          console.log('Applying book selection from ref:', currentPending.abbrev);
-          handleBookSelect(currentPending.abbrev);
-          setPendingBookSelection(null);
-        } else {
-          console.log('No pending book selection to apply (checked both state and ref)');
-        }
         e.preventDefault();
       }
-      
       // 't' key - simulate clicking the To Clip button
       else if (e.key === 't' || e.keyCode === 84) {
         // Find and click the To Clip button
@@ -1350,6 +1172,84 @@ const BibleApp = () => {
         e.preventDefault();
       }
 
+      // 'j' key - go to next book (from any chapter)
+      else if (e.key === 'j') {
+        // Stop any ongoing speech before navigating
+        const stopSpeechEvent = new CustomEvent('stopSpeech');
+        window.dispatchEvent(stopSpeechEvent);
+        
+        console.log("=== J KEY PRESSED ===");
+        console.log("Current React state:", { 
+          selectedBook: selectedBook?.abbrev, 
+          selectedChapter, 
+          totalChapters: selectedBook?.chapters?.length 
+        });
+        
+        // Also check what the page visually shows vs React state
+        const pageTitle = document.querySelector('h2')?.textContent || 'Unknown';
+        console.log("Visual page title:", pageTitle);
+        console.log("React state vs Visual mismatch?", !pageTitle.includes(selectedBook?.abbrev || 'none'));
+
+        // Extract the actual current book from the visual display
+        let actualCurrentBook = null;
+        if (bibleData && bibleData.length > 0) {
+          // Try to find which book matches the visual title
+          for (const book of bibleData) {
+            const bookName = getBookName(book.abbrev);
+            if (pageTitle.includes(bookName)) {
+              actualCurrentBook = book;
+              break;
+            }
+          }
+        }
+
+        console.log("Actual current book from visual:", actualCurrentBook?.abbrev);
+
+        // Use the actual visual book instead of React state
+        const bookToUse = actualCurrentBook || selectedBook;
+        console.log("Using book for navigation:", bookToUse?.abbrev);
+
+        // Check if we can go to next book (not at last book)
+        if (bookToUse && bibleData && bibleData.length > 0) {
+          const currentBookIndex = bibleData.findIndex(b => b.abbrev === bookToUse.abbrev);
+          console.log("Current book index:", currentBookIndex);
+          console.log("Total books:", bibleData.length);
+          
+          if (currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1) {
+            const nextBook = bibleData[currentBookIndex + 1];
+            console.log("✓ Going to next book:", { 
+              currentBookIndex,
+              nextBookIndex: currentBookIndex + 1,
+              currentBook: bookToUse.abbrev, 
+              nextBook: nextBook.abbrev,
+              nextBookChapters: nextBook.chapters?.length 
+            });
+            
+            // Ensure the next book has valid chapter data
+            if (nextBook && nextBook.chapters && nextBook.chapters.length > 0) {
+              console.log("✓ Next book has valid data, navigating...");
+              setSelectedBook(nextBook);
+              // Update primaryReading immediately to keep TextToSpeech in sync
+              setPrimaryReading({
+                book: nextBook,
+                chapter: 1
+              });
+              setTimeout(() => {
+                console.log("✓ Calling handleChapterSelect(1, true) for next book");
+                handleChapterSelect(1, true);
+              }, 100);
+            } else {
+              console.error("❌ Next book has invalid chapter data:", nextBook);
+            }
+          } else {
+            console.log("❌ At last book - cannot go to next book");
+          }
+        } else {
+          console.log("❌ No book selected or bible data not loaded");
+        }
+
+        e.preventDefault();
+      }
       
       // '0' key - scroll up one line at a time in KJV pane (same as Up Arrow)
       else if ((e.key === '0' || e.keyCode === 48) && kjvContentRef.current) {
@@ -3125,60 +3025,6 @@ const BibleApp = () => {
                 </span>
                 Apply (for read)
               </button>
-
-              {/* Book Selection Dropdown */}
-              <div className="flex ml-2 items-center border-l border-gray-300 pl-2 relative">
-                <span className="text-xs text-gray-600 mr-1">BOOK:</span>
-                <button
-                  onClick={() => setShowBookDropdown(!showBookDropdown)}
-                  className={`text-xs px-2 py-1 rounded border flex items-center ${
-                    pendingBookSelection ? 'bg-yellow-100 hover:bg-yellow-200 border-yellow-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-300'
-                  }`}
-                >
-                  {pendingBookSelection ? 
-                    (pendingBookSelection.book || getBookName(pendingBookSelection.abbrev)) : 
-                    (selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : 'Select Book')
-                  }
-                  <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                
-                {showBookDropdown && (
-                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 w-64 max-h-80 overflow-y-auto">
-                    {bibleData && bibleData.map((book) => (
-                      <button
-                        key={book.abbrev}
-                        onClick={() => {
-                          setPendingBookSelection(book);
-                          setShowBookDropdown(false);
-                        }}
-                        className={`block w-full text-left px-3 py-2 text-xs hover:bg-gray-100 ${
-                          selectedBook && selectedBook.abbrev === book.abbrev ? 'bg-blue-50 text-blue-700 font-medium' : ''
-                        } ${
-                          pendingBookSelection && pendingBookSelection.abbrev === book.abbrev ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''
-                        }`}
-                      >
-                        {book.book || getBookName(book.abbrev)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Return/Apply Button */}
-                {pendingBookSelection && (
-                  <button
-                    onClick={() => {
-                      handleBookSelect(pendingBookSelection.abbrev);
-                      setPendingBookSelection(null);
-                    }}
-                    className="ml-1 px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs flex items-center"
-                    title="Navigate to selected book"
-                  >
-                    ⏎
-                  </button>
-                )}
-              </div>
             </div>
           </div>
           
@@ -3459,7 +3305,7 @@ const BibleApp = () => {
                       }}
                       className="bg-white bg-opacity-80 border border-orange-300 hover:bg-orange-100 text-orange-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
-                      Next Book (1,2,3) &gt;
+                      Next Book (j) &gt;
                     </button>
                   )}
                   
@@ -3636,7 +3482,7 @@ const BibleApp = () => {
                         }}
                         className="bg-white bg-opacity-80 border border-orange-300 hover:bg-orange-100 text-orange-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
-                        Next Book (1,2,3) &gt;
+                        Next Book (j) &gt;
                       </button>
                     )}
                   </div>
