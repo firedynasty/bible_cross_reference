@@ -452,6 +452,76 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     };
   }, [isSpeaking, speakVerse]);
 
+  // Function to speak book and chapter
+  const speakBookAndChapter = useCallback((book, chapter) => {
+    if (!book || !chapter) return;
+
+    // Get book name from abbreviation
+    const getBookName = (abbrev) => {
+      const bookNames = {
+        'gn': 'Genesis', 'ex': 'Exodus', 'lv': 'Leviticus', 'nm': 'Numbers', 'dt': 'Deuteronomy',
+        'js': 'Joshua', 'jud': 'Judges', 'rt': 'Ruth', '1sm': '1 Samuel', '2sm': '2 Samuel',
+        '1kgs': '1 Kings', '2kgs': '2 Kings', '1ch': '1 Chronicles', '2ch': '2 Chronicles',
+        'ezr': 'Ezra', 'ne': 'Nehemiah', 'et': 'Esther', 'job': 'Job', 'ps': 'Psalms',
+        'prv': 'Proverbs', 'ec': 'Ecclesiastes', 'so': 'Song of Solomon', 'is': 'Isaiah',
+        'jr': 'Jeremiah', 'lm': 'Lamentations', 'ez': 'Ezekiel', 'dn': 'Daniel',
+        'ho': 'Hosea', 'jl': 'Joel', 'am': 'Amos', 'ob': 'Obadiah', 'jn': 'Jonah',
+        'mi': 'Micah', 'na': 'Nahum', 'hk': 'Habakkuk', 'zp': 'Zephaniah', 'hg': 'Haggai',
+        'zc': 'Zechariah', 'ml': 'Malachi', 'mt': 'Matthew', 'mk': 'Mark', 'lk': 'Luke',
+        'jo': 'John', 'act': 'Acts', 'rm': 'Romans', '1co': '1 Corinthians', '2co': '2 Corinthians',
+        'gl': 'Galatians', 'eph': 'Ephesians', 'ph': 'Philippians', 'cl': 'Colossians',
+        '1ts': '1 Thessalonians', '2ts': '2 Thessalonians', '1tm': '1 Timothy', '2tm': '2 Timothy',
+        'tt': 'Titus', 'phm': 'Philemon', 'hb': 'Hebrews', 'jm': 'James', '1pe': '1 Peter',
+        '2pe': '2 Peter', '1jo': '1 John', '2jo': '2 John', '3jo': '3 John', 'jd': 'Jude',
+        're': 'Revelation',
+        'ge': 'Genesis'
+      };
+      return bookNames[abbrev] || abbrev;
+    };
+
+    const bookName = book.book || getBookName(book.abbrev);
+    const text = `${bookName} Chapter ${chapter}`;
+
+    // Check if speechSynthesis is available
+    if (!('speechSynthesis' in window)) {
+      console.error('Speech synthesis not supported');
+      return;
+    }
+
+    // Stop any current speech
+    if (speechSynthesis.speaking) {
+      speechSynthesis.cancel();
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Get the target language based on the selected translation
+    const languageInfo = getLanguageFromTranslation(rightPaneTranslation || 'en_kjv.json');
+    utterance.lang = languageInfo.lang;
+    
+    // Set speech rate based on language
+    if (languageInfo.lang.startsWith('he-')) {
+      utterance.rate = 0.5;
+    } else if (languageInfo.lang.startsWith('en-')) {
+      utterance.rate = 0.9;
+    } else {
+      utterance.rate = 0.7;
+    }
+    
+    // Use the smart voice selection for the target language
+    const selectedVoice = selectBestVoice(languageInfo.lang, availableVoices);
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+
+    utterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event);
+    };
+
+    speechSynthesis.speak(utterance);
+  }, [availableVoices, rightPaneTranslation]);
+
   // Listen for stop speech events
   useEffect(() => {
     const handleStopSpeech = () => {
@@ -466,6 +536,84 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       window.removeEventListener('stopSpeech', handleStopSpeech);
     };
   }, [isSpeaking, stopSpeaking]);
+
+  // Listen for speak book/chapter events
+  useEffect(() => {
+    const handleSpeakBookChapter = (event) => {
+      const { book, chapter } = event.detail;
+      if (book && chapter) {
+        speakBookAndChapter(book, chapter);
+      }
+    };
+
+    window.addEventListener('speakBookChapter', handleSpeakBookChapter);
+    
+    return () => {
+      window.removeEventListener('speakBookChapter', handleSpeakBookChapter);
+    };
+  }, [speakBookAndChapter]);
+
+  // Function to speak verse number
+  const speakVerseNumber = useCallback((verseNumber) => {
+    if (!verseNumber) return;
+
+    const text = `Verse ${verseNumber}`;
+
+    // Check if speechSynthesis is available
+    if (!('speechSynthesis' in window)) {
+      console.error('Speech synthesis not supported');
+      return;
+    }
+
+    // Stop any current speech
+    if (speechSynthesis.speaking) {
+      speechSynthesis.cancel();
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Get the target language based on the selected translation
+    const languageInfo = getLanguageFromTranslation(rightPaneTranslation || 'en_kjv.json');
+    utterance.lang = languageInfo.lang;
+    
+    // Set speech rate based on language
+    if (languageInfo.lang.startsWith('he-')) {
+      utterance.rate = 0.5;
+    } else if (languageInfo.lang.startsWith('en-')) {
+      utterance.rate = 0.9;
+    } else {
+      utterance.rate = 0.7;
+    }
+    
+    // Use the smart voice selection for the target language
+    const selectedVoice = selectBestVoice(languageInfo.lang, availableVoices);
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+
+    utterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event);
+    };
+
+    speechSynthesis.speak(utterance);
+  }, [availableVoices, rightPaneTranslation]);
+
+  // Listen for speak verse number events
+  useEffect(() => {
+    const handleSpeakVerseNumber = (event) => {
+      const { verseNumber } = event.detail;
+      if (verseNumber) {
+        speakVerseNumber(verseNumber);
+      }
+    };
+
+    window.addEventListener('speakVerseNumber', handleSpeakVerseNumber);
+    
+    return () => {
+      window.removeEventListener('speakVerseNumber', handleSpeakVerseNumber);
+    };
+  }, [speakVerseNumber]);
 
   // Copy verse to clipboard
   const copyVerseToClipboard = async (verseNumber) => {
