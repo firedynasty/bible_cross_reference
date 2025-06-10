@@ -1502,6 +1502,16 @@ const BibleApp = () => {
         let currentBook = null;
         let currentChapter = selectedChapter;
         
+        // Always try to get the current chapter from DOM first since state might be stale
+        const chapterSelect = document.querySelector('select.border.border-gray-300, select.border.border-gray-600');
+        if (chapterSelect) {
+          const selectedChapterFromDOM = parseInt(chapterSelect.value);
+          if (selectedChapterFromDOM) {
+            currentChapter = selectedChapterFromDOM;
+            console.log('Found chapter from DOM:', currentChapter);
+          }
+        }
+        
         if (pendingBookSelection) {
           currentBook = pendingBookSelection;
           console.log('Using pendingBookSelection:', currentBook.abbrev);
@@ -1512,16 +1522,6 @@ const BibleApp = () => {
           // Try to detect from page title and DOM elements as fallback
           const pageTitle = document.querySelector('h1')?.textContent || 'Unknown';
           console.log('Visual page title:', pageTitle);
-          
-          // Also try to get current chapter from the chapter dropdown
-          const chapterSelect = document.querySelector('select.border.border-gray-600');
-          if (chapterSelect) {
-            const selectedChapterFromDOM = parseInt(chapterSelect.value);
-            if (selectedChapterFromDOM) {
-              currentChapter = selectedChapterFromDOM;
-              console.log('Found chapter from DOM:', currentChapter);
-            }
-          }
           
           // Create a simple book detection without relying on bibleData
           const bookNameToAbbrev = {
