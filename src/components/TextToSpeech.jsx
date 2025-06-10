@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
-import { ChevronDown, Play, SkipForward } from 'lucide-react';
+import { ChevronDown, ChevronRight, Play, SkipForward } from 'lucide-react';
 
 const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation }, ref) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
@@ -422,6 +422,13 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     }
   }, [selectedVerse, maxVerses, speakVerse, setSelectedVerse]);
 
+  // Scroll to next verse without reading
+  const scrollToNextVerse = useCallback(() => {
+    if (selectedVerse < maxVerses) {
+      setSelectedVerse(selectedVerse + 1);
+    }
+  }, [selectedVerse, maxVerses, setSelectedVerse]);
+
   // Stop current speech
   const stopSpeaking = useCallback(() => {
     console.log('stopSpeaking called');
@@ -694,11 +701,11 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         {isSpeaking ? 'Stop' : 'Read'}
       </button>
 
-      {/* Next Verse Button */}
+      {/* Next Verse Button - Hidden */}
       <button
         onClick={nextVerseAndRead}
         disabled={selectedVerse >= maxVerses || isSpeaking}
-        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
+        className={`hidden px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
           selectedVerse >= maxVerses || isSpeaking
             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
             : 'bg-green-100 text-green-700 hover:bg-green-200'
@@ -707,6 +714,21 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       >
         <SkipForward className="w-3 h-3 mr-1" />
         Next
+      </button>
+
+      {/* Scroll to Next Verse Button */}
+      <button
+        onClick={scrollToNextVerse}
+        disabled={selectedVerse >= maxVerses}
+        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
+          selectedVerse >= maxVerses
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            : 'bg-green-100 text-green-700 hover:bg-green-200'
+        }`}
+        title="Scroll to next verse"
+      >
+        <ChevronRight className="w-3 h-3 mr-1" />
+        Scroll
       </button>
 
       {/* Read to End Toggle Button */}
