@@ -256,10 +256,16 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       }
     };
 
+    const handleVerseReset = () => {
+      setSelectedVerse(1);
+    };
+
     window.addEventListener('navigateVerse', handleVerseNavigation);
+    window.addEventListener('resetVerse', handleVerseReset);
     
     return () => {
       window.removeEventListener('navigateVerse', handleVerseNavigation);
+      window.removeEventListener('resetVerse', handleVerseReset);
     };
   }, [selectedVerse, maxVerses]);
 

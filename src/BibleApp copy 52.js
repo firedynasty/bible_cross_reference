@@ -565,8 +565,8 @@ const NavigationPlaceholder = ({
           ↓
         </button>
 
-        {/* Scroll Control Radio Buttons - hidden */}
-        <div className="hidden ml-2 items-center border-l border-gray-300 pl-2">
+        {/* Scroll Control Radio Buttons - unhidden */}
+        <div className="hidden md:flex ml-2 items-center border-l border-gray-300 pl-2">
             <span className="text-xs text-gray-600 mr-1">SCROLL:</span>
             <label className="flex items-center cursor-pointer">
               <input
@@ -590,11 +590,6 @@ const NavigationPlaceholder = ({
               />
               <span className="text-xs">KJV</span>
             </label>
-          </div>
-
-          {/* Reset Verse Speech Text */}
-          <div className="hidden md:flex ml-2 items-center border-l border-gray-300 pl-2">
-            <span className="text-xs text-gray-600">"\": reset verse(speech)</span>
           </div>
 
           {/* Touch Scroll Configuration Dropdown */}

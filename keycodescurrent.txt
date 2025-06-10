@@ -10,4 +10,5 @@
   - 0 - scroll up one line
   - 9 - scroll down one line
   - Escape - home/reset
+ - \ - go to top (same as home/reset)
  - / toggle continuous read on /off
