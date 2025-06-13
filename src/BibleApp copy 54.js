@@ -1354,6 +1354,13 @@ const BibleApp = () => {
 
         e.preventDefault();
       }
+      // '\' key - reset verse selector to verse 1
+      else if (e.key === '\\') {
+        console.log("Backslash key pressed - resetting verse to 1");
+        const resetEvent = new CustomEvent('resetVerse');
+        window.dispatchEvent(resetEvent);
+        e.preventDefault();
+      }
 
       
       // '0' key - scroll up one line at a time in KJV pane (same as Up Arrow)
@@ -1476,24 +1483,6 @@ const BibleApp = () => {
         window.dispatchEvent(event);
         e.preventDefault();
       }
-      // '[' key - go to previous verse (copy of ArrowLeft functionality)
-      else if (e.key === '[') {
-        // Dispatch custom event to navigate to previous verse
-        const event = new CustomEvent('navigateVerse', {
-          detail: { direction: 'previous' }
-        });
-        window.dispatchEvent(event);
-        e.preventDefault();
-      }
-      // ']' key - go to next verse (copy of ArrowRight functionality)
-      else if (e.key === ']') {
-        // Dispatch custom event to navigate to next verse
-        const event = new CustomEvent('navigateVerse', {
-          detail: { direction: 'next' }
-        });
-        window.dispatchEvent(event);
-        e.preventDefault();
-      }
       // Enter key - read the currently selected verse
       else if (e.key === 'Enter') {
         // Dispatch custom event to read current verse
@@ -1501,9 +1490,9 @@ const BibleApp = () => {
         window.dispatchEvent(event);
         e.preventDefault();
       }
-      // 'i' key - speak the current book and chapter (duplicate of '[' key)
-      else if (e.key === 'i') {
-        console.log('i key pressed - speaking book and chapter');
+      // '[' key - speak the current book and chapter
+      else if (e.key === '[') {
+        console.log('[ key pressed - speaking book and chapter');
         console.log('selectedBook:', selectedBook);
         console.log('selectedChapter:', selectedChapter);
         console.log('pendingBookSelection:', pendingBookSelection);
@@ -1585,9 +1574,9 @@ const BibleApp = () => {
         
         e.preventDefault();
       }
-      // '\' key - speak the currently selected verse number (duplicate of ']' key)
-      else if (e.key === '\\') {
-        console.log('\\ key pressed - speaking selected verse');
+      // ']' key - speak the currently selected verse number
+      else if (e.key === ']') {
+        console.log('] key pressed - speaking selected verse');
         
         // Find the verse selector button
         const verseButton = document.querySelector('button.bg-purple-100.text-purple-700');
