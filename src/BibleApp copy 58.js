@@ -64,7 +64,7 @@ const getBaseUrl = () => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, autoSavePosition, onAutoSavePositionChange, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, isMobileView, isTabletView, stickyPane, isDarkMode, autoSavePosition, onAutoSavePositionChange, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -159,48 +159,6 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
 
   return (
     <div className="flex items-center space-x-2">
-      {/* Next Translation button */}
-      <button
-        onClick={() => {
-          try {
-            // Find current translation index
-            const currentIndex = translations.findIndex(t => t.id === selectedDropdownTranslation);
-            
-            // Calculate next index (loops back to 0 after last item)
-            const nextIndex = (currentIndex + 1) % translations.length;
-            const nextTranslation = translations[nextIndex].id;
-            
-            // Skip Hebrew translations if they cause issues
-            let finalTranslation = nextTranslation;
-            if (nextTranslation.includes('he_heb')) {
-              const afterHebrewIndex = (nextIndex + 1) % translations.length;
-              if (translations[afterHebrewIndex] && !translations[afterHebrewIndex].id.includes('he_heb')) {
-                finalTranslation = translations[afterHebrewIndex].id;
-              }
-            }
-            
-            // Update dropdown selection
-            setSelectedDropdownTranslation(finalTranslation);
-            
-            // Apply translation with delay to prevent scroll errors
-            setTimeout(() => {
-              try {
-                onApplyTranslationToPane2(finalTranslation);
-              } catch (error) {
-                console.warn('Error applying translation:', error);
-              }
-            }, 150);
-          } catch (error) {
-            console.warn('Error cycling translation:', error);
-          }
-        }}
-        className={`flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded hover:bg-blue-600 transition-colors`}
-        title="Cycle to next translation and apply to pane 2"
-      >
-        <ChevronRight className="w-3 h-3 mr-1" />
-        Next Transl
-      </button>
-      
       <select
         className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
         value={autoSavePosition}
@@ -262,7 +220,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         onClick={() => {
           onApplyTranslationToPane2(selectedDropdownTranslation);
         }}
-        className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-purple-700' : 'bg-purple-500'} text-white rounded hover:bg-purple-600 transition-colors hidden`}
+        className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-purple-700' : 'bg-purple-500'} text-white rounded hover:bg-purple-600 transition-colors`}
         title="Apply selected translation to secondary pane"
       >
         <span className="flex items-center">
@@ -2521,7 +2479,6 @@ const BibleApp = () => {
   };
 
   // Direct book navigation functions for key '1' and '2'
-  // eslint-disable-next-line no-unused-vars
   const handlePreviousBook = () => {
     if (!bibleData || !selectedBook) return;
     
@@ -2547,7 +2504,6 @@ const BibleApp = () => {
     }
   };
 
-  // eslint-disable-next-line no-unused-vars
   const handleNextBook = () => {
     if (!bibleData || !selectedBook) return;
     
@@ -3439,8 +3395,6 @@ const BibleApp = () => {
               onApplyTranslationToPane1={handleApplySelectedTranslationToPane1}
               onApplyTranslationToPane2={handleApplySelectedTranslationToPane2}
               selectedDropdownTranslation={selectedDropdownTranslation}
-              setSelectedDropdownTranslation={setSelectedDropdownTranslation}
-              translations={translations}
               isMobileView={isMobileView}
               isTabletView={isTabletView}
               stickyPane={stickyPane}
