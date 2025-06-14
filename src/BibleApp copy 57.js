@@ -1165,44 +1165,6 @@ const BibleApp = () => {
         e.preventDefault();
       }
       
-      // '3' key - go to next chapter (same as ';' key)
-      else if (e.key === '3' || e.keyCode === 51) {
-        console.log("3 key pressed for Next Chapter");
-        console.log("Current state:", { 
-          selectedBook: selectedBook?.abbrev, 
-          selectedChapter, 
-          totalChapters: selectedBook?.chapters.length 
-        });
-
-        // Simplified approach: directly find and click the Next Chapter button
-        const nextChapterButtons = Array.from(document.querySelectorAll('button'))
-          .filter(button => button.textContent.includes('Next Chapter'));
-
-        console.log("Found Next Chapter buttons:", nextChapterButtons.length);
-
-        if (nextChapterButtons.length > 0) {
-          console.log("Found Next Chapter button, clicking it");
-          console.log("Current React state before button click:", {
-            selectedBook: selectedBook?.abbrev,
-            selectedChapter: selectedChapter
-          });
-          nextChapterButtons[0].click();
-          
-          // Check state after a delay to see if it updated
-          setTimeout(() => {
-            console.log("React state 200ms after button click:", {
-              selectedBook: selectedBook?.abbrev,
-              selectedChapter: selectedChapter
-            });
-          }, 200);
-        } else {
-          console.log("No Next Chapter button found - this means we're at the last chapter");
-          console.log("Doing nothing (not advancing to next book or Genesis)");
-        }
-
-        e.preventDefault();
-      }
-      
       // 't' key - simulate clicking the To Clip button
       else if (e.key === 't' || e.keyCode === 84) {
         // Find and click the To Clip button
@@ -1543,13 +1505,6 @@ const BibleApp = () => {
         // Also stop any ongoing speech
         const event = new CustomEvent('stopSpeech');
         window.dispatchEvent(event);
-        e.preventDefault();
-      }
-      
-      // Grave accent/backtick key - open hamburger menu (show sidebar)
-      else if (e.key === '`' || e.keyCode === 192) {
-        console.log("Grave accent key pressed - opening menu");
-        setShowSidebar(true);
         e.preventDefault();
       }
     };
@@ -3167,17 +3122,14 @@ const BibleApp = () => {
           <div className="flex items-center space-x-2">
             {/* Sidebar toggle button for mobile, tablet and full screen */}
             {!showSidebar && (
-              <>
-                <button 
-                  onClick={() => setShowSidebar(true)} 
-                  className="flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-                <span className="ml-1 text-sm text-gray-500">(`)</span>
-              </>
+              <button 
+                onClick={() => setShowSidebar(true)} 
+                className="flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
             )}
             
             {/* Book Navigation Buttons */}
@@ -3204,7 +3156,7 @@ const BibleApp = () => {
                 className="mr-2 px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-sm font-bold"
                 title="Previous book"
               >
-                ←(1)
+                ←
               </button>
               <button 
                 onClick={() => {
@@ -3228,7 +3180,7 @@ const BibleApp = () => {
                 className="mr-2 px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-sm font-bold"
                 title="Next book"
               >
-                →(2)
+                →
               </button>
             </div>
             
@@ -3250,7 +3202,6 @@ const BibleApp = () => {
                     </option>
                   ))}
                 </select>
-                <span className="ml-1 text-sm text-gray-500">(3)</span>
                 {/* Chapter Navigation Input */}
                 <input 
                   type="number" 
