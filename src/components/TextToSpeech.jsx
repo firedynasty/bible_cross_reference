@@ -429,6 +429,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     }
   }, [selectedVerse, maxVerses, setSelectedVerse]);
 
+
   // Stop current speech
   const stopSpeaking = useCallback(() => {
     console.log('stopSpeaking called');
@@ -442,6 +443,75 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       console.log('Speech stopped, state reset');
     }, 0);
   }, [setIsSpeaking, setCurrentUtterance, setShouldContinueAfterCurrent]);
+
+  // Read current verse without incrementing
+  const repeatCurrentVerse = useCallback(() => {
+    if (isSpeaking) {
+      stopSpeaking();
+    } else {
+      // Create a custom speakVerse that doesn't increment
+      const speakCurrentVerseOnly = (verseNumber = selectedVerse) => {
+        console.log('repeatCurrentVerse called with verse:', verseNumber);
+        
+        if (!verses[verseNumber - 1] || isSpeaking) return;
+
+        const verseText = cleanTextForTTS(verses[verseNumber - 1]);
+        if (!verseText) return;
+
+        if (!('speechSynthesis' in window)) {
+          console.error('Speech synthesis not supported');
+          return;
+        }
+
+        if (speechSynthesis.speaking) {
+          speechSynthesis.cancel();
+          setTimeout(() => {
+            speakCurrentVerseOnly(verseNumber);
+          }, 100);
+          return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance(verseText);
+        
+        const languageInfo = getLanguageFromTranslation(rightPaneTranslation || 'en_kjv.json');
+        utterance.lang = languageInfo.lang;
+        
+        if (languageInfo.lang.startsWith('he-')) {
+          utterance.rate = 0.5;
+        } else if (languageInfo.lang.startsWith('en-')) {
+          utterance.rate = 0.9;
+        } else {
+          utterance.rate = 0.7;
+        }
+        
+        const selectedVoice = selectBestVoice(languageInfo.lang, availableVoices);
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+        }
+
+        utterance.onstart = () => {
+          setIsSpeaking(true);
+          setCurrentUtterance(utterance);
+        };
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          setCurrentUtterance(null);
+          // Don't increment verse - this is the key difference
+        };
+        utterance.onerror = (event) => {
+          console.error('Speech synthesis error:', event);
+          setIsSpeaking(false);
+          setCurrentUtterance(null);
+        };
+
+        setIsSpeaking(true);
+        setCurrentUtterance(utterance);
+        speechSynthesis.speak(utterance);
+      };
+      
+      speakCurrentVerseOnly();
+    }
+  }, [selectedVerse, verses, isSpeaking, rightPaneTranslation, availableVoices, stopSpeaking, setIsSpeaking, setCurrentUtterance]);
 
   // Listen for read current verse events
   useEffect(() => {
@@ -731,7 +801,21 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         Scroll
       </button>
 
-      {/* Read to End Toggle Button */}
+      {/* Repeat Current Verse Button */}
+      <button
+        onClick={repeatCurrentVerse}
+        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
+          isSpeaking 
+            ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+        }`}
+        title={isSpeaking ? "Stop reading" : `Repeat selected verse in ${currentLanguageInfo.name}`}
+      >
+        <Play className="w-3 h-3 mr-1" />
+        {isSpeaking ? 'Stop' : 'Repeat'}
+      </button>
+
+      {/* Read to End Toggle Button - Hidden */}
       <button
         onClick={() => {
           // If currently speaking and toggle is OFF, turn it ON and set flag to continue
@@ -750,7 +834,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
             }
           }
         }}
-        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs transition-colors ${
+        className={`hidden px-2 py-0.5 rounded focus:outline-none flex items-center text-xs transition-colors ${
           readToEnd 
             ? 'bg-orange-500 text-white hover:bg-orange-600'
             : 'bg-gray-400 text-gray-700 hover:bg-gray-500'
