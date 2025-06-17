@@ -863,15 +863,14 @@ const BibleApp = () => {
   const [firebaseEnabled, setFirebaseEnabled] = useState(false);
   
   // State to track touch scroll mode
-  const [touchScrollMode, setTouchScrollMode] = useState('right-independent');
+  const [touchScrollMode, setTouchScrollMode] = useState('right-only');
   
   // Touch scroll mode options
   const touchScrollModes = [
     { id: 'disabled', label: 'Disabled', description: 'Normal click behavior' },
     { id: 'right-only', label: 'Right Pane', description: 'Touch right pane triggers page down' },
     { id: 'both-panes', label: 'Both Panes', description: 'Touch either pane triggers page down' },
-    { id: 'right-reduced', label: 'Right Reduced', description: 'Touch right pane with smaller scroll' },
-    { id: 'right-independent', label: 'Right Independent', description: 'Touch right pane scrolls only right pane (no sync)' }
+    { id: 'right-reduced', label: 'Right Reduced', description: 'Touch right pane with smaller scroll' }
   ];
   
   // State to track scroll position for mobile view during translation changes
@@ -1839,24 +1838,6 @@ const BibleApp = () => {
     }
   }, [isMobileView, setMobileScrollPosition]);
 
-  const handleIndependentRightScroll = useCallback((scrollAmount = 0.9) => {
-    if (!kjvContentRef.current) return;
-    
-    const pageHeight = kjvContentRef.current.clientHeight * scrollAmount;
-    isManuallyScrolling.current = true;
-
-    try {
-      const kjvPane = kjvContentRef.current;
-      const kjvNewPosition = kjvPane.scrollTop + pageHeight;
-      const kjvMaxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
-      kjvPane.scrollTop = Math.min(kjvMaxScroll, kjvNewPosition);
-    } finally {
-      setTimeout(() => {
-        isManuallyScrolling.current = false;
-      }, 50);
-    }
-  }, []);
-
   const handlePaneClick = useCallback((event, pane) => {
     // Don't trigger scroll if clicking on a button or interactive element
     if (event.target.tagName === 'BUTTON' || 
@@ -1871,17 +1852,10 @@ const BibleApp = () => {
     if (touchScrollMode === 'disabled') return;
     
     if (touchScrollMode === 'right-only' && pane === 'left') return;
-    if (touchScrollMode === 'right-independent' && pane === 'left') return;
-    
-    if (touchScrollMode === 'right-independent' && pane === 'right') {
-      const scrollAmount = 0.9;
-      handleIndependentRightScroll(scrollAmount);
-      return;
-    }
     
     const scrollAmount = touchScrollMode === 'right-reduced' && pane === 'right' ? 0.5 : 0.9;
     handleTouchPageDown(scrollAmount);
-  }, [touchScrollMode, handleTouchPageDown, handleIndependentRightScroll]);
+  }, [touchScrollMode, handleTouchPageDown]);
 
   // Centralized Home function to reset all scroll positions and state
   const handleHomeReset = useCallback(() => {
@@ -3558,44 +3532,6 @@ const BibleApp = () => {
           >
             {selectedBook && selectedChapter > 0 && (
               <div>
-                {/* Read and Repeat buttons */}
-                <div className="mb-4 flex gap-2">
-                  <button 
-                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
-                    title="Read selected verse in English"
-                    onClick={(event) => {
-                      const readButtons = document.querySelectorAll('button[title="Read selected verse in English"]');
-                      const targetButton = Array.from(readButtons).find(btn => btn !== event.target);
-                      if (targetButton) {
-                        targetButton.click();
-                      }
-                    }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-3 h-3 mr-1">
-                      <polygon points="6 3 20 12 6 21 6 3"></polygon>
-                    </svg>
-                    Read
-                  </button>
-                  <button 
-                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
-                    title="Repeat selected verse in English"
-                    onClick={(event) => {
-                      const repeatButtons = document.querySelectorAll('button[title="Repeat selected verse in English"]');
-                      const targetButton = Array.from(repeatButtons).find(btn => btn !== event.target);
-                      if (targetButton) {
-                        targetButton.click();
-                      }
-                    }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat w-3 h-3 mr-1">
-                      <polyline points="17 1 21 5 17 9"></polyline>
-                      <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
-                      <polyline points="7 23 3 19 7 15"></polyline>
-                      <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
-                    </svg>
-                    Repeat
-                  </button>
-                </div>
                 <h2 className="text-3xl font-semibold flex items-center mb-5">
                   <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open mr-3 h-8 w-8">
                     <path d="M12 7v14"></path>
@@ -3788,48 +3724,10 @@ const BibleApp = () => {
                 ref={kjvContentRef} 
                 className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'}`}
                 onClick={(event) => handlePaneClick(event, 'right')}
-                style={{ cursor: touchScrollMode !== 'disabled' && (touchScrollMode === 'right-only' || touchScrollMode === 'both-panes' || touchScrollMode === 'right-reduced' || touchScrollMode === 'right-independent') ? 'pointer' : 'default' }}
+                style={{ cursor: touchScrollMode !== 'disabled' && (touchScrollMode === 'right-only' || touchScrollMode === 'both-panes' || touchScrollMode === 'right-reduced') ? 'pointer' : 'default' }}
               >
                 {selectedBook && selectedChapter > 0 && (
                 <div>
-                  {/* Read and Repeat buttons */}
-                  <div className="mb-4 flex gap-2">
-                    <button 
-                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
-                      title="Read selected verse in English"
-                      onClick={(event) => {
-                        const readButtons = document.querySelectorAll('button[title="Read selected verse in English"]');
-                        const targetButton = Array.from(readButtons).find(btn => btn !== event.target);
-                        if (targetButton) {
-                          targetButton.click();
-                        }
-                      }}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-3 h-3 mr-1">
-                        <polygon points="6 3 20 12 6 21 6 3"></polygon>
-                      </svg>
-                      Read
-                    </button>
-                    <button 
-                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
-                      title="Repeat selected verse in English"
-                      onClick={(event) => {
-                        const repeatButtons = document.querySelectorAll('button[title="Repeat selected verse in English"]');
-                        const targetButton = Array.from(repeatButtons).find(btn => btn !== event.target);
-                        if (targetButton) {
-                          targetButton.click();
-                        }
-                      }}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat w-3 h-3 mr-1">
-                        <polyline points="17 1 21 5 17 9"></polyline>
-                        <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
-                        <polyline points="7 23 3 19 7 15"></polyline>
-                        <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
-                      </svg>
-                      Repeat
-                    </button>
-                  </div>
                   <h2 className="text-3xl mr-2 font-semibold mb-5 flex items-center">
                     {isMobileView && !isTabletView && (
                       <button 

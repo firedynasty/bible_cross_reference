@@ -640,7 +640,7 @@ const NavigationPlaceholder = ({
           </div>
 
           {/* Touch Scroll Configuration Dropdown */}
-          <div className="hidden ml-2 items-center border-l border-gray-300 pl-2 relative">
+          <div className="flex ml-2 items-center border-l border-gray-300 pl-2 relative">
             <span className="text-xs text-gray-600 mr-1">TOUCH:</span>
             <button
               onClick={() => setShowTouchDropdown(!showTouchDropdown)}
@@ -863,7 +863,7 @@ const BibleApp = () => {
   const [firebaseEnabled, setFirebaseEnabled] = useState(false);
   
   // State to track touch scroll mode
-  const [touchScrollMode, setTouchScrollMode] = useState('right-independent');
+  const [touchScrollMode, setTouchScrollMode] = useState('right-only');
   
   // Touch scroll mode options
   const touchScrollModes = [
@@ -3558,44 +3558,6 @@ const BibleApp = () => {
           >
             {selectedBook && selectedChapter > 0 && (
               <div>
-                {/* Read and Repeat buttons */}
-                <div className="mb-4 flex gap-2">
-                  <button 
-                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
-                    title="Read selected verse in English"
-                    onClick={(event) => {
-                      const readButtons = document.querySelectorAll('button[title="Read selected verse in English"]');
-                      const targetButton = Array.from(readButtons).find(btn => btn !== event.target);
-                      if (targetButton) {
-                        targetButton.click();
-                      }
-                    }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-3 h-3 mr-1">
-                      <polygon points="6 3 20 12 6 21 6 3"></polygon>
-                    </svg>
-                    Read
-                  </button>
-                  <button 
-                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
-                    title="Repeat selected verse in English"
-                    onClick={(event) => {
-                      const repeatButtons = document.querySelectorAll('button[title="Repeat selected verse in English"]');
-                      const targetButton = Array.from(repeatButtons).find(btn => btn !== event.target);
-                      if (targetButton) {
-                        targetButton.click();
-                      }
-                    }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat w-3 h-3 mr-1">
-                      <polyline points="17 1 21 5 17 9"></polyline>
-                      <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
-                      <polyline points="7 23 3 19 7 15"></polyline>
-                      <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
-                    </svg>
-                    Repeat
-                  </button>
-                </div>
                 <h2 className="text-3xl font-semibold flex items-center mb-5">
                   <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open mr-3 h-8 w-8">
                     <path d="M12 7v14"></path>
@@ -3792,44 +3754,6 @@ const BibleApp = () => {
               >
                 {selectedBook && selectedChapter > 0 && (
                 <div>
-                  {/* Read and Repeat buttons */}
-                  <div className="mb-4 flex gap-2">
-                    <button 
-                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
-                      title="Read selected verse in English"
-                      onClick={(event) => {
-                        const readButtons = document.querySelectorAll('button[title="Read selected verse in English"]');
-                        const targetButton = Array.from(readButtons).find(btn => btn !== event.target);
-                        if (targetButton) {
-                          targetButton.click();
-                        }
-                      }}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-3 h-3 mr-1">
-                        <polygon points="6 3 20 12 6 21 6 3"></polygon>
-                      </svg>
-                      Read
-                    </button>
-                    <button 
-                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
-                      title="Repeat selected verse in English"
-                      onClick={(event) => {
-                        const repeatButtons = document.querySelectorAll('button[title="Repeat selected verse in English"]');
-                        const targetButton = Array.from(repeatButtons).find(btn => btn !== event.target);
-                        if (targetButton) {
-                          targetButton.click();
-                        }
-                      }}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat w-3 h-3 mr-1">
-                        <polyline points="17 1 21 5 17 9"></polyline>
-                        <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
-                        <polyline points="7 23 3 19 7 15"></polyline>
-                        <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
-                      </svg>
-                      Repeat
-                    </button>
-                  </div>
                   <h2 className="text-3xl mr-2 font-semibold mb-5 flex items-center">
                     {isMobileView && !isTabletView && (
                       <button 

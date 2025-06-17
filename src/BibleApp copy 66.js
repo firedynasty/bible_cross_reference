@@ -640,7 +640,7 @@ const NavigationPlaceholder = ({
           </div>
 
           {/* Touch Scroll Configuration Dropdown */}
-          <div className="hidden ml-2 items-center border-l border-gray-300 pl-2 relative">
+          <div className="flex ml-2 items-center border-l border-gray-300 pl-2 relative">
             <span className="text-xs text-gray-600 mr-1">TOUCH:</span>
             <button
               onClick={() => setShowTouchDropdown(!showTouchDropdown)}
@@ -863,7 +863,7 @@ const BibleApp = () => {
   const [firebaseEnabled, setFirebaseEnabled] = useState(false);
   
   // State to track touch scroll mode
-  const [touchScrollMode, setTouchScrollMode] = useState('right-independent');
+  const [touchScrollMode, setTouchScrollMode] = useState('right-only');
   
   // Touch scroll mode options
   const touchScrollModes = [
