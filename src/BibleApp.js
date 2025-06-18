@@ -3571,10 +3571,9 @@ const BibleApp = () => {
                       }
                     }}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-3 h-3 mr-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-6 h-6">
                       <polygon points="6 3 20 12 6 21 6 3"></polygon>
                     </svg>
-                    Read
                   </button>
                   <button 
                     className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
@@ -3587,13 +3586,26 @@ const BibleApp = () => {
                       }
                     }}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat w-3 h-3 mr-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat w-6 h-6">
                       <polyline points="17 1 21 5 17 9"></polyline>
                       <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
                       <polyline points="7 23 3 19 7 15"></polyline>
                       <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
                     </svg>
-                    Repeat
+                  </button>
+                  <button 
+                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
+                    title="Scroll to next verse"
+                    onClick={() => {
+                      const event = new CustomEvent('navigateVerse', {
+                        detail: { direction: 'next' }
+                      });
+                      window.dispatchEvent(event);
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right w-6 h-6">
+                      <path d="m9 18 6-6-6-6"></path>
+                    </svg>
                   </button>
                 </div>
                 <h2 className="text-3xl font-semibold flex items-center mb-5">
@@ -3805,10 +3817,9 @@ const BibleApp = () => {
                         }
                       }}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-3 h-3 mr-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-6 h-6">
                         <polygon points="6 3 20 12 6 21 6 3"></polygon>
                       </svg>
-                      Read
                     </button>
                     <button 
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
@@ -3821,13 +3832,26 @@ const BibleApp = () => {
                         }
                       }}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat w-3 h-3 mr-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat w-6 h-6">
                         <polyline points="17 1 21 5 17 9"></polyline>
                         <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
                         <polyline points="7 23 3 19 7 15"></polyline>
                         <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
                       </svg>
-                      Repeat
+                    </button>
+                    <button 
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
+                      title="Scroll to next verse"
+                      onClick={() => {
+                        const event = new CustomEvent('navigateVerse', {
+                          detail: { direction: 'next' }
+                        });
+                        window.dispatchEvent(event);
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right w-6 h-6">
+                        <path d="m9 18 6-6-6-6"></path>
+                      </svg>
                     </button>
                   </div>
                   <h2 className="text-3xl mr-2 font-semibold mb-5 flex items-center">
