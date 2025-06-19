@@ -1595,15 +1595,6 @@ const BibleApp = () => {
         setShowSidebar(true);
         e.preventDefault();
       }
-      
-      // '/' key - trigger repeat button click
-      else if (e.key === '/' || e.keyCode === 191) {
-        const repeatButtons = document.querySelectorAll('button[title="Repeat selected verse in English"]');
-        if (repeatButtons.length > 0) {
-          repeatButtons[0].click();
-        }
-        e.preventDefault();
-      }
     };
     
     window.addEventListener('keydown', handleKeyDown);
