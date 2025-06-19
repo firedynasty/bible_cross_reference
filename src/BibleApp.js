@@ -473,7 +473,7 @@ const NavigationPlaceholder = ({
           >
             Prompts ▼
           </button>
-          
+          (7:read2end)
           {showPromptDropdown && (
             <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg z-50">
               <div className="py-1">
@@ -704,7 +704,7 @@ const NavigationPlaceholder = ({
               >
                 🔗
               </button>
-
+              (links)
               
               {showLinksDropdown && (
                 <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
@@ -3552,6 +3552,7 @@ const BibleApp = () => {
               >
                 Return
               </button>
+
             )}
           </div>
         </div>
@@ -3616,6 +3617,7 @@ const BibleApp = () => {
                       <path d="m9 18 6-6-6-6"></path>
                     </svg>
                   </button>
+
                 </div>
                 <h2 className="text-3xl font-semibold flex items-center mb-5">
                   <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open mr-3 h-8 w-8">
