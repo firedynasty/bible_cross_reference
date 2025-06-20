@@ -473,7 +473,7 @@ const NavigationPlaceholder = ({
           >
             Prompts ▼
           </button>
-          (7:read2end,&darr;:+10)
+          (7:read2end)
           {showPromptDropdown && (
             <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg z-50">
               <div className="py-1">
@@ -989,14 +989,9 @@ const BibleApp = () => {
     const isManuallyScrollingRef = isManuallyScrolling;
 
     const handleKeyDown = (e) => {
-      // Prevent keycode handling when user is typing in input fields or select dropdowns
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
-        return;
-      }
-      
       // Removed '[' and ']' key handlers for translation switching
-      // 'x' key - scroll down one line at a time in KJV pane (like 'z' but just one line)
-      if (e.key === 'x' && kjvContentRef.current) {
+      // 'x' key or Down Arrow - scroll down one line at a time in KJV pane (like 'z' but just one line)
+      if ((e.key === 'x' || e.key === 'ArrowDown') && kjvContentRef.current) {
         
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
@@ -1251,35 +1246,8 @@ const BibleApp = () => {
         e.preventDefault();
       }
       
-      // '4' key - advance by +10 chapters by clicking Next Chapter button 10 times
-      else if (e.key === '4' || e.keyCode === 52) {
-        console.log("4 key pressed for +10 chapters");
-        
-        // Find the Next Chapter button
-        const nextChapterButtons = Array.from(document.querySelectorAll('button'))
-          .filter(button => button.textContent.includes('Next Chapter'));
-          
-        if (nextChapterButtons.length > 0) {
-          console.log("Found Next Chapter button, clicking it 10 times");
-          
-          // Click the button 10 times with small delays
-          for (let i = 0; i < 10; i++) {
-            setTimeout(() => {
-              if (nextChapterButtons[0]) {
-                nextChapterButtons[0].click();
-                console.log(`Clicked Next Chapter button ${i + 1}/10`);
-              }
-            }, i * 100); // 100ms delay between clicks
-          }
-        } else {
-          console.log("No Next Chapter button found");
-        }
-        
-        e.preventDefault();
-      }
-      
-      // Shift+4 key - simulate clicking the To Clip button (moved from 't' key)
-      else if (e.key === '$' || (e.shiftKey && e.key === '4')) {
+      // 't' key - simulate clicking the To Clip button
+      else if (e.key === 't' || e.keyCode === 84) {
         // Find and click the To Clip button
         const clipButton = Array.from(document.querySelectorAll('button'))
           .find(button => button.title && button.title.includes('Copy VLC command') && button.textContent.includes('To Clip'));
@@ -1470,21 +1438,6 @@ const BibleApp = () => {
         window.dispatchEvent(event);
         e.preventDefault();
       }
-      // Down Arrow - advance by +10 verses
-      else if (e.key === 'ArrowDown') {
-        console.log("Down Arrow pressed - advancing +10 verses");
-        // Dispatch navigateVerse event 10 times with small delays
-        for (let i = 0; i < 10; i++) {
-          setTimeout(() => {
-            const event = new CustomEvent('navigateVerse', {
-              detail: { direction: 'next' }
-            });
-            window.dispatchEvent(event);
-            console.log(`Advanced verse ${i + 1}/10`);
-          }, i * 50); // 50ms delay between verse advances
-        }
-        e.preventDefault();
-      }
       // '[' key - go to previous verse (copy of ArrowLeft functionality)
       else if (e.key === '[') {
         // Dispatch custom event to navigate to previous verse
@@ -1510,8 +1463,8 @@ const BibleApp = () => {
         window.dispatchEvent(event);
         e.preventDefault();
       }
-      // Shift+5 key - speak the current book and chapter (moved from 'i' key)
-      else if (e.key === '%' || (e.shiftKey && e.key === '5')) {
+      // 'i' key - speak the current book and chapter (duplicate of '[' key)
+      else if (e.key === 'i') {
         console.log('i key pressed - speaking book and chapter');
         console.log('selectedBook:', selectedBook);
         console.log('selectedChapter:', selectedChapter);
@@ -1648,111 +1601,6 @@ const BibleApp = () => {
         const repeatButtons = document.querySelectorAll('button[title="Repeat selected verse in English"]');
         if (repeatButtons.length > 0) {
           repeatButtons[0].click();
-        }
-        e.preventDefault();
-      }
-      // Direct book navigation keys
-      // A key - go to Psalms
-      else if (e.key === 'a' || e.key === 'A') {
-        const book = bibleData?.find(b => b.abbrev === 'ps');
-        if (book) {
-          handleBookSelect('ps');
-        }
-        e.preventDefault();
-      }
-      // C key - go to Colossians
-      else if (e.key === 'c' || e.key === 'C') {
-        const book = bibleData?.find(b => b.abbrev === 'cl');
-        if (book) {
-          handleBookSelect('cl');
-        }
-        e.preventDefault();
-      }
-      // E key - go to Ecclesiastes
-      else if (e.key === 'e' || e.key === 'E') {
-        const book = bibleData?.find(b => b.abbrev === 'ec');
-        if (book) {
-          handleBookSelect('ec');
-        }
-        e.preventDefault();
-      }
-      // G key - go to Genesis
-      else if (e.key === 'g' || e.key === 'G') {
-        const book = bibleData?.find(b => b.abbrev === 'gn');
-        if (book) {
-          handleBookSelect('gn');
-        }
-        e.preventDefault();
-      }
-      // H key - go to Hebrews
-      else if (e.key === 'h' || e.key === 'H') {
-        const book = bibleData?.find(b => b.abbrev === 'hb');
-        if (book) {
-          handleBookSelect('hb');
-        }
-        e.preventDefault();
-      }
-      // I key - go to Isaiah
-      else if (e.key === 'i' || e.key === 'I') {
-        const book = bibleData?.find(b => b.abbrev === 'is');
-        if (book) {
-          handleBookSelect('is');
-        }
-        e.preventDefault();
-      }
-      // J key - go to John
-      else if (e.key === 'j' || e.key === 'J') {
-        const book = bibleData?.find(b => b.abbrev === 'jo');
-        if (book) {
-          handleBookSelect('jo');
-        }
-        e.preventDefault();
-      }
-      // K key - go to 1 Kings
-      else if (e.key === 'k' || e.key === 'K') {
-        const book = bibleData?.find(b => b.abbrev === '1kgs');
-        if (book) {
-          handleBookSelect('1kgs');
-        }
-        e.preventDefault();
-      }
-      // L key - go to Lamentations
-      else if (e.key === 'l' || e.key === 'L') {
-        const book = bibleData?.find(b => b.abbrev === 'lm');
-        if (book) {
-          handleBookSelect('lm');
-        }
-        e.preventDefault();
-      }
-      // N key - go to Nahum
-      else if (e.key === 'n' || e.key === 'N') {
-        const book = bibleData?.find(b => b.abbrev === 'na');
-        if (book) {
-          handleBookSelect('na');
-        }
-        e.preventDefault();
-      }
-      // R key - go to Romans
-      else if (e.key === 'r' || e.key === 'R') {
-        const book = bibleData?.find(b => b.abbrev === 'rm');
-        if (book) {
-          handleBookSelect('rm');
-        }
-        e.preventDefault();
-      }
-      // S key - go to 1 Samuel
-      else if (e.key === 's' || e.key === 'S') {
-        const book = bibleData?.find(b => b.abbrev === '1sm');
-        if (book) {
-          handleBookSelect('1sm');
-        }
-        e.preventDefault();
-      }
-      // T key - go to 1 Thessalonians
-      else if (e.key === 't' || e.key === 'T') {
-        const book = bibleData?.find(b => b.abbrev === '1ts');
-        if (book) {
-          handleBookSelect('1ts');
         }
         e.preventDefault();
       }
@@ -3384,25 +3232,7 @@ const BibleApp = () => {
                   selectedBook && selectedBook.abbrev === book.abbrev ? 'bg-blue-100 font-medium' : ''
                 }`}
               >
-                {(() => {
-                  const bookName = book.book || getBookName(book.abbrev);
-                  const keyMappings = {
-                    'Psalms': '(a)',
-                    'Colossians': '(c)', 
-                    'Ecclesiastes': '(e)',
-                    'Genesis': '(g)',
-                    'Hebrews': '(h)',
-                    'Isaiah': '(i)',
-                    'John': '(j)',
-                    '1 Kings': '(k)',
-                    'Lamentations': '(l)',
-                    'Nahum': '(n)',
-                    'Romans': '(r)',
-                    '1 Samuel': '(s)',
-                    '1 Thessalonians': '(t)'
-                  };
-                  return keyMappings[bookName] ? `${bookName} ${keyMappings[bookName]}` : bookName;
-                })()}
+                {book.book || getBookName(book.abbrev)}
               </button>
             ))}
           </div>
@@ -3499,7 +3329,7 @@ const BibleApp = () => {
                     </option>
                   ))}
                 </select>
-                <span className="ml-1 text-sm text-gray-500">(3,4:10+)</span>
+                <span className="ml-1 text-sm text-gray-500">(3)</span>
                 {/* Chapter Navigation Input */}
                 <input 
                   type="number" 

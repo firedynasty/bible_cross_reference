@@ -1,14 +1,74 @@
- - x or Arrow Down - scroll down one line
-  - Arrow Up - scroll up one line
-  - o or Page Up - page up
-  - p or Page Down - page down
-  - z - previous chapter
-  - m, ,, ; - next chapter
-  - 3 - cycle touch options
-  - t - clipboard
-  - d - toggle dark mode
-  - 0 - scroll up one line
-  - 9 - scroll down one line
-  - Escape - home/reset
- - \ - go to top (same as home/reset)
- - / toggle continuous read on /off
+  Current keycodes (accurate):
+  - x or Arrow Down - scroll down one line ✓
+  - Arrow Up - scroll up one line ✓
+  - o or Page Up - page up ✓
+  - p or Page Down - page down ✓
+  - z - previous chapter ✓
+  - m, ,, ; - next chapter ✓
+  - d - toggle dark mode ✓
+  - 0 - scroll up one line ✓
+  - 9 - scroll down one line ✓
+  - Escape - home/reset ✓
+  - 7 - toggle Read2End (continuous read) ✓
+
+  Corrections needed:
+  - 3 - go to next chapter (NOT "cycle touch options")
+  - t - go to 1 Thessalonians (NOT "clipboard" - moved to Shift+4)
+  - *** - speak currently selected verse number (NOT "go to top")
+
+  Book navigation (accurate):
+  - A: Psalms ✓
+  - C: Colossians ✓
+  - E: Ecclesiastes ✓
+  - G: Genesis ✓
+  - H: Hebrews ✓
+  - I: Isaiah ✓
+  - J: John ✓
+  - K: 1 Kings ✓
+  - L: Lamentations ✓
+  - N: Nehemiah ✓
+  - R: Romans ✓
+  - S: 1 Samuel ✓
+  - T: 1 Thessalonians ✓
+
+  The clipboard function is now Shift+4 and the speak book/chapter function is now Shift+5.
+
+  1,2: will shift books
+
+
+
+  Book navigation (accurate):
+  - A: Psalms ✓
+  - C: Colossians ✓
+  - E: Ecclesiastes ✓
+  - G: Genesis ✓
+  - H: Hebrews ✓
+  - I: Isaiah ✓
+  - J: John ✓
+  - K: 1 Kings ✓
+  - L: Lamentations ✓
+  - N: Nahum ✓
+  - R: Romans ✓
+  - S: 1 Samuel ✓
+  - T: 1 Thessalonians ✓
+
+
+Given the sidebar, can you attach these paranthesis and keycode 
+  Psalms (a)
+  Colossians (c)
+  Eccelsiastes (e)
+  Genesis (g)
+  Hebrews (h)
+  Isaiah (i)
+  John (j)
+  1 Kings (k)
+  Lamentations (l)
+  Nahum (n)
+  Romans (r)
+  1 Samuel (s)
+  1 Thessalonians (t)
+
+
+
+  <div class="overflow-y-auto h-full"><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Genesis</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Exodus</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Leviticus</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl bg-blue-100 font-medium">Numbers</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Deuteronomy</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Joshua</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Judges</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Ruth</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">1 Samuel</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">2 Samuel</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">1 Kings</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">2 Kings</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">1 Chronicles</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">2 Chronicles</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Ezra</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Nehemiah</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Esther</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Job</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Psalms</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Proverbs</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Ecclesiastes</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Song of Solomon</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Isaiah</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Jeremiah</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Lamentations</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Ezekiel</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Daniel</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Hosea</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Joel</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Amos</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Obadiah</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Jonah</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Micah</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Nahum</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Habakkuk</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Zephaniah</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Haggai</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Zechariah</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Malachi</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Matthew</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Mark</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Luke</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">John</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Acts</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Romans</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">1 Corinthians</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">2 Corinthians</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Galatians</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Ephesians</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Philippians</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Colossians</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">1 Thessalonians</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">2 Thessalonians</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">1 Timothy</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">2 Timothy</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Titus</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Philemon</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Hebrews</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">James</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">1 Peter</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">2 Peter</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">1 John</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">2 John</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">3 John</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Jude</button><button class="w-full text-left px-6 py-3 hover:bg-gray-100 text-xl ">Revelation</button></div>
+
