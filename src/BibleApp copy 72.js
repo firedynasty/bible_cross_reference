@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 // eslint-disable-next-line no-unused-vars
-import { Book, Link, ChevronRight, History, BookOpen, Save, Database, Download } from 'lucide-react';
+import { Book, Link, ChevronRight, History, BookOpen, Save, Database } from 'lucide-react';
 import TextToSpeech from './components/TextToSpeech';
 
 // Import Firebase modules
@@ -64,7 +64,7 @@ const getBaseUrl = () => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, autoSavePosition, onAutoSavePositionChange, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -131,19 +131,13 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
 
   // Handle saving current position to selected key
   const handleSave = () => {
-    // Determine which position to save to
-    let savePosition;
-    
-    if (selectedKey && selectedKey.includes('-position')) {
-      // If a position is selected in the dropdown, save to that position
-      savePosition = selectedKey.split('-')[0];
-    } else {
-      // If no position is selected, default to position 1
-      savePosition = '1';
+    if (!autoSavePosition) {
+      console.warn('Save aborted: No auto-save position selected');
+      return;
     }
 
     // Create the key string in the expected format
-    const keyToSave = `${savePosition}-position`;
+    const keyToSave = `${autoSavePosition}-position`;
 
     // Create position data object
     const positionData = JSON.stringify({
@@ -154,19 +148,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       stickyPane: stickyPane
     });
 
-    console.log(`Saving to position ${savePosition}: ${keyToSave}`);
     onSave(keyToSave, positionData);
-  };
-
-  // Handle loading position from selected key
-  const handleLoad = () => {
-    if (!selectedKey) {
-      console.warn('Load aborted: No position selected');
-      return;
-    }
-
-    // Call the onSelect function to load the position
-    onSelect(selectedKey);
   };
 
   // Get key number from key string (e.g., "1-position" returns "1")
@@ -220,13 +202,27 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       </button>
       
       <select
-        className={`firebase-position-select border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
+        className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
+        value={autoSavePosition}
+        onChange={(e) => onAutoSavePositionChange && onAutoSavePositionChange(e.target.value)}
+        title="Select position for auto-save"
+      >
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+      </select>
+      <select
+        className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
         value={selectedKey}
         onChange={(e) => {
           const newKey = e.target.value;
           setSelectedKey(newKey);
           
-          // Don't automatically load - let user manually trigger with '7' key or Load button
+          // Automatically load the selected position
+          if (newKey) {
+            onSelect(newKey);
+          }
         }}
       >
         <option value="">Select position...</option>
@@ -245,16 +241,6 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       >
         <Save className="h-3 w-3 mr-1" />
         Save
-      </button>
-      
-      <button
-        onClick={handleLoad}
-        disabled={loading}
-        className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded hover:bg-blue-600 transition-colors disabled:${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
-        title="Load from selected position"
-      >
-        <Download className="h-3 w-3 mr-1" />
-        Load
       </button>
       
       {/* Firebase Toggle Button */}
@@ -340,7 +326,6 @@ const NavigationPlaceholder = ({
   const [showPromptDropdown, setShowPromptDropdown] = useState(false);
   const [showTouchDropdown, setShowTouchDropdown] = useState(false);
   const [showLinksDropdown, setShowLinksDropdown] = useState(false);
-  const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
 
   // Bible study prompt options
   const bibleStudyPrompts = [
@@ -480,37 +465,31 @@ const NavigationPlaceholder = ({
           </svg>
         </button>
         
-        <div className="flex items-center">
-          <select
-            className="border border-gray-300 bg-white rounded px-2 py-1 text-sm max-w-xs ml-2"
-            style={{width: 'auto'}}
-            value={currentPromptIndex}
-            onChange={(e) => setCurrentPromptIndex(parseInt(e.target.value))}
-            title="Select Bible study prompt"
-          >
-            {bibleStudyPrompts.map((prompt, index) => (
-              <option key={prompt.id} value={index}>
-                {prompt.id}. {prompt.label}
-              </option>
-            ))}
-          </select>
-          
+        <div className="relative">
           <button
-            onClick={() => {
-              // Get current selection from the dropdown directly
-              const promptsSelect = document.querySelector('select[title="Select Bible study prompt"]');
-              if (promptsSelect) {
-                const currentIndex = parseInt(promptsSelect.value);
-                const currentPrompt = bibleStudyPrompts[currentIndex];
-                handlePromptClipboard(currentPrompt.template);
-              }
-            }}
-            className="ml-1 px-2 py-0.5 rounded focus:outline-none bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs"
-            title="Load selected prompt to clipboard"
+            onClick={() => setShowPromptDropdown(!showPromptDropdown)}
+            className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-green-100 text-green-700 hover:bg-green-200 text-xs"
+            title="Copy Bible study prompts to clipboard"
           >
-            <Download className="h-3 w-3" />
+            Prompts ▼
           </button>
-          (8:read2end,&darr;:+10)
+          (7:read2end,&darr;:+10)
+          {showPromptDropdown && (
+            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg z-50">
+              <div className="py-1">
+                {bibleStudyPrompts.map((prompt) => (
+                  <button
+                    key={prompt.id}
+                    onClick={() => handlePromptClipboard(prompt.template)}
+                    className="block w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                    title={`Copy ${prompt.label} prompt to clipboard`}
+                  >
+                    {prompt.id}. {prompt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Text to Speech Component */}
@@ -810,6 +789,8 @@ const BibleApp = () => {
     pendingBookRef.current = pendingBookSelection;
   }, [pendingBookSelection]);
   const [showCrossRef, setShowCrossRef] = useState(null);
+  const [nextChapterClickCount, setNextChapterClickCount] = useState(0);
+  const [autoSavePosition, setAutoSavePosition] = useState("1");
 
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
@@ -1296,6 +1277,22 @@ const BibleApp = () => {
         
         e.preventDefault();
       }
+      
+      // Shift+4 key - simulate clicking the To Clip button (moved from 't' key)
+      else if (e.key === '$' || (e.shiftKey && e.key === '4')) {
+        // Find and click the To Clip button
+        const clipButton = Array.from(document.querySelectorAll('button'))
+          .find(button => button.title && button.title.includes('Copy VLC command') && button.textContent.includes('To Clip'));
+        
+        if (clipButton) {
+          clipButton.click();
+        } else {
+          // If we can't find the button but handleClipboardButtonClick is defined, call it directly
+          handleClipboardButtonClick();
+        }
+        
+        e.preventDefault();
+      }
       // 'd' key - toggle dark mode
       else if (e.key === 'd' || e.keyCode === 68) {
         // Find and click the dark mode toggle button
@@ -1351,92 +1348,291 @@ const BibleApp = () => {
 
         e.preventDefault();
       }
-      // '5' key - cycle through Firebase saved positions (visual only, no actions)
-      else if (e.key === '5' || e.keyCode === 53) {
-        // First, enable Firebase if it's not already enabled
-        const firebaseToggleButton = document.querySelector('button[title*="Firebase loading is"]');
-        if (firebaseToggleButton && firebaseToggleButton.textContent.includes('OFF')) {
-          firebaseToggleButton.click();
-          console.log("5 key pressed - auto-enabled Firebase");
-        }
-        
-        // Find the Firebase position select element by its unique class
-        const firebaseSelect = document.querySelector('select.firebase-position-select');
-        if (firebaseSelect && firebaseSelect.options.length > 1) {
-          // Get current selected index
-          let currentIndex = firebaseSelect.selectedIndex;
-          
-          // Skip the first option ("Select position...") and cycle through actual positions
-          if (currentIndex === 0 || currentIndex === firebaseSelect.options.length - 1) {
-            currentIndex = 1; // Start from first real position
-          } else {
-            currentIndex += 1; // Move to next position
-          }
-          
-          // Update the select value WITHOUT triggering change event
-          firebaseSelect.selectedIndex = currentIndex;
-          
-          console.log(`5 key pressed - cycled Firebase position to ${firebaseSelect.options[currentIndex].text} (visual only)`);
-        }
-        e.preventDefault();
-      }
-      // '6' key - click Firebase Save button
-      else if (e.key === '6' || e.keyCode === 54) {
-        // Find the Firebase Save button by its title
-        const saveButton = document.querySelector('button[title="Save current position"]');
-        if (saveButton) {
-          saveButton.click();
-          console.log("6 key pressed - clicked Firebase Save button");
-        }
-        e.preventDefault();
-      }
-      // '7' key - click Firebase Load button
-      else if (e.key === '7' || e.keyCode === 55) {
-        // Find the Firebase Load button by its title
-        const loadButton = document.querySelector('button[title="Load from selected position"]');
-        if (loadButton) {
-          loadButton.click();
-          console.log("7 key pressed - clicked Firebase Load button");
-        }
-        e.preventDefault();
-      }
 
-      // '8' key - toggle Read to End button
-      else if (e.key === '8' || e.keyCode === 56) {
+      // '7' key - toggle Read to End button
+      else if (e.key === '7' || e.keyCode === 55) {
         // Find and click the Read to End toggle button
         const readToEndButton = Array.from(document.querySelectorAll('button'))
           .find(btn => btn.textContent.includes('Read2End'));
         
         if (readToEndButton) {
           readToEndButton.click();
-          console.log("8 key pressed - toggled Read to End");
+          console.log("7 key pressed - toggled Read to End");
         }
         e.preventDefault();
       }
-      // '9' key - cycle to next prompt (like Next Transl button)
+      // '8' key - copy practical application prompt to clipboard
+      else if (e.key === '8' || e.keyCode === 56) {
+        console.log("8 key pressed - starting practical application prompt");
+        console.log("selectedBook:", selectedBook);
+        console.log("selectedChapter:", selectedChapter);
+        console.log("pendingBookSelection:", pendingBookSelection);
+        
+        const practicalApplicationTemplate = 'Practical Application: For {book} {chapter}, "Given the original context and timeless principles in this chapter, what specific life situations, moral decisions, relationship dynamics, or spiritual challenges does this text address, and how can its wisdom be authentically applied to contemporary personal and communal life?"';
+        
+        // Use the most current book information available
+        // Priority: pendingBookSelection -> selectedBook -> fallback to page title detection
+        let currentBook = null;
+        let currentChapter = selectedChapter;
+        
+        // Always try to get the current chapter from DOM first since state might be stale
+        const chapterSelect = document.querySelector('select.border.border-gray-300, select.border.border-gray-600');
+        if (chapterSelect) {
+          const selectedChapterFromDOM = parseInt(chapterSelect.value);
+          if (selectedChapterFromDOM) {
+            currentChapter = selectedChapterFromDOM;
+            console.log('Found chapter from DOM:', currentChapter);
+          }
+        }
+        
+        if (pendingBookSelection) {
+          currentBook = pendingBookSelection;
+          console.log('Using pendingBookSelection:', currentBook.abbrev);
+        } else if (selectedBook) {
+          currentBook = selectedBook;
+          console.log('Using selectedBook:', currentBook.abbrev);
+        } else {
+          // Try to detect from page title and DOM elements as fallback
+          const pageTitle = document.querySelector('h1')?.textContent || 'Unknown';
+          console.log('Visual page title:', pageTitle);
+          
+          // Create a simple book detection without relying on bibleData
+          const bookNameToAbbrev = {
+            'Genesis': 'gn', 'Exodus': 'ex', 'Leviticus': 'lv', 'Numbers': 'nm', 'Deuteronomy': 'dt',
+            'Joshua': 'js', 'Judges': 'jud', 'Ruth': 'rt', '1 Samuel': '1sm', '2 Samuel': '2sm',
+            '1 Kings': '1kgs', '2 Kings': '2kgs', '1 Chronicles': '1ch', '2 Chronicles': '2ch',
+            'Ezra': 'ezr', 'Nehemiah': 'ne', 'Esther': 'et', 'Job': 'job', 'Psalms': 'ps',
+            'Proverbs': 'prv', 'Ecclesiastes': 'ec', 'Song of Solomon': 'so', 'Isaiah': 'is',
+            'Jeremiah': 'jr', 'Lamentations': 'lm', 'Ezekiel': 'ez', 'Daniel': 'dn',
+            'Hosea': 'ho', 'Joel': 'jl', 'Amos': 'am', 'Obadiah': 'ob', 'Jonah': 'jn',
+            'Micah': 'mi', 'Nahum': 'na', 'Habakkuk': 'hk', 'Zephaniah': 'zp', 'Haggai': 'hg',
+            'Zechariah': 'zc', 'Malachi': 'ml', 'Matthew': 'mt', 'Mark': 'mk', 'Luke': 'lk',
+            'John': 'jo', 'Acts': 'act', 'Romans': 'rm', '1 Corinthians': '1co', '2 Corinthians': '2co',
+            'Galatians': 'gl', 'Ephesians': 'eph', 'Philippians': 'ph', 'Colossians': 'cl',
+            '1 Thessalonians': '1ts', '2 Thessalonians': '2ts', '1 Timothy': '1tm', '2 Timothy': '2tm',
+            'Titus': 'tt', 'Philemon': 'phm', 'Hebrews': 'hb', 'James': 'jm', '1 Peter': '1pe',
+            '2 Peter': '2pe', '1 John': '1jo', '2 John': '2jo', '3 John': '3jo', 'Jude': 'jd',
+            'Revelation': 're'
+          };
+          
+          console.log('Searching for book name in title...');
+          for (const [bookName, abbrev] of Object.entries(bookNameToAbbrev)) {
+            console.log(`Checking "${bookName}" against title "${pageTitle}"`);
+            if (pageTitle.includes(bookName)) {
+              // Create a simple book object
+              currentBook = { abbrev: abbrev, book: bookName };
+              console.log('Detected book from page title:', abbrev, '->', bookName);
+              break;
+            }
+          }
+          
+          if (!currentBook) {
+            console.log('No book matched the page title');
+          }
+        }
+        
+        if (currentBook) {
+          const bookName = currentBook.book || currentBook.abbrev;
+          console.log("bookName:", bookName);
+          
+          const finalPrompt = practicalApplicationTemplate.replace('{book}', bookName).replace('{chapter}', `Chapter ${currentChapter}`);
+          console.log("finalPrompt:", finalPrompt);
+          
+          navigator.clipboard.writeText(finalPrompt)
+            .then(() => {
+              console.log("Successfully copied to clipboard");
+              alert(`Copied to clipboard: ${finalPrompt}`);
+            })
+            .catch(err => {
+              console.error('Failed to copy text: ', err);
+              alert('Failed to copy to clipboard. ' + err);
+            });
+        } else {
+          console.log('No book found for practical application prompt');
+        }
+        
+        e.preventDefault();
+      }
+      // '9' key - copy creative engagement prompt to clipboard
       else if (e.key === '9' || e.keyCode === 57) {
-        // Find the prompts select element by its title
-        const promptsSelect = document.querySelector('select[title="Select Bible study prompt"]');
-        if (promptsSelect) {
-          const currentIndex = parseInt(promptsSelect.value);
-          const totalOptions = promptsSelect.options.length;
-          const nextIndex = (currentIndex + 1) % totalOptions;
-          
-          // Update the select value directly without triggering change event
-          promptsSelect.value = nextIndex;
-          
-          console.log(`9 key pressed - cycled to prompt ${nextIndex + 1}: ${promptsSelect.options[nextIndex].text}`);
+        console.log("9 key pressed - starting creative engagement prompt");
+        console.log("selectedBook:", selectedBook);
+        console.log("selectedChapter:", selectedChapter);
+        console.log("pendingBookSelection:", pendingBookSelection);
+        
+        const creativeEngagementTemplate = 'For {book} {chapter}, "If you were to reimagine this chapter through contemporary storytelling, artistic expression, or modern parallels, what would it look like, what current situations mirror its dynamics, and how might creative interpretation help unlock its relevance for today\'s audience?"';
+        
+        // Use the most current book information available
+        // Priority: pendingBookSelection -> selectedBook -> fallback to page title detection
+        let currentBook = null;
+        let currentChapter = selectedChapter;
+        
+        // Always try to get the current chapter from DOM first since state might be stale
+        const chapterSelect = document.querySelector('select.border.border-gray-300, select.border.border-gray-600');
+        if (chapterSelect) {
+          const selectedChapterFromDOM = parseInt(chapterSelect.value);
+          if (selectedChapterFromDOM) {
+            currentChapter = selectedChapterFromDOM;
+            console.log('Found chapter from DOM:', currentChapter);
+          }
         }
+        
+        if (pendingBookSelection) {
+          currentBook = pendingBookSelection;
+          console.log('Using pendingBookSelection:', currentBook.abbrev);
+        } else if (selectedBook) {
+          currentBook = selectedBook;
+          console.log('Using selectedBook:', currentBook.abbrev);
+        } else {
+          // Try to detect from page title and DOM elements as fallback
+          const pageTitle = document.querySelector('h1')?.textContent || 'Unknown';
+          console.log('Visual page title:', pageTitle);
+          
+          // Create a simple book detection without relying on bibleData
+          const bookNameToAbbrev = {
+            'Genesis': 'gn', 'Exodus': 'ex', 'Leviticus': 'lv', 'Numbers': 'nm', 'Deuteronomy': 'dt',
+            'Joshua': 'js', 'Judges': 'jud', 'Ruth': 'rt', '1 Samuel': '1sm', '2 Samuel': '2sm',
+            '1 Kings': '1kgs', '2 Kings': '2kgs', '1 Chronicles': '1ch', '2 Chronicles': '2ch',
+            'Ezra': 'ezr', 'Nehemiah': 'ne', 'Esther': 'et', 'Job': 'job', 'Psalms': 'ps',
+            'Proverbs': 'prv', 'Ecclesiastes': 'ec', 'Song of Solomon': 'so', 'Isaiah': 'is',
+            'Jeremiah': 'jr', 'Lamentations': 'lm', 'Ezekiel': 'ez', 'Daniel': 'dn',
+            'Hosea': 'ho', 'Joel': 'jl', 'Amos': 'am', 'Obadiah': 'ob', 'Jonah': 'jn',
+            'Micah': 'mi', 'Nahum': 'na', 'Habakkuk': 'hk', 'Zephaniah': 'zp', 'Haggai': 'hg',
+            'Zechariah': 'zc', 'Malachi': 'ml', 'Matthew': 'mt', 'Mark': 'mk', 'Luke': 'lk',
+            'John': 'jo', 'Acts': 'act', 'Romans': 'rm', '1 Corinthians': '1co', '2 Corinthians': '2co',
+            'Galatians': 'gl', 'Ephesians': 'eph', 'Philippians': 'ph', 'Colossians': 'cl',
+            '1 Thessalonians': '1ts', '2 Thessalonians': '2ts', '1 Timothy': '1tm', '2 Timothy': '2tm',
+            'Titus': 'tt', 'Philemon': 'phm', 'Hebrews': 'hb', 'James': 'jm', '1 Peter': '1pe',
+            '2 Peter': '2pe', '1 John': '1jo', '2 John': '2jo', '3 John': '3jo', 'Jude': 'jd',
+            'Revelation': 're'
+          };
+          
+          console.log('Searching for book name in title...');
+          for (const [bookName, abbrev] of Object.entries(bookNameToAbbrev)) {
+            console.log(`Checking "${bookName}" against title "${pageTitle}"`);
+            if (pageTitle.includes(bookName)) {
+              // Create a simple book object
+              currentBook = { abbrev: abbrev, book: bookName };
+              console.log('Detected book from page title:', abbrev, '->', bookName);
+              break;
+            }
+          }
+          
+          if (!currentBook) {
+            console.log('No book matched the page title');
+          }
+        }
+        
+        if (currentBook) {
+          const bookName = currentBook.book || currentBook.abbrev;
+          console.log("bookName:", bookName);
+          
+          const finalPrompt = creativeEngagementTemplate.replace('{book}', bookName).replace('{chapter}', `Chapter ${currentChapter}`);
+          console.log("finalPrompt:", finalPrompt);
+          
+          navigator.clipboard.writeText(finalPrompt)
+            .then(() => {
+              console.log("Successfully copied to clipboard");
+              alert(`Copied to clipboard: ${finalPrompt}`);
+            })
+            .catch(err => {
+              console.error('Failed to copy text: ', err);
+              alert('Failed to copy to clipboard. ' + err);
+            });
+        } else {
+          console.log('No book found for creative engagement prompt');
+        }
+        
         e.preventDefault();
       }
-      // '0' key - click Load prompt button
+      // '0' key - copy basic book and chapter template to clipboard
       else if (e.key === '0' || e.keyCode === 48) {
-        // Find the Load prompt button by its title
-        const loadButton = document.querySelector('button[title="Load selected prompt to clipboard"]');
-        if (loadButton) {
-          loadButton.click();
-          console.log("0 key pressed - clicked Load prompt button");
+        console.log("0 key pressed - starting basic book and chapter template");
+        console.log("selectedBook:", selectedBook);
+        console.log("selectedChapter:", selectedChapter);
+        console.log("pendingBookSelection:", pendingBookSelection);
+        
+        // Use the most current book information available
+        // Priority: pendingBookSelection -> selectedBook -> fallback to page title detection
+        let currentBook = null;
+        let currentChapter = selectedChapter;
+        
+        // Always try to get the current chapter from DOM first since state might be stale
+        const chapterSelect = document.querySelector('select.border.border-gray-300, select.border.border-gray-600');
+        if (chapterSelect) {
+          const selectedChapterFromDOM = parseInt(chapterSelect.value);
+          if (selectedChapterFromDOM) {
+            currentChapter = selectedChapterFromDOM;
+            console.log('Found chapter from DOM:', currentChapter);
+          }
         }
+        
+        if (pendingBookSelection) {
+          currentBook = pendingBookSelection;
+          console.log('Using pendingBookSelection:', currentBook.abbrev);
+        } else if (selectedBook) {
+          currentBook = selectedBook;
+          console.log('Using selectedBook:', currentBook.abbrev);
+        } else {
+          // Try to detect from page title and DOM elements as fallback
+          const pageTitle = document.querySelector('h1')?.textContent || 'Unknown';
+          console.log('Visual page title:', pageTitle);
+          
+          // Create a simple book detection without relying on bibleData
+          const bookNameToAbbrev = {
+            'Genesis': 'gn', 'Exodus': 'ex', 'Leviticus': 'lv', 'Numbers': 'nm', 'Deuteronomy': 'dt',
+            'Joshua': 'js', 'Judges': 'jud', 'Ruth': 'rt', '1 Samuel': '1sm', '2 Samuel': '2sm',
+            '1 Kings': '1kgs', '2 Kings': '2kgs', '1 Chronicles': '1ch', '2 Chronicles': '2ch',
+            'Ezra': 'ezr', 'Nehemiah': 'ne', 'Esther': 'et', 'Job': 'job', 'Psalms': 'ps',
+            'Proverbs': 'prv', 'Ecclesiastes': 'ec', 'Song of Solomon': 'so', 'Isaiah': 'is',
+            'Jeremiah': 'jr', 'Lamentations': 'lm', 'Ezekiel': 'ez', 'Daniel': 'dn',
+            'Hosea': 'ho', 'Joel': 'jl', 'Amos': 'am', 'Obadiah': 'ob', 'Jonah': 'jn',
+            'Micah': 'mi', 'Nahum': 'na', 'Habakkuk': 'hk', 'Zephaniah': 'zp', 'Haggai': 'hg',
+            'Zechariah': 'zc', 'Malachi': 'ml', 'Matthew': 'mt', 'Mark': 'mk', 'Luke': 'lk',
+            'John': 'jo', 'Acts': 'act', 'Romans': 'rm', '1 Corinthians': '1co', '2 Corinthians': '2co',
+            'Galatians': 'gl', 'Ephesians': 'eph', 'Philippians': 'ph', 'Colossians': 'cl',
+            '1 Thessalonians': '1ts', '2 Thessalonians': '2ts', '1 Timothy': '1tm', '2 Timothy': '2tm',
+            'Titus': 'tt', 'Philemon': 'phm', 'Hebrews': 'hb', 'James': 'jm', '1 Peter': '1pe',
+            '2 Peter': '2pe', '1 John': '1jo', '2 John': '2jo', '3 John': '3jo', 'Jude': 'jd',
+            'Revelation': 're'
+          };
+          
+          console.log('Searching for book name in title...');
+          for (const [bookName, abbrev] of Object.entries(bookNameToAbbrev)) {
+            console.log(`Checking "${bookName}" against title "${pageTitle}"`);
+            if (pageTitle.includes(bookName)) {
+              // Create a simple book object
+              currentBook = { abbrev: abbrev, book: bookName };
+              console.log('Detected book from page title:', abbrev, '->', bookName);
+              break;
+            }
+          }
+          
+          if (!currentBook) {
+            console.log('No book matched the page title');
+          }
+        }
+        
+        if (currentBook) {
+          const bookName = currentBook.book || currentBook.abbrev;
+          console.log("bookName:", bookName);
+          
+          const finalPrompt = `For ${bookName}, Chapter ${currentChapter}, `;
+          console.log("finalPrompt:", finalPrompt);
+          
+          navigator.clipboard.writeText(finalPrompt)
+            .then(() => {
+              console.log("Successfully copied to clipboard");
+              alert(`Copied to clipboard: ${finalPrompt}`);
+            })
+            .catch(err => {
+              console.error('Failed to copy text: ', err);
+              alert('Failed to copy to clipboard. ' + err);
+            });
+        } else {
+          console.log('No book found for basic template');
+        }
+        
         e.preventDefault();
       }
       // Left Arrow - go to previous verse
@@ -2058,6 +2254,8 @@ const BibleApp = () => {
 
   // Load Bible data and cross-references on component mount
   useEffect(() => {
+    // Reset the Next Chapter click counter when the component mounts
+    setNextChapterClickCount(0);
     
     const loadData = async () => {
       try {
@@ -2634,6 +2832,34 @@ const BibleApp = () => {
 
     // No need to reset auto-scroll timer here - will be handled in NavigationPlaceholder component
 
+    // Handle Next Chapter button click counting and auto-save
+    if (fromNextChapterButton) {
+      const newCount = nextChapterClickCount + 1;
+      setNextChapterClickCount(newCount);
+      
+      // If this is the second click, trigger auto-save without resetting counter
+      if (newCount >= 2) {
+        try {
+          console.log(`Auto-saving to position ${autoSavePosition}`);
+
+          // Direct save using the Firebase save function
+          // Create position data object
+          const positionData = JSON.stringify({
+            bookAbbrev: selectedBook?.abbrev,
+            chapter: chapterNum, // Use the new chapter we're navigating to
+            translation: selectedTranslation,
+            timestamp: Date.now(),
+            stickyPane: stickyPane
+          });
+
+          // Call the save function directly with the selected position
+          handleFirebasePositionSave(`${autoSavePosition}-position`, positionData);
+        } catch (error) {
+          console.error("Error during auto-save:", error);
+        }
+        // Note: Counter is not reset here - it will only reset on page load
+      }
+    }
     
     // Update primary reading
     if (selectedBook) {
@@ -2653,8 +2879,11 @@ const BibleApp = () => {
     }
     
     // When navigating between chapters, we want to start at the top of the page
-    localStorage.removeItem('mobileScrollPosition');
-    setMobileScrollPosition(0);
+    // Only clear this if coming from the Next Chapter button
+    if (fromNextChapterButton) {
+      localStorage.removeItem('mobileScrollPosition');
+      setMobileScrollPosition(0);
+    }
     
     // Reset scroll sync state
     lastPrimaryScrollPos.current = 0;
@@ -3604,6 +3833,8 @@ const BibleApp = () => {
               isTabletView={isTabletView}
               stickyPane={stickyPane}
               isDarkMode={isDarkMode}
+              autoSavePosition={autoSavePosition}
+              onAutoSavePositionChange={setAutoSavePosition}
               onNextChapter={handleChapterSelect}
               bibleData={bibleData}
               setSelectedBook={setSelectedBook}

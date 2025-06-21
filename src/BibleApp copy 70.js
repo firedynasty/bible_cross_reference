@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 // eslint-disable-next-line no-unused-vars
-import { Book, Link, ChevronRight, History, BookOpen, Save, Database, Download } from 'lucide-react';
+import { Book, Link, ChevronRight, History, BookOpen, Save, Database } from 'lucide-react';
 import TextToSpeech from './components/TextToSpeech';
 
 // Import Firebase modules
@@ -64,7 +64,7 @@ const getBaseUrl = () => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, autoSavePosition, onAutoSavePositionChange, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -131,19 +131,13 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
 
   // Handle saving current position to selected key
   const handleSave = () => {
-    // Determine which position to save to
-    let savePosition;
-    
-    if (selectedKey && selectedKey.includes('-position')) {
-      // If a position is selected in the dropdown, save to that position
-      savePosition = selectedKey.split('-')[0];
-    } else {
-      // If no position is selected, default to position 1
-      savePosition = '1';
+    if (!autoSavePosition) {
+      console.warn('Save aborted: No auto-save position selected');
+      return;
     }
 
     // Create the key string in the expected format
-    const keyToSave = `${savePosition}-position`;
+    const keyToSave = `${autoSavePosition}-position`;
 
     // Create position data object
     const positionData = JSON.stringify({
@@ -154,19 +148,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       stickyPane: stickyPane
     });
 
-    console.log(`Saving to position ${savePosition}: ${keyToSave}`);
     onSave(keyToSave, positionData);
-  };
-
-  // Handle loading position from selected key
-  const handleLoad = () => {
-    if (!selectedKey) {
-      console.warn('Load aborted: No position selected');
-      return;
-    }
-
-    // Call the onSelect function to load the position
-    onSelect(selectedKey);
   };
 
   // Get key number from key string (e.g., "1-position" returns "1")
@@ -220,13 +202,27 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       </button>
       
       <select
-        className={`firebase-position-select border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
+        className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
+        value={autoSavePosition}
+        onChange={(e) => onAutoSavePositionChange && onAutoSavePositionChange(e.target.value)}
+        title="Select position for auto-save"
+      >
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+      </select>
+      <select
+        className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
         value={selectedKey}
         onChange={(e) => {
           const newKey = e.target.value;
           setSelectedKey(newKey);
           
-          // Don't automatically load - let user manually trigger with '7' key or Load button
+          // Automatically load the selected position
+          if (newKey) {
+            onSelect(newKey);
+          }
         }}
       >
         <option value="">Select position...</option>
@@ -245,16 +241,6 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       >
         <Save className="h-3 w-3 mr-1" />
         Save
-      </button>
-      
-      <button
-        onClick={handleLoad}
-        disabled={loading}
-        className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded hover:bg-blue-600 transition-colors disabled:${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
-        title="Load from selected position"
-      >
-        <Download className="h-3 w-3 mr-1" />
-        Load
       </button>
       
       {/* Firebase Toggle Button */}
@@ -340,7 +326,6 @@ const NavigationPlaceholder = ({
   const [showPromptDropdown, setShowPromptDropdown] = useState(false);
   const [showTouchDropdown, setShowTouchDropdown] = useState(false);
   const [showLinksDropdown, setShowLinksDropdown] = useState(false);
-  const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
 
   // Bible study prompt options
   const bibleStudyPrompts = [
@@ -480,37 +465,31 @@ const NavigationPlaceholder = ({
           </svg>
         </button>
         
-        <div className="flex items-center">
-          <select
-            className="border border-gray-300 bg-white rounded px-2 py-1 text-sm max-w-xs ml-2"
-            style={{width: 'auto'}}
-            value={currentPromptIndex}
-            onChange={(e) => setCurrentPromptIndex(parseInt(e.target.value))}
-            title="Select Bible study prompt"
-          >
-            {bibleStudyPrompts.map((prompt, index) => (
-              <option key={prompt.id} value={index}>
-                {prompt.id}. {prompt.label}
-              </option>
-            ))}
-          </select>
-          
+        <div className="relative">
           <button
-            onClick={() => {
-              // Get current selection from the dropdown directly
-              const promptsSelect = document.querySelector('select[title="Select Bible study prompt"]');
-              if (promptsSelect) {
-                const currentIndex = parseInt(promptsSelect.value);
-                const currentPrompt = bibleStudyPrompts[currentIndex];
-                handlePromptClipboard(currentPrompt.template);
-              }
-            }}
-            className="ml-1 px-2 py-0.5 rounded focus:outline-none bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs"
-            title="Load selected prompt to clipboard"
+            onClick={() => setShowPromptDropdown(!showPromptDropdown)}
+            className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-green-100 text-green-700 hover:bg-green-200 text-xs"
+            title="Copy Bible study prompts to clipboard"
           >
-            <Download className="h-3 w-3" />
+            Prompts ▼
           </button>
-          (8:read2end,&darr;:+10)
+          (7:read2end,&darr;:+10)
+          {showPromptDropdown && (
+            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg z-50">
+              <div className="py-1">
+                {bibleStudyPrompts.map((prompt) => (
+                  <button
+                    key={prompt.id}
+                    onClick={() => handlePromptClipboard(prompt.template)}
+                    className="block w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                    title={`Copy ${prompt.label} prompt to clipboard`}
+                  >
+                    {prompt.id}. {prompt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Text to Speech Component */}
@@ -810,6 +789,8 @@ const BibleApp = () => {
     pendingBookRef.current = pendingBookSelection;
   }, [pendingBookSelection]);
   const [showCrossRef, setShowCrossRef] = useState(null);
+  const [nextChapterClickCount, setNextChapterClickCount] = useState(0);
+  const [autoSavePosition, setAutoSavePosition] = useState("1");
 
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
@@ -886,11 +867,11 @@ const BibleApp = () => {
   
   // Touch scroll mode options
   const touchScrollModes = [
-    { id: 'disabled', label: 'D', description: 'Normal click behavior' },
-    { id: 'right-only', label: 'R P', description: 'Touch right pane triggers page down' },
+    { id: 'disabled', label: 'Disabled', description: 'Normal click behavior' },
+    { id: 'right-only', label: 'Right Pane', description: 'Touch right pane triggers page down' },
     { id: 'both-panes', label: 'Both Panes', description: 'Touch either pane triggers page down' },
-    { id: 'right-reduced', label: 'R R', description: 'Touch right pane with smaller scroll' },
-    { id: 'right-independent', label: 'R I', description: 'Touch right pane scrolls only right pane (no sync)' }
+    { id: 'right-reduced', label: 'Right Reduced', description: 'Touch right pane with smaller scroll' },
+    { id: 'right-independent', label: 'Right Independent', description: 'Touch right pane scrolls only right pane (no sync)' }
   ];
   
   // State to track scroll position for mobile view during translation changes
@@ -1296,6 +1277,22 @@ const BibleApp = () => {
         
         e.preventDefault();
       }
+      
+      // Shift+4 key - simulate clicking the To Clip button (moved from 't' key)
+      else if (e.key === '$' || (e.shiftKey && e.key === '4')) {
+        // Find and click the To Clip button
+        const clipButton = Array.from(document.querySelectorAll('button'))
+          .find(button => button.title && button.title.includes('Copy VLC command') && button.textContent.includes('To Clip'));
+        
+        if (clipButton) {
+          clipButton.click();
+        } else {
+          // If we can't find the button but handleClipboardButtonClick is defined, call it directly
+          handleClipboardButtonClick();
+        }
+        
+        e.preventDefault();
+      }
       // 'd' key - toggle dark mode
       else if (e.key === 'd' || e.keyCode === 68) {
         // Find and click the dark mode toggle button
@@ -1351,91 +1348,107 @@ const BibleApp = () => {
 
         e.preventDefault();
       }
-      // '5' key - cycle through Firebase saved positions (visual only, no actions)
-      else if (e.key === '5' || e.keyCode === 53) {
-        // First, enable Firebase if it's not already enabled
-        const firebaseToggleButton = document.querySelector('button[title*="Firebase loading is"]');
-        if (firebaseToggleButton && firebaseToggleButton.textContent.includes('OFF')) {
-          firebaseToggleButton.click();
-          console.log("5 key pressed - auto-enabled Firebase");
-        }
-        
-        // Find the Firebase position select element by its unique class
-        const firebaseSelect = document.querySelector('select.firebase-position-select');
-        if (firebaseSelect && firebaseSelect.options.length > 1) {
-          // Get current selected index
-          let currentIndex = firebaseSelect.selectedIndex;
-          
-          // Skip the first option ("Select position...") and cycle through actual positions
-          if (currentIndex === 0 || currentIndex === firebaseSelect.options.length - 1) {
-            currentIndex = 1; // Start from first real position
-          } else {
-            currentIndex += 1; // Move to next position
-          }
-          
-          // Update the select value WITHOUT triggering change event
-          firebaseSelect.selectedIndex = currentIndex;
-          
-          console.log(`5 key pressed - cycled Firebase position to ${firebaseSelect.options[currentIndex].text} (visual only)`);
-        }
-        e.preventDefault();
-      }
-      // '6' key - click Firebase Save button
-      else if (e.key === '6' || e.keyCode === 54) {
-        // Find the Firebase Save button by its title
-        const saveButton = document.querySelector('button[title="Save current position"]');
-        if (saveButton) {
-          saveButton.click();
-          console.log("6 key pressed - clicked Firebase Save button");
-        }
-        e.preventDefault();
-      }
-      // '7' key - click Firebase Load button
-      else if (e.key === '7' || e.keyCode === 55) {
-        // Find the Firebase Load button by its title
-        const loadButton = document.querySelector('button[title="Load from selected position"]');
-        if (loadButton) {
-          loadButton.click();
-          console.log("7 key pressed - clicked Firebase Load button");
-        }
-        e.preventDefault();
-      }
 
-      // '8' key - toggle Read to End button
-      else if (e.key === '8' || e.keyCode === 56) {
+      
+      // '0' key - scroll up one line at a time in KJV pane (same as Up Arrow)
+      else if ((e.key === '0' || e.keyCode === 48) && kjvContentRef.current) {
+        
+        // Set the flag to prevent feedback loops
+        isManuallyScrollingRef.current = true;
+
+        try {
+          // Get KJV pane reference
+          const kjvPane = kjvContentRef.current;
+          
+          // Calculate line height - using verse element height as reference
+          // Default to a reasonable line height if we can't find a verse element
+          const lineHeight = 60; // Default is 60px (reasonable for text-2xl)
+          
+          // Scroll KJV pane up by one line
+          const kjvNewPosition = kjvPane.scrollTop - lineHeight;
+          kjvPane.scrollTop = Math.max(0, kjvNewPosition); // Ensure we don't scroll past the top
+
+          // In mobile view, we can skip synchronizing with primary pane
+          if (!isMobileView && chapterContentRef.current) {
+            const primaryPane = chapterContentRef.current;
+
+            // Calculate new scroll percentage of KJV after scrolling
+            const newKjvScrollPercentage = kjvPane.scrollTop /
+              (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
+
+            // Apply the same percentage to primary pane
+            primaryPane.scrollTop = newKjvScrollPercentage *
+              (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
+
+            // Update last scroll position for sync algorithm
+            lastPrimaryScrollPos.current = primaryPane.scrollTop;
+          }
+
+          e.preventDefault();
+        } catch (error) {
+          console.error("Error during keyboard scroll:", error);
+        } finally {
+          // Reset the flag
+          setTimeout(() => {
+            isManuallyScrollingRef.current = false;
+          }, 50);
+        }
+      }
+      
+      // '9' key - scroll down one line at a time in KJV pane (same as Down Arrow)
+      else if ((e.key === '9' || e.keyCode === 57) && kjvContentRef.current) {
+        
+        // Set the flag to prevent feedback loops
+        isManuallyScrollingRef.current = true;
+
+        try {
+          // Get KJV pane reference
+          const kjvPane = kjvContentRef.current;
+          
+          // Calculate line height - using verse element height as reference
+          // Default to a reasonable line height if we can't find a verse element
+          const lineHeight = 60; // Default is 60px (reasonable for text-2xl)
+          
+          // Scroll KJV pane down by one line
+          const kjvNewPosition = kjvPane.scrollTop + lineHeight;
+          const kjvMaxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
+          kjvPane.scrollTop = Math.min(kjvMaxScroll, kjvNewPosition);
+
+          // In mobile view, we can skip synchronizing with primary pane
+          if (!isMobileView && chapterContentRef.current) {
+            const primaryPane = chapterContentRef.current;
+
+            // Calculate new scroll percentage of KJV after scrolling
+            const newKjvScrollPercentage = kjvPane.scrollTop /
+              (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
+
+            // Apply the same percentage to primary pane
+            primaryPane.scrollTop = newKjvScrollPercentage *
+              (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
+
+            // Update last scroll position for sync algorithm
+            lastPrimaryScrollPos.current = primaryPane.scrollTop;
+          }
+
+          e.preventDefault();
+        } catch (error) {
+          console.error("Error during keyboard scroll:", error);
+        } finally {
+          // Reset the flag
+          setTimeout(() => {
+            isManuallyScrollingRef.current = false;
+          }, 50);
+        }
+      }
+      // '7' key - toggle Read to End button
+      else if (e.key === '7' || e.keyCode === 55) {
         // Find and click the Read to End toggle button
         const readToEndButton = Array.from(document.querySelectorAll('button'))
           .find(btn => btn.textContent.includes('Read2End'));
         
         if (readToEndButton) {
           readToEndButton.click();
-          console.log("8 key pressed - toggled Read to End");
-        }
-        e.preventDefault();
-      }
-      // '9' key - cycle to next prompt (like Next Transl button)
-      else if (e.key === '9' || e.keyCode === 57) {
-        // Find the prompts select element by its title
-        const promptsSelect = document.querySelector('select[title="Select Bible study prompt"]');
-        if (promptsSelect) {
-          const currentIndex = parseInt(promptsSelect.value);
-          const totalOptions = promptsSelect.options.length;
-          const nextIndex = (currentIndex + 1) % totalOptions;
-          
-          // Update the select value directly without triggering change event
-          promptsSelect.value = nextIndex;
-          
-          console.log(`9 key pressed - cycled to prompt ${nextIndex + 1}: ${promptsSelect.options[nextIndex].text}`);
-        }
-        e.preventDefault();
-      }
-      // '0' key - click Load prompt button
-      else if (e.key === '0' || e.keyCode === 48) {
-        // Find the Load prompt button by its title
-        const loadButton = document.querySelector('button[title="Load selected prompt to clipboard"]');
-        if (loadButton) {
-          loadButton.click();
-          console.log("0 key pressed - clicked Load prompt button");
+          console.log("7 key pressed - toggled Read to End");
         }
         e.preventDefault();
       }
@@ -2058,6 +2071,8 @@ const BibleApp = () => {
 
   // Load Bible data and cross-references on component mount
   useEffect(() => {
+    // Reset the Next Chapter click counter when the component mounts
+    setNextChapterClickCount(0);
     
     const loadData = async () => {
       try {
@@ -2634,6 +2649,34 @@ const BibleApp = () => {
 
     // No need to reset auto-scroll timer here - will be handled in NavigationPlaceholder component
 
+    // Handle Next Chapter button click counting and auto-save
+    if (fromNextChapterButton) {
+      const newCount = nextChapterClickCount + 1;
+      setNextChapterClickCount(newCount);
+      
+      // If this is the second click, trigger auto-save without resetting counter
+      if (newCount >= 2) {
+        try {
+          console.log(`Auto-saving to position ${autoSavePosition}`);
+
+          // Direct save using the Firebase save function
+          // Create position data object
+          const positionData = JSON.stringify({
+            bookAbbrev: selectedBook?.abbrev,
+            chapter: chapterNum, // Use the new chapter we're navigating to
+            translation: selectedTranslation,
+            timestamp: Date.now(),
+            stickyPane: stickyPane
+          });
+
+          // Call the save function directly with the selected position
+          handleFirebasePositionSave(`${autoSavePosition}-position`, positionData);
+        } catch (error) {
+          console.error("Error during auto-save:", error);
+        }
+        // Note: Counter is not reset here - it will only reset on page load
+      }
+    }
     
     // Update primary reading
     if (selectedBook) {
@@ -2653,8 +2696,11 @@ const BibleApp = () => {
     }
     
     // When navigating between chapters, we want to start at the top of the page
-    localStorage.removeItem('mobileScrollPosition');
-    setMobileScrollPosition(0);
+    // Only clear this if coming from the Next Chapter button
+    if (fromNextChapterButton) {
+      localStorage.removeItem('mobileScrollPosition');
+      setMobileScrollPosition(0);
+    }
     
     // Reset scroll sync state
     lastPrimaryScrollPos.current = 0;
@@ -3604,6 +3650,8 @@ const BibleApp = () => {
               isTabletView={isTabletView}
               stickyPane={stickyPane}
               isDarkMode={isDarkMode}
+              autoSavePosition={autoSavePosition}
+              onAutoSavePositionChange={setAutoSavePosition}
               onNextChapter={handleChapterSelect}
               bibleData={bibleData}
               setSelectedBook={setSelectedBook}

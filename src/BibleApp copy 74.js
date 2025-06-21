@@ -64,7 +64,7 @@ const getBaseUrl = () => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, autoSavePosition, onAutoSavePositionChange, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -131,19 +131,13 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
 
   // Handle saving current position to selected key
   const handleSave = () => {
-    // Determine which position to save to
-    let savePosition;
-    
-    if (selectedKey && selectedKey.includes('-position')) {
-      // If a position is selected in the dropdown, save to that position
-      savePosition = selectedKey.split('-')[0];
-    } else {
-      // If no position is selected, default to position 1
-      savePosition = '1';
+    if (!autoSavePosition) {
+      console.warn('Save aborted: No auto-save position selected');
+      return;
     }
 
     // Create the key string in the expected format
-    const keyToSave = `${savePosition}-position`;
+    const keyToSave = `${autoSavePosition}-position`;
 
     // Create position data object
     const positionData = JSON.stringify({
@@ -154,19 +148,21 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       stickyPane: stickyPane
     });
 
-    console.log(`Saving to position ${savePosition}: ${keyToSave}`);
     onSave(keyToSave, positionData);
   };
 
-  // Handle loading position from selected key
+  // Handle loading position from selected auto-save key
   const handleLoad = () => {
-    if (!selectedKey) {
-      console.warn('Load aborted: No position selected');
+    if (!autoSavePosition) {
+      console.warn('Load aborted: No auto-save position selected');
       return;
     }
 
+    // Create the key string in the expected format
+    const keyToLoad = `${autoSavePosition}-position`;
+    
     // Call the onSelect function to load the position
-    onSelect(selectedKey);
+    onSelect(keyToLoad);
   };
 
   // Get key number from key string (e.g., "1-position" returns "1")
@@ -220,13 +216,27 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       </button>
       
       <select
-        className={`firebase-position-select border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
+        className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
+        value={autoSavePosition}
+        onChange={(e) => onAutoSavePositionChange && onAutoSavePositionChange(e.target.value)}
+        title="Select position for auto-save"
+      >
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+      </select>
+      <select
+        className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
         value={selectedKey}
         onChange={(e) => {
           const newKey = e.target.value;
           setSelectedKey(newKey);
           
-          // Don't automatically load - let user manually trigger with '7' key or Load button
+          // Automatically load the selected position
+          if (newKey) {
+            onSelect(newKey);
+          }
         }}
       >
         <option value="">Select position...</option>
@@ -249,7 +259,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       
       <button
         onClick={handleLoad}
-        disabled={loading}
+        disabled={loading || !autoSavePosition}
         className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded hover:bg-blue-600 transition-colors disabled:${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
         title="Load from selected position"
       >
@@ -810,6 +820,8 @@ const BibleApp = () => {
     pendingBookRef.current = pendingBookSelection;
   }, [pendingBookSelection]);
   const [showCrossRef, setShowCrossRef] = useState(null);
+  const [nextChapterClickCount, setNextChapterClickCount] = useState(0);
+  const [autoSavePosition, setAutoSavePosition] = useState("1");
 
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
@@ -1351,32 +1363,18 @@ const BibleApp = () => {
 
         e.preventDefault();
       }
-      // '5' key - cycle through Firebase saved positions (visual only, no actions)
+      // '5' key - cycle through auto-save position selector (1,2,3,4)
       else if (e.key === '5' || e.keyCode === 53) {
-        // First, enable Firebase if it's not already enabled
-        const firebaseToggleButton = document.querySelector('button[title*="Firebase loading is"]');
-        if (firebaseToggleButton && firebaseToggleButton.textContent.includes('OFF')) {
-          firebaseToggleButton.click();
-          console.log("5 key pressed - auto-enabled Firebase");
-        }
-        
-        // Find the Firebase position select element by its unique class
-        const firebaseSelect = document.querySelector('select.firebase-position-select');
-        if (firebaseSelect && firebaseSelect.options.length > 1) {
-          // Get current selected index
-          let currentIndex = firebaseSelect.selectedIndex;
+        // Find the auto-save position select element by its title
+        const autoSaveSelect = document.querySelector('select[title="Select position for auto-save"]');
+        if (autoSaveSelect) {
+          const currentValue = parseInt(autoSaveSelect.value);
+          const nextValue = (currentValue % 4) + 1; // Cycle through 1,2,3,4
           
-          // Skip the first option ("Select position...") and cycle through actual positions
-          if (currentIndex === 0 || currentIndex === firebaseSelect.options.length - 1) {
-            currentIndex = 1; // Start from first real position
-          } else {
-            currentIndex += 1; // Move to next position
-          }
+          // Update the select value directly without triggering change event
+          autoSaveSelect.value = nextValue;
           
-          // Update the select value WITHOUT triggering change event
-          firebaseSelect.selectedIndex = currentIndex;
-          
-          console.log(`5 key pressed - cycled Firebase position to ${firebaseSelect.options[currentIndex].text} (visual only)`);
+          console.log(`5 key pressed - cycled auto-save position to ${nextValue}`);
         }
         e.preventDefault();
       }
@@ -2058,6 +2056,8 @@ const BibleApp = () => {
 
   // Load Bible data and cross-references on component mount
   useEffect(() => {
+    // Reset the Next Chapter click counter when the component mounts
+    setNextChapterClickCount(0);
     
     const loadData = async () => {
       try {
@@ -2634,6 +2634,34 @@ const BibleApp = () => {
 
     // No need to reset auto-scroll timer here - will be handled in NavigationPlaceholder component
 
+    // Handle Next Chapter button click counting and auto-save
+    if (fromNextChapterButton) {
+      const newCount = nextChapterClickCount + 1;
+      setNextChapterClickCount(newCount);
+      
+      // If this is the second click, trigger auto-save without resetting counter
+      if (newCount >= 2) {
+        try {
+          console.log(`Auto-saving to position ${autoSavePosition}`);
+
+          // Direct save using the Firebase save function
+          // Create position data object
+          const positionData = JSON.stringify({
+            bookAbbrev: selectedBook?.abbrev,
+            chapter: chapterNum, // Use the new chapter we're navigating to
+            translation: selectedTranslation,
+            timestamp: Date.now(),
+            stickyPane: stickyPane
+          });
+
+          // Call the save function directly with the selected position
+          handleFirebasePositionSave(`${autoSavePosition}-position`, positionData);
+        } catch (error) {
+          console.error("Error during auto-save:", error);
+        }
+        // Note: Counter is not reset here - it will only reset on page load
+      }
+    }
     
     // Update primary reading
     if (selectedBook) {
@@ -2653,8 +2681,11 @@ const BibleApp = () => {
     }
     
     // When navigating between chapters, we want to start at the top of the page
-    localStorage.removeItem('mobileScrollPosition');
-    setMobileScrollPosition(0);
+    // Only clear this if coming from the Next Chapter button
+    if (fromNextChapterButton) {
+      localStorage.removeItem('mobileScrollPosition');
+      setMobileScrollPosition(0);
+    }
     
     // Reset scroll sync state
     lastPrimaryScrollPos.current = 0;
@@ -3604,6 +3635,8 @@ const BibleApp = () => {
               isTabletView={isTabletView}
               stickyPane={stickyPane}
               isDarkMode={isDarkMode}
+              autoSavePosition={autoSavePosition}
+              onAutoSavePositionChange={setAutoSavePosition}
               onNextChapter={handleChapterSelect}
               bibleData={bibleData}
               setSelectedBook={setSelectedBook}

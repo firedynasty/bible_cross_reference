@@ -64,7 +64,7 @@ const getBaseUrl = () => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, autoSavePosition, onAutoSavePositionChange, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -158,15 +158,18 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
     onSave(keyToSave, positionData);
   };
 
-  // Handle loading position from selected key
+  // Handle loading position from selected auto-save key
   const handleLoad = () => {
-    if (!selectedKey) {
-      console.warn('Load aborted: No position selected');
+    if (!autoSavePosition) {
+      console.warn('Load aborted: No auto-save position selected');
       return;
     }
 
+    // Create the key string in the expected format
+    const keyToLoad = `${autoSavePosition}-position`;
+    
     // Call the onSelect function to load the position
-    onSelect(selectedKey);
+    onSelect(keyToLoad);
   };
 
   // Get key number from key string (e.g., "1-position" returns "1")
@@ -249,7 +252,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       
       <button
         onClick={handleLoad}
-        disabled={loading}
+        disabled={loading || !autoSavePosition}
         className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded hover:bg-blue-600 transition-colors disabled:${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
         title="Load from selected position"
       >
@@ -810,6 +813,8 @@ const BibleApp = () => {
     pendingBookRef.current = pendingBookSelection;
   }, [pendingBookSelection]);
   const [showCrossRef, setShowCrossRef] = useState(null);
+  const [nextChapterClickCount, setNextChapterClickCount] = useState(0);
+  const [autoSavePosition, setAutoSavePosition] = useState("1");
 
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
@@ -2058,6 +2063,8 @@ const BibleApp = () => {
 
   // Load Bible data and cross-references on component mount
   useEffect(() => {
+    // Reset the Next Chapter click counter when the component mounts
+    setNextChapterClickCount(0);
     
     const loadData = async () => {
       try {
@@ -2634,6 +2641,34 @@ const BibleApp = () => {
 
     // No need to reset auto-scroll timer here - will be handled in NavigationPlaceholder component
 
+    // Handle Next Chapter button click counting and auto-save
+    if (fromNextChapterButton) {
+      const newCount = nextChapterClickCount + 1;
+      setNextChapterClickCount(newCount);
+      
+      // If this is the second click, trigger auto-save without resetting counter
+      if (newCount >= 2) {
+        try {
+          console.log(`Auto-saving to position ${autoSavePosition}`);
+
+          // Direct save using the Firebase save function
+          // Create position data object
+          const positionData = JSON.stringify({
+            bookAbbrev: selectedBook?.abbrev,
+            chapter: chapterNum, // Use the new chapter we're navigating to
+            translation: selectedTranslation,
+            timestamp: Date.now(),
+            stickyPane: stickyPane
+          });
+
+          // Call the save function directly with the selected position
+          handleFirebasePositionSave(`${autoSavePosition}-position`, positionData);
+        } catch (error) {
+          console.error("Error during auto-save:", error);
+        }
+        // Note: Counter is not reset here - it will only reset on page load
+      }
+    }
     
     // Update primary reading
     if (selectedBook) {
@@ -2653,8 +2688,11 @@ const BibleApp = () => {
     }
     
     // When navigating between chapters, we want to start at the top of the page
-    localStorage.removeItem('mobileScrollPosition');
-    setMobileScrollPosition(0);
+    // Only clear this if coming from the Next Chapter button
+    if (fromNextChapterButton) {
+      localStorage.removeItem('mobileScrollPosition');
+      setMobileScrollPosition(0);
+    }
     
     // Reset scroll sync state
     lastPrimaryScrollPos.current = 0;
@@ -3604,6 +3642,8 @@ const BibleApp = () => {
               isTabletView={isTabletView}
               stickyPane={stickyPane}
               isDarkMode={isDarkMode}
+              autoSavePosition={autoSavePosition}
+              onAutoSavePositionChange={setAutoSavePosition}
               onNextChapter={handleChapterSelect}
               bibleData={bibleData}
               setSelectedBook={setSelectedBook}
