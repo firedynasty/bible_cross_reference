@@ -1639,11 +1639,11 @@ const BibleApp = () => {
         e.preventDefault();
       }
       // Direct book navigation keys
-      // A key - go to Psalms
+      // A key - go to Genesis
       else if (e.key === 'a' || e.key === 'A') {
-        const book = bibleData?.find(b => b.abbrev === 'ps');
+        const book = bibleData?.find(b => b.abbrev === 'gn');
         if (book) {
-          handleBookSelect('ps');
+          handleBookSelect('gn');
         }
         e.preventDefault();
       }
@@ -1655,51 +1655,51 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // E key - go to Ecclesiastes
-      else if (e.key === 'e' || e.key === 'E') {
-        const book = bibleData?.find(b => b.abbrev === 'ec');
+      // F key - go to Job
+      else if (e.key === 'f' || e.key === 'F') {
+        const book = bibleData?.find(b => b.abbrev === 'job');
         if (book) {
-          handleBookSelect('ec');
+          handleBookSelect('job');
         }
         e.preventDefault();
       }
-      // G key - go to Genesis
+      // G key - go to Isaiah
       else if (e.key === 'g' || e.key === 'G') {
-        const book = bibleData?.find(b => b.abbrev === 'gn');
-        if (book) {
-          handleBookSelect('gn');
-        }
-        e.preventDefault();
-      }
-      // H key - go to Hebrews
-      else if (e.key === 'h' || e.key === 'H') {
-        const book = bibleData?.find(b => b.abbrev === 'hb');
-        if (book) {
-          handleBookSelect('hb');
-        }
-        e.preventDefault();
-      }
-      // I key - go to Isaiah
-      else if (e.key === 'i' || e.key === 'I') {
         const book = bibleData?.find(b => b.abbrev === 'is');
         if (book) {
           handleBookSelect('is');
         }
         e.preventDefault();
       }
-      // J key - go to John
-      else if (e.key === 'j' || e.key === 'J') {
-        const book = bibleData?.find(b => b.abbrev === 'jo');
+      // H key - go to Matthew
+      else if (e.key === 'h' || e.key === 'H') {
+        const book = bibleData?.find(b => b.abbrev === 'mt');
         if (book) {
-          handleBookSelect('jo');
+          handleBookSelect('mt');
         }
         e.preventDefault();
       }
-      // K key - go to 1 Kings
-      else if (e.key === 'k' || e.key === 'K') {
-        const book = bibleData?.find(b => b.abbrev === '1kgs');
+      // I key - go to Acts
+      else if (e.key === 'i' || e.key === 'I') {
+        const book = bibleData?.find(b => b.abbrev === 'ac');
         if (book) {
-          handleBookSelect('1kgs');
+          handleBookSelect('ac');
+        }
+        e.preventDefault();
+      }
+      // J key - go to Romans
+      else if (e.key === 'j' || e.key === 'J') {
+        const book = bibleData?.find(b => b.abbrev === 'rm');
+        if (book) {
+          handleBookSelect('rm');
+        }
+        e.preventDefault();
+      }
+      // K key - go to Hebrews
+      else if (e.key === 'k' || e.key === 'K') {
+        const book = bibleData?.find(b => b.abbrev === 'hb');
+        if (book) {
+          handleBookSelect('hb');
         }
         e.preventDefault();
       }
@@ -1711,35 +1711,11 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // N key - go to Nahum
-      else if (e.key === 'n' || e.key === 'N') {
-        const book = bibleData?.find(b => b.abbrev === 'na');
-        if (book) {
-          handleBookSelect('na');
-        }
-        e.preventDefault();
-      }
-      // R key - go to Romans
-      else if (e.key === 'r' || e.key === 'R') {
-        const book = bibleData?.find(b => b.abbrev === 'rm');
-        if (book) {
-          handleBookSelect('rm');
-        }
-        e.preventDefault();
-      }
-      // S key - go to 1 Samuel
+      // S key - go to Joshua
       else if (e.key === 's' || e.key === 'S') {
-        const book = bibleData?.find(b => b.abbrev === '1sm');
+        const book = bibleData?.find(b => b.abbrev === 'js');
         if (book) {
-          handleBookSelect('1sm');
-        }
-        e.preventDefault();
-      }
-      // T key - go to 1 Thessalonians
-      else if (e.key === 't' || e.key === 'T') {
-        const book = bibleData?.find(b => b.abbrev === '1ts');
-        if (book) {
-          handleBookSelect('1ts');
+          handleBookSelect('js');
         }
         e.preventDefault();
       }
@@ -3341,19 +3317,16 @@ const BibleApp = () => {
                 {(() => {
                   const bookName = book.book || getBookName(book.abbrev);
                   const keyMappings = {
-                    'Psalms': '(a)',
-                    'Colossians': '(c)', 
-                    'Ecclesiastes': '(e)',
-                    'Genesis': '(g)',
-                    'Hebrews': '(h)',
-                    'Isaiah': '(i)',
-                    'John': '(j)',
-                    '1 Kings': '(k)',
+                    'Genesis': '(a)',
+                    'Joshua': '(s)', 
+                    'Job': '(f)',
+                    'Isaiah': '(g)',
+                    'Matthew': '(h)',
+                    'Acts': '(i)',
+                    'Romans': '(j)',
+                    'Hebrews': '(k)',
                     'Lamentations': '(l)',
-                    'Nahum': '(n)',
-                    'Romans': '(r)',
-                    '1 Samuel': '(s)',
-                    '1 Thessalonians': '(t)'
+                    'Colossians': '(c)'
                   };
                   return keyMappings[bookName] ? `${bookName} ${keyMappings[bookName]}` : bookName;
                 })()}
