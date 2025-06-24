@@ -1214,8 +1214,8 @@ const BibleApp = () => {
         e.preventDefault();
       }
       
-      // '1' key - directly click the left arrow button (previous book)
-      else if (e.key === '1' || e.keyCode === 49) {
+      // 'q' key - directly click the left arrow button (previous book)
+      else if (e.key === 'q' || e.key === 'Q' || e.keyCode === 81) {
         const leftArrowButton = document.querySelector('button[title="Previous book"]');
         if (leftArrowButton) {
           leftArrowButton.click();
@@ -1223,8 +1223,8 @@ const BibleApp = () => {
         e.preventDefault();
       }
       
-      // '2' key - directly click the right arrow button (next book)
-      else if (e.key === '2' || e.keyCode === 50) {
+      // 'w' key - directly click the right arrow button (next book)
+      else if (e.key === 'w' || e.key === 'W' || e.keyCode === 87) {
         const rightArrowButton = document.querySelector('button[title="Next book"]');
         if (rightArrowButton) {
           rightArrowButton.click();
@@ -3380,7 +3380,7 @@ const BibleApp = () => {
                 className="mr-2 px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-sm font-bold"
                 title="Previous book"
               >
-                ←(1)
+                ←(q)
               </button>
               <button 
                 onClick={() => {
@@ -3404,7 +3404,7 @@ const BibleApp = () => {
                 className="mr-2 px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-sm font-bold"
                 title="Next book"
               >
-                →(2)
+                →(w)
               </button>
             </div>
             
