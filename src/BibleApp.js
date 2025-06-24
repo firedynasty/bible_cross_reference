@@ -1232,9 +1232,9 @@ const BibleApp = () => {
         e.preventDefault();
       }
       
-      // '3' key - go to next chapter (same as ';' key)
-      else if (e.key === '3' || e.keyCode === 51) {
-        console.log("3 key pressed for Next Chapter");
+      // 'e' key - go to next chapter (same as ';' key)
+      else if (e.key === 'e' || e.key === 'E' || e.keyCode === 69) {
+        console.log("e key pressed for Next Chapter");
         console.log("Current state:", { 
           selectedBook: selectedBook?.abbrev, 
           selectedChapter, 
@@ -1270,9 +1270,9 @@ const BibleApp = () => {
         e.preventDefault();
       }
       
-      // '4' key - advance by +10 chapters by clicking Next Chapter button 10 times
-      else if (e.key === '4' || e.keyCode === 52) {
-        console.log("4 key pressed for +10 chapters");
+      // 'r' key - advance by +10 chapters by clicking Next Chapter button 10 times
+      else if (e.key === 'r' || e.key === 'R' || e.keyCode === 82) {
+        console.log("r key pressed for +10 chapters");
         
         // Find the Next Chapter button
         const nextChapterButtons = Array.from(document.querySelectorAll('button'))
@@ -3426,7 +3426,7 @@ const BibleApp = () => {
                     </option>
                   ))}
                 </select>
-                <span className="ml-1 text-sm text-gray-500">(3,4:10+)</span>
+                <span className="ml-1 text-sm text-gray-500">(e,r:10+)</span>
                 {/* Chapter Navigation Input */}
                 <input 
                   type="number" 
@@ -3848,7 +3848,7 @@ const BibleApp = () => {
                       }}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
-                      Next Chapter (m,;3) &gt;
+                      Next Chapter (m,;e) &gt;
                     </button>
                   )}
 
@@ -4074,7 +4074,7 @@ const BibleApp = () => {
                         }}
                         className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
-                        Next Chapter (m,;3) &gt;
+                        Next Chapter (m,;e) &gt;
                       </button>
                     )}
 
