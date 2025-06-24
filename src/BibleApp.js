@@ -68,6 +68,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Load saved positions from Firebase
   useEffect(() => {
@@ -111,7 +112,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
     };
 
     loadFirebaseKeys();
-  }, [firebaseEnabled]);
+  }, [firebaseEnabled, refreshTrigger]);
 
   // Format saved position for display
   const formatPositionDisplay = (position) => {
@@ -135,11 +136,19 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
     let savePosition;
     
     if (selectedKey && selectedKey.includes('-position')) {
-      // If a position is selected in the dropdown, save to that position
+      // If a position is selected in the dropdown, save to that position (overwrite)
       savePosition = selectedKey.split('-')[0];
+      console.log(`Saving to selected position ${savePosition} (overwriting existing)`);
     } else {
-      // If no position is selected, default to position 1
-      savePosition = '1';
+      // If no position is selected, find the next available position slot (1-4)
+      const existingPositions = savedPositions.map(p => parseInt(p.key.split('-')[0]));
+      let nextPosition = 1;
+      while (existingPositions.includes(nextPosition) && nextPosition <= 4) {
+        nextPosition++;
+      }
+      // If all positions 1-4 are taken, default to position 1 (overwrite)
+      savePosition = nextPosition <= 4 ? nextPosition.toString() : '1';
+      console.log(`No position selected, saving to next available position ${savePosition}`);
     }
 
     // Create the key string in the expected format
@@ -155,7 +164,17 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
     });
 
     console.log(`Saving to position ${savePosition}: ${keyToSave}`);
+    
+    // Keep the current selection to show confirmation
+    setSelectedKey(keyToSave);
+    
+    // Save the data
     onSave(keyToSave, positionData);
+    
+    // Trigger refresh of saved positions after a short delay to allow Firebase save to complete
+    setTimeout(() => {
+      setRefreshTrigger(prev => prev + 1);
+    }, 500);
   };
 
   // Handle loading position from selected key
@@ -243,8 +262,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         className={`flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-green-700' : 'bg-green-500'} text-white rounded hover:bg-green-600 transition-colors disabled:${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
         title="Save current position"
       >
-        <Save className="h-3 w-3 mr-1" />
-        Save
+        Save(t,y)
       </button>
       
       <button
@@ -253,8 +271,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded hover:bg-blue-600 transition-colors disabled:${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
         title="Load from selected position"
       >
-        <Download className="h-3 w-3 mr-1" />
-        Load
+        Load(v)
       </button>
       
       {/* Firebase Toggle Button */}
@@ -346,7 +363,7 @@ const NavigationPlaceholder = ({
   const bibleStudyPrompts = [
     {
       id: 1,
-      label: "Meditation Connection",
+      label: "1. Meditation Connection (u,i)",
       template: "Meditation Connection, For {book} {chapter}, tell me what is the theme connect to meditation like breathe in out"
     },
     {
@@ -1351,13 +1368,13 @@ const BibleApp = () => {
 
         e.preventDefault();
       }
-      // '5' key - cycle through Firebase saved positions (visual only, no actions)
-      else if (e.key === '5' || e.keyCode === 53) {
+      // 't' key - cycle through Firebase saved positions (visual only, no actions)
+      else if (e.key === 't' || e.key === 'T') {
         // First, enable Firebase if it's not already enabled
         const firebaseToggleButton = document.querySelector('button[title*="Firebase loading is"]');
         if (firebaseToggleButton && firebaseToggleButton.textContent.includes('OFF')) {
           firebaseToggleButton.click();
-          console.log("5 key pressed - auto-enabled Firebase");
+          console.log("t key pressed - auto-enabled Firebase");
         }
         
         // Find the Firebase position select element by its unique class
@@ -1373,48 +1390,49 @@ const BibleApp = () => {
             currentIndex += 1; // Move to next position
           }
           
-          // Update the select value WITHOUT triggering change event
+          // Update the select value AND trigger change event to update selectedKey state
           firebaseSelect.selectedIndex = currentIndex;
+          firebaseSelect.dispatchEvent(new Event('change', { bubbles: true }));
           
-          console.log(`5 key pressed - cycled Firebase position to ${firebaseSelect.options[currentIndex].text} (visual only)`);
+          console.log(`t key pressed - cycled Firebase position to ${firebaseSelect.options[currentIndex].text}`);
         }
         e.preventDefault();
       }
-      // '6' key - click Firebase Save button
-      else if (e.key === '6' || e.keyCode === 54) {
+      // 'y' key - click Firebase Save button
+      else if (e.key === 'y' || e.key === 'Y') {
         // Find the Firebase Save button by its title
         const saveButton = document.querySelector('button[title="Save current position"]');
         if (saveButton) {
           saveButton.click();
-          console.log("6 key pressed - clicked Firebase Save button");
+          console.log("y key pressed - clicked Firebase Save button");
         }
         e.preventDefault();
       }
-      // '7' key - click Firebase Load button
-      else if (e.key === '7' || e.keyCode === 55) {
+      // 'v' key - click Firebase Load button
+      else if (e.key === 'v' || e.key === 'V') {
         // Find the Firebase Load button by its title
         const loadButton = document.querySelector('button[title="Load from selected position"]');
         if (loadButton) {
           loadButton.click();
-          console.log("7 key pressed - clicked Firebase Load button");
+          console.log("v key pressed - clicked Firebase Load button");
         }
         e.preventDefault();
       }
 
-      // '8' key - toggle Read to End button
-      else if (e.key === '8' || e.keyCode === 56) {
+      // '/' key - toggle Read to End button
+      else if (e.key === '/' || e.keyCode === 191) {
         // Find and click the Read to End toggle button
         const readToEndButton = Array.from(document.querySelectorAll('button'))
           .find(btn => btn.textContent.includes('Read2End'));
         
         if (readToEndButton) {
           readToEndButton.click();
-          console.log("8 key pressed - toggled Read to End");
+          console.log("/ key pressed - toggled Read to End");
         }
         e.preventDefault();
       }
-      // '9' key - cycle to next prompt (like Next Transl button)
-      else if (e.key === '9' || e.keyCode === 57) {
+      // 'u' key - cycle to next prompt (like Next Transl button)
+      else if (e.key === 'u' || e.key === 'U') {
         // Find the prompts select element by its title
         const promptsSelect = document.querySelector('select[title="Select Bible study prompt"]');
         if (promptsSelect) {
@@ -1425,17 +1443,17 @@ const BibleApp = () => {
           // Update the select value directly without triggering change event
           promptsSelect.value = nextIndex;
           
-          console.log(`9 key pressed - cycled to prompt ${nextIndex + 1}: ${promptsSelect.options[nextIndex].text}`);
+          console.log(`u key pressed - cycled to prompt ${nextIndex + 1}: ${promptsSelect.options[nextIndex].text}`);
         }
         e.preventDefault();
       }
-      // '0' key - click Load prompt button
-      else if (e.key === '0' || e.keyCode === 48) {
+      // 'i' key - click Load prompt button
+      else if (e.key === 'i' || e.key === 'I') {
         // Find the Load prompt button by its title
         const loadButton = document.querySelector('button[title="Load selected prompt to clipboard"]');
         if (loadButton) {
           loadButton.click();
-          console.log("0 key pressed - clicked Load prompt button");
+          console.log("i key pressed - clicked Load prompt button");
         }
         e.preventDefault();
       }
@@ -1627,15 +1645,6 @@ const BibleApp = () => {
       else if (e.key === '`' || e.keyCode === 192) {
         console.log("Grave accent key pressed - opening menu");
         setShowSidebar(true);
-        e.preventDefault();
-      }
-      
-      // '/' key - trigger repeat button click
-      else if (e.key === '/' || e.keyCode === 191) {
-        const repeatButtons = document.querySelectorAll('button[title="Repeat selected verse in English"]');
-        if (repeatButtons.length > 0) {
-          repeatButtons[0].click();
-        }
         e.preventDefault();
       }
       // Direct book navigation keys
