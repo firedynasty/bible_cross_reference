@@ -527,7 +527,7 @@ const NavigationPlaceholder = ({
           >
             <Download className="h-3 w-3" />
           </button>
-          (8:read2end,&darr;:+10)
+          (/:read2end,&darr;:+10)
         </div>
         
         {/* Text to Speech Component */}
@@ -839,6 +839,99 @@ const BibleApp = () => {
   
   // State to track primary reading vs cross-reference viewing
   const [isViewingCrossRef, setIsViewingCrossRef] = useState(false);
+
+  // State for verse number input with timeout
+  const [verseNumberInput, setVerseNumberInput] = useState('');
+  const verseInputTimeoutRef = useRef(null);
+
+  // Function to handle verse number selection
+  const handleVerseNumberInput = (digit) => {
+    // Clear existing timeout first
+    if (verseInputTimeoutRef.current) {
+      clearTimeout(verseInputTimeoutRef.current);
+    }
+    
+    // Use functional state update to ensure we get the latest value
+    setVerseNumberInput(prevInput => {
+      const newInput = prevInput + digit;
+      console.log(`Verse input: "${newInput}" (added digit: ${digit}) - current state: "${verseNumberInput}"`);
+      
+      // Set new timeout for 1.5 seconds - only this final timeout will execute
+      verseInputTimeoutRef.current = setTimeout(() => {
+        const verseNumber = parseInt(newInput);
+        if (verseNumber > 0) {
+          // First, find and click the main verse selector button to open the dropdown
+          const mainVerseButton = document.querySelector('button[title="Select verse to read in English"]');
+          if (mainVerseButton) {
+            // Simulate mousedown to open dropdown without immediately closing
+            const mouseDownEvent = new MouseEvent('mousedown', {
+              bubbles: true,
+              cancelable: true,
+              view: window
+            });
+            mainVerseButton.dispatchEvent(mouseDownEvent);
+            
+            // Wait for dropdown to open and find the verse
+            setTimeout(() => {
+              // Look specifically in the dropdown container for verse buttons
+              const dropdownContainer = document.querySelector('div.absolute.top-full');
+              let verseButtons = [];
+              
+              if (dropdownContainer) {
+                // Search within the dropdown container
+                const dropdownButtons = dropdownContainer.querySelectorAll('button');
+                verseButtons = Array.from(dropdownButtons).filter(btn => 
+                  btn.textContent.trim().startsWith('Verse ')
+                );
+                console.log('Found dropdown container with verse buttons:', verseButtons.map(btn => btn.textContent.trim()));
+                
+                const targetButton = verseButtons.find(btn => 
+                  btn.textContent.trim() === `Verse ${verseNumber}`
+                );
+                
+                if (targetButton) {
+                  // Click the target verse button
+                  targetButton.click();
+                  console.log(`✓ Selected verse ${verseNumber} via keyboard`);
+                } else {
+                  const availableVerses = verseButtons.map(btn => btn.textContent.trim()).join(', ');
+                  console.warn(`✗ Verse ${verseNumber} not found. Available verses: ${availableVerses}`);
+                  // Close dropdown if verse not found
+                  document.addEventListener('click', () => {}, { once: true });
+                }
+              } else {
+                console.log('No dropdown container found - dropdown may have closed');
+                // Try clicking the main button again with a regular click
+                mainVerseButton.click();
+                setTimeout(() => {
+                  const newDropdownContainer = document.querySelector('div.absolute.top-full');
+                  if (newDropdownContainer) {
+                    const newDropdownButtons = newDropdownContainer.querySelectorAll('button');
+                    const newVerseButtons = Array.from(newDropdownButtons).filter(btn => 
+                      btn.textContent.trim().startsWith('Verse ')
+                    );
+                    const newTargetButton = newVerseButtons.find(btn => 
+                      btn.textContent.trim() === `Verse ${verseNumber}`
+                    );
+                    if (newTargetButton) {
+                      newTargetButton.click();
+                      console.log(`✓ Selected verse ${verseNumber} via keyboard (retry)`);
+                    }
+                  }
+                }, 200);
+              }
+            }, 150);
+          } else {
+            console.warn('✗ Verse selector button not found');
+          }
+        }
+        // Reset the input after processing
+        setVerseNumberInput('');
+      }, 1500);
+      
+      return newInput;
+    });
+  };
   const [primaryReading, setPrimaryReading] = useState({
     book: null,
     chapter: 1
@@ -1647,6 +1740,13 @@ const BibleApp = () => {
         setShowSidebar(true);
         e.preventDefault();
       }
+      
+      // Numeric keys (0-9) for verse selection
+      else if (e.key >= '0' && e.key <= '9') {
+        handleVerseNumberInput(e.key);
+        e.preventDefault();
+      }
+      
       // Direct book navigation keys
       // A key - go to Genesis
       else if (e.key === 'a' || e.key === 'A') {
