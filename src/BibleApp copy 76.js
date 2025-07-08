@@ -831,7 +831,6 @@ const BibleApp = () => {
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
   const kjvContentRef = useRef(null);
-  const sidebarScrollRef = useRef(null);
   const isManuallyScrolling = useRef(false);
   const scrollSyncInitialized = useRef(false);
   const lastPrimaryScrollPos = useRef(0);
@@ -841,72 +840,93 @@ const BibleApp = () => {
   // State to track primary reading vs cross-reference viewing
   const [isViewingCrossRef, setIsViewingCrossRef] = useState(false);
 
-  // State for book number input with timeout
-  const [bookNumberInput, setBookNumberInput] = useState('');
-  const bookInputTimeoutRef = useRef(null);
+  // State for verse number input with timeout
+  const [verseNumberInput, setVerseNumberInput] = useState('');
+  const verseInputTimeoutRef = useRef(null);
 
-  // Canonical Bible books order for numeric selection
-  const bibleBooksCanonical = [
-    // Old Testament
-    "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy",
-    "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel",
-    "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles",
-    "Ezra", "Nehemiah", "Tobit", "Judith", "Esther",
-    "1 Maccabees", "2 Maccabees", "Job", "Psalms", "Proverbs",
-    "Ecclesiastes", "Song of Songs", "Wisdom", "Sirach",
-    "Isaiah", "Jeremiah", "Lamentations", "Baruch", "Ezekiel",
-    "Daniel", "Hosea", "Joel", "Amos", "Obadiah", "Jonah",
-    "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai",
-    "Zechariah", "Malachi",
-    // New Testament
-    "Matthew", "Mark", "Luke", "John", "Acts",
-    "Romans", "1 Corinthians", "2 Corinthians", "Galatians",
-    "Ephesians", "Philippians", "Colossians", "1 Thessalonians",
-    "2 Thessalonians", "1 Timothy", "2 Timothy", "Titus",
-    "Philemon", "Hebrews", "James", "1 Peter", "2 Peter",
-    "1 John", "2 John", "3 John", "Jude", "Revelation"
-  ];
-
-  // Function to handle book number selection
-  const handleBookNumberInput = (digit) => {
+  // Function to handle verse number selection
+  const handleVerseNumberInput = (digit) => {
     // Clear existing timeout first
-    if (bookInputTimeoutRef.current) {
-      clearTimeout(bookInputTimeoutRef.current);
+    if (verseInputTimeoutRef.current) {
+      clearTimeout(verseInputTimeoutRef.current);
     }
     
     // Use functional state update to ensure we get the latest value
-    setBookNumberInput(prevInput => {
+    setVerseNumberInput(prevInput => {
       const newInput = prevInput + digit;
-      console.log(`Book input: "${newInput}" (added digit: ${digit}) - current state: "${bookNumberInput}"`);
+      console.log(`Verse input: "${newInput}" (added digit: ${digit}) - current state: "${verseNumberInput}"`);
       
       // Set new timeout for 1.5 seconds - only this final timeout will execute
-      bookInputTimeoutRef.current = setTimeout(() => {
-        const bookNumber = parseInt(newInput);
-        if (bookNumber > 0 && bookNumber <= bibleBooksCanonical.length) {
-          const targetBookName = bibleBooksCanonical[bookNumber - 1];
-          console.log(`Selecting book ${bookNumber}: ${targetBookName}`);
-          
-          // Find the book in bibleData and select it
-          if (bibleData) {
-            const bookToSelect = bibleData.find(book => {
-              const bookName = book.book || getBookName(book.abbrev);
-              return bookName === targetBookName;
+      verseInputTimeoutRef.current = setTimeout(() => {
+        const verseNumber = parseInt(newInput);
+        if (verseNumber > 0) {
+          // First, find and click the main verse selector button to open the dropdown
+          const mainVerseButton = document.querySelector('button[title="Select verse to read in English"]');
+          if (mainVerseButton) {
+            // Simulate mousedown to open dropdown without immediately closing
+            const mouseDownEvent = new MouseEvent('mousedown', {
+              bubbles: true,
+              cancelable: true,
+              view: window
             });
+            mainVerseButton.dispatchEvent(mouseDownEvent);
             
-            if (bookToSelect) {
-              handleBookSelect(bookToSelect.abbrev);
-              console.log(`✓ Selected book ${bookNumber}: ${targetBookName} via keyboard`);
-            } else {
-              console.warn(`✗ Book "${targetBookName}" not found in bibleData`);
-            }
+            // Wait for dropdown to open and find the verse
+            setTimeout(() => {
+              // Look specifically in the dropdown container for verse buttons
+              const dropdownContainer = document.querySelector('div.absolute.top-full');
+              let verseButtons = [];
+              
+              if (dropdownContainer) {
+                // Search within the dropdown container
+                const dropdownButtons = dropdownContainer.querySelectorAll('button');
+                verseButtons = Array.from(dropdownButtons).filter(btn => 
+                  btn.textContent.trim().startsWith('Verse ')
+                );
+                console.log('Found dropdown container with verse buttons:', verseButtons.map(btn => btn.textContent.trim()));
+                
+                const targetButton = verseButtons.find(btn => 
+                  btn.textContent.trim() === `Verse ${verseNumber}`
+                );
+                
+                if (targetButton) {
+                  // Click the target verse button
+                  targetButton.click();
+                  console.log(`✓ Selected verse ${verseNumber} via keyboard`);
+                } else {
+                  const availableVerses = verseButtons.map(btn => btn.textContent.trim()).join(', ');
+                  console.warn(`✗ Verse ${verseNumber} not found. Available verses: ${availableVerses}`);
+                  // Close dropdown if verse not found
+                  document.addEventListener('click', () => {}, { once: true });
+                }
+              } else {
+                console.log('No dropdown container found - dropdown may have closed');
+                // Try clicking the main button again with a regular click
+                mainVerseButton.click();
+                setTimeout(() => {
+                  const newDropdownContainer = document.querySelector('div.absolute.top-full');
+                  if (newDropdownContainer) {
+                    const newDropdownButtons = newDropdownContainer.querySelectorAll('button');
+                    const newVerseButtons = Array.from(newDropdownButtons).filter(btn => 
+                      btn.textContent.trim().startsWith('Verse ')
+                    );
+                    const newTargetButton = newVerseButtons.find(btn => 
+                      btn.textContent.trim() === `Verse ${verseNumber}`
+                    );
+                    if (newTargetButton) {
+                      newTargetButton.click();
+                      console.log(`✓ Selected verse ${verseNumber} via keyboard (retry)`);
+                    }
+                  }
+                }, 200);
+              }
+            }, 150);
           } else {
-            console.warn('✗ bibleData not available');
+            console.warn('✗ Verse selector button not found');
           }
-        } else {
-          console.warn(`✗ Invalid book number: ${bookNumber}. Valid range: 1-${bibleBooksCanonical.length}`);
         }
         // Reset the input after processing
-        setBookNumberInput('');
+        setVerseNumberInput('');
       }, 1500);
       
       return newInput;
@@ -1194,15 +1214,8 @@ const BibleApp = () => {
         }
       }
       
-      // 'o' key or PageUp key - page up (scrolls both sidebar and main content)
+      // 'o' key or PageUp key - page up with KJV pane as reference point
       else if ((e.key === 'o' || e.key === 'PageUp') && kjvContentRef.current) {
-        // If sidebar is open, scroll the sidebar too
-        if (showSidebar && sidebarScrollRef.current) {
-          const sidebarPane = sidebarScrollRef.current;
-          const sidebarPageHeight = sidebarPane.clientHeight * 0.9;
-          const sidebarNewPosition = sidebarPane.scrollTop - sidebarPageHeight;
-          sidebarPane.scrollTop = Math.max(0, sidebarNewPosition);
-        }
         
         // Calculate page height (approx viewport height)
         const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
@@ -1244,16 +1257,8 @@ const BibleApp = () => {
           }, 50);
         }
       }
-      // 'p' key or PageDown key - page down (scrolls both sidebar and main content)
+      // 'p' key or PageDown key - page down with KJV pane as reference point
       else if ((e.key === 'p' || e.key === 'PageDown') && kjvContentRef.current) {
-        // If sidebar is open, scroll the sidebar too
-        if (showSidebar && sidebarScrollRef.current) {
-          const sidebarPane = sidebarScrollRef.current;
-          const sidebarPageHeight = sidebarPane.clientHeight * 0.9;
-          const sidebarNewPosition = sidebarPane.scrollTop + sidebarPageHeight;
-          const sidebarMaxScroll = sidebarPane.scrollHeight - sidebarPane.clientHeight;
-          sidebarPane.scrollTop = Math.min(sidebarMaxScroll, sidebarNewPosition);
-        }
         
         // Calculate page height (approx viewport height)
         const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
@@ -1729,16 +1734,16 @@ const BibleApp = () => {
         e.preventDefault();
       }
       
-      // Grave accent/backtick key - toggle sidebar open/close
+      // Grave accent/backtick key - open hamburger menu (show sidebar)
       else if (e.key === '`' || e.keyCode === 192) {
-        console.log("Grave accent key pressed - toggling sidebar");
-        setShowSidebar(prev => !prev);
+        console.log("Grave accent key pressed - opening menu");
+        setShowSidebar(true);
         e.preventDefault();
       }
       
-      // Numeric keys (0-9) for book selection
+      // Numeric keys (0-9) for verse selection
       else if (e.key >= '0' && e.key <= '9') {
-        handleBookNumberInput(e.key);
+        handleVerseNumberInput(e.key);
         e.preventDefault();
       }
       
@@ -1828,7 +1833,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar]);
+  }, [selectedTranslation]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
@@ -3405,8 +3410,8 @@ const BibleApp = () => {
               </svg>
             </button>
           </div>
-          <div ref={sidebarScrollRef} className="overflow-y-auto h-full">
-            {bibleData && bibleData.map((book, index) => (
+          <div className="overflow-y-auto h-full">
+            {bibleData && bibleData.map(book => (
               <button
                 key={book.abbrev}
                 onClick={() => {
@@ -3432,7 +3437,7 @@ const BibleApp = () => {
                     'Lamentations': '(l)',
                     'Colossians': '(c)'
                   };
-                  return keyMappings[bookName] ? `${index + 1}. ${bookName} ${keyMappings[bookName]}` : `${index + 1}. ${bookName}`;
+                  return keyMappings[bookName] ? `${bookName} ${keyMappings[bookName]}` : bookName;
                 })()}
               </button>
             ))}
