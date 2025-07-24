@@ -527,7 +527,7 @@ const NavigationPlaceholder = ({
           >
             <Download className="h-3 w-3" />
           </button>
-          (/:read2end,&darr;:+10)
+          (/:read2end)
         </div>
         
         {/* Text to Speech Component */}
@@ -1242,8 +1242,8 @@ const BibleApp = () => {
           }, 50);
         }
       }
-      // 'p' key or PageDown key - page down (scrolls both sidebar and main content)
-      else if ((e.key === 'p' || e.key === 'PageDown') && kjvContentRef.current) {
+      // 'p' key, PageDown key, or ArrowDown key - page down (scrolls both sidebar and main content)
+      else if ((e.key === 'p' || e.key === 'PageDown' || e.key === 'ArrowDown') && kjvContentRef.current) {
         // If sidebar is open, scroll the sidebar too
         if (showSidebar && sidebarScrollRef.current) {
           const sidebarPane = sidebarScrollRef.current;
@@ -1561,21 +1561,6 @@ const BibleApp = () => {
         window.dispatchEvent(event);
         e.preventDefault();
       }
-      // Down Arrow - advance by +10 verses
-      else if (e.key === 'ArrowDown') {
-        console.log("Down Arrow pressed - advancing +10 verses");
-        // Dispatch navigateVerse event 10 times with small delays
-        for (let i = 0; i < 10; i++) {
-          setTimeout(() => {
-            const event = new CustomEvent('navigateVerse', {
-              detail: { direction: 'next' }
-            });
-            window.dispatchEvent(event);
-            console.log(`Advanced verse ${i + 1}/10`);
-          }, i * 50); // 50ms delay between verse advances
-        }
-        e.preventDefault();
-      }
       // '[' key - go to previous verse (copy of ArrowLeft functionality)
       else if (e.key === '[') {
         // Dispatch custom event to navigate to previous verse
@@ -1754,14 +1739,6 @@ const BibleApp = () => {
         const book = bibleData?.find(b => b.abbrev === 'cl');
         if (book) {
           handleBookSelect('cl');
-        }
-        e.preventDefault();
-      }
-      // F key - go to Job
-      else if (e.key === 'f' || e.key === 'F') {
-        const book = bibleData?.find(b => b.abbrev === 'job');
-        if (book) {
-          handleBookSelect('job');
         }
         e.preventDefault();
       }
