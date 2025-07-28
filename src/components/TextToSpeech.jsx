@@ -7,12 +7,37 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [readToEnd, setReadToEnd] = useState(false);
+  const [autoScroll, setAutoScroll] = useState(true); // Always on by default
   const [currentUtterance, setCurrentUtterance] = useState(null);
   const [shouldContinueAfterCurrent, setShouldContinueAfterCurrent] = useState(false);
+  const [autoScrollTimer, setAutoScrollTimer] = useState(null);
+  const [autoScrollRunning, setAutoScrollRunning] = useState(false);
+  const timerIdRef = useRef(null);
   
+  // Calculate smart timing based on verse length - simple, consistent speed
+  const calculateVerseTiming = (verseText) => {
+    if (!verseText) return 3.0;
+    
+    // Clean the text for more accurate measurement
+    const cleanText = cleanTextForTTS(verseText);
+    const wordCount = cleanText.split(/\s+/).filter(word => word.length > 0).length;
+    
+    // Simple calculation: ~0.4 seconds per word (150 words per minute)
+    const secondsPerWord = 0.4;
+    const punctuationCount = (cleanText.match(/[,.;:!?]/g) || []).length;
+    const punctuationPause = punctuationCount * 0.2; // Brief pause for punctuation
+    
+    let timing = (wordCount * secondsPerWord) + punctuationPause;
+    timing = Math.max(2.0, timing); // Minimum 2 seconds
+    
+    // Cap timing between 2 and 15 seconds
+    return Math.min(15.0, timing);
+  };
+
   // Use refs to access current values in closures
   const readToEndRef = useRef(readToEnd);
   const shouldContinueRef = useRef(shouldContinueAfterCurrent);
+  const autoScrollRef = useRef(autoScroll);
   
   // Keep refs in sync with state
   useEffect(() => {
@@ -22,6 +47,10 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   useEffect(() => {
     shouldContinueRef.current = shouldContinueAfterCurrent;
   }, [shouldContinueAfterCurrent]);
+
+  useEffect(() => {
+    autoScrollRef.current = autoScroll;
+  }, [autoScroll]);
 
   // Language detection based on Bible translation
   const getLanguageFromTranslation = (translation) => {
@@ -241,10 +270,65 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const verses = getCurrentVerses();
   const maxVerses = verses.length;
 
-  // Reset selected verse when chapter changes
+  // Reset selected verse when chapter changes and restart auto-scroll
   useEffect(() => {
     setSelectedVerse(1);
+    setAutoScrollRunning(false);
+    // Clear any existing timer
+    if (timerIdRef.current) {
+      clearTimeout(timerIdRef.current);
+      timerIdRef.current = null;
+    }
   }, [currentBook, currentChapter]);
+
+  // Start auto-scroll when verses are available and selectedVerse is 1
+  useEffect(() => {
+    if (verses.length > 0 && selectedVerse === 1 && !autoScrollRunning) {
+      console.log('Starting auto-scroll for new chapter');
+      // Use a timeout to start auto-scroll after the function is defined
+      const timer = setTimeout(() => {
+        // Prevent multiple instances
+        if (timerIdRef.current) {
+          console.log('Auto-scroll already running, clearing existing timer');
+          clearTimeout(timerIdRef.current);
+          timerIdRef.current = null;
+        }
+        
+        setAutoScrollRunning(true);
+        console.log('Starting auto-scroll from verse:', selectedVerse);
+        
+        const scheduleNextVerse = (currentVerse) => {
+          if (currentVerse >= maxVerses) {
+            console.log('Auto-scroll completed - reached end of chapter');
+            setAutoScrollRunning(false);
+            timerIdRef.current = null;
+            return;
+          }
+          
+          const nextVerse = currentVerse + 1;
+          const nextVerseText = verses[nextVerse - 1] || '';
+          const timing = calculateVerseTiming(nextVerseText);
+          
+          console.log(`Auto-scroll: Scheduling verse ${nextVerse} in ${timing.toFixed(1)}s (${nextVerseText.split(' ').length} words)`);
+          
+          timerIdRef.current = setTimeout(() => {
+            console.log(`Auto-scroll: Moving to verse ${nextVerse}`);
+            setSelectedVerse(nextVerse);
+            scheduleNextVerse(nextVerse);
+          }, timing * 1000);
+        };
+        
+        // Start with current verse timing
+        const currentVerseText = verses[selectedVerse - 1] || '';
+        const initialTiming = calculateVerseTiming(currentVerseText);
+        console.log(`Auto-scroll: Current verse ${selectedVerse} will show for ${initialTiming.toFixed(1)}s (${currentVerseText.split(' ').length} words)`);
+        
+        scheduleNextVerse(selectedVerse);
+      }, 200);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [verses.length, selectedVerse, autoScrollRunning]);
 
   // Listen for keyboard navigation events
   useEffect(() => {
@@ -296,12 +380,143 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readToEnd]);
 
+  // Stop auto-scroll when toggle is turned OFF
+  useEffect(() => {
+    if (!autoScroll) {
+      stopAutoScroll();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoScroll]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoScrollTimer) {
+        clearTimeout(autoScrollTimer);
+      }
+    };
+  }, [autoScrollTimer]);
+
   // Clean text for TTS (remove annotations in curly braces and parentheses)
   const cleanTextForTTS = (text) => {
     if (!text) return '';
     // Remove both curly braces and parentheses like the reference app
     return text.replace(/\{[^}]*\}/g, '').replace(/[()]/g, '').trim();
   };
+
+  // Auto-scroll functions with better timer management
+  const startAutoScroll = useCallback(() => {
+    // Prevent multiple instances
+    if (autoScrollTimer) {
+      console.log('Auto-scroll already running, ignoring start request');
+      return;
+    }
+    
+    console.log('Starting auto-scroll from verse:', selectedVerse);
+    
+    let currentTimer = null;
+    
+    const advanceToNextVerse = () => {
+      // Check if auto-scroll is still enabled before proceeding
+      if (!autoScrollRef.current) {
+        console.log('Auto-scroll disabled, stopping advancement');
+        return;
+      }
+      
+      setSelectedVerse(currentVerse => {
+        console.log('Auto-scroll: Currently at verse', currentVerse, 'of', maxVerses);
+        
+        if (currentVerse < maxVerses && autoScrollRef.current) {
+          const nextVerse = currentVerse + 1;
+          console.log('Auto-scroll: Advancing to verse', nextVerse);
+          
+          // Calculate timing for the next verse and schedule advancement
+          const nextVerseText = verses[nextVerse - 1] || '';
+          const smartTiming = calculateVerseTiming(nextVerseText);
+          console.log(`Auto-scroll: Verse ${nextVerse} will show for ${smartTiming.toFixed(1)}s (${nextVerseText.split(' ').length} words)`);
+          
+          // Schedule next advancement
+          currentTimer = setTimeout(advanceToNextVerse, smartTiming * 1000);
+          setAutoScrollTimer(currentTimer);
+          
+          return nextVerse;
+        } else {
+          // Reached end of chapter or auto-scroll disabled, stop
+          console.log('Auto-scroll completed - reached end or disabled');
+          setAutoScroll(false);
+          setAutoScrollTimer(null);
+          return currentVerse;
+        }
+      });
+    };
+    
+    // Start the first advancement using smart timing for current verse
+    const currentVerseText = verses[selectedVerse - 1] || '';
+    const initialTiming = calculateVerseTiming(currentVerseText);
+    console.log(`Auto-scroll: Starting with verse ${selectedVerse} for ${initialTiming.toFixed(1)}s (${currentVerseText.split(' ').length} words)`);
+    
+    currentTimer = setTimeout(advanceToNextVerse, initialTiming * 1000);
+    setAutoScrollTimer(currentTimer);
+  }, [selectedVerse, maxVerses, verses]);
+
+  const stopAutoScroll = useCallback(() => {
+    console.log('Stopping auto-scroll');
+    if (autoScrollTimer) {
+      clearTimeout(autoScrollTimer);
+      setAutoScrollTimer(null);
+    }
+    setAutoScrollRunning(false);
+  }, [autoScrollTimer]);
+
+  // Restart auto-scroll from current verse (used when speed changes)
+  const restartAutoScrollAtCurrentVerse = useCallback(() => {
+    if (autoScrollRunning) {
+      console.log('Auto-scroll already running, ignoring restart request');
+      return;
+    }
+    
+    setAutoScrollRunning(true);
+    console.log('Restarting auto-scroll from verse:', selectedVerse, 'with new speed');
+    
+    const advanceToNextVerse = () => {
+      if (!autoScrollRef.current) {
+        console.log('Auto-scroll disabled, stopping advancement');
+        setAutoScrollRunning(false);
+        return;
+      }
+      
+      setSelectedVerse(currentVerse => {
+        console.log('Auto-scroll: Currently at verse', currentVerse, 'of', maxVerses);
+        
+        if (currentVerse < maxVerses && autoScrollRef.current) {
+          const nextVerse = currentVerse + 1;
+          console.log('Auto-scroll: Advancing to verse', nextVerse);
+          
+          const nextVerseText = verses[nextVerse - 1] || '';
+          const smartTiming = calculateVerseTiming(nextVerseText);
+          console.log(`Auto-scroll: Verse ${nextVerse} will show for ${smartTiming.toFixed(1)}s (${nextVerseText.split(' ').length} words)`);
+          
+          const timer = setTimeout(advanceToNextVerse, smartTiming * 1000);
+          setAutoScrollTimer(timer);
+          
+          return nextVerse;
+        } else {
+          console.log('Auto-scroll completed - reached end or disabled');
+          setAutoScrollRunning(false);
+          setAutoScrollTimer(null);
+          return currentVerse;
+        }
+      });
+    };
+    
+    // Start from current verse with new speed
+    const currentVerseText = verses[selectedVerse - 1] || '';
+    const initialTiming = calculateVerseTiming(currentVerseText);
+    console.log(`Auto-scroll: Continuing with verse ${selectedVerse} for ${initialTiming.toFixed(1)}s (${currentVerseText.split(' ').length} words)`);
+    
+    const currentTimer = setTimeout(advanceToNextVerse, initialTiming * 1000);
+    setAutoScrollTimer(currentTimer);
+  }, [selectedVerse, maxVerses, verses, autoScrollRunning]);
 
   // Speak the selected verse - now with multilingual support
   const speakVerse = useCallback((verseNumber = selectedVerse) => {
@@ -630,6 +845,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     };
   }, [speakBookAndChapter]);
 
+
   // Function to speak verse number
   const speakVerseNumber = useCallback((verseNumber) => {
     if (!verseNumber) return;
@@ -749,6 +965,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
           </div>
         )}
       </div>
+
 
       {/* Speak Button */}
       <button

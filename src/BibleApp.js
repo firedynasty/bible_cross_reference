@@ -1742,35 +1742,11 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // G key - go to Isaiah
-      else if (e.key === 'g' || e.key === 'G') {
-        const book = bibleData?.find(b => b.abbrev === 'is');
-        if (book) {
-          handleBookSelect('is');
-        }
-        e.preventDefault();
-      }
-      // H key - go to Matthew
-      else if (e.key === 'h' || e.key === 'H') {
-        const book = bibleData?.find(b => b.abbrev === 'mt');
-        if (book) {
-          handleBookSelect('mt');
-        }
-        e.preventDefault();
-      }
       // I key - go to Acts
       else if (e.key === 'i' || e.key === 'I') {
         const book = bibleData?.find(b => b.abbrev === 'ac');
         if (book) {
           handleBookSelect('ac');
-        }
-        e.preventDefault();
-      }
-      // J key - go to Romans
-      else if (e.key === 'j' || e.key === 'J') {
-        const book = bibleData?.find(b => b.abbrev === 'rm');
-        if (book) {
-          handleBookSelect('rm');
         }
         e.preventDefault();
       }
