@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { ChevronDown, ChevronRight, Play, SkipForward } from 'lucide-react';
 
-const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation }, ref) => {
+const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume }, ref) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -328,7 +328,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       
       return () => clearTimeout(timer);
     }
-  }, [verses.length, selectedVerse, autoScrollRunning]);
+  }, [verses.length, selectedVerse, autoScrollRunning, maxVerses, verses, calculateVerseTiming]);
 
   // Listen for keyboard navigation events
   useEffect(() => {
@@ -457,7 +457,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     
     currentTimer = setTimeout(advanceToNextVerse, initialTiming * 1000);
     setAutoScrollTimer(currentTimer);
-  }, [selectedVerse, maxVerses, verses]);
+  }, [selectedVerse, maxVerses, verses, autoScrollTimer, calculateVerseTiming]);
 
   const stopAutoScroll = useCallback(() => {
     console.log('Stopping auto-scroll');
@@ -516,7 +516,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     
     const currentTimer = setTimeout(advanceToNextVerse, initialTiming * 1000);
     setAutoScrollTimer(currentTimer);
-  }, [selectedVerse, maxVerses, verses, autoScrollRunning]);
+  }, [selectedVerse, maxVerses, verses, autoScrollRunning, calculateVerseTiming]);
 
   // Speak the selected verse - now with multilingual support
   const speakVerse = useCallback((verseNumber = selectedVerse) => {
@@ -560,6 +560,9 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     } else {
       utterance.rate = 0.7; // Default rate for other languages
     }
+    
+    // Set volume based on user preference
+    utterance.volume = speechVolume === 'softer' ? 0.4 : 1.0;
     
     const voices = availableVoices; // Use the loaded voices state
     
@@ -625,7 +628,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         setCurrentUtterance(null);
       }
     }, 100);
-  }, [selectedVerse, verses, isSpeaking, rightPaneTranslation, availableVoices, maxVerses, readToEndRef, shouldContinueRef, setIsSpeaking, setCurrentUtterance, setSelectedVerse, setShouldContinueAfterCurrent]);
+  }, [selectedVerse, verses, isSpeaking, rightPaneTranslation, availableVoices, maxVerses, readToEndRef, shouldContinueRef, setIsSpeaking, setCurrentUtterance, setSelectedVerse, setShouldContinueAfterCurrent, speechVolume]);
 
   // Move to next verse and read it
   const nextVerseAndRead = useCallback(() => {
@@ -699,6 +702,9 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
           utterance.rate = 0.7;
         }
         
+        // Set volume based on user preference
+        utterance.volume = speechVolume === 'softer' ? 0.4 : 1.0;
+        
         const selectedVoice = selectBestVoice(languageInfo.lang, availableVoices);
         if (selectedVoice) {
           utterance.voice = selectedVoice;
@@ -726,7 +732,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       
       speakCurrentVerseOnly();
     }
-  }, [selectedVerse, verses, isSpeaking, rightPaneTranslation, availableVoices, stopSpeaking, setIsSpeaking, setCurrentUtterance]);
+  }, [selectedVerse, verses, isSpeaking, rightPaneTranslation, availableVoices, stopSpeaking, setIsSpeaking, setCurrentUtterance, speechVolume]);
 
   // Listen for read current verse events
   useEffect(() => {
@@ -800,6 +806,9 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       utterance.rate = 0.7;
     }
     
+    // Set volume based on user preference
+    utterance.volume = speechVolume === 'softer' ? 0.4 : 1.0;
+    
     // Use the smart voice selection for the target language
     const selectedVoice = selectBestVoice(languageInfo.lang, availableVoices);
 
@@ -812,7 +821,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     };
 
     speechSynthesis.speak(utterance);
-  }, [availableVoices, rightPaneTranslation]);
+  }, [availableVoices, rightPaneTranslation, speechVolume]);
 
   // Listen for stop speech events
   useEffect(() => {
@@ -878,6 +887,9 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       utterance.rate = 0.7;
     }
     
+    // Set volume based on user preference
+    utterance.volume = speechVolume === 'softer' ? 0.4 : 1.0;
+    
     // Use the smart voice selection for the target language
     const selectedVoice = selectBestVoice(languageInfo.lang, availableVoices);
 
@@ -890,7 +902,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     };
 
     speechSynthesis.speak(utterance);
-  }, [availableVoices, rightPaneTranslation]);
+  }, [availableVoices, rightPaneTranslation, speechVolume]);
 
   // Listen for speak verse number events
   useEffect(() => {

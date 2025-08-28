@@ -350,7 +350,8 @@ const NavigationPlaceholder = ({
   touchScrollModes,
   rightPaneBibleData,
   rightPaneTranslation,
-  resetScrollTimerRef
+  resetScrollTimerRef,
+  speechVolume
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -536,6 +537,7 @@ const NavigationPlaceholder = ({
           currentBook={book.abbrev}
           currentChapter={chapter}
           rightPaneTranslation={rightPaneTranslation}
+          speechVolume={speechVolume}
         />
         
         {/* To Clipboard Button - Hidden */}
@@ -965,6 +967,9 @@ const BibleApp = () => {
   
   // State to track dark/light mode
   const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  // State to track speech volume (normal or softer)
+  const [speechVolume, setSpeechVolume] = useState('softer');
   
   // State to track Firebase loading toggle
   const [firebaseEnabled, setFirebaseEnabled] = useState(false);
@@ -3482,6 +3487,34 @@ const BibleApp = () => {
                   ))}
                 </select>
                 <span className="ml-1 text-sm text-gray-500">(e,r:10+)</span>
+                
+                {/* Speech Volume Controls */}
+                <div className="flex items-center ml-4 border-l pl-4">
+                  <span className="text-sm text-gray-600 mr-2">Volume:</span>
+                  <label className="flex items-center mr-3 text-sm">
+                    <input
+                      type="radio"
+                      name="speechVolume"
+                      value="normal"
+                      checked={speechVolume === 'normal'}
+                      onChange={(e) => setSpeechVolume(e.target.value)}
+                      className="mr-1"
+                    />
+                    Normal
+                  </label>
+                  <label className="flex items-center text-sm">
+                    <input
+                      type="radio"
+                      name="speechVolume"
+                      value="softer"
+                      checked={speechVolume === 'softer'}
+                      onChange={(e) => setSpeechVolume(e.target.value)}
+                      className="mr-1"
+                    />
+                    Softer
+                  </label>
+                </div>
+                
                 {/* Chapter Navigation Input */}
                 <input 
                   type="number" 
@@ -3660,6 +3693,7 @@ const BibleApp = () => {
               rightPaneBibleData={rightPaneBibleData}
               rightPaneTranslation={rightPaneTranslation}
               resetScrollTimerRef={resetScrollTimerRef}
+              speechVolume={speechVolume}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
                   const bookObj = bibleData.find(b => b.abbrev === book);
