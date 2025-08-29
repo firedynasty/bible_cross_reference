@@ -3798,9 +3798,26 @@ const BibleApp = () => {
                     }}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right w-6 h-6">
-                      <path d="m9 18 6-6-6-6"></path>
+                      <polyline points="9 18 15 12 9 6"></polyline>
                     </svg>
                   </button>
+                  {selectedBook && selectedChapter < selectedBook.chapters.length && (
+                    <button
+                      onClick={() => {
+                        handleChapterSelect(selectedChapter + 1, true);
+                        // Sync KJV panel scroll with primary panel
+                        if (kjvContentRef.current) {
+                          setTimeout(() => {
+                            kjvContentRef.current.scrollTop = 0;
+                          }, 100);
+                        }
+                      }}
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center"
+                      title="Next Chapter"
+                    >
+                      Next Ch
+                    </button>
+                  )}
 
                 </div>
                 <h2 className="text-3xl font-semibold flex items-center mb-5">
@@ -4048,6 +4065,26 @@ const BibleApp = () => {
                         <path d="m9 18 6-6-6-6"></path>
                       </svg>
                     </button>
+                    {selectedBook && selectedChapter < selectedBook.chapters.length && (
+                      <button
+                        onClick={() => {
+                          // Clear mobile scroll position immediately to prevent restoration
+                          localStorage.removeItem('mobileScrollPosition');
+                          setMobileScrollPosition(0);
+                          
+                          handleChapterSelect(selectedChapter + 1, true);
+                          
+                          // Reset all scroll state after content loads
+                          setTimeout(() => {
+                            handleHomeReset();
+                          }, 100);
+                        }}
+                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center"
+                        title="Next Chapter"
+                      >
+                        Next Ch
+                      </button>
+                    )}
                   </div>
                   <h2 className="text-3xl mr-2 font-semibold mb-5 flex items-center">
                     {isMobileView && !isTabletView && (

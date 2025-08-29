@@ -15,8 +15,15 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const [autoScrollRunning, setAutoScrollRunning] = useState(false);
   const timerIdRef = useRef(null);
   
+  // Clean text for TTS (remove annotations in curly braces and parentheses)
+  const cleanTextForTTS = useCallback((text) => {
+    if (!text) return '';
+    // Remove both curly braces and parentheses like the reference app
+    return text.replace(/\{[^}]*\}/g, '').replace(/[()]/g, '').trim();
+  }, []);
+  
   // Calculate smart timing based on verse length - simple, consistent speed
-  const calculateVerseTiming = (verseText) => {
+  const calculateVerseTiming = useCallback((verseText) => {
     if (!verseText) return 3.0;
     
     // Clean the text for more accurate measurement
@@ -33,7 +40,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     
     // Cap timing between 2 and 15 seconds
     return Math.min(15.0, timing);
-  };
+  }, [cleanTextForTTS]);
 
   // Use refs to access current values in closures
   const readToEndRef = useRef(readToEnd);
@@ -287,6 +294,8 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     }
   }, [currentBook, currentChapter]);
 
+  // This effect will be handled later after speakVerse is defined
+
   // Start auto-scroll when verses are available and selectedVerse is 1
   useEffect(() => {
     if (verses.length > 0 && selectedVerse === 1 && !autoScrollRunning) {
@@ -414,12 +423,6 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     };
   }, [autoScrollTimer]);
 
-  // Clean text for TTS (remove annotations in curly braces and parentheses)
-  const cleanTextForTTS = (text) => {
-    if (!text) return '';
-    // Remove both curly braces and parentheses like the reference app
-    return text.replace(/\{[^}]*\}/g, '').replace(/[()]/g, '').trim();
-  };
 
   // Auto-scroll functions with better timer management
   const startAutoScroll = useCallback(() => {
@@ -647,6 +650,18 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       }
     }, 100);
   }, [selectedVerse, verses, isSpeaking, rightPaneTranslation, availableVoices, maxVerses, readToEndRef, shouldContinueRef, setIsSpeaking, setCurrentUtterance, setSelectedVerse, setShouldContinueAfterCurrent, speechVolume]);
+
+  // Handle DelayRead auto-start after speakVerse is defined
+  useEffect(() => {
+    // If DelayRead is ON when chapter changes, automatically start reading the new chapter
+    if (delayRead && verses.length > 0 && selectedVerse === 1) {
+      const timer = setTimeout(() => {
+        speakVerse(1);
+      }, 500); // Small delay to ensure chapter content is loaded
+      
+      return () => clearTimeout(timer);
+    }
+  }, [currentBook, currentChapter, delayRead, verses.length, selectedVerse, speakVerse]);
 
   // Move to next verse and read it
   const nextVerseAndRead = useCallback(() => {
