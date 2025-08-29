@@ -7,6 +7,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [availableVoices, setAvailableVoices] = useState([]);
   const [readToEnd, setReadToEnd] = useState(false);
+  const [delayRead, setDelayRead] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true); // Always on by default
   const [currentUtterance, setCurrentUtterance] = useState(null);
   const [shouldContinueAfterCurrent, setShouldContinueAfterCurrent] = useState(false);
@@ -36,6 +37,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
 
   // Use refs to access current values in closures
   const readToEndRef = useRef(readToEnd);
+  const delayReadRef = useRef(delayRead);
   const shouldContinueRef = useRef(shouldContinueAfterCurrent);
   const autoScrollRef = useRef(autoScroll);
   
@@ -43,6 +45,10 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   useEffect(() => {
     readToEndRef.current = readToEnd;
   }, [readToEnd]);
+  
+  useEffect(() => {
+    delayReadRef.current = delayRead;
+  }, [delayRead]);
   
   useEffect(() => {
     shouldContinueRef.current = shouldContinueAfterCurrent;
@@ -380,6 +386,17 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readToEnd]);
 
+  // Stop current reading when Delay Read toggle is turned OFF
+  useEffect(() => {
+    if (!delayRead && isSpeaking && currentUtterance) {
+      speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setCurrentUtterance(null);
+      setShouldContinueAfterCurrent(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [delayRead]);
+
   // Stop auto-scroll when toggle is turned OFF
   useEffect(() => {
     if (!autoScroll) {
@@ -591,10 +608,11 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         const nextVerse = verseNumber + 1;
         setSelectedVerse(nextVerse);
         setShouldContinueAfterCurrent(false); // Reset the flag
-        // If Read2End is enabled, continue reading the next verse
-        if (readToEndRef.current || shouldContinueRef.current) {
-          // Small delay before reading next verse
-          setTimeout(() => speakVerse(nextVerse), 500);
+        // If Read2End or DelayRead is enabled, continue reading the next verse
+        if (readToEndRef.current || delayReadRef.current || shouldContinueRef.current) {
+          // Use 7-second delay for DelayRead mode, otherwise small delay
+          const delayTime = delayReadRef.current ? 7000 : 500;
+          setTimeout(() => speakVerse(nextVerse), delayTime);
         }
       }
     };
@@ -1044,9 +1062,48 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         {isSpeaking ? 'Stop' : 'Repeat'}
       </button>
 
+      {/* Delay Read Toggle Button */}
+      <button
+        onClick={() => {
+          // Turn off ReadToEnd if it's on when enabling DelayRead
+          if (!delayRead && readToEnd) {
+            setReadToEnd(false);
+          }
+          
+          // If currently speaking and toggle is OFF, turn it ON and set flag to continue
+          if (isSpeaking && !delayRead) {
+            setDelayRead(true);
+            setShouldContinueAfterCurrent(true);
+          } else {
+            const newDelayReadState = !delayRead;
+            setDelayRead(newDelayReadState);
+            
+            // If toggling ON and not currently speaking, trigger Read button after 100ms
+            if (newDelayReadState && !isSpeaking) {
+              setTimeout(() => {
+                speakVerse();
+              }, 100);
+            }
+          }
+        }}
+        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs transition-colors ${
+          delayRead 
+            ? 'bg-purple-500 text-white hover:bg-purple-600'
+            : 'bg-gray-400 text-gray-700 hover:bg-gray-500'
+        }`}
+        title={`Delay Read (7s between verses) is ${delayRead ? 'ON' : 'OFF'} - Click to toggle`}
+      >
+        DelayRead {delayRead ? 'ON' : 'OFF'}
+      </button>
+
       {/* Read to End Toggle Button - Hidden */}
       <button
         onClick={() => {
+          // Turn off DelayRead if it's on when enabling ReadToEnd
+          if (!readToEnd && delayRead) {
+            setDelayRead(false);
+          }
+          
           // If currently speaking and toggle is OFF, turn it ON and set flag to continue
           if (isSpeaking && !readToEnd) {
             setReadToEnd(true);
