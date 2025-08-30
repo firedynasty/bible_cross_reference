@@ -1773,7 +1773,6 @@ const BibleApp = () => {
         if (book) {
           handleBookSelect('lm');
         }
-        e.preventDefault();
       }
       // S key - go to Joshua
       else if (e.key === 's' || e.key === 'S') {
