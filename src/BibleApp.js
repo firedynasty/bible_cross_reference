@@ -1726,6 +1726,10 @@ const BibleApp = () => {
       
       // Numeric keys (0-9) for book selection
       else if (e.key >= '0' && e.key <= '9') {
+        // Allow browser shortcuts like Cmd+1, Cmd+2, etc. for tab switching
+        if (e.metaKey || e.ctrlKey) {
+          return;
+        }
         handleBookNumberInput(e.key);
         e.preventDefault();
       }
