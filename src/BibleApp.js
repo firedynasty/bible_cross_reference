@@ -1708,21 +1708,13 @@ const BibleApp = () => {
         
         e.preventDefault();
       }
-      // Escape key - Home functionality (reset all scroll positions and state) + stop speech
+      // Escape key - toggle sidebar open/close
       else if (e.key === 'Escape') {
-        handleHomeReset();
-        // Also stop any ongoing speech
-        const event = new CustomEvent('stopSpeech');
-        window.dispatchEvent(event);
-        e.preventDefault();
-      }
-      
-      // Grave accent/backtick key - toggle sidebar open/close
-      else if (e.key === '`' || e.keyCode === 192) {
-        console.log("Grave accent key pressed - toggling sidebar");
+        console.log("Escape key pressed - toggling sidebar");
         setShowSidebar(prev => !prev);
         e.preventDefault();
       }
+      
       
       // Numeric keys (0-9) for book selection
       else if (e.key >= '0' && e.key <= '9') {
@@ -3407,7 +3399,7 @@ const BibleApp = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
-                <span className="ml-1 text-sm text-gray-500">(`)</span>
+                <span className="ml-1 text-sm text-gray-500">(esc)</span>
               </>
             )}
             
