@@ -3560,7 +3560,7 @@ const BibleApp = () => {
               </div>
             )}
 
-            <div className="flex items-center ml-2">
+            <div className="flex items-center ml-2 md:ml-2 w-full md:w-auto flex-wrap md:flex-nowrap mt-2 md:mt-0">
               <BookOpen className="mr-1 h-4 w-4 text-blue-600" />
               <select 
                 value={selectedDropdownTranslation}
