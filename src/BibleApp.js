@@ -3473,7 +3473,7 @@ const BibleApp = () => {
                     </option>
                   ))}
                 </select>
-                <span className="ml-1 text-sm text-gray-500">(e,r:10+)</span>
+                <span className="ml-1 text-sm text-gray-500">(e:+1,r:+10)</span>
                 
                 {/* Speech Volume Controls */}
                 <div className="flex items-center ml-4 border-l pl-4">
