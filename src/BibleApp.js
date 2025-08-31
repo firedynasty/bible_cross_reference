@@ -262,7 +262,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         className={`flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-green-700' : 'bg-green-500'} text-white rounded hover:bg-green-600 transition-colors disabled:${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
         title="Save current position"
       >
-        Save(t,y)
+        Save(g)
       </button>
       
       <button
@@ -1459,13 +1459,13 @@ const BibleApp = () => {
 
         e.preventDefault();
       }
-      // 't' key - cycle through Firebase saved positions (visual only, no actions)
-      else if (e.key === 't' || e.key === 'T') {
+      // 'g' key - cycle through Firebase saved positions (visual only, no actions)
+      else if (e.key === 'g' || e.key === 'G') {
         // First, enable Firebase if it's not already enabled
         const firebaseToggleButton = document.querySelector('button[title*="Firebase loading is"]');
         if (firebaseToggleButton && firebaseToggleButton.textContent.includes('OFF')) {
           firebaseToggleButton.click();
-          console.log("t key pressed - auto-enabled Firebase");
+          console.log("g key pressed - auto-enabled Firebase");
         }
         
         // Find the Firebase position select element by its unique class
@@ -1485,17 +1485,43 @@ const BibleApp = () => {
           firebaseSelect.selectedIndex = currentIndex;
           firebaseSelect.dispatchEvent(new Event('change', { bubbles: true }));
           
-          console.log(`t key pressed - cycled Firebase position to ${firebaseSelect.options[currentIndex].text}`);
+          console.log(`g key pressed - cycled Firebase position to ${firebaseSelect.options[currentIndex].text}`);
         }
         e.preventDefault();
       }
-      // 'y' key - click Firebase Save button
+      // 't' key - go to chapter 1 of current book
+      else if (e.key === 't' || e.key === 'T') {
+        // Find the chapter select dropdown and set it to 1
+        const chapterSelect = document.querySelector('select.border.border-gray-300, select.border.border-gray-600');
+        if (chapterSelect) {
+          // Set to chapter 1
+          chapterSelect.value = '1';
+          // Trigger change event to update the chapter
+          chapterSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          console.log("t key pressed - navigated to chapter 1");
+        }
+        e.preventDefault();
+      }
+      // 'y' key - go to previous chapter (-1)
       else if (e.key === 'y' || e.key === 'Y') {
-        // Find the Firebase Save button by its title
-        const saveButton = document.querySelector('button[title="Save current position"]');
-        if (saveButton) {
-          saveButton.click();
-          console.log("y key pressed - clicked Firebase Save button");
+        console.log("Y key pressed for Previous Chapter");
+        // Find and click the Previous Chapter button
+        const prevChapterButtons = document.querySelectorAll('button');
+        let prevButton = null;
+        
+        for (let i = 0; i < prevChapterButtons.length; i++) {
+          const buttonText = prevChapterButtons[i].textContent || prevChapterButtons[i].innerText;
+          if (buttonText.includes('Previous Chapter') || buttonText.includes('Prev Chapter')) {
+            prevButton = prevChapterButtons[i];
+            break;
+          }
+        }
+        
+        if (prevButton && !prevButton.disabled) {
+          prevButton.click();
+          console.log("Previous Chapter button clicked");
+        } else {
+          console.log("Previous Chapter button not found or disabled");
         }
         e.preventDefault();
       }
@@ -3473,7 +3499,7 @@ const BibleApp = () => {
                     </option>
                   ))}
                 </select>
-                <span className="ml-1 text-sm text-gray-500">(e:+1,r:+10)</span>
+                <span className="ml-1 text-sm text-gray-500">(y:-1,e:+1,r:+10,t=1)</span>
                 
                 {/* Speech Volume Controls */}
                 <div className="flex items-center ml-4 border-l pl-4">
