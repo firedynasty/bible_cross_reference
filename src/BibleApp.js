@@ -235,7 +235,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         title="Cycle to next translation and apply to pane 2"
       >
         <ChevronRight className="w-3 h-3 mr-1" />
-        Next Transl
+        Next Transl (n)
       </button>
       
       <select
@@ -1789,6 +1789,43 @@ const BibleApp = () => {
         const book = bibleData?.find(b => b.abbrev === 'js');
         if (book) {
           handleBookSelect('js');
+        }
+        e.preventDefault();
+      }
+      // 'n' key - cycle to next translation (like Next Transl button)
+      else if (e.key === 'n' || e.key === 'N') {
+        try {
+          // Find current translation index
+          const currentIndex = translations.findIndex(t => t.id === selectedDropdownTranslation);
+          
+          // Calculate next index (loops back to 0 after last item)
+          const nextIndex = (currentIndex + 1) % translations.length;
+          const nextTranslation = translations[nextIndex].id;
+          
+          // Skip Hebrew translations if they cause issues
+          let finalTranslation = nextTranslation;
+          if (nextTranslation.includes('he_heb')) {
+            const afterHebrewIndex = (nextIndex + 1) % translations.length;
+            if (translations[afterHebrewIndex] && !translations[afterHebrewIndex].id.includes('he_heb')) {
+              finalTranslation = translations[afterHebrewIndex].id;
+            }
+          }
+          
+          // Update dropdown selection
+          setSelectedDropdownTranslation(finalTranslation);
+          
+          // Apply translation with delay to prevent scroll errors
+          setTimeout(() => {
+            try {
+              handleApplySelectedTranslationToPane2(finalTranslation);
+            } catch (error) {
+              console.warn('Error applying translation:', error);
+            }
+          }, 150);
+          
+          console.log(`n key pressed - cycled to translation: ${finalTranslation}`);
+        } catch (error) {
+          console.warn('Error cycling translation:', error);
         }
         e.preventDefault();
       }

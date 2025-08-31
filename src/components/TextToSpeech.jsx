@@ -296,54 +296,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
 
   // This effect will be handled later after speakVerse is defined
 
-  // Start auto-scroll when verses are available and selectedVerse is 1
-  useEffect(() => {
-    if (verses.length > 0 && selectedVerse === 1 && !autoScrollRunning) {
-      console.log('Starting auto-scroll for new chapter');
-      // Use a timeout to start auto-scroll after the function is defined
-      const timer = setTimeout(() => {
-        // Prevent multiple instances
-        if (timerIdRef.current) {
-          console.log('Auto-scroll already running, clearing existing timer');
-          clearTimeout(timerIdRef.current);
-          timerIdRef.current = null;
-        }
-        
-        setAutoScrollRunning(true);
-        console.log('Starting auto-scroll from verse:', selectedVerse);
-        
-        const scheduleNextVerse = (currentVerse) => {
-          if (currentVerse >= maxVerses) {
-            console.log('Auto-scroll completed - reached end of chapter');
-            setAutoScrollRunning(false);
-            timerIdRef.current = null;
-            return;
-          }
-          
-          const nextVerse = currentVerse + 1;
-          const nextVerseText = verses[nextVerse - 1] || '';
-          const timing = calculateVerseTiming(nextVerseText);
-          
-          console.log(`Auto-scroll: Scheduling verse ${nextVerse} in ${timing.toFixed(1)}s (${nextVerseText.split(' ').length} words)`);
-          
-          timerIdRef.current = setTimeout(() => {
-            console.log(`Auto-scroll: Moving to verse ${nextVerse}`);
-            setSelectedVerse(nextVerse);
-            scheduleNextVerse(nextVerse);
-          }, timing * 1000);
-        };
-        
-        // Start with current verse timing
-        const currentVerseText = verses[selectedVerse - 1] || '';
-        const initialTiming = calculateVerseTiming(currentVerseText);
-        console.log(`Auto-scroll: Current verse ${selectedVerse} will show for ${initialTiming.toFixed(1)}s (${currentVerseText.split(' ').length} words)`);
-        
-        scheduleNextVerse(selectedVerse);
-      }, 200);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [verses.length, selectedVerse, autoScrollRunning, maxVerses, verses, calculateVerseTiming]);
+  // Auto-scroll functionality removed - no longer starts automatically on page load
 
   // Listen for keyboard navigation events
   useEffect(() => {
