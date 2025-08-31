@@ -1743,14 +1743,6 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // C key - go to Colossians
-      else if (e.key === 'c' || e.key === 'C') {
-        const book = bibleData?.find(b => b.abbrev === 'cl');
-        if (book) {
-          handleBookSelect('cl');
-        }
-        e.preventDefault();
-      }
       // I key - go to Acts
       else if (e.key === 'i' || e.key === 'I') {
         const book = bibleData?.find(b => b.abbrev === 'ac');
