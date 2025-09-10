@@ -8,6 +8,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const [availableVoices, setAvailableVoices] = useState([]);
   const [readToEnd, setReadToEnd] = useState(false);
   const [delayRead, setDelayRead] = useState(false);
+  const [versesLeftToRead, setVersesLeftToRead] = useState(0);
   const [autoScroll, setAutoScroll] = useState(true); // Always on by default
   const [currentUtterance, setCurrentUtterance] = useState(null);
   const [shouldContinueAfterCurrent, setShouldContinueAfterCurrent] = useState(false);
@@ -564,6 +565,17 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         const nextVerse = verseNumber + 1;
         setSelectedVerse(nextVerse);
         setShouldContinueAfterCurrent(false); // Reset the flag
+        
+        // Check if we should continue reading more verses (for 5-verse reading)
+        setVersesLeftToRead(prev => {
+          const remaining = prev - 1;
+          if (remaining > 0 && nextVerse <= maxVerses) {
+            // Continue reading with 1 second delay
+            setTimeout(() => speakVerse(nextVerse), 1000);
+          }
+          return Math.max(0, remaining);
+        });
+        
         // If Read2End or DelayRead is enabled, continue reading the next verse
         if (readToEndRef.current || delayReadRef.current || shouldContinueRef.current) {
           // Use 7-second delay for DelayRead mode, otherwise small delay
@@ -949,6 +961,8 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
                     setIsDropdownOpen(false);
                     // Copy verse to clipboard
                     copyVerseToClipboard(verseNumber);
+                    // Set up to read 5 verses starting from selected verse
+                    setVersesLeftToRead(5);
                     // Automatically read the selected verse after a short delay
                     setTimeout(() => speakVerse(verseNumber), 100);
                   }}
@@ -972,6 +986,8 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
           if (isSpeaking) {
             stopSpeaking();
           } else {
+            // Set up to read 5 verses starting from current verse
+            setVersesLeftToRead(5);
             speakVerse();
           }
         }}
@@ -1030,7 +1046,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         {isSpeaking ? 'Stop' : 'Repeat'}
       </button>
 
-      {/* Delay Read Toggle Button */}
+      {/* Delay Read Toggle Button - Hidden */}
       <button
         onClick={() => {
           // Turn off ReadToEnd if it's on when enabling DelayRead
@@ -1054,11 +1070,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
             }
           }
         }}
-        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs transition-colors ${
-          delayRead 
-            ? 'bg-purple-500 text-white hover:bg-purple-600'
-            : 'bg-gray-400 text-gray-700 hover:bg-gray-500'
-        }`}
+        className="hidden"
         title={`Delay Read (7s between verses) is ${delayRead ? 'ON' : 'OFF'} - Click to toggle`}
       >
         DelayRead {delayRead ? 'ON' : 'OFF'}

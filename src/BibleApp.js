@@ -3519,7 +3519,7 @@ const BibleApp = () => {
             </div>
             
             <h1 className="text-xl font-bold ml-2">
-              {selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : 'Select a Book'}
+              {selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)).substring(0, 6) : 'Select a Book'}
             </h1>
             
             {selectedBook && (
