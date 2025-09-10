@@ -979,7 +979,7 @@ const BibleApp = () => {
   
   // Touch scroll mode options
   const touchScrollModes = [
-    { id: 'disabled', label: 'D', description: 'Normal click behavior' },
+    { id: 'disabled', label: 'X', description: 'Text selection enabled - no auto-scroll' },
     { id: 'right-only', label: 'R P', description: 'Touch right pane triggers page down' },
     { id: 'both-panes', label: 'Both Panes', description: 'Touch either pane triggers page down' },
     { id: 'right-reduced', label: 'R R', description: 'Touch right pane with smaller scroll' },
