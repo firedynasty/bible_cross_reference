@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 // eslint-disable-next-line no-unused-vars
-import { Book, Link, ChevronRight, History, BookOpen, Save, Database } from 'lucide-react';
+import { Book, Link, ChevronRight, History, BookOpen, Save, Database, Download } from 'lucide-react';
+import TextToSpeech from './components/TextToSpeech';
 
 // Import Firebase modules
 import { initializeApp } from 'firebase/app';
@@ -24,6 +25,14 @@ const database = getDatabase(app);
 
 // Firebase database name for Bible chapter positions
 const theVocabDatabaseName = 'BibleChapterDatabase';
+
+// External links for dropdown
+const linksOut = {
+  "60 bpm": "https://www.youtube.com/watch?v=gSmf7W3DUjs",
+  "80 bpm": "https://www.youtube.com/watch?v=cNhD7utblss&t=117s",
+  "Holy Spirit": "https://www.youtube.com/watch?v=QuY5YPORvfs&t=1823s",
+  "Test" : "https://www.google.com"
+};
 
 // Helper function to handle base URL for different environments
 const getBaseUrl = () => {
@@ -55,13 +64,21 @@ const getBaseUrl = () => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, isMobileView, isTabletView, stickyPane, isDarkMode, autoSavePosition, onAutoSavePositionChange, onNextChapter, bibleData, setSelectedBook }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Load saved positions from Firebase
   useEffect(() => {
+    // Only load Firebase data if Firebase is enabled
+    if (!firebaseEnabled) {
+      setLoading(false);
+      setSavedPositions([]);
+      return;
+    }
+
     const loadFirebaseKeys = async () => {
       try {
         setLoading(true);
@@ -95,7 +112,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
     };
 
     loadFirebaseKeys();
-  }, []);
+  }, [firebaseEnabled, refreshTrigger]);
 
   // Format saved position for display
   const formatPositionDisplay = (position) => {
@@ -115,13 +132,27 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
 
   // Handle saving current position to selected key
   const handleSave = () => {
-    if (!autoSavePosition) {
-      console.warn('Save aborted: No auto-save position selected');
-      return;
+    // Determine which position to save to
+    let savePosition;
+    
+    if (selectedKey && selectedKey.includes('-position')) {
+      // If a position is selected in the dropdown, save to that position (overwrite)
+      savePosition = selectedKey.split('-')[0];
+      console.log(`Saving to selected position ${savePosition} (overwriting existing)`);
+    } else {
+      // If no position is selected, find the next available position slot (1-4)
+      const existingPositions = savedPositions.map(p => parseInt(p.key.split('-')[0]));
+      let nextPosition = 1;
+      while (existingPositions.includes(nextPosition) && nextPosition <= 4) {
+        nextPosition++;
+      }
+      // If all positions 1-4 are taken, default to position 1 (overwrite)
+      savePosition = nextPosition <= 4 ? nextPosition.toString() : '1';
+      console.log(`No position selected, saving to next available position ${savePosition}`);
     }
 
     // Create the key string in the expected format
-    const keyToSave = `${autoSavePosition}-position`;
+    const keyToSave = `${savePosition}-position`;
 
     // Create position data object
     const positionData = JSON.stringify({
@@ -132,7 +163,29 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
       stickyPane: stickyPane
     });
 
+    console.log(`Saving to position ${savePosition}: ${keyToSave}`);
+    
+    // Keep the current selection to show confirmation
+    setSelectedKey(keyToSave);
+    
+    // Save the data
     onSave(keyToSave, positionData);
+    
+    // Trigger refresh of saved positions after a short delay to allow Firebase save to complete
+    setTimeout(() => {
+      setRefreshTrigger(prev => prev + 1);
+    }, 500);
+  };
+
+  // Handle loading position from selected key
+  const handleLoad = () => {
+    if (!selectedKey) {
+      console.warn('Load aborted: No position selected');
+      return;
+    }
+
+    // Call the onSelect function to load the position
+    onSelect(selectedKey);
   };
 
   // Get key number from key string (e.g., "1-position" returns "1")
@@ -143,28 +196,56 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
 
   return (
     <div className="flex items-center space-x-2">
-      <select
-        className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
-        value={autoSavePosition}
-        onChange={(e) => onAutoSavePositionChange && onAutoSavePositionChange(e.target.value)}
-        title="Select position for auto-save"
+      {/* Next Translation button */}
+      <button
+        onClick={() => {
+          try {
+            // Find current translation index
+            const currentIndex = translations.findIndex(t => t.id === selectedDropdownTranslation);
+            
+            // Calculate next index (loops back to 0 after last item)
+            const nextIndex = (currentIndex + 1) % translations.length;
+            const nextTranslation = translations[nextIndex].id;
+            
+            // Skip Hebrew translations if they cause issues
+            let finalTranslation = nextTranslation;
+            if (nextTranslation.includes('he_heb')) {
+              const afterHebrewIndex = (nextIndex + 1) % translations.length;
+              if (translations[afterHebrewIndex] && !translations[afterHebrewIndex].id.includes('he_heb')) {
+                finalTranslation = translations[afterHebrewIndex].id;
+              }
+            }
+            
+            // Update dropdown selection
+            setSelectedDropdownTranslation(finalTranslation);
+            
+            // Apply translation with delay to prevent scroll errors
+            setTimeout(() => {
+              try {
+                onApplyTranslationToPane2(finalTranslation);
+              } catch (error) {
+                console.warn('Error applying translation:', error);
+              }
+            }, 150);
+          } catch (error) {
+            console.warn('Error cycling translation:', error);
+          }
+        }}
+        className={`flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded hover:bg-blue-600 transition-colors`}
+        title="Cycle to next translation and apply to pane 2"
       >
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-      </select>
+        <ChevronRight className="w-3 h-3 mr-1" />
+        Next Transl (n)
+      </button>
+      
       <select
-        className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
+        className={`firebase-position-select border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded p-1 text-sm`}
         value={selectedKey}
         onChange={(e) => {
           const newKey = e.target.value;
           setSelectedKey(newKey);
           
-          // Automatically load the selected position
-          if (newKey) {
-            onSelect(newKey);
-          }
+          // Don't automatically load - let user manually trigger with '7' key or Load button
         }}
       >
         <option value="">Select position...</option>
@@ -181,28 +262,30 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         className={`flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-green-700' : 'bg-green-500'} text-white rounded hover:bg-green-600 transition-colors disabled:${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
         title="Save current position"
       >
-        <Save className="h-3 w-3 mr-1" />
-        Save
+        Save(g)
       </button>
       
-      {/* Page Down button (Page DN) */}
       <button
-        onClick={() => {
-          // Dispatch a 'p' key press event directly
-          const event = new KeyboardEvent('keydown', {
-            key: 'p',
-            code: 'KeyP',
-            keyCode: 80,
-            which: 80,
-            bubbles: true,
-            cancelable: true
-          });
-          document.dispatchEvent(event);
-        }}
-        className="ml-2 px-2 py-1 rounded text-xs font-medium bg-indigo-200 text-indigo-700 hover:bg-indigo-300"
-        title="Scroll down one page (same as pressing 'p' key)"
+        onClick={handleLoad}
+        disabled={loading}
+        className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-blue-700' : 'bg-blue-500'} text-white rounded hover:bg-blue-600 transition-colors disabled:${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
+        title="Load from selected position"
       >
-        Page DN
+        Load(v)
+      </button>
+      
+      {/* Firebase Toggle Button */}
+      <button
+        onClick={() => onFirebaseToggle && onFirebaseToggle(!firebaseEnabled)}
+        className={`ml-2 flex items-center px-2 py-1 text-sm rounded transition-colors ${
+          firebaseEnabled 
+            ? (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-500 text-white hover:bg-blue-600')
+            : (isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-400 text-gray-700 hover:bg-gray-500')
+        }`}
+        title={`Firebase loading is ${firebaseEnabled ? 'ON' : 'OFF'} - Click to toggle`}
+      >
+        <Database className="h-3 w-3 mr-1" />
+        {firebaseEnabled ? 'ON' : 'OFF'}
       </button>
 
       {/* Apply translation to pane 2 */}
@@ -210,7 +293,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
         onClick={() => {
           onApplyTranslationToPane2(selectedDropdownTranslation);
         }}
-        className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-purple-700' : 'bg-purple-500'} text-white rounded hover:bg-purple-600 transition-colors`}
+        className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-purple-700' : 'bg-purple-500'} text-white rounded hover:bg-purple-600 transition-colors hidden`}
         title="Apply selected translation to secondary pane"
       >
         <span className="flex items-center">
@@ -264,18 +347,24 @@ const NavigationPlaceholder = ({
   isDarkMode,
   touchScrollMode,
   onTouchScrollModeChange,
-  touchScrollModes
+  touchScrollModes,
+  rightPaneBibleData,
+  rightPaneTranslation,
+  resetScrollTimerRef,
+  speechVolume
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showPromptDropdown, setShowPromptDropdown] = useState(false);
   const [showTouchDropdown, setShowTouchDropdown] = useState(false);
+  const [showLinksDropdown, setShowLinksDropdown] = useState(false);
+  const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
 
   // Bible study prompt options
   const bibleStudyPrompts = [
     {
       id: 1,
-      label: "Meditation Connection",
+      label: "1. Meditation Connection (u,i)",
       template: "Meditation Connection, For {book} {chapter}, tell me what is the theme connect to meditation like breathe in out"
     },
     {
@@ -409,20 +498,62 @@ const NavigationPlaceholder = ({
           </svg>
         </button>
         
-        {/* To Clipboard Button */}
+        <div className="flex items-center">
+          <select
+            className="border border-gray-300 bg-white rounded px-2 py-1 text-sm max-w-xs ml-2"
+            style={{width: 'auto'}}
+            value={currentPromptIndex}
+            onChange={(e) => setCurrentPromptIndex(parseInt(e.target.value))}
+            title="Select Bible study prompt"
+          >
+            {bibleStudyPrompts.map((prompt, index) => (
+              <option key={prompt.id} value={index}>
+                {prompt.id}. {prompt.label}
+              </option>
+            ))}
+          </select>
+          
+          <button
+            onClick={() => {
+              // Get current selection from the dropdown directly
+              const promptsSelect = document.querySelector('select[title="Select Bible study prompt"]');
+              if (promptsSelect) {
+                const currentIndex = parseInt(promptsSelect.value);
+                const currentPrompt = bibleStudyPrompts[currentIndex];
+                handlePromptClipboard(currentPrompt.template);
+              }
+            }}
+            className="ml-1 px-2 py-0.5 rounded focus:outline-none bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs"
+            title="Load selected prompt to clipboard"
+          >
+            <Download className="h-3 w-3" />
+          </button>
+          (/:read2end)
+        </div>
+        
+        {/* Text to Speech Component */}
+        <TextToSpeech 
+          rightPaneBibleData={rightPaneBibleData}
+          currentBook={book.abbrev}
+          currentChapter={chapter}
+          rightPaneTranslation={rightPaneTranslation}
+          speechVolume={speechVolume}
+        />
+        
+        {/* To Clipboard Button - Hidden */}
         <button
           onClick={() => onClipboardClick && onClipboardClick()}
-          className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-green-100 text-green-700 hover:bg-green-200"
+          className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-green-100 text-green-700 hover:bg-green-200 hidden"
           title="Copy VLC command to clipboard for this chapter"
         >
           To Clip (t)
         </button>
         
-        {/* Primary text - Now after buttons */}
-        <span className="ml-3">Primary:</span>
-        <span className="font-medium mx-1">{book.book || getBookName(book.abbrev)}</span>
-        <ChevronRight className="h-3 w-3 mx-1" />
-        <span className="font-medium">Ch {chapter}</span>
+        {/* Primary text - Hidden */}
+        <span className="ml-3 hidden">Primary:</span>
+        <span className="font-medium mx-1 hidden">{book.book || getBookName(book.abbrev)}</span>
+        <ChevronRight className="h-3 w-3 mx-1 hidden" />
+        <span className="font-medium hidden">Ch {chapter}</span>
         
         {/* Scroll Sync Buttons - All hidden but functionality is retained */}
         <button 
@@ -483,41 +614,15 @@ const NavigationPlaceholder = ({
           </label>
         </div>
         
-        {/* History Button */}
+        {/* History Button - Hidden */}
         <button
           onClick={() => setShowHistory(!showHistory)}
-          className="ml-2 p-0.5 rounded-full hover:bg-gray-200 focus:outline-none"
+          className="ml-2 p-0.5 rounded-full hover:bg-gray-200 focus:outline-none hidden"
           title="Navigation history"
         >
           <History className="h-3 w-3" />
         </button>
 
-        <div className="relative">
-          <button
-            onClick={() => setShowPromptDropdown(!showPromptDropdown)}
-            className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-green-100 text-green-700 hover:bg-green-200 text-xs"
-            title="Copy Bible study prompts to clipboard"
-          >
-            Study Prompts ▼
-          </button>
-          
-          {showPromptDropdown && (
-            <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg z-50">
-              <div className="py-1">
-                {bibleStudyPrompts.map((prompt) => (
-                  <button
-                    key={prompt.id}
-                    onClick={() => handlePromptClipboard(prompt.template)}
-                    className="block w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                    title={`Copy ${prompt.label} prompt to clipboard`}
-                  >
-                    {prompt.id}. {prompt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* We've removed the mobile line break div to allow buttons to overflow on mobile */}
         
@@ -536,14 +641,14 @@ const NavigationPlaceholder = ({
             });
             document.dispatchEvent(event);
           }}
-          className="hidden md:block ml-2 px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+          className="hidden ml-2 px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
           title="Scroll down one line (Down Arrow)"
         >
           ↓
         </button>
 
-        {/* Scroll Control Radio Buttons - unhidden */}
-        <div className="hidden md:flex ml-2 items-center border-l border-gray-300 pl-2">
+        {/* Scroll Control Radio Buttons - hidden */}
+        <div className="hidden ml-2 items-center border-l border-gray-300 pl-2">
             <span className="text-xs text-gray-600 mr-1">SCROLL:</span>
             <label className="flex items-center cursor-pointer">
               <input
@@ -569,8 +674,13 @@ const NavigationPlaceholder = ({
             </label>
           </div>
 
+          {/* Reset Verse Speech Text */}
+          <div className="hidden md:flex ml-2 items-center border-l border-gray-300 pl-2">
+            <span className="text-xs text-gray-600"></span>
+          </div>
+
           {/* Touch Scroll Configuration Dropdown */}
-          <div className="hidden md:flex ml-2 items-center border-l border-gray-300 pl-2 relative">
+          <div className="hidden ml-2 items-center border-l border-gray-300 pl-2 relative">
             <span className="text-xs text-gray-600 mr-1">TOUCH:</span>
             <button
               onClick={() => setShowTouchDropdown(!showTouchDropdown)}
@@ -619,11 +729,40 @@ const NavigationPlaceholder = ({
                 });
                 document.dispatchEvent(event);
               }}
-              className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+              className="hidden px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
               title="Scroll up one line (Up Arrow)"
             >
               ↑
             </button>
+            
+            {/* External Links Dropdown */}
+            <div className="relative ml-2">
+              <button
+                onClick={() => setShowLinksDropdown(!showLinksDropdown)}
+                className="px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-xs font-bold"
+                title="External Links"
+              >
+                🔗
+              </button>
+              (links)
+              
+              {showLinksDropdown && (
+                <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                  {Object.entries(linksOut).map(([label, url]) => (
+                    <button
+                      key={label}
+                      onClick={() => {
+                        window.open(url, '_blank');
+                        setShowLinksDropdown(false);
+                      }}
+                      className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             
           </div>
           
@@ -636,7 +775,7 @@ const NavigationPlaceholder = ({
             <h3 className="font-medium text-lg">Reading History</h3>
           </div>
           <div className="max-h-80 overflow-y-auto">
-            {[...navigationHistory].reverse().map((item, index) => (
+            {navigationHistory && [...navigationHistory].reverse().map((item, index) => (
               <button
                 key={index}
                 onClick={() => {
@@ -678,14 +817,23 @@ const BibleApp = () => {
   const [error, setError] = useState(null);
   const [selectedBook, setSelectedBook] = useState(null);
   const [selectedChapter, setSelectedChapter] = useState(1);
+  const [showBookDropdown, setShowBookDropdown] = useState(false);
+  const [pendingBookSelection, setPendingBookSelection] = useState(null);
+  const pendingBookRef = useRef(null);
   const [crossReferences, setCrossReferences] = useState({});
+  
+  // Debug effect to track pendingBookSelection changes
+  useEffect(() => {
+    console.log('pendingBookSelection state changed to:', pendingBookSelection?.abbrev);
+    console.log('Full pendingBookSelection object:', pendingBookSelection);
+    pendingBookRef.current = pendingBookSelection;
+  }, [pendingBookSelection]);
   const [showCrossRef, setShowCrossRef] = useState(null);
-  const [nextChapterClickCount, setNextChapterClickCount] = useState(0);
-  const [autoSavePosition, setAutoSavePosition] = useState("1");
 
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
   const kjvContentRef = useRef(null);
+  const sidebarScrollRef = useRef(null);
   const isManuallyScrolling = useRef(false);
   const scrollSyncInitialized = useRef(false);
   const lastPrimaryScrollPos = useRef(0);
@@ -694,6 +842,76 @@ const BibleApp = () => {
   
   // State to track primary reading vs cross-reference viewing
   const [isViewingCrossRef, setIsViewingCrossRef] = useState(false);
+
+  // State for book number input with timeout
+  const [bookNumberInput, setBookNumberInput] = useState('');
+  const bookInputTimeoutRef = useRef(null);
+
+  // Bible books order for numeric selection (matches your actual Bible data)
+  const bibleBooksCanonical = [
+    // Old Testament
+    "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy",
+    "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel",
+    "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles",
+    "Ezra", "Nehemiah", "Esther", "Job", "Psalms", "Proverbs",
+    "Ecclesiastes", "Song of Solomon", "Isaiah", "Jeremiah", "Lamentations",
+    "Ezekiel", "Daniel", "Hosea", "Joel", "Amos", "Obadiah", "Jonah",
+    "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai",
+    "Zechariah", "Malachi",
+    // New Testament
+    "Matthew", "Mark", "Luke", "John", "Acts",
+    "Romans", "1 Corinthians", "2 Corinthians", "Galatians",
+    "Ephesians", "Philippians", "Colossians", "1 Thessalonians",
+    "2 Thessalonians", "1 Timothy", "2 Timothy", "Titus",
+    "Philemon", "Hebrews", "James", "1 Peter", "2 Peter",
+    "1 John", "2 John", "3 John", "Jude", "Revelation"
+  ];
+
+  // Function to handle book number selection
+  const handleBookNumberInput = (digit) => {
+    // Clear existing timeout first
+    if (bookInputTimeoutRef.current) {
+      clearTimeout(bookInputTimeoutRef.current);
+    }
+    
+    // Use functional state update to ensure we get the latest value
+    setBookNumberInput(prevInput => {
+      const newInput = prevInput + digit;
+      console.log(`Book input: "${newInput}" (added digit: ${digit}) - current state: "${bookNumberInput}"`);
+      
+      // Set new timeout for 1.5 seconds - only this final timeout will execute
+      bookInputTimeoutRef.current = setTimeout(() => {
+        const bookNumber = parseInt(newInput);
+        if (bookNumber > 0 && bookNumber <= bibleBooksCanonical.length) {
+          const targetBookName = bibleBooksCanonical[bookNumber - 1];
+          console.log(`Selecting book ${bookNumber}: ${targetBookName}`);
+          
+          // Find the book in bibleData and select it
+          if (bibleData) {
+            const bookToSelect = bibleData.find(book => {
+              const bookName = book.book || getBookName(book.abbrev);
+              return bookName === targetBookName;
+            });
+            
+            if (bookToSelect) {
+              handleBookSelect(bookToSelect.abbrev);
+              console.log(`✓ Selected book ${bookNumber}: ${targetBookName} via keyboard`);
+            } else {
+              console.warn(`✗ Book "${targetBookName}" not found in bibleData`);
+            }
+          } else {
+            console.warn('✗ bibleData not available');
+          }
+        } else {
+          console.warn(`✗ Invalid book number: ${bookNumber}. Valid range: 1-${bibleBooksCanonical.length}`);
+        }
+        // Reset the input after processing
+        setBookNumberInput('');
+      }, 1500);
+      
+      return newInput;
+    });
+  };
   const [primaryReading, setPrimaryReading] = useState({
     book: null,
     chapter: 1
@@ -724,7 +942,8 @@ const BibleApp = () => {
   const translations = React.useMemo(() => [
     { id: 'en_kjv.json', name: 'English - King James Version (KJV)' },
     { id: 'en_bbe.json', name: 'English - Bible in Basic English (BBE)' },
-    { id: 'zh_cuv.json', name: 'Chinese - Chinese Union Version (CUV)' },
+    { id: 'zh_cuv_cantonese.json', name: 'Chinese - CUV, Cantonese' },
+    { id: 'zh_cuv_chinese.json', name: 'Chinese - CUV, Chinese' },
     { id: 'es_rvr.json', name: 'Spanish - Reina Valera Revisada (RVR)' },
     { id: 'fr_apee.json', name: 'French - Louis Segond (APEE)' },
     { id: 'ko_ko.json', name: 'Korean - Korean Version' },
@@ -749,15 +968,22 @@ const BibleApp = () => {
   // State to track dark/light mode
   const [isDarkMode, setIsDarkMode] = useState(false);
   
+  // State to track speech volume (normal or softer)
+  const [speechVolume, setSpeechVolume] = useState('softer');
+  
+  // State to track Firebase loading toggle
+  const [firebaseEnabled, setFirebaseEnabled] = useState(false);
+  
   // State to track touch scroll mode
-  const [touchScrollMode, setTouchScrollMode] = useState('right-only');
+  const [touchScrollMode, setTouchScrollMode] = useState('right-independent');
   
   // Touch scroll mode options
   const touchScrollModes = [
-    { id: 'disabled', label: 'Disabled', description: 'Normal click behavior' },
-    { id: 'right-only', label: 'Right Pane', description: 'Touch right pane triggers page down' },
+    { id: 'disabled', label: 'X', description: 'Text selection enabled - no auto-scroll' },
+    { id: 'right-only', label: 'R P', description: 'Touch right pane triggers page down' },
     { id: 'both-panes', label: 'Both Panes', description: 'Touch either pane triggers page down' },
-    { id: 'right-reduced', label: 'Right Reduced', description: 'Touch right pane with smaller scroll' }
+    { id: 'right-reduced', label: 'R R', description: 'Touch right pane with smaller scroll' },
+    { id: 'right-independent', label: 'R I', description: 'Touch right pane scrolls only right pane (no sync)' }
   ];
   
   // State to track scroll position for mobile view during translation changes
@@ -844,15 +1070,45 @@ const BibleApp = () => {
     }
   }, [selectedBook]);
   
+  // Helper function to get book name based on abbreviation
+  const getBookName = (abbrev) => {
+    const bookNames = {
+      'gn': 'Genesis', 'ex': 'Exodus', 'lv': 'Leviticus', 'nm': 'Numbers', 'dt': 'Deuteronomy',
+      'js': 'Joshua', 'jud': 'Judges', 'rt': 'Ruth', '1sm': '1 Samuel', '2sm': '2 Samuel',
+      '1kgs': '1 Kings', '2kgs': '2 Kings', '1ch': '1 Chronicles', '2ch': '2 Chronicles',
+      'ezr': 'Ezra', 'ne': 'Nehemiah', 'et': 'Esther', 'job': 'Job', 'ps': 'Psalms',
+      'prv': 'Proverbs', 'ec': 'Ecclesiastes', 'so': 'Song of Solomon', 'is': 'Isaiah',
+      'jr': 'Jeremiah', 'lm': 'Lamentations', 'ez': 'Ezekiel', 'dn': 'Daniel',
+      'ho': 'Hosea', 'jl': 'Joel', 'am': 'Amos', 'ob': 'Obadiah', 'jn': 'Jonah',
+      'mi': 'Micah', 'na': 'Nahum', 'hk': 'Habakkuk', 'zp': 'Zephaniah', 'hg': 'Haggai',
+      'zc': 'Zechariah', 'ml': 'Malachi', 'mt': 'Matthew', 'mk': 'Mark', 'lk': 'Luke',
+      'jo': 'John', 'act': 'Acts', 'rm': 'Romans', '1co': '1 Corinthians', '2co': '2 Corinthians',
+      'gl': 'Galatians', 'eph': 'Ephesians', 'ph': 'Philippians', 'cl': 'Colossians',
+      '1ts': '1 Thessalonians', '2ts': '2 Thessalonians', '1tm': '1 Timothy', '2tm': '2 Timothy',
+      'tt': 'Titus', 'phm': 'Philemon', 'hb': 'Hebrews', 'jm': 'James', '1pe': '1 Peter',
+      '2pe': '2 Peter', '1jo': '1 John', '2jo': '2 John', '3jo': '3 John', 'jd': 'Jude',
+      're': 'Revelation',
+      // Add mapping for Hebrew Bible abbrevs
+      'ge': 'Genesis'
+    };
+    
+    return bookNames[abbrev] || abbrev;
+  };
+
   // Add keyboard event handler for translation switching and KJV scrolling
   useEffect(() => {
     // Flag to prevent scroll event feedback loops
     const isManuallyScrollingRef = isManuallyScrolling;
 
     const handleKeyDown = (e) => {
+      // Prevent keycode handling when user is typing in input fields or select dropdowns
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
+      
       // Removed '[' and ']' key handlers for translation switching
-      // 'x' key or Down Arrow - scroll down one line at a time in KJV pane (like 'z' but just one line)
-      if ((e.key === 'x' || e.key === 'ArrowDown') && kjvContentRef.current) {
+      // 'x' key - scroll down one line at a time in KJV pane (like 'z' but just one line)
+      if (e.key === 'x' && kjvContentRef.current) {
         
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
@@ -941,8 +1197,15 @@ const BibleApp = () => {
         }
       }
       
-      // 'o' key or PageUp key - page up with KJV pane as reference point
+      // 'o' key or PageUp key - page up (scrolls both sidebar and main content)
       else if ((e.key === 'o' || e.key === 'PageUp') && kjvContentRef.current) {
+        // If sidebar is open, scroll the sidebar too
+        if (showSidebar && sidebarScrollRef.current) {
+          const sidebarPane = sidebarScrollRef.current;
+          const sidebarPageHeight = sidebarPane.clientHeight * 0.9;
+          const sidebarNewPosition = sidebarPane.scrollTop - sidebarPageHeight;
+          sidebarPane.scrollTop = Math.max(0, sidebarNewPosition);
+        }
         
         // Calculate page height (approx viewport height)
         const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
@@ -984,8 +1247,16 @@ const BibleApp = () => {
           }, 50);
         }
       }
-      // 'p' key or PageDown key - page down with KJV pane as reference point
-      else if ((e.key === 'p' || e.key === 'PageDown') && kjvContentRef.current) {
+      // 'p' key, PageDown key, or ArrowDown key - page down (scrolls both sidebar and main content)
+      else if ((e.key === 'p' || e.key === 'PageDown' || e.key === 'ArrowDown') && kjvContentRef.current) {
+        // If sidebar is open, scroll the sidebar too
+        if (showSidebar && sidebarScrollRef.current) {
+          const sidebarPane = sidebarScrollRef.current;
+          const sidebarPageHeight = sidebarPane.clientHeight * 0.9;
+          const sidebarNewPosition = sidebarPane.scrollTop + sidebarPageHeight;
+          const sidebarMaxScroll = sidebarPane.scrollHeight - sidebarPane.clientHeight;
+          sidebarPane.scrollTop = Math.min(sidebarMaxScroll, sidebarNewPosition);
+        }
         
         // Calculate page height (approx viewport height)
         const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
@@ -1050,25 +1321,85 @@ const BibleApp = () => {
 
         e.preventDefault();
       }
-      // '3' key - cycle through touch options
-      else if (e.key === '3' || e.keyCode === 51) {
-        const currentIndex = touchScrollModes.findIndex(mode => mode.id === touchScrollMode);
-        const nextIndex = (currentIndex + 1) % touchScrollModes.length;
-        setTouchScrollMode(touchScrollModes[nextIndex].id);
-        
+      
+      // 'q' key - directly click the left arrow button (previous book)
+      else if (e.key === 'q' || e.key === 'Q' || e.keyCode === 81) {
+        const leftArrowButton = document.querySelector('button[title="Previous book"]');
+        if (leftArrowButton) {
+          leftArrowButton.click();
+        }
         e.preventDefault();
       }
-      // 't' key - simulate clicking the To Clip button
-      else if (e.key === 't' || e.keyCode === 84) {
-        // Find and click the To Clip button
-        const clipButton = Array.from(document.querySelectorAll('button'))
-          .find(button => button.title && button.title.includes('Copy VLC command') && button.textContent.includes('To Clip'));
-        
-        if (clipButton) {
-          clipButton.click();
+      
+      // 'w' key - directly click the right arrow button (next book)
+      else if (e.key === 'w' || e.key === 'W' || e.keyCode === 87) {
+        const rightArrowButton = document.querySelector('button[title="Next book"]');
+        if (rightArrowButton) {
+          rightArrowButton.click();
+        }
+        e.preventDefault();
+      }
+      
+      // 'e' key - go to next chapter (same as ';' key)
+      else if (e.key === 'e' || e.key === 'E' || e.keyCode === 69) {
+        console.log("e key pressed for Next Chapter");
+        console.log("Current state:", { 
+          selectedBook: selectedBook?.abbrev, 
+          selectedChapter, 
+          totalChapters: selectedBook?.chapters.length 
+        });
+
+        // Simplified approach: directly find and click the Next Chapter button
+        const nextChapterButtons = Array.from(document.querySelectorAll('button'))
+          .filter(button => button.textContent.includes('Next Chapter'));
+
+        console.log("Found Next Chapter buttons:", nextChapterButtons.length);
+
+        if (nextChapterButtons.length > 0) {
+          console.log("Found Next Chapter button, clicking it");
+          console.log("Current React state before button click:", {
+            selectedBook: selectedBook?.abbrev,
+            selectedChapter: selectedChapter
+          });
+          nextChapterButtons[0].click();
+          
+          // Check state after a delay to see if it updated
+          setTimeout(() => {
+            console.log("React state 200ms after button click:", {
+              selectedBook: selectedBook?.abbrev,
+              selectedChapter: selectedChapter
+            });
+          }, 200);
         } else {
-          // If we can't find the button but handleClipboardButtonClick is defined, call it directly
-          handleClipboardButtonClick();
+          console.log("No Next Chapter button found - this means we're at the last chapter");
+          console.log("Doing nothing (not advancing to next book or Genesis)");
+        }
+
+        e.preventDefault();
+      }
+      
+      // 'r' key - advance by +10 chapters by clicking Next Chapter button 10 times
+      else if (e.key === 'r' || e.key === 'R' || e.keyCode === 82) {
+        console.log("r key pressed for +10 chapters");
+        
+        // Find the Next Chapter button
+        const nextChapterButtons = Array.from(document.querySelectorAll('button'))
+          .filter(button => button.textContent.includes('Next Chapter'));
+          
+        if (nextChapterButtons.length > 0) {
+          console.log("Found Next Chapter button, clicking it 10 times");
+          
+          // Click the button 10 times with small delays
+          for (let i = 0; i < 10; i++) {
+            setTimeout(() => {
+              if (nextChapterButtons[0]) {
+                nextChapterButtons[0].click();
+                console.log(`Clicked Next Chapter button ${i + 1}/10`);
+              }
+            }, i * 100); // 100ms delay between clicks
+          }
+        } else {
+          console.log("No Next Chapter button found");
         }
         
         e.preventDefault();
@@ -1093,146 +1424,409 @@ const BibleApp = () => {
       }
       // 'm', ',', or ';' key - go to next chapter when available by simulating a click on the Next Chapter button
       else if (e.key === 'm' || e.key === ',' || e.key === ';') {
-        console.log("M or comma key pressed for Next Chapter");
+        console.log("Semicolon key pressed for Next Chapter");
+        console.log("Current state:", { 
+          selectedBook: selectedBook?.abbrev, 
+          selectedChapter, 
+          totalChapters: selectedBook?.chapters.length 
+        });
 
         // Simplified approach: directly find and click the Next Chapter button
         const nextChapterButtons = Array.from(document.querySelectorAll('button'))
           .filter(button => button.textContent.includes('Next Chapter'));
 
+        console.log("Found Next Chapter buttons:", nextChapterButtons.length);
+
         if (nextChapterButtons.length > 0) {
           console.log("Found Next Chapter button, clicking it");
+          console.log("Current React state before button click:", {
+            selectedBook: selectedBook?.abbrev,
+            selectedChapter: selectedChapter
+          });
           nextChapterButtons[0].click();
-        } else if (bibleData && bibleData.length > 0) {
-          console.log("No Next Chapter button found, navigating programmatically");
-
-          // Initialize book if not selected
-          if (!selectedBook) {
-            console.log("No book selected, selecting first book");
-            const firstBook = bibleData[0];
-            setSelectedBook(firstBook);
-            handleChapterSelect(1, true);
-          } else {
-            // Navigate to next chapter or book
-            const currentChapter = selectedChapter || 1;
-
-            if (currentChapter < selectedBook.chapters.length) {
-              // Go to next chapter in current book
-              console.log(`Going to next chapter: ${currentChapter + 1}`);
-              handleChapterSelect(currentChapter + 1, true);
-            } else {
-              // Try to go to next book
-              const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
-
-              if (currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1) {
-                const nextBook = bibleData[currentBookIndex + 1];
-                console.log(`Going to next book: ${nextBook.book || getBookName(nextBook.abbrev)}`);
-                setSelectedBook(nextBook);
-                setTimeout(() => {
-                  handleChapterSelect(1, true);
-                }, 100);
-              }
-            }
-          }
+          
+          // Check state after a delay to see if it updated
+          setTimeout(() => {
+            console.log("React state 200ms after button click:", {
+              selectedBook: selectedBook?.abbrev,
+              selectedChapter: selectedChapter
+            });
+          }, 200);
         } else {
-          console.log("Bible data not loaded yet");
+          console.log("No Next Chapter button found - this means we're at the last chapter");
+          console.log("Doing nothing (not advancing to next book or Genesis)");
         }
 
         e.preventDefault();
       }
-      
-      // '0' key - scroll up one line at a time in KJV pane (same as Up Arrow)
-      else if ((e.key === '0' || e.keyCode === 48) && kjvContentRef.current) {
-        
-        // Set the flag to prevent feedback loops
-        isManuallyScrollingRef.current = true;
-
-        try {
-          // Get KJV pane reference
-          const kjvPane = kjvContentRef.current;
-          
-          // Calculate line height - using verse element height as reference
-          // Default to a reasonable line height if we can't find a verse element
-          const lineHeight = 60; // Default is 60px (reasonable for text-2xl)
-          
-          // Scroll KJV pane up by one line
-          const kjvNewPosition = kjvPane.scrollTop - lineHeight;
-          kjvPane.scrollTop = Math.max(0, kjvNewPosition); // Ensure we don't scroll past the top
-
-          // In mobile view, we can skip synchronizing with primary pane
-          if (!isMobileView && chapterContentRef.current) {
-            const primaryPane = chapterContentRef.current;
-
-            // Calculate new scroll percentage of KJV after scrolling
-            const newKjvScrollPercentage = kjvPane.scrollTop /
-              (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
-
-            // Apply the same percentage to primary pane
-            primaryPane.scrollTop = newKjvScrollPercentage *
-              (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
-
-            // Update last scroll position for sync algorithm
-            lastPrimaryScrollPos.current = primaryPane.scrollTop;
-          }
-
-          e.preventDefault();
-        } catch (error) {
-          console.error("Error during keyboard scroll:", error);
-        } finally {
-          // Reset the flag
-          setTimeout(() => {
-            isManuallyScrollingRef.current = false;
-          }, 50);
+      // 'g' key - cycle through Firebase saved positions (visual only, no actions)
+      else if (e.key === 'g' || e.key === 'G') {
+        // First, enable Firebase if it's not already enabled
+        const firebaseToggleButton = document.querySelector('button[title*="Firebase loading is"]');
+        if (firebaseToggleButton && firebaseToggleButton.textContent.includes('OFF')) {
+          firebaseToggleButton.click();
+          console.log("g key pressed - auto-enabled Firebase");
         }
-      }
-      
-      // '9' key - scroll down one line at a time in KJV pane (same as Down Arrow)
-      else if ((e.key === '9' || e.keyCode === 57) && kjvContentRef.current) {
         
-        // Set the flag to prevent feedback loops
-        isManuallyScrollingRef.current = true;
-
-        try {
-          // Get KJV pane reference
-          const kjvPane = kjvContentRef.current;
+        // Find the Firebase position select element by its unique class
+        const firebaseSelect = document.querySelector('select.firebase-position-select');
+        if (firebaseSelect && firebaseSelect.options.length > 1) {
+          // Get current selected index
+          let currentIndex = firebaseSelect.selectedIndex;
           
-          // Calculate line height - using verse element height as reference
-          // Default to a reasonable line height if we can't find a verse element
-          const lineHeight = 60; // Default is 60px (reasonable for text-2xl)
-          
-          // Scroll KJV pane down by one line
-          const kjvNewPosition = kjvPane.scrollTop + lineHeight;
-          const kjvMaxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
-          kjvPane.scrollTop = Math.min(kjvMaxScroll, kjvNewPosition);
-
-          // In mobile view, we can skip synchronizing with primary pane
-          if (!isMobileView && chapterContentRef.current) {
-            const primaryPane = chapterContentRef.current;
-
-            // Calculate new scroll percentage of KJV after scrolling
-            const newKjvScrollPercentage = kjvPane.scrollTop /
-              (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
-
-            // Apply the same percentage to primary pane
-            primaryPane.scrollTop = newKjvScrollPercentage *
-              (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
-
-            // Update last scroll position for sync algorithm
-            lastPrimaryScrollPos.current = primaryPane.scrollTop;
+          // Skip the first option ("Select position...") and cycle through actual positions
+          if (currentIndex === 0 || currentIndex === firebaseSelect.options.length - 1) {
+            currentIndex = 1; // Start from first real position
+          } else {
+            currentIndex += 1; // Move to next position
           }
-
-          e.preventDefault();
-        } catch (error) {
-          console.error("Error during keyboard scroll:", error);
-        } finally {
-          // Reset the flag
-          setTimeout(() => {
-            isManuallyScrollingRef.current = false;
-          }, 50);
+          
+          // Update the select value AND trigger change event to update selectedKey state
+          firebaseSelect.selectedIndex = currentIndex;
+          firebaseSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          
+          console.log(`g key pressed - cycled Firebase position to ${firebaseSelect.options[currentIndex].text}`);
         }
+        e.preventDefault();
       }
-      // Escape key - Home functionality (reset all scroll positions and state)
+      // 't' key - go to chapter 1 of current book
+      else if (e.key === 't' || e.key === 'T') {
+        // Find the chapter select dropdown and set it to 1
+        const chapterSelect = document.querySelector('select.border.border-gray-300, select.border.border-gray-600');
+        if (chapterSelect) {
+          // Set to chapter 1
+          chapterSelect.value = '1';
+          // Trigger change event to update the chapter
+          chapterSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          console.log("t key pressed - navigated to chapter 1");
+        }
+        e.preventDefault();
+      }
+      // 'y' key - go to previous chapter (-1)
+      else if (e.key === 'y' || e.key === 'Y') {
+        console.log("Y key pressed for Previous Chapter");
+        // Find and click the Previous Chapter button
+        const prevChapterButtons = document.querySelectorAll('button');
+        let prevButton = null;
+        
+        for (let i = 0; i < prevChapterButtons.length; i++) {
+          const buttonText = prevChapterButtons[i].textContent || prevChapterButtons[i].innerText;
+          if (buttonText.includes('Previous Chapter') || buttonText.includes('Prev Chapter')) {
+            prevButton = prevChapterButtons[i];
+            break;
+          }
+        }
+        
+        if (prevButton && !prevButton.disabled) {
+          prevButton.click();
+          console.log("Previous Chapter button clicked");
+        } else {
+          console.log("Previous Chapter button not found or disabled");
+        }
+        e.preventDefault();
+      }
+      // 'v' key - click Firebase Load button
+      else if (e.key === 'v' || e.key === 'V') {
+        // Find the Firebase Load button by its title
+        const loadButton = document.querySelector('button[title="Load from selected position"]');
+        if (loadButton) {
+          loadButton.click();
+          console.log("v key pressed - clicked Firebase Load button");
+        }
+        e.preventDefault();
+      }
+
+      // '/' key - toggle Read to End button
+      else if (e.key === '/' || e.keyCode === 191) {
+        // Find and click the Read to End toggle button
+        const readToEndButton = Array.from(document.querySelectorAll('button'))
+          .find(btn => btn.textContent.includes('Read2End'));
+        
+        if (readToEndButton) {
+          readToEndButton.click();
+          console.log("/ key pressed - toggled Read to End");
+        }
+        e.preventDefault();
+      }
+      // 'u' key - cycle to next prompt (like Next Transl button)
+      else if (e.key === 'u' || e.key === 'U') {
+        // Find the prompts select element by its title
+        const promptsSelect = document.querySelector('select[title="Select Bible study prompt"]');
+        if (promptsSelect) {
+          const currentIndex = parseInt(promptsSelect.value);
+          const totalOptions = promptsSelect.options.length;
+          const nextIndex = (currentIndex + 1) % totalOptions;
+          
+          // Update the select value directly without triggering change event
+          promptsSelect.value = nextIndex;
+          
+          console.log(`u key pressed - cycled to prompt ${nextIndex + 1}: ${promptsSelect.options[nextIndex].text}`);
+        }
+        e.preventDefault();
+      }
+      // 'i' key - click Load prompt button
+      else if (e.key === 'i' || e.key === 'I') {
+        // Find the Load prompt button by its title
+        const loadButton = document.querySelector('button[title="Load selected prompt to clipboard"]');
+        if (loadButton) {
+          loadButton.click();
+          console.log("i key pressed - clicked Load prompt button");
+        }
+        e.preventDefault();
+      }
+      // Left Arrow - go to previous verse
+      else if (e.key === 'ArrowLeft') {
+        // Dispatch custom event to navigate to previous verse
+        const event = new CustomEvent('navigateVerse', {
+          detail: { direction: 'previous' }
+        });
+        window.dispatchEvent(event);
+        e.preventDefault();
+      }
+      // Right Arrow - go to next verse
+      else if (e.key === 'ArrowRight') {
+        // Dispatch custom event to navigate to next verse
+        const event = new CustomEvent('navigateVerse', {
+          detail: { direction: 'next' }
+        });
+        window.dispatchEvent(event);
+        e.preventDefault();
+      }
+      // '[' key - go to previous verse (copy of ArrowLeft functionality)
+      else if (e.key === '[') {
+        // Dispatch custom event to navigate to previous verse
+        const event = new CustomEvent('navigateVerse', {
+          detail: { direction: 'previous' }
+        });
+        window.dispatchEvent(event);
+        e.preventDefault();
+      }
+      // ']' key - go to next verse (copy of ArrowRight functionality)
+      else if (e.key === ']') {
+        // Dispatch custom event to navigate to next verse
+        const event = new CustomEvent('navigateVerse', {
+          detail: { direction: 'next' }
+        });
+        window.dispatchEvent(event);
+        e.preventDefault();
+      }
+      // Enter key - read the currently selected verse
+      else if (e.key === 'Enter') {
+        // Dispatch custom event to read current verse
+        const event = new CustomEvent('readCurrentVerse');
+        window.dispatchEvent(event);
+        e.preventDefault();
+      }
+      // Apostrophe (') key - speak the current book and chapter (moved from Shift+5)
+      else if (e.key === "'" || e.key === "'") {
+        console.log('i key pressed - speaking book and chapter');
+        console.log('selectedBook:', selectedBook);
+        console.log('selectedChapter:', selectedChapter);
+        console.log('pendingBookSelection:', pendingBookSelection);
+        
+        // Use the most current book information available
+        // Priority: pendingBookSelection -> selectedBook -> fallback to page title detection
+        let currentBook = null;
+        let currentChapter = selectedChapter;
+        
+        // Always try to get the current chapter from DOM first since state might be stale
+        const chapterSelect = document.querySelector('select.border.border-gray-300, select.border.border-gray-600');
+        if (chapterSelect) {
+          const selectedChapterFromDOM = parseInt(chapterSelect.value);
+          if (selectedChapterFromDOM) {
+            currentChapter = selectedChapterFromDOM;
+            console.log('Found chapter from DOM:', currentChapter);
+          }
+        }
+        
+        if (pendingBookSelection) {
+          currentBook = pendingBookSelection;
+          console.log('Using pendingBookSelection:', currentBook.abbrev);
+        } else if (selectedBook) {
+          currentBook = selectedBook;
+          console.log('Using selectedBook:', currentBook.abbrev);
+        } else {
+          // Try to detect from page title and DOM elements as fallback
+          const pageTitle = document.querySelector('h1')?.textContent || 'Unknown';
+          console.log('Visual page title:', pageTitle);
+          
+          // Create a simple book detection without relying on bibleData
+          const bookNameToAbbrev = {
+            'Genesis': 'gn', 'Exodus': 'ex', 'Leviticus': 'lv', 'Numbers': 'nm', 'Deuteronomy': 'dt',
+            'Joshua': 'js', 'Judges': 'jud', 'Ruth': 'rt', '1 Samuel': '1sm', '2 Samuel': '2sm',
+            '1 Kings': '1kgs', '2 Kings': '2kgs', '1 Chronicles': '1ch', '2 Chronicles': '2ch',
+            'Ezra': 'ezr', 'Nehemiah': 'ne', 'Esther': 'et', 'Job': 'job', 'Psalms': 'ps',
+            'Proverbs': 'prv', 'Ecclesiastes': 'ec', 'Song of Solomon': 'so', 'Isaiah': 'is',
+            'Jeremiah': 'jr', 'Lamentations': 'lm', 'Ezekiel': 'ez', 'Daniel': 'dn',
+            'Hosea': 'ho', 'Joel': 'jl', 'Amos': 'am', 'Obadiah': 'ob', 'Jonah': 'jn',
+            'Micah': 'mi', 'Nahum': 'na', 'Habakkuk': 'hk', 'Zephaniah': 'zp', 'Haggai': 'hg',
+            'Zechariah': 'zc', 'Malachi': 'ml', 'Matthew': 'mt', 'Mark': 'mk', 'Luke': 'lk',
+            'John': 'jo', 'Acts': 'act', 'Romans': 'rm', '1 Corinthians': '1co', '2 Corinthians': '2co',
+            'Galatians': 'gl', 'Ephesians': 'eph', 'Philippians': 'ph', 'Colossians': 'cl',
+            '1 Thessalonians': '1ts', '2 Thessalonians': '2ts', '1 Timothy': '1tm', '2 Timothy': '2tm',
+            'Titus': 'tt', 'Philemon': 'phm', 'Hebrews': 'hb', 'James': 'jm', '1 Peter': '1pe',
+            '2 Peter': '2pe', '1 John': '1jo', '2 John': '2jo', '3 John': '3jo', 'Jude': 'jd',
+            'Revelation': 're'
+          };
+          
+          console.log('Searching for book name in title...');
+          for (const [bookName, abbrev] of Object.entries(bookNameToAbbrev)) {
+            console.log(`Checking "${bookName}" against title "${pageTitle}"`);
+            if (pageTitle.includes(bookName)) {
+              // Create a simple book object
+              currentBook = { abbrev: abbrev, book: bookName };
+              console.log('Detected book from page title:', abbrev, '->', bookName);
+              break;
+            }
+          }
+          
+          if (!currentBook) {
+            console.log('No book matched the page title');
+          }
+        }
+        
+        if (currentBook) {
+          // Dispatch custom event to speak current book and chapter
+          const event = new CustomEvent('speakBookChapter', {
+            detail: {
+              book: currentBook,
+              chapter: currentChapter
+            }
+          });
+          console.log('Dispatching speakBookChapter event:', event.detail);
+          window.dispatchEvent(event);
+        } else {
+          console.log('No book found to speak');
+        }
+        
+        e.preventDefault();
+      }
+      // '\' key - speak the currently selected verse number (duplicate of ']' key)
+      else if (e.key === '\\') {
+        console.log('\\ key pressed - speaking selected verse');
+        
+        // Find the verse selector button
+        const verseButton = document.querySelector('button.bg-purple-100.text-purple-700');
+        if (verseButton) {
+          const buttonText = verseButton.textContent || '';
+          console.log('Found verse button text:', buttonText);
+          
+          // Extract verse number from text like "Verse 1"
+          const verseMatch = buttonText.match(/Verse (\d+)/);
+          if (verseMatch) {
+            const verseNumber = verseMatch[1];
+            console.log('Extracted verse number:', verseNumber);
+            
+            // Dispatch custom event to speak the verse number
+            const event = new CustomEvent('speakVerseNumber', {
+              detail: {
+                verseNumber: verseNumber
+              }
+            });
+            console.log('Dispatching speakVerseNumber event:', event.detail);
+            window.dispatchEvent(event);
+          } else {
+            console.log('Could not extract verse number from button text');
+          }
+        } else {
+          console.log('Verse button not found');
+        }
+        
+        e.preventDefault();
+      }
+      // Escape key - toggle sidebar open/close
       else if (e.key === 'Escape') {
-        handleHomeReset();
+        console.log("Escape key pressed - toggling sidebar");
+        setShowSidebar(prev => !prev);
+        e.preventDefault();
+      }
+      
+      
+      // Numeric keys (0-9) for book selection
+      else if (e.key >= '0' && e.key <= '9') {
+        // Allow browser shortcuts like Cmd+1, Cmd+2, etc. for tab switching
+        if (e.metaKey || e.ctrlKey) {
+          return;
+        }
+        handleBookNumberInput(e.key);
+        e.preventDefault();
+      }
+      
+      // Direct book navigation keys
+      // A key - go to Genesis
+      else if (e.key === 'a' || e.key === 'A') {
+        const book = bibleData?.find(b => b.abbrev === 'gn');
+        if (book) {
+          handleBookSelect('gn');
+        }
+        e.preventDefault();
+      }
+      // I key - go to Acts
+      else if (e.key === 'i' || e.key === 'I') {
+        const book = bibleData?.find(b => b.abbrev === 'ac');
+        if (book) {
+          handleBookSelect('ac');
+        }
+        e.preventDefault();
+      }
+      // K key - go to Hebrews
+      else if (e.key === 'k' || e.key === 'K') {
+        const book = bibleData?.find(b => b.abbrev === 'hb');
+        if (book) {
+          handleBookSelect('hb');
+        }
+        e.preventDefault();
+      }
+      // L key - go to Lamentations
+      else if (e.key === 'l' || e.key === 'L') {
+        const book = bibleData?.find(b => b.abbrev === 'lm');
+        if (book) {
+          handleBookSelect('lm');
+        }
+      }
+      // S key - go to Joshua
+      else if (e.key === 's' || e.key === 'S') {
+        const book = bibleData?.find(b => b.abbrev === 'js');
+        if (book) {
+          handleBookSelect('js');
+        }
+        e.preventDefault();
+      }
+      // 'n' key - cycle to next translation (like Next Transl button)
+      else if (e.key === 'n' || e.key === 'N') {
+        try {
+          // Find current translation index
+          const currentIndex = translations.findIndex(t => t.id === selectedDropdownTranslation);
+          
+          // Calculate next index (loops back to 0 after last item)
+          const nextIndex = (currentIndex + 1) % translations.length;
+          const nextTranslation = translations[nextIndex].id;
+          
+          // Skip Hebrew translations if they cause issues
+          let finalTranslation = nextTranslation;
+          if (nextTranslation.includes('he_heb')) {
+            const afterHebrewIndex = (nextIndex + 1) % translations.length;
+            if (translations[afterHebrewIndex] && !translations[afterHebrewIndex].id.includes('he_heb')) {
+              finalTranslation = translations[afterHebrewIndex].id;
+            }
+          }
+          
+          // Update dropdown selection
+          setSelectedDropdownTranslation(finalTranslation);
+          
+          // Apply translation with delay to prevent scroll errors
+          setTimeout(() => {
+            try {
+              handleApplySelectedTranslationToPane2(finalTranslation);
+            } catch (error) {
+              console.warn('Error applying translation:', error);
+            }
+          }, 150);
+          
+          console.log(`n key pressed - cycled to translation: ${finalTranslation}`);
+        } catch (error) {
+          console.warn('Error cycling translation:', error);
+        }
         e.preventDefault();
       }
     };
@@ -1240,7 +1834,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation]);
+  }, [selectedTranslation, showSidebar]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
@@ -1479,6 +2073,24 @@ const BibleApp = () => {
     }
   }, [isMobileView, setMobileScrollPosition]);
 
+  const handleIndependentRightScroll = useCallback((scrollAmount = 0.9) => {
+    if (!kjvContentRef.current) return;
+    
+    const pageHeight = kjvContentRef.current.clientHeight * scrollAmount;
+    isManuallyScrolling.current = true;
+
+    try {
+      const kjvPane = kjvContentRef.current;
+      const kjvNewPosition = kjvPane.scrollTop + pageHeight;
+      const kjvMaxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
+      kjvPane.scrollTop = Math.min(kjvMaxScroll, kjvNewPosition);
+    } finally {
+      setTimeout(() => {
+        isManuallyScrolling.current = false;
+      }, 50);
+    }
+  }, []);
+
   const handlePaneClick = useCallback((event, pane) => {
     // Don't trigger scroll if clicking on a button or interactive element
     if (event.target.tagName === 'BUTTON' || 
@@ -1493,10 +2105,17 @@ const BibleApp = () => {
     if (touchScrollMode === 'disabled') return;
     
     if (touchScrollMode === 'right-only' && pane === 'left') return;
+    if (touchScrollMode === 'right-independent' && pane === 'left') return;
+    
+    if (touchScrollMode === 'right-independent' && pane === 'right') {
+      const scrollAmount = 0.9;
+      handleIndependentRightScroll(scrollAmount);
+      return;
+    }
     
     const scrollAmount = touchScrollMode === 'right-reduced' && pane === 'right' ? 0.5 : 0.9;
     handleTouchPageDown(scrollAmount);
-  }, [touchScrollMode, handleTouchPageDown]);
+  }, [touchScrollMode, handleTouchPageDown, handleIndependentRightScroll]);
 
   // Centralized Home function to reset all scroll positions and state
   const handleHomeReset = useCallback(() => {
@@ -1525,8 +2144,6 @@ const BibleApp = () => {
 
   // Load Bible data and cross-references on component mount
   useEffect(() => {
-    // Reset the Next Chapter click counter when the component mounts
-    setNextChapterClickCount(0);
     
     const loadData = async () => {
       try {
@@ -1698,15 +2315,24 @@ const BibleApp = () => {
         }
         
         // Set selected book (from saved state or default to first book)
+        console.log("=== INITIALIZING BOOK/CHAPTER STATE ===");
+        console.log("savedBook:", savedBook?.abbrev);
+        console.log("savedChapter:", savedChapter);
+        console.log("bibleData length:", bibleData?.length);
+        
         if (savedBook) {
+          console.log("✓ Using saved state - setting book:", savedBook.abbrev, "chapter:", savedChapter);
           setSelectedBook(savedBook);
           setSelectedChapter(savedChapter);
         } else if (bibleData && bibleData.length > 0) {
+          console.log("✓ Using default state - setting book:", bibleData[0].abbrev, "chapter: 1");
           setSelectedBook(bibleData[0]);
           setPrimaryReading({
             book: bibleData[0],
             chapter: 1
           });
+        } else {
+          console.log("❌ No state to set - no savedBook and no bibleData");
         }
         
         // Load cross-references from the JSON file, using the same method that worked for Bible data
@@ -2046,9 +2672,16 @@ const BibleApp = () => {
 
   // Handle book selection
   const handleBookSelect = (abbrev) => {
+    console.log("=== handleBookSelect called ===", {
+      abbrev,
+      currentSelectedBook: selectedBook?.abbrev,
+      currentSelectedChapter: selectedChapter
+    });
     if (bibleData) {
       const book = bibleData.find(b => b.abbrev === abbrev);
+      console.log("✓ setSelectedBook called with:", book?.abbrev);
       setSelectedBook(book);
+      console.log("✓ setSelectedChapter called with: 1");
       setSelectedChapter(1); // Reset to first chapter when book changes
       setShowCrossRef(null); // Hide any cross-reference popup
       
@@ -2075,39 +2708,18 @@ const BibleApp = () => {
 
   // Handle chapter selection
   const handleChapterSelect = (chapterNum, fromNextChapterButton = false) => {
+    console.log("=== handleChapterSelect called ===", {
+      chapterNum,
+      fromNextChapterButton,
+      currentSelectedBook: selectedBook?.abbrev,
+      currentSelectedChapter: selectedChapter
+    });
     setSelectedChapter(chapterNum);
+    console.log("✓ setSelectedChapter called with:", chapterNum);
     setShowCrossRef(null); // Hide any cross-reference popup
 
     // No need to reset auto-scroll timer here - will be handled in NavigationPlaceholder component
 
-    // Handle Next Chapter button click counting and auto-save
-    if (fromNextChapterButton) {
-      const newCount = nextChapterClickCount + 1;
-      setNextChapterClickCount(newCount);
-      
-      // If this is the second click, trigger auto-save without resetting counter
-      if (newCount >= 2) {
-        try {
-          console.log(`Auto-saving to position ${autoSavePosition}`);
-
-          // Direct save using the Firebase save function
-          // Create position data object
-          const positionData = JSON.stringify({
-            bookAbbrev: selectedBook?.abbrev,
-            chapter: chapterNum, // Use the new chapter we're navigating to
-            translation: selectedTranslation,
-            timestamp: Date.now(),
-            stickyPane: stickyPane
-          });
-
-          // Call the save function directly with the selected position
-          handleFirebasePositionSave(`${autoSavePosition}-position`, positionData);
-        } catch (error) {
-          console.error("Error during auto-save:", error);
-        }
-        // Note: Counter is not reset here - it will only reset on page load
-      }
-    }
     
     // Update primary reading
     if (selectedBook) {
@@ -2127,15 +2739,65 @@ const BibleApp = () => {
     }
     
     // When navigating between chapters, we want to start at the top of the page
-    // Only clear this if coming from the Next Chapter button
-    if (fromNextChapterButton) {
-      localStorage.removeItem('mobileScrollPosition');
-      setMobileScrollPosition(0);
-    }
+    localStorage.removeItem('mobileScrollPosition');
+    setMobileScrollPosition(0);
     
     // Reset scroll sync state
     lastPrimaryScrollPos.current = 0;
     scrollSyncInitialized.current = false;
+  };
+
+  // Direct book navigation functions for key '1' and '2'
+  // eslint-disable-next-line no-unused-vars
+  const handlePreviousBook = () => {
+    if (!bibleData || !selectedBook) return;
+    
+    const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
+    if (currentBookIndex !== -1) {
+      const prevIndex = currentBookIndex > 0 ? currentBookIndex - 1 : bibleData.length - 1;
+      const prevBook = bibleData[prevIndex];
+      
+      console.log("Direct previous book navigation:", {
+        currentBook: selectedBook.abbrev,
+        prevBook: prevBook.abbrev
+      });
+      
+      setSelectedBook(prevBook);
+      setSelectedChapter(1); // Reset to first chapter
+      setShowCrossRef(null); // Hide any cross-reference popup
+      
+      // Update primary reading
+      setPrimaryReading({
+        book: prevBook,
+        chapter: 1
+      });
+    }
+  };
+
+  // eslint-disable-next-line no-unused-vars
+  const handleNextBook = () => {
+    if (!bibleData || !selectedBook) return;
+    
+    const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
+    if (currentBookIndex !== -1) {
+      const nextIndex = currentBookIndex < bibleData.length - 1 ? currentBookIndex + 1 : 0;
+      const nextBook = bibleData[nextIndex];
+      
+      console.log("Direct next book navigation:", {
+        currentBook: selectedBook.abbrev,
+        nextBook: nextBook.abbrev
+      });
+      
+      setSelectedBook(nextBook);
+      setSelectedChapter(1); // Reset to first chapter
+      setShowCrossRef(null); // Hide any cross-reference popup
+      
+      // Update primary reading
+      setPrimaryReading({
+        book: nextBook,
+        chapter: 1
+      });
+    }
   };
   
   // Apply selected translation from dropdown to the secondary pane (pane 2)
@@ -2705,31 +3367,6 @@ const BibleApp = () => {
     );
   }
 
-  // Helper function to get book name based on abbreviation
-  const getBookName = (abbrev) => {
-    const bookNames = {
-      'gn': 'Genesis', 'ex': 'Exodus', 'lv': 'Leviticus', 'nm': 'Numbers', 'dt': 'Deuteronomy',
-      'js': 'Joshua', 'jud': 'Judges', 'rt': 'Ruth', '1sm': '1 Samuel', '2sm': '2 Samuel',
-      '1kgs': '1 Kings', '2kgs': '2 Kings', '1ch': '1 Chronicles', '2ch': '2 Chronicles',
-      'ezr': 'Ezra', 'ne': 'Nehemiah', 'et': 'Esther', 'job': 'Job', 'ps': 'Psalms',
-      'prv': 'Proverbs', 'ec': 'Ecclesiastes', 'so': 'Song of Solomon', 'is': 'Isaiah',
-      'jr': 'Jeremiah', 'lm': 'Lamentations', 'ez': 'Ezekiel', 'dn': 'Daniel',
-      'ho': 'Hosea', 'jl': 'Joel', 'am': 'Amos', 'ob': 'Obadiah', 'jn': 'Jonah',
-      'mi': 'Micah', 'na': 'Nahum', 'hk': 'Habakkuk', 'zp': 'Zephaniah', 'hg': 'Haggai',
-      'zc': 'Zechariah', 'ml': 'Malachi', 'mt': 'Matthew', 'mk': 'Mark', 'lk': 'Luke',
-      'jo': 'John', 'act': 'Acts', 'rm': 'Romans', '1co': '1 Corinthians', '2co': '2 Corinthians',
-      'gl': 'Galatians', 'eph': 'Ephesians', 'ph': 'Philippians', 'cl': 'Colossians',
-      '1ts': '1 Thessalonians', '2ts': '2 Thessalonians', '1tm': '1 Timothy', '2tm': '2 Timothy',
-      'tt': 'Titus', 'phm': 'Philemon', 'hb': 'Hebrews', 'jm': 'James', '1pe': '1 Peter',
-      '2pe': '2 Peter', '1jo': '1 John', '2jo': '2 John', '3jo': '3 John', 'jd': 'Jude',
-      're': 'Revelation',
-      // Add mapping for Hebrew Bible abbrevs
-      'ge': 'Genesis'
-    };
-    
-    return bookNames[abbrev] || abbrev;
-  };
-
   // Map Hebrew book abbreviations to KJV abbreviations
   const getKjvBookAbbrev = (hebrewAbbrev) => {
     const abbrevMap = {
@@ -2774,8 +3411,8 @@ const BibleApp = () => {
               </svg>
             </button>
           </div>
-          <div className="overflow-y-auto h-full">
-            {bibleData && bibleData.map(book => (
+          <div ref={sidebarScrollRef} className="overflow-y-auto h-full">
+            {bibleData && bibleData.map((book, index) => (
               <button
                 key={book.abbrev}
                 onClick={() => {
@@ -2787,7 +3424,22 @@ const BibleApp = () => {
                   selectedBook && selectedBook.abbrev === book.abbrev ? 'bg-blue-100 font-medium' : ''
                 }`}
               >
-                {book.book || getBookName(book.abbrev)}
+                {(() => {
+                  const bookName = book.book || getBookName(book.abbrev);
+                  const keyMappings = {
+                    'Genesis': '(a)',
+                    'Joshua': '(s)', 
+                    'Job': '(f)',
+                    'Isaiah': '(g)',
+                    'Matthew': '(h)',
+                    'Acts': '(i)',
+                    'Romans': '(j)',
+                    'Hebrews': '(k)',
+                    'Lamentations': '(l)',
+                    'Colossians': '(c)'
+                  };
+                  return keyMappings[bookName] ? `${index + 1}. ${bookName} ${keyMappings[bookName]}` : `${index + 1}. ${bookName}`;
+                })()}
               </button>
             ))}
           </div>
@@ -2801,17 +3453,73 @@ const BibleApp = () => {
           <div className="flex items-center space-x-2">
             {/* Sidebar toggle button for mobile, tablet and full screen */}
             {!showSidebar && (
-              <button 
-                onClick={() => setShowSidebar(true)} 
-                className="flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
+              <>
+                <button 
+                  onClick={() => setShowSidebar(true)} 
+                  className="flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+                <span className="ml-1 text-sm text-gray-500">(esc)</span>
+              </>
             )}
+            
+            {/* Book Navigation Buttons */}
+            <div className="flex items-center ml-2">
+              <button 
+                onClick={() => {
+                  if (bibleData && selectedBook) {
+                    const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
+                    if (currentBookIndex !== -1) {
+                      const prevIndex = currentBookIndex > 0 ? currentBookIndex - 1 : bibleData.length - 1;
+                      const prevBook = bibleData[prevIndex];
+                      
+                      setSelectedBook(prevBook);
+                      setSelectedChapter(1);
+                      setShowCrossRef(null);
+                      
+                      setPrimaryReading({
+                        book: prevBook,
+                        chapter: 1
+                      });
+                    }
+                  }
+                }}
+                className="mr-2 px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-sm font-bold"
+                title="Previous book"
+              >
+                ←(q)
+              </button>
+              <button 
+                onClick={() => {
+                  if (bibleData && selectedBook) {
+                    const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
+                    if (currentBookIndex !== -1) {
+                      const nextIndex = currentBookIndex < bibleData.length - 1 ? currentBookIndex + 1 : 0;
+                      const nextBook = bibleData[nextIndex];
+                      
+                      setSelectedBook(nextBook);
+                      setSelectedChapter(1);
+                      setShowCrossRef(null);
+                      
+                      setPrimaryReading({
+                        book: nextBook,
+                        chapter: 1
+                      });
+                    }
+                  }
+                }}
+                className="mr-2 px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-sm font-bold"
+                title="Next book"
+              >
+                →(w)
+              </button>
+            </div>
+            
             <h1 className="text-xl font-bold ml-2">
-              {selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : 'Select a Book'}
+              {selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)).substring(0, 6) : 'Select a Book'}
             </h1>
             
             {selectedBook && (
@@ -2822,16 +3530,74 @@ const BibleApp = () => {
                   onChange={(e) => handleChapterSelect(parseInt(e.target.value))}
                   className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded px-1 py-0 text-sm w-12`}
                 >
-                  {selectedBook.chapters.map((_, index) => (
+                  {selectedBook && selectedBook.chapters && selectedBook.chapters.map((_, index) => (
                     <option key={index + 1} value={index + 1}>
                       {index + 1}
                     </option>
                   ))}
                 </select>
+                <span className="ml-1 text-sm text-gray-500">(y:-1,e:+1,r:+10,t=1)</span>
+                
+                {/* Speech Volume Controls */}
+                <div className="flex items-center ml-4 border-l pl-4">
+                  <span className="text-sm text-gray-600 mr-2">Volume:</span>
+                  <label className="flex items-center mr-3 text-sm">
+                    <input
+                      type="radio"
+                      name="speechVolume"
+                      value="normal"
+                      checked={speechVolume === 'normal'}
+                      onChange={(e) => setSpeechVolume(e.target.value)}
+                      className="mr-1"
+                    />
+                    Normal
+                  </label>
+                  <label className="flex items-center text-sm">
+                    <input
+                      type="radio"
+                      name="speechVolume"
+                      value="softer"
+                      checked={speechVolume === 'softer'}
+                      onChange={(e) => setSpeechVolume(e.target.value)}
+                      className="mr-1"
+                    />
+                    Softer
+                  </label>
+                </div>
+                
+                {/* Chapter Navigation Input */}
+                <input 
+                  type="number" 
+                  placeholder="1" 
+                  className="hidden ml-2 px-1 py-0 border border-gray-300 rounded text-sm w-12"
+                  min="1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const chapter = parseInt(e.target.value);
+                      if (chapter && !isNaN(chapter) && chapter > 0) {
+                        handleChapterSelect(chapter);
+                        e.target.value = '';
+                      }
+                    }
+                  }}
+                />
+                <button 
+                  onClick={(e) => {
+                    const chapter = parseInt(e.target.previousElementSibling.value);
+                    if (chapter && !isNaN(chapter) && chapter > 0) {
+                      handleChapterSelect(chapter);
+                      e.target.previousElementSibling.value = '';
+                    }
+                  }}
+                  className="hidden ml-1 px-1 py-0 bg-green-200 hover:bg-green-300 rounded text-sm font-bold"
+                  title="Go to chapter"
+                >
+                  Go
+                </button>
               </div>
             )}
 
-            <div className="flex items-center ml-2">
+            <div className="flex items-center ml-2 md:ml-2 w-full md:w-auto flex-wrap md:flex-nowrap mt-2 md:mt-0">
               <BookOpen className="mr-1 h-4 w-4 text-blue-600" />
               <select 
                 value={selectedDropdownTranslation}
@@ -2840,7 +3606,7 @@ const BibleApp = () => {
                 style={{ width: "auto" }}
                 id="translationSelector"
               >
-                {translations.map(translation => (
+                {translations && translations.map(translation => (
                   <option key={translation.id} value={translation.id}>
                     {translation.name}
                   </option>
@@ -2861,6 +3627,74 @@ const BibleApp = () => {
                 </span>
                 Apply
               </button>
+
+              {/* Load selected translation for pane 2 (for read) */}
+              <button
+                onClick={() => {
+                  handleApplySelectedTranslationToPane2(selectedDropdownTranslation);
+                }}
+                className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-purple-700' : 'bg-purple-500'} text-white rounded hover:bg-purple-600 transition-colors`}
+                title="Apply selected translation to secondary pane"
+              >
+                <span className="flex items-center">
+                  <BookOpen className="h-3 w-3" />
+                  <span className="text-xs font-bold ml-0.5 mr-1">2</span>
+                </span>
+                Apply (for read)
+              </button>
+
+              {/* Book Selection Dropdown */}
+              <div className="flex ml-2 items-center border-l border-gray-300 pl-2 relative">
+                <button
+                  onClick={() => setShowBookDropdown(!showBookDropdown)}
+                  className={`hidden text-xs px-2 py-1 rounded border flex items-center ${
+                    pendingBookSelection ? 'bg-yellow-100 hover:bg-yellow-200 border-yellow-300' : 'bg-gray-100 hover:bg-gray-200 border-gray-300'
+                  }`}
+                >
+                  {pendingBookSelection ? 
+                    (pendingBookSelection.book || getBookName(pendingBookSelection.abbrev)) : 
+                    (selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : 'Select Book')
+                  }
+                  <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {showBookDropdown && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 w-64 max-h-80 overflow-y-auto">
+                    {bibleData && bibleData.map((book) => (
+                      <button
+                        key={book.abbrev}
+                        onClick={() => {
+                          setPendingBookSelection(book);
+                          setShowBookDropdown(false);
+                        }}
+                        className={`block w-full text-left px-3 py-2 text-xs hover:bg-gray-100 ${
+                          selectedBook && selectedBook.abbrev === book.abbrev ? 'bg-blue-50 text-blue-700 font-medium' : ''
+                        } ${
+                          pendingBookSelection && pendingBookSelection.abbrev === book.abbrev ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''
+                        }`}
+                      >
+                        {book.book || getBookName(book.abbrev)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Return/Apply Button */}
+                {pendingBookSelection && (
+                  <button
+                    onClick={() => {
+                      handleBookSelect(pendingBookSelection.abbrev);
+                      setPendingBookSelection(null);
+                    }}
+                    className="ml-1 px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs flex items-center"
+                    title="Navigate to selected book"
+                  >
+                    ⏎
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           
@@ -2875,15 +3709,17 @@ const BibleApp = () => {
               onApplyTranslationToPane1={handleApplySelectedTranslationToPane1}
               onApplyTranslationToPane2={handleApplySelectedTranslationToPane2}
               selectedDropdownTranslation={selectedDropdownTranslation}
+              setSelectedDropdownTranslation={setSelectedDropdownTranslation}
+              translations={translations}
               isMobileView={isMobileView}
               isTabletView={isTabletView}
               stickyPane={stickyPane}
               isDarkMode={isDarkMode}
-              autoSavePosition={autoSavePosition}
-              onAutoSavePositionChange={setAutoSavePosition}
               onNextChapter={handleChapterSelect}
               bibleData={bibleData}
               setSelectedBook={setSelectedBook}
+              firebaseEnabled={firebaseEnabled}
+              onFirebaseToggle={setFirebaseEnabled}
             />
           </div>
           
@@ -2904,7 +3740,10 @@ const BibleApp = () => {
               touchScrollMode={touchScrollMode}
               onTouchScrollModeChange={setTouchScrollMode}
               touchScrollModes={touchScrollModes}
+              rightPaneBibleData={rightPaneBibleData}
+              rightPaneTranslation={rightPaneTranslation}
               resetScrollTimerRef={resetScrollTimerRef}
+              speechVolume={speechVolume}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
                   const bookObj = bibleData.find(b => b.abbrev === book);
@@ -2947,6 +3786,7 @@ const BibleApp = () => {
               >
                 Return
               </button>
+
             )}
           </div>
         </div>
@@ -2962,6 +3802,74 @@ const BibleApp = () => {
           >
             {selectedBook && selectedChapter > 0 && (
               <div>
+                {/* Read and Repeat buttons */}
+                <div className="mb-4 flex gap-2">
+                  <button 
+                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
+                    title="Read selected verse in English"
+                    onClick={(event) => {
+                      const readButtons = document.querySelectorAll('button[title="Read selected verse in English"]');
+                      const targetButton = Array.from(readButtons).find(btn => btn !== event.target);
+                      if (targetButton) {
+                        targetButton.click();
+                      }
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-6 h-6">
+                      <polygon points="6 3 20 12 6 21 6 3"></polygon>
+                    </svg>
+                  </button>
+                  <button 
+                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
+                    title="Repeat selected verse in English"
+                    onClick={(event) => {
+                      const repeatButtons = document.querySelectorAll('button[title="Repeat selected verse in English"]');
+                      const targetButton = Array.from(repeatButtons).find(btn => btn !== event.target);
+                      if (targetButton) {
+                        targetButton.click();
+                      }
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat w-6 h-6">
+                      <polyline points="17 1 21 5 17 9"></polyline>
+                      <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                      <polyline points="7 23 3 19 7 15"></polyline>
+                      <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                    </svg>
+                  </button>
+                  <button 
+                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
+                    title="Scroll to next verse"
+                    onClick={() => {
+                      const event = new CustomEvent('navigateVerse', {
+                        detail: { direction: 'next' }
+                      });
+                      window.dispatchEvent(event);
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right w-6 h-6">
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </button>
+                  {selectedBook && selectedChapter < selectedBook.chapters.length && (
+                    <button
+                      onClick={() => {
+                        handleChapterSelect(selectedChapter + 1, true);
+                        // Sync KJV panel scroll with primary panel
+                        if (kjvContentRef.current) {
+                          setTimeout(() => {
+                            kjvContentRef.current.scrollTop = 0;
+                          }, 100);
+                        }
+                      }}
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center"
+                      title="Next Chapter"
+                    >
+                      Next Ch
+                    </button>
+                  )}
+
+                </div>
                 <h2 className="text-3xl font-semibold flex items-center mb-5">
                   <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open mr-3 h-8 w-8">
                     <path d="M12 7v14"></path>
@@ -2994,7 +3902,7 @@ const BibleApp = () => {
                   </span>
                 </h2>
                 <div className="space-y-5">
-                  {selectedBook.chapters[selectedChapter - 1].map((verse, index) => {
+                  {selectedBook && selectedBook.chapters && selectedBook.chapters[selectedChapter - 1] && selectedBook.chapters[selectedChapter - 1].map((verse, index) => {
                     const verseNumber = index + 1;
                     const refKey = `${selectedBook.abbrev}-${selectedChapter}-${verseNumber}`;
                     const hasReference = crossReferences[refKey] && crossReferences[refKey].length > 0;
@@ -3096,7 +4004,48 @@ const BibleApp = () => {
                       }}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
-                      Next Chapter (m ,) &gt;
+                      Next Chapter (m,;e) &gt;
+                    </button>
+                  )}
+
+                  {/* Next Book button - appears when at last chapter but not at last book */}
+                  {selectedBook && selectedChapter === selectedBook.chapters?.length && bibleData && (() => {
+                    const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
+                    return currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1;
+                  })() && (
+                    <button
+                      onClick={() => {
+                        console.log("=== NEXT BOOK BUTTON CLICKED ===");
+                        const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
+                        console.log("Button - Current book index:", currentBookIndex);
+                        console.log("Button - Total books:", bibleData.length);
+                        
+                        if (currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1) {
+                          const nextBook = bibleData[currentBookIndex + 1];
+                          console.log("Button - Next Book found:", { 
+                            currentBookIndex,
+                            nextBookIndex: currentBookIndex + 1,
+                            currentBook: selectedBook.abbrev, 
+                            nextBook: nextBook.abbrev,
+                            nextBookChapters: nextBook.chapters?.length 
+                          });
+                          
+                          // Ensure the next book has valid chapter data
+                          if (nextBook && nextBook.chapters && nextBook.chapters.length > 0) {
+                            console.log("Button - Navigating to next book...");
+                            setSelectedBook(nextBook);
+                            setTimeout(() => {
+                              console.log("Button - Calling handleChapterSelect(1, true)");
+                              handleChapterSelect(1, true);
+                            }, 100);
+                          } else {
+                            console.error("Button - Next book has invalid chapter data:", nextBook);
+                          }
+                        }
+                      }}
+                      className="bg-white bg-opacity-80 border border-orange-300 hover:bg-orange-100 text-orange-700 font-bold rounded px-8 py-4 shadow text-xl"
+                    >
+                      Next Book (1,2,3) &gt;
                     </button>
                   )}
                   
@@ -3113,10 +4062,80 @@ const BibleApp = () => {
                 ref={kjvContentRef} 
                 className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'}`}
                 onClick={(event) => handlePaneClick(event, 'right')}
-                style={{ cursor: touchScrollMode !== 'disabled' && (touchScrollMode === 'right-only' || touchScrollMode === 'both-panes' || touchScrollMode === 'right-reduced') ? 'pointer' : 'default' }}
+                style={{ cursor: touchScrollMode !== 'disabled' && (touchScrollMode === 'right-only' || touchScrollMode === 'both-panes' || touchScrollMode === 'right-reduced' || touchScrollMode === 'right-independent') ? 'pointer' : 'default' }}
               >
                 {selectedBook && selectedChapter > 0 && (
                 <div>
+                  {/* Read and Repeat buttons */}
+                  <div className="mb-4 flex gap-2">
+                    <button 
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
+                      title="Read selected verse in English"
+                      onClick={(event) => {
+                        const readButtons = document.querySelectorAll('button[title="Read selected verse in English"]');
+                        const targetButton = Array.from(readButtons).find(btn => btn !== event.target);
+                        if (targetButton) {
+                          targetButton.click();
+                        }
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-6 h-6">
+                        <polygon points="6 3 20 12 6 21 6 3"></polygon>
+                      </svg>
+                    </button>
+                    <button 
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
+                      title="Repeat selected verse in English"
+                      onClick={(event) => {
+                        const repeatButtons = document.querySelectorAll('button[title="Repeat selected verse in English"]');
+                        const targetButton = Array.from(repeatButtons).find(btn => btn !== event.target);
+                        if (targetButton) {
+                          targetButton.click();
+                        }
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat w-6 h-6">
+                        <polyline points="17 1 21 5 17 9"></polyline>
+                        <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                        <polyline points="7 23 3 19 7 15"></polyline>
+                        <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                      </svg>
+                    </button>
+                    <button 
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
+                      title="Scroll to next verse"
+                      onClick={() => {
+                        const event = new CustomEvent('navigateVerse', {
+                          detail: { direction: 'next' }
+                        });
+                        window.dispatchEvent(event);
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right w-6 h-6">
+                        <path d="m9 18 6-6-6-6"></path>
+                      </svg>
+                    </button>
+                    {selectedBook && selectedChapter < selectedBook.chapters.length && (
+                      <button
+                        onClick={() => {
+                          // Clear mobile scroll position immediately to prevent restoration
+                          localStorage.removeItem('mobileScrollPosition');
+                          setMobileScrollPosition(0);
+                          
+                          handleChapterSelect(selectedChapter + 1, true);
+                          
+                          // Reset all scroll state after content loads
+                          setTimeout(() => {
+                            handleHomeReset();
+                          }, 100);
+                        }}
+                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center"
+                        title="Next Chapter"
+                      >
+                        Next Ch
+                      </button>
+                    )}
+                  </div>
                   <h2 className="text-3xl mr-2 font-semibold mb-5 flex items-center">
                     {isMobileView && !isTabletView && (
                       <button 
@@ -3136,7 +4155,7 @@ const BibleApp = () => {
                     </span>
                     <div className="ml-auto flex items-center">
                       <div className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded mr-2">
-                        Keys: 'o', 'p'
+                        Keys: 'o', 'p', '0'
                       </div>
                       
                     </div>
@@ -3231,7 +4250,49 @@ const BibleApp = () => {
                         }}
                         className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                       >
-                        Next Chapter (m ,) &gt;
+                        Next Chapter (m,;e) &gt;
+                      </button>
+                    )}
+
+                    {/* Next Book button - appears when at last chapter but not at last book */}
+                    {selectedBook && selectedChapter === selectedBook.chapters.length && bibleData && (() => {
+                      const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
+                      return currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1;
+                    })() && (
+                      <button
+                        onClick={() => {
+                          // Clear mobile scroll position immediately to prevent restoration
+                          localStorage.removeItem('mobileScrollPosition');
+                          setMobileScrollPosition(0);
+                          
+                          const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
+                          if (currentBookIndex !== -1 && currentBookIndex < bibleData.length - 1) {
+                            const nextBook = bibleData[currentBookIndex + 1];
+                            console.log("Next Book clicked (KJV panel):", { 
+                              currentBook: selectedBook.abbrev, 
+                              nextBook: nextBook.abbrev,
+                              nextBookChapters: nextBook.chapters?.length 
+                            });
+                            
+                            // Ensure the next book has valid chapter data
+                            if (nextBook && nextBook.chapters && nextBook.chapters.length > 0) {
+                              setSelectedBook(nextBook);
+                              setTimeout(() => {
+                                handleChapterSelect(1, true);
+                              }, 100);
+                            } else {
+                              console.error("Next book has invalid chapter data:", nextBook);
+                            }
+                          }
+                          
+                          // Reset all scroll state after content loads
+                          setTimeout(() => {
+                            handleHomeReset();
+                          }, 100);
+                        }}
+                        className="bg-white bg-opacity-80 border border-orange-300 hover:bg-orange-100 text-orange-700 font-bold rounded px-8 py-4 shadow text-xl"
+                      >
+                        Next Book (1,2,3) &gt;
                       </button>
                     )}
                   </div>

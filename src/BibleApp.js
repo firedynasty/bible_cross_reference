@@ -63,12 +63,86 @@ const getBaseUrl = () => {
   return '';
 };
 
+// Helper function to parse and render glosses from parentheses
+const renderWithGlosses = (text, showGlosses) => {
+  if (!text) return text;
+
+  // If glosses are disabled, remove them completely
+  if (!showGlosses) {
+    return text.replace(/\s*\([^)]+\)/g, '');
+  }
+
+  // Parse glosses: word(definition) or word (definition)
+  const parts = [];
+  let lastIndex = 0;
+  const regex = /(\w+)\s*\(([^)]+)\)/g;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+
+    // Add the glossed word
+    const word = match[1];
+    const definition = match[2];
+
+    parts.push(
+      <span key={match.index} className="gloss" style={{ position: 'relative', display: 'inline' }}>
+        <span
+          className="gloss-text"
+          style={{
+            borderBottom: '1px dotted #999',
+            cursor: 'help'
+          }}
+        >
+          {word}
+        </span>
+        <span
+          className="gloss-def"
+          style={{
+            position: 'absolute',
+            bottom: '-1.3em',
+            left: '0',
+            fontSize: '0.7em',
+            color: '#666',
+            fontStyle: 'italic',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none'
+          }}
+        >
+          {definition}
+        </span>
+      </span>
+    );
+
+    lastIndex = regex.lastIndex;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+};
+
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle, showGlosses, onGlossToggle, onDarkModeToggle, onTouchScrollModeChange, touchScrollMode }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Touch scroll modes definition (for the cycling button)
+  const touchScrollModes = [
+    { id: 'disabled', label: 'X', description: 'Text selection enabled - no auto-scroll' },
+    { id: 'right-only', label: 'R P', description: 'Touch right pane triggers page down' },
+    { id: 'both-panes', label: 'Both Panes', description: 'Touch either pane triggers page down' },
+    { id: 'right-reduced', label: 'R R', description: 'Touch right pane with smaller scroll' },
+    { id: 'right-independent', label: 'R I', description: 'Touch right pane scrolls only right pane (no sync)' }
+  ];
 
   // Load saved positions from Firebase
   useEffect(() => {
@@ -332,14 +406,14 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
 };
 
 // Navigation Placeholder Component
-const NavigationPlaceholder = ({ 
-  book, 
-  chapter, 
-  getBookName, 
-  onNavigate, 
-  onSyncModeChange, 
-  syncMode, 
-  onStickyPaneChange, 
+const NavigationPlaceholder = ({
+  book,
+  chapter,
+  getBookName,
+  onNavigate,
+  onSyncModeChange,
+  syncMode,
+  onStickyPaneChange,
   stickyPane,
   onAudioClick,
   onClipboardClick,
@@ -351,7 +425,9 @@ const NavigationPlaceholder = ({
   rightPaneBibleData,
   rightPaneTranslation,
   resetScrollTimerRef,
-  speechVolume
+  speechVolume,
+  showGlosses,
+  onGlossToggle
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -473,15 +549,28 @@ const NavigationPlaceholder = ({
         <button
           onClick={() => onDarkModeToggle && onDarkModeToggle()}
           className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
-            isDarkMode 
-              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' 
+            isDarkMode
+              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
               : 'bg-gray-700 text-white hover:bg-gray-800'
           }`}
           title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
         >
           {isDarkMode ? 'Light (d)' : 'Dark (d)'}
         </button>
-        
+
+        {/* Gloss Toggle Button */}
+        <button
+          onClick={() => onGlossToggle && onGlossToggle()}
+          className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
+            showGlosses
+              ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+              : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
+          }`}
+          title={showGlosses ? "Hide glosses (definitions)" : "Show glosses (definitions)"}
+        >
+          {showGlosses ? 'Gloss: ON' : 'Gloss: OFF'}
+        </button>
+
         {/* Touch Options Cycling Button */}
         <button
           onClick={() => {
@@ -932,7 +1021,10 @@ const BibleApp = () => {
   
   // Add sticky pane control (which pane controls the other)
   const [stickyPane, setStickyPane] = useState('kjv'); // 'primary' or 'kjv'
-  
+
+  // Gloss display control
+  const [showGlosses, setShowGlosses] = useState(true);
+
   // Mobile responsiveness states
   const [showSidebar, setShowSidebar] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
@@ -3720,13 +3812,18 @@ const BibleApp = () => {
               setSelectedBook={setSelectedBook}
               firebaseEnabled={firebaseEnabled}
               onFirebaseToggle={setFirebaseEnabled}
+              showGlosses={showGlosses}
+              onGlossToggle={() => setShowGlosses(!showGlosses)}
+              onDarkModeToggle={() => setIsDarkMode(!isDarkMode)}
+              onTouchScrollModeChange={setTouchScrollMode}
+              touchScrollMode={touchScrollMode}
             />
           </div>
           
           {/* Navigation History / Breadcrumb */}
           <div className="flex items-center space-x-1 mr-2">
-            <NavigationPlaceholder 
-              book={primaryReading.book} 
+            <NavigationPlaceholder
+              book={primaryReading.book}
               chapter={primaryReading.chapter}
               getBookName={getBookName}
               syncMode={scrollSyncMode}
@@ -3744,6 +3841,8 @@ const BibleApp = () => {
               rightPaneTranslation={rightPaneTranslation}
               resetScrollTimerRef={resetScrollTimerRef}
               speechVolume={speechVolume}
+              showGlosses={showGlosses}
+              onGlossToggle={() => setShowGlosses(!showGlosses)}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
                   const bookObj = bibleData.find(b => b.abbrev === book);
@@ -3919,7 +4018,7 @@ const BibleApp = () => {
                       >
                         <p className="flex">
                           <span className={`font-bold mr-4 text-2xl ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
-                          <span className="flex-1">{verse}</span>
+                          <span className="flex-1">{renderWithGlosses(verse, showGlosses)}</span>
                           
                           {hasReference && (
                             <button
@@ -3955,7 +4054,7 @@ const BibleApp = () => {
                                   </button>
                                   <p className={`mt-2 ${
                                     isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                                  }`}>{ref.text}</p>
+                                  }`}>{renderWithGlosses(ref.text, showGlosses)}</p>
                                 </li>
                               ))}
                             </ul>
@@ -4183,7 +4282,7 @@ const BibleApp = () => {
                               >
                                 <p className="flex">
                                   <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
-                                  <span className="flex-1">{verse}</span>
+                                  <span className="flex-1">{renderWithGlosses(verse, showGlosses)}</span>
                                 </p>
                               </div>
                             );
