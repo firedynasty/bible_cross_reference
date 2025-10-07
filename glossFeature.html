@@ -1,0 +1,1774 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clipboard Text-to-Speech Reader</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 2rem;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 0.75rem 1.5rem;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        
+        .primary-button {
+            background-color: #3B82F6;
+        }
+        
+        .primary-button:hover {
+            background-color: #2563EB;
+        }
+        
+        .secondary-button {
+            background-color: #6B7280;
+        }
+        
+        .secondary-button:hover {
+            background-color: #4B5563;
+        }
+        
+        .success-button {
+            background-color: #10B981;
+        }
+        
+        .success-button:hover {
+            background-color: #059669;
+        }
+        
+        .danger-button {
+            background-color: #EF4444;
+        }
+        
+        .danger-button:hover {
+            background-color: #DC2626;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+            margin-bottom: 1.5rem;
+        }
+        
+        .reading-area {
+            background-color: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            min-height: 200px;
+            font-size: 1.2rem;
+            line-height: 1.6;
+        }
+        
+        .word {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .word:hover {
+            background-color: #e9ecef;
+        }
+        
+        .word.highlight {
+            background-color: #fff3cd;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        
+        .word.current {
+            background-color: #ffd43b;
+            border-radius: 3px;
+            font-weight: bold;
+            box-shadow: 0 0 5px rgba(255, 212, 59, 0.5);
+        }
+        
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+        
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        select {
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+            display: none;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #3B82F6;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            margin: 1rem 0;
+            font-weight: 500;
+            display: none;
+        }
+        
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 1000;
+        }
+        
+        .popup-content {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 800px;
+            height: 80%;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .popup-header {
+            padding: 1rem;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .popup-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6B7280;
+            padding: 0.5rem;
+            line-height: 1;
+        }
+        
+        .popup-close:hover {
+            color: #DC2626;
+        }
+        
+        .popup-reading-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            font-size: 1.2rem;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+        }
+        
+        /* Toggle slider styles */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #4CAF50;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider {
+            background-color: #ff6b6b;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 8px;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .sentence-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .nav-button {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: background-color 0.2s;
+        }
+
+        .nav-button:hover {
+            background-color: #5a6268;
+        }
+
+        .nav-button:disabled {
+            background-color: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .sentence-indicator {
+            flex: 1;
+            text-align: center;
+            font-weight: 500;
+            color: #495057;
+            padding: 0.5rem;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+            min-height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loop-timer-controls {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(67, 160, 71, 0.1));
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .loop-timer-controls h4 {
+            color: #4CAF50;
+            margin: 0 0 10px 0;
+            font-size: 1.1rem;
+        }
+
+        .loop-timer-status {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid #4CAF50;
+            border-radius: 8px;
+            color: #4CAF50;
+            font-family: monospace;
+            font-weight: 600;
+        }
+
+        .loop-btn {
+            padding: 8px 16px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 5px;
+        }
+
+        .loop-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .loop-btn.stop {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+        }
+
+        .loop-btn.loop-25 {
+            background: linear-gradient(45deg, #9C27B0, #7B1FA2);
+        }
+
+        .loop-btn.loop-25:hover {
+            box-shadow: 0 5px 15px rgba(156, 39, 176, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Clipboard Text-to-Speech Reader</h1>
+        
+        <div class="toggle-container">
+            <span style="font-weight: bold; color: #4CAF50; font-size: 12px;">KEEP #s (Bible Mode)</span>
+            <label class="switch">
+                <input type="checkbox" id="skipNumbersToggle" checked>
+                <span class="slider"></span>
+            </label>
+            <span style="font-weight: bold; color: #ff6b6b; font-size: 12px;">SKIP #s (Bible Mode)</span>
+        </div>
+
+        <div class="toggle-container" style="background-color: #ffe6e6;">
+            <span style="font-weight: bold; font-size: 12px;">📖 Bible Mode</span>
+            <label class="switch">
+                <input type="checkbox" id="youtubeToggle" checked>
+                <span class="slider" style="background-color: #ff6b6b;"></span>
+            </label>
+            <span style="font-weight: bold; font-size: 12px;">🎥 YouTube Mode</span>
+        </div>
+        
+        <div class="button-group">
+            <button class="primary-button" id="pasteButton">📋 Paste from Clipboard(escape)</button>
+            <button class="danger-button" id="removeSelectedButton">✂️ Remove Selected</button>
+            <button class="secondary-button" id="clearButton">🗑️ Clear Text</button>
+        </div>
+        
+        <textarea id="textArea" placeholder="Paste your text here or click 'Paste from Clipboard' to automatically get clipboard content..."></textarea>
+
+        <div class="controls">
+            <div class="speed-control">
+                <label for="speedSelect">Speed:</label>
+                <select id="speedSelect">
+                    <option value="0.5">0.5x</option>
+                    <option value="0.7">0.7x</option>
+                    <option value="1">1x</option>
+                    <option value="1.25" selected>1.25x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2">2x</option>
+                </select>
+            </div>
+
+            <div class="speed-control">
+                <label for="presetSelect">Load Preset:</label>
+                <select id="presetSelect">
+                    <option value="">Choose preset...</option>
+                </select>
+            </div>
+
+            <button class="secondary-button" id="popupButton" style="display: none;">🔍 Popup</button>
+        </div>
+
+        <!-- Loop Timer Controls -->
+        <div class="loop-timer-controls">
+            <h4>🔄 Loop Reading Timer</h4>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                <button id="loopTimer5minBtn" class="loop-btn">▶️ 5 min Loop</button>
+                <button id="loopTimer25minBtn" class="loop-btn loop-25">▶️ 25 min Loop</button>
+                <span style="color: #666; font-size: 0.9rem; font-style: italic;">Automatically restarts from sentence 1/X when finished</span>
+            </div>
+            <div id="loopTimerStatus" class="loop-timer-status">
+                Loop Timer: 00:00 remaining
+            </div>
+        </div>
+
+        <!-- Sentence Navigation Bar with Play Controls -->
+        <div class="sentence-nav">
+            <button class="nav-button" id="prevSentenceButton">◀</button>
+            <span class="sentence-indicator" id="sentenceIndicator">Ready to read...</span>
+            <button class="nav-button" id="nextSentenceButton">▶</button>
+            <button class="success-button" id="playButton" style="margin-left: 1rem;">▶️ Play</button>
+            <button class="secondary-button" id="stopButton" disabled style="margin-left: 0.5rem;">⏹️ Stop</button>
+            <button class="secondary-button" id="resetButton" style="margin-left: 0.5rem;">🔄 Reset</button>
+            <button class="success-button" id="glossButton" style="margin-left: 0.5rem;">📖 Gloss</button>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        
+        <div class="status" id="statusDisplay">Ready to read text</div>
+        
+        <div class="reading-area" id="readingArea">
+            <p style="text-align: center; color: #666;">Text will appear here for reading with word-by-word highlighting</p>
+        </div>
+    </div>
+    
+    <!-- Popup Overlay -->
+    <div class="popup-overlay" id="popupOverlay">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h3>Reading View</h3>
+                <button class="popup-close" id="popupClose">✕</button>
+            </div>
+            <div class="popup-reading-area" id="popupReadingArea">
+                <p style="text-align: center; color: #666;">Text will appear here for reading with word-by-word highlighting</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Information Database
+        const bible_verses_1 = `3 Praise be to the God and Father of our Lord Jesus Christ! In his great mercy he has given us new birth into a living hope through the resurrection of Jesus Christ from the dead, 4 and into an inheritance that can never perish, spoil or fade. This inheritance is kept in heaven for you, 5 who through faith are shielded by God's power until the coming of the salvation that is ready to be revealed in the last time. 6 In all this you greatly rejoice, though now for a little while you may have had to suffer grief in all kinds of trials. 7 These have come so that the proven`;
+
+        const test_info_1 = `genuineness of your faith—of greater worth than gold, which perishes even though refined by fire—may result in praise, glory and honor when Jesus Christ is revealed. 8 Though you have not seen him, you love him; and even though you do not see him now, you believe in him and are filled with an inexpressible and glorious joy, 9 for you are receiving the end result of your faith, the salvation of your souls.`;
+
+        let informationDatabase = {
+            'bible verse 1': bible_verses_1,
+            'test info': test_info_1
+        };
+
+        class ClipboardTextToSpeech {
+            constructor() {
+                this.textArea = document.getElementById('textArea');
+                this.readingArea = document.getElementById('readingArea');
+                this.statusDisplay = document.getElementById('statusDisplay');
+                this.progressFill = document.getElementById('progressFill');
+                
+                this.playButton = document.getElementById('playButton');
+                this.stopButton = document.getElementById('stopButton');
+                this.resetButton = document.getElementById('resetButton');
+                this.speedSelect = document.getElementById('speedSelect');
+                
+                this.popupOverlay = document.getElementById('popupOverlay');
+                this.popupReadingArea = document.getElementById('popupReadingArea');
+
+                // Navigation elements
+                this.sentenceIndicator = document.getElementById('sentenceIndicator');
+                this.prevSentenceButton = document.getElementById('prevSentenceButton');
+                this.nextSentenceButton = document.getElementById('nextSentenceButton');
+
+                this.words = [];
+                this.currentWordIndex = 0;
+                this.isPlaying = false;
+                this.isPaused = false;
+                this.utterance = null;
+                
+                // Timing tracking for accuracy
+                this.sentenceStartTime = null;
+                this.expectedWordTimes = [];
+                this.actualTimingAdjustment = 1.0;
+                
+                // Number skipping mode - starts in skip mode (checkbox checked)
+                this.skipNumbersMode = true;
+
+                // YouTube mode - starts in YouTube mode (checkbox checked)
+                this.youtubeMode = true;
+
+                // Loop timer properties
+                this.loopTimerActive = false;
+                this.loopTimerEndTime = null;
+                this.loopTimerInterval = null;
+                this.originalPageTitle = document.title;
+
+                // Sentence number input properties
+                this.sentenceNumberInput = '';
+                this.sentenceInputTimeoutRef = null;
+
+                this.initializeEventListeners();
+                this.populatePresetDropdown();
+            }
+            
+            initializeEventListeners() {
+                // Clipboard paste
+                document.getElementById('pasteButton').addEventListener('click', () => this.pasteFromClipboard());
+                
+                // Remove selected text
+                document.getElementById('removeSelectedButton').addEventListener('click', () => this.removeSelectedText());
+                
+                // Clear text
+                document.getElementById('clearButton').addEventListener('click', () => this.clearText());
+                
+                // Text area changes
+                this.textArea.addEventListener('input', () => this.updateReadingArea());
+                
+                // Playback controls
+                this.playButton.addEventListener('click', () => this.togglePlayPause());
+                this.stopButton.addEventListener('click', () => this.stop());
+                this.resetButton.addEventListener('click', () => this.reset());
+                
+                // Speed changes
+                this.speedSelect.addEventListener('change', () => this.updateSpeed());
+                
+                // Popup controls
+                document.getElementById('popupButton').addEventListener('click', () => this.openPopup());
+                document.getElementById('popupClose').addEventListener('click', () => this.closePopup());
+                this.popupOverlay.addEventListener('click', (e) => {
+                    if (e.target === this.popupOverlay) {
+                        this.closePopup();
+                    }
+                });
+                
+                // Word clicking in main reading area
+                this.readingArea.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('word')) {
+                        const wordIndex = parseInt(e.target.dataset.index);
+                        this.jumpToWord(wordIndex);
+                    }
+                });
+                
+                // Word clicking in popup reading area
+                this.popupReadingArea.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('word')) {
+                        const wordIndex = parseInt(e.target.dataset.index);
+                        this.jumpToWord(wordIndex);
+                    }
+                });
+                
+                // Escape key to stop/play
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        if (this.isPlaying) {
+                            this.stop();
+                        } else {
+                            this.play();
+                        }
+                    }
+                    // Enter key to toggle play/stop
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (this.isPlaying) {
+                            this.stop();
+                        } else {
+                            this.play();
+                        }
+                    }
+                    // '`' key to reset
+                    if (e.key === '`') {
+                        e.preventDefault();
+                        this.reset();
+                    }
+                    // Left/Right arrow keys for sentence navigation
+                    if (e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        this.navigateToSentence(-1);
+                    }
+                    if (e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        this.navigateToSentence(1);
+                    }
+                    // Digit keys 0-9 for sentence number input
+                    if (e.key >= '0' && e.key <= '9' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+                        e.preventDefault();
+                        this.handleSentenceNumberInput(e.key);
+                    }
+                });
+                
+                // Number skipping toggle
+                document.getElementById('skipNumbersToggle').addEventListener('change', (e) => {
+                    this.skipNumbersMode = e.target.checked;
+                    console.log('Number skipping mode:', this.skipNumbersMode ? 'SKIP #s' : 'KEEP #s');
+                });
+
+                // YouTube mode toggle
+                document.getElementById('youtubeToggle').addEventListener('change', (e) => {
+                    this.youtubeMode = e.target.checked;
+                    console.log('Reading mode:', this.youtubeMode ? 'YouTube Mode' : 'Bible Mode');
+                });
+
+                // Sentence navigation
+                this.prevSentenceButton.addEventListener('click', () => this.navigateToSentence(-1));
+                this.nextSentenceButton.addEventListener('click', () => this.navigateToSentence(1));
+
+                // Loop timer buttons
+                document.getElementById('loopTimer5minBtn').addEventListener('click', () => this.toggleLoopTimer(5));
+                document.getElementById('loopTimer25minBtn').addEventListener('click', () => this.toggleLoopTimer(25));
+
+                // Preset selector
+                document.getElementById('presetSelect').addEventListener('change', (e) => this.loadPreset(e.target.value));
+
+                // Gloss button
+                document.getElementById('glossButton').addEventListener('click', () => this.glossSelectedText());
+            }
+
+            populatePresetDropdown() {
+                const presetSelect = document.getElementById('presetSelect');
+
+                // Clear existing options except the first placeholder
+                presetSelect.innerHTML = '<option value="">Choose preset...</option>';
+
+                // Add options from informationDatabase
+                Object.keys(informationDatabase).forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = key;
+                    presetSelect.appendChild(option);
+                });
+            }
+
+            loadPreset(presetKey) {
+                if (!presetKey || !informationDatabase[presetKey]) {
+                    return;
+                }
+
+                // Stop any ongoing speech
+                this.stop();
+
+                // Load the preset text into textarea
+                this.textArea.value = informationDatabase[presetKey];
+
+                // Update the reading area
+                this.updateReadingArea();
+
+                this.updateStatus(`Loaded preset: ${presetKey}`);
+            }
+
+            async glossSelectedText() {
+                // Get the selection from the reading area
+                const selection = window.getSelection();
+                const selectedText = selection.toString().trim();
+
+                if (!selectedText) {
+                    this.updateStatus('Please select text in the reading area first');
+                    return;
+                }
+
+                // Create the gloss prompt
+                const glossPrompt = `Gloss this KJV Bible passage with brief definitions in parentheses after archaic or unclear words: ${selectedText}`;
+
+                try {
+                    // Copy to clipboard
+                    await navigator.clipboard.writeText(glossPrompt);
+                    this.updateStatus(`Gloss prompt copied to clipboard! (${selectedText.length} characters selected)`);
+                } catch (err) {
+                    console.error('Failed to copy to clipboard:', err);
+                    this.updateStatus('Failed to copy to clipboard');
+                }
+            }
+            
+            async pasteFromClipboard() {
+                try {
+                    // Stop any ongoing speech before pasting new content
+                    this.stop();
+                    
+                    let text = await navigator.clipboard.readText();
+                    const originalLength = text.length;
+                    
+                    // Remove Kindle citations automatically
+                    text = this.removeKindleCitations(text);
+                    
+                    // Remove number prefixes if skip numbers mode is enabled
+                    if (this.skipNumbersMode) {
+                        text = this.removeNumberPrefixes(text);
+                    }
+                    
+                    this.textArea.value = text;
+                    this.updateReadingArea();
+                    
+                    if (text.length < originalLength) {
+                        this.updateStatus('Text pasted successfully! Kindle citation automatically removed. Ready to read.');
+                    } else {
+                        this.updateStatus('Text pasted from clipboard successfully! Ready to read.');
+                    }
+                } catch (err) {
+                    console.error('Failed to read clipboard:', err);
+                    this.updateStatus('Failed to access clipboard. Please paste manually.');
+                }
+            }
+            
+            removeKindleCitations(text) {
+                // Split text into lines
+                const lines = text.split('\n');
+                
+                // Check if the last line (or second to last if last is empty) contains Kindle citation pattern
+                let lastLineIndex = lines.length - 1;
+                
+                // Skip empty lines at the end
+                while (lastLineIndex >= 0 && lines[lastLineIndex].trim() === '') {
+                    lastLineIndex--;
+                }
+                
+                if (lastLineIndex >= 0) {
+                    const lastLine = lines[lastLineIndex].trim();
+                    
+                    // Pattern to match Kindle citations (publisher, book title, page info, Kindle Edition)
+                    const kindlePatterns = [
+                        /.*\. .+\(p\. \d+\)\. .+\. Kindle Edition\.?$/i,
+                        /.*\. .+\(Function\)\. Kindle Edition\.?$/i,
+                        /.*Kindle Edition\.?$/i,
+                        /.*\(p\. \d+\)\. .+\.$/i,
+                        /.+,\. .+\. Kindle Edition\.?$/i
+                    ];
+                    
+                    const isKindleCitation = kindlePatterns.some(pattern => pattern.test(lastLine));
+                    
+                    if (isKindleCitation) {
+                        // Remove the citation line
+                        lines.splice(lastLineIndex, 1);
+                        
+                        // Remove any trailing empty lines
+                        while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
+                            lines.pop();
+                        }
+                        
+                        return lines.join('\n');
+                    }
+                }
+                
+                return text;
+            }
+            
+            removeNumberPrefixes(text) {
+                // Split text into lines and process each line
+                const lines = text.split('\n');
+
+                const processedLines = lines.map(line => {
+                    // Remove leading numbers followed by space(s) at the beginning of lines
+                    // This handles cases like "1 Computer spent..." or "123 Some text..."
+                    return line.replace(/^\s*\d+\s+/, '');
+                });
+
+                return processedLines.join('\n');
+            }
+
+            improveTextFormatting(text) {
+                // Detect transcript-style text with timestamps (e.g., "0:00", "1:23")
+                const timestampPattern = /\b\d{1,2}:\d{2}\b/g;
+                const timestamps = text.match(timestampPattern);
+                const punctuation = text.match(/[.!?]/g);
+                const punctuationCount = punctuation ? punctuation.length : 0;
+
+                console.log('=== improveTextFormatting Debug ===');
+                console.log('Timestamps found:', timestamps ? timestamps.length : 0);
+                console.log('Punctuation found:', punctuationCount);
+                console.log('Text length:', text.length);
+                console.log('Punctuation ratio:', punctuationCount / text.length);
+
+                // If we have timestamps AND very little punctuation (less than 1 per 100 chars)
+                // then it's likely a transcript that needs sentence breaks added
+                if (timestamps && timestamps.length >= 3 && punctuationCount < text.length / 100) {
+                    console.log('🔧 Applying transcript fix: adding periods before timestamps');
+                    // Add a period before each timestamp (but not if there's already punctuation or it's after a digit)
+                    let processed = text.replace(/([^\.\!\?\s\d])(\s+)(\d{1,2}:\d{2})/g, '$1.$2$3');
+                    console.log('Text after processing:', processed.substring(0, 300) + '...');
+                    text = processed;
+                } else {
+                    console.log('❌ Not applying transcript fix - conditions not met');
+                }
+
+                // Check if text already has good paragraph structure
+                const existingBreaks = (text.match(/\n\s*\n/g) || []).length;
+                const textLength = text.length;
+
+                // If text already has reasonable paragraph breaks (1 break per ~300 chars), leave it alone
+                if (existingBreaks > 0 && textLength / existingBreaks < 800) {
+                    return text;
+                }
+
+                // Split into existing paragraphs first
+                const paragraphs = text.split(/\n\s*\n/);
+
+                const processedParagraphs = paragraphs.map(paragraph => {
+                    const trimmedParagraph = paragraph.trim();
+
+                    // Only process long paragraphs (>500 characters)
+                    if (trimmedParagraph.length < 500) {
+                        return trimmedParagraph;
+                    }
+
+                    // Smart breaking patterns
+                    let processed = trimmedParagraph;
+
+                    // Break at numbered/lettered lists
+                    processed = processed.replace(/(\S)\s+([A-Z]\.\s|[0-9]+\.\s)/g, '$1\n\n$2');
+
+                    // Break at bullet points
+                    processed = processed.replace(/(\S)\s+-\s+/g, '$1\n\n- ');
+
+                    // Break at topic indicators (colon followed by capital letter or "The", "Why", etc.)
+                    processed = processed.replace(/([.!?:])\s+(Why\s|The\s|Strategic\s|Tactical\s|Key\s|Most\s|Analysis\s|Resolution\s|Turning\s)/g, '$1\n\n$2');
+
+                    // Break at section headers (words ending with colon)
+                    processed = processed.replace(/(\S)\s+([A-Z][A-Za-z\s]+:)\s+/g, '$1\n\n$2\n');
+
+                    // Break at "Evaluation shift", "Psychological impact", etc.
+                    processed = processed.replace(/(\S)\s+(Evaluation\s|Psychological\s|Timing\s|Resolution\s)/g, '$1\n\n$2');
+
+                    // Clean up multiple consecutive line breaks
+                    processed = processed.replace(/\n\s*\n\s*\n+/g, '\n\n');
+
+                    return processed;
+                });
+
+                return processedParagraphs.join('\n\n');
+            }
+            
+            openPopup() {
+                // Stop any ongoing reading first
+                this.stop();
+                
+                // Copy current reading area content to popup
+                this.popupReadingArea.innerHTML = this.readingArea.innerHTML;
+                
+                // Reset reading position to beginning (same as paste from clipboard does)
+                this.currentWordIndex = 0;
+                this.currentSentenceIndex = 0;
+                this.updateProgress();
+                
+                // Show popup
+                this.popupOverlay.style.display = 'block';
+                
+                // Prevent body scrolling when popup is open
+                document.body.style.overflow = 'hidden';
+                
+                // Automatically start reading after a short delay
+                setTimeout(() => {
+                    if (this.words.length > 0 && this.popupOverlay.style.display === 'block') {
+                        this.play();
+                    }
+                }, 500);
+            }
+            
+            closePopup() {
+                // Stop reading when closing popup
+                setTimeout(() => {
+                    this.stop();
+                }, 100);
+                
+                // Hide popup
+                this.popupOverlay.style.display = 'none';
+                
+                // Restore body scrolling
+                document.body.style.overflow = 'auto';
+            }
+            
+            clearText() {
+                this.textArea.value = '';
+                this.readingArea.innerHTML = '<p style="text-align: center; color: #666;">Text will appear here for reading with word-by-word highlighting</p>';
+                this.reset();
+                this.updateStatus('Text cleared');
+            }
+            
+            removeSelectedText() {
+                const startPos = this.textArea.selectionStart;
+                const endPos = this.textArea.selectionEnd;
+                
+                if (startPos === endPos) {
+                    this.updateStatus('No text selected. Please highlight text to remove.');
+                    return;
+                }
+                
+                const textValue = this.textArea.value;
+                const selectedText = textValue.substring(startPos, endPos);
+                const newText = textValue.substring(0, startPos) + textValue.substring(endPos);
+                
+                this.textArea.value = newText;
+                this.textArea.setSelectionRange(startPos, startPos);
+                this.updateReadingArea();
+                
+                const removedLength = selectedText.length;
+                const removedWords = selectedText.split(/\s+/).filter(word => word.trim().length > 0).length;
+                this.updateStatus(`Removed ${removedLength} characters (${removedWords} words)`);
+            }
+            
+            updateReadingArea() {
+                // Stop any ongoing reading when updating content
+                if (this.isPlaying) {
+                    this.stop();
+                }
+                
+                let text = this.textArea.value.trim();
+                if (!text) {
+                    this.clearText();
+                    return;
+                }
+                
+                // Apply number prefix removal if enabled (for manually entered text)
+                if (this.skipNumbersMode) {
+                    const processedText = this.removeNumberPrefixes(text);
+                    if (processedText !== text) {
+                        text = processedText;
+                        this.textArea.value = text;
+                    }
+                }
+
+                // Apply intelligent paragraph breaking for better readability
+                text = this.improveTextFormatting(text);
+
+                // First, split the entire text into all sentences, ignoring paragraph boundaries
+                const allRawSentences = text.split(/[.!?]+/).filter(sentence => sentence.trim().length > 0);
+
+                console.log('Raw sentences detected:', allRawSentences.length);
+                console.log('First 3 sentences:', allRawSentences.slice(0, 3));
+
+                // Consolidate short sentences across the entire text
+                const consolidatedSentences = [];
+                for (let i = 0; i < allRawSentences.length; i++) {
+                    const currentSentence = allRawSentences[i].trim();
+                    if (!currentSentence) continue;
+
+                    // Use character length (minimum 15 chars) as criteria for better consolidation
+                    const charLength = currentSentence.length;
+
+                    // If sentence is very short (<15 characters), always merge
+                    if (charLength < 15 && consolidatedSentences.length > 0) {
+                        // Merge with previous sentence
+                        const lastIndex = consolidatedSentences.length - 1;
+                        consolidatedSentences[lastIndex] = consolidatedSentences[lastIndex] + '. ' + currentSentence;
+                    } else if (charLength < 15 && i < allRawSentences.length - 1) {
+                        // Merge with next sentence if it exists
+                        const nextSentence = allRawSentences[i + 1].trim();
+                        if (nextSentence) {
+                            consolidatedSentences.push(currentSentence + '. ' + nextSentence);
+                            i++; // Skip the next sentence since we merged it
+                        } else {
+                            consolidatedSentences.push(currentSentence);
+                        }
+                    } else {
+                        consolidatedSentences.push(currentSentence);
+                    }
+                }
+
+                // Now process the consolidated sentences
+                this.words = [];
+                this.sentences = [];
+                let wordIndex = 0;
+                let sentenceIndex = 0;
+
+                // Create HTML with paragraph breaks where natural breaks occur
+                let paragraphsHtml = '';
+                consolidatedSentences.forEach((sentence, index) => {
+                    const trimmedSentence = sentence.trim();
+                    if (!trimmedSentence) return;
+
+                    // Split sentence into words
+                    const wordsInSentence = trimmedSentence.split(/\s+/).filter(word => word.length > 0);
+
+                    // Add words to our main words array
+                    this.words.push(...wordsInSentence);
+
+                    // Store sentence info for TTS
+                    this.sentences.push({
+                        text: trimmedSentence,
+                        startWordIndex: wordIndex,
+                        endWordIndex: wordIndex + wordsInSentence.length - 1
+                    });
+
+                    // Create HTML for this sentence
+                    const sentenceWordsHtml = wordsInSentence.map((word) =>
+                        `<span class="word" data-index="${wordIndex++}" data-sentence="${sentenceIndex}">${this.escapeHtml(word)}</span>`
+                    ).join(' ');
+
+                    // Add paragraph breaks every few sentences for readability
+                    if (index % 3 === 0) {
+                        paragraphsHtml += `<p>${sentenceWordsHtml}. `;
+                    } else {
+                        paragraphsHtml += `${sentenceWordsHtml}. `;
+                    }
+
+                    if ((index + 1) % 3 === 0 || index === consolidatedSentences.length - 1) {
+                        paragraphsHtml += `</p>`;
+                    }
+
+                    sentenceIndex++;
+                });
+
+                console.log('Final consolidated sentences:', consolidatedSentences.length);
+                console.log('Paragraph HTML length:', paragraphsHtml.length);
+                console.log('Paragraph breaks in HTML:', (paragraphsHtml.match(/<p>/g) || []).length);
+
+                this.readingArea.innerHTML = paragraphsHtml;
+                this.currentWordIndex = 0;
+                this.currentSentenceIndex = 0;
+                
+                // Reset timing adjustment for new text
+                this.actualTimingAdjustment = 1.0;
+                
+                // Clear any existing highlighting timers when content changes
+                if (this.wordHighlightTimer) {
+                    clearInterval(this.wordHighlightTimer);
+                    this.wordHighlightTimer = null;
+                }
+                
+                this.updateProgress();
+                this.updateSentenceIndicator();
+                this.updateStatus(`Ready to read ${this.sentences.length} sentences (${this.words.length} words)`);
+            }
+            
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            navigateToSentence(direction) {
+                if (!this.sentences || this.sentences.length === 0) return;
+
+                const newSentenceIndex = this.currentSentenceIndex + direction;
+                if (newSentenceIndex >= 0 && newSentenceIndex < this.sentences.length) {
+                    // Stop any ongoing speech
+                    this.stop();
+
+                    // Update sentence position
+                    this.currentSentenceIndex = newSentenceIndex;
+                    this.currentWordIndex = this.sentences[this.currentSentenceIndex].startWordIndex;
+
+                    // Update UI
+                    this.updateProgress();
+                    this.updateSentenceIndicator();
+                    this.clearHighlights();
+
+                    this.updateStatus(`Navigated to sentence ${this.currentSentenceIndex + 1} of ${this.sentences.length}`);
+                }
+            }
+
+            handleSentenceNumberInput(digit) {
+                // Clear existing timeout first
+                if (this.sentenceInputTimeoutRef) {
+                    clearTimeout(this.sentenceInputTimeoutRef);
+                }
+
+                // Update the input string
+                this.sentenceNumberInput += digit;
+                console.log(`Sentence input: "${this.sentenceNumberInput}" (added digit: ${digit})`);
+
+                // Update sentence indicator to show current input
+                const tempIndicator = this.sentenceIndicator.textContent;
+                this.sentenceIndicator.textContent = `Entering sentence #: ${this.sentenceNumberInput} (will jump in 1.5s)`;
+
+                // Set new timeout for 1.5 seconds
+                this.sentenceInputTimeoutRef = setTimeout(() => {
+                    const sentenceNumber = parseInt(this.sentenceNumberInput) - 1; // Decrement by 1
+
+                    if (!this.sentences || this.sentences.length === 0) {
+                        console.warn('No sentences available');
+                        this.sentenceIndicator.textContent = 'No text loaded';
+                        this.sentenceNumberInput = '';
+                        return;
+                    }
+
+                    if (sentenceNumber >= 0 && sentenceNumber < this.sentences.length) {
+                        console.log(`Jumping to sentence ${sentenceNumber}`);
+
+                        // Stop any ongoing speech
+                        this.stop();
+
+                        // Update sentence position
+                        this.currentSentenceIndex = sentenceNumber;
+                        this.currentWordIndex = this.sentences[this.currentSentenceIndex].startWordIndex;
+
+                        // Update UI
+                        this.updateProgress();
+                        this.updateSentenceIndicator();
+                        this.clearHighlights();
+
+                        this.updateStatus(`Jumped to sentence ${sentenceNumber + 1} of ${this.sentences.length}`);
+                    } else {
+                        console.warn(`Invalid sentence number: ${sentenceNumber + 1}. Valid range: 1-${this.sentences.length}`);
+                        this.updateStatus(`Invalid sentence #: ${sentenceNumber + 1}. Valid: 1-${this.sentences.length}`);
+                        this.updateSentenceIndicator();
+                    }
+
+                    // Reset the input after processing
+                    this.sentenceNumberInput = '';
+                }, 1500);
+            }
+
+            updateSentenceIndicator() {
+                if (!this.sentences || this.sentences.length === 0) {
+                    this.sentenceIndicator.textContent = 'Ready to read...';
+                    this.prevSentenceButton.disabled = true;
+                    this.nextSentenceButton.disabled = true;
+                    return;
+                }
+
+                // Ensure currentSentenceIndex is within bounds
+                if (this.currentSentenceIndex >= this.sentences.length) {
+                    this.currentSentenceIndex = this.sentences.length - 1;
+                }
+                if (this.currentSentenceIndex < 0) {
+                    this.currentSentenceIndex = 0;
+                }
+
+                // Get first two words of current sentence
+                const currentSentence = this.sentences[this.currentSentenceIndex];
+                if (!currentSentence) {
+                    this.sentenceIndicator.textContent = 'Ready to read...';
+                    return;
+                }
+
+                const firstTwoWords = currentSentence.text.split(' ').slice(0, 2).join(' ');
+
+                // Show sentence position and first two words
+                this.sentenceIndicator.textContent = `${this.currentSentenceIndex + 1}/${this.sentences.length}: ${firstTwoWords}...`;
+
+                // Update button states
+                this.prevSentenceButton.disabled = this.currentSentenceIndex === 0;
+                this.nextSentenceButton.disabled = this.currentSentenceIndex === this.sentences.length - 1;
+            }
+            
+            cleanTextForSpeech(originalText) {
+                // Remove asterisks
+                let cleanedText = originalText.replace(/\*/g, '');
+
+                if (this.youtubeMode) {
+                    // YouTube mode: Remove timestamps only
+                    cleanedText = this.removeTimestamps(cleanedText);
+                } else if (this.skipNumbersMode) {
+                    // Bible mode: Remove verse numbers
+                    cleanedText = this.removeVerseNumbersAdvanced(cleanedText);
+                }
+
+                return cleanedText;
+            }
+
+            removeTimestamps(text) {
+                // Remove timestamp patterns like "0:00", "1:23", "12:34"
+                return text.replace(/\b\d{1,2}:\d{2}\b/g, '').trim();
+            }
+
+            removeVerseNumbersAdvanced(text) {
+                // Remove verse numbers that appear at the beginning of sentences
+                return text
+                    .replace(/(\s|^)(\d+)([A-Z])/g, '$1$3') // Number directly before capital letter
+                    .replace(/(\s|^)\d+\s+/g, '$1') // Number followed by space(s)
+                    .trim();
+            }
+            
+            togglePlayPause() {
+                if (this.isPlaying) {
+                    // Currently playing, so pause and stop
+                    this.pause();
+                    this.stop();
+                } else {
+                    // Not playing, so start playing
+                    this.play();
+                }
+            }
+
+            play() {
+                if (!this.words.length) {
+                    this.updateStatus('Please enter some text first');
+                    return;
+                }
+
+                // Ensure we have valid sentence data
+                if (!this.sentences || this.sentences.length === 0) {
+                    this.updateStatus('No sentences found to read');
+                    return;
+                }
+
+                if (this.isPaused) {
+                    this.resumeReading();
+                } else {
+                    this.startReading();
+                }
+            }
+            
+            startReading() {
+                // Ensure any previous speech is completely stopped
+                this.stop();
+                
+                // Small delay to ensure cleanup is complete
+                setTimeout(() => {
+                    this.isPlaying = true;
+                    this.isPaused = false;
+                    this.updateButtonStates();
+                    this.speakCurrentWord();
+                }, 100);
+            }
+            
+            resumeReading() {
+                if (window.speechSynthesis.paused) {
+                    window.speechSynthesis.resume();
+                    this.isPaused = false;
+                    this.updateButtonStates();
+                    this.updateStatus('Resumed reading');
+                }
+            }
+            
+            pause() {
+                if (this.isPlaying) {
+                    window.speechSynthesis.pause();
+                    this.isPaused = true;
+                    this.updateButtonStates();
+                    this.updateStatus('Paused');
+                }
+            }
+            
+            stop() {
+                // Cancel any ongoing speech
+                window.speechSynthesis.cancel();
+                
+                // Clear all timers
+                if (this.wordHighlightTimer) {
+                    clearInterval(this.wordHighlightTimer);
+                    this.wordHighlightTimer = null;
+                }
+                
+                // Clear any pending utterance
+                if (this.utterance) {
+                    this.utterance.onend = null;
+                    this.utterance.onerror = null;
+                    this.utterance = null;
+                }
+                
+                // Reset state
+                this.isPlaying = false;
+                this.isPaused = false;
+                this.clearHighlights();
+                this.updateButtonStates();
+                
+                if (arguments.length === 0) { // Only show status if called directly, not from internal methods
+                    this.updateStatus('Stopped');
+                }
+            }
+            
+            async reset() {
+                this.stop();
+
+                // Prompt user for paste or reset
+                const shouldPaste = confirm('Paste new content from clipboard?\n\nYes = Paste from clipboard\nNo = Reset to sentence 1');
+
+                if (shouldPaste) {
+                    // Paste from clipboard
+                    await this.pasteFromClipboard();
+                } else {
+                    // Just reset to beginning
+                    this.currentWordIndex = 0;
+                    this.currentSentenceIndex = 0;
+                    this.updateProgress();
+                    this.updateSentenceIndicator();
+                    this.updateStatus('Reset to beginning');
+                }
+
+                // Scroll to the loop timer controls (top of the page content)
+                const loopTimerControls = document.querySelector('.loop-timer-controls');
+                if (loopTimerControls) {
+                    loopTimerControls.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+            
+            jumpToWord(wordIndex) {
+                if (wordIndex >= 0 && wordIndex < this.words.length) {
+                    this.stop();
+                    this.currentWordIndex = wordIndex;
+
+                    // Find which sentence this word belongs to
+                    for (let i = 0; i < this.sentences.length; i++) {
+                        const sentence = this.sentences[i];
+                        if (wordIndex >= sentence.startWordIndex && wordIndex <= sentence.endWordIndex) {
+                            this.currentSentenceIndex = i;
+                            break;
+                        }
+                    }
+
+                    this.updateProgress();
+                    this.updateSentenceIndicator();
+                    this.updateStatus(`Jumped to word ${wordIndex + 1}`);
+                }
+            }
+            
+            speakCurrentSentence() {
+                console.log(`🔊 DEBUG speakCurrentSentence: currentSentenceIndex = ${this.currentSentenceIndex}, total sentences = ${this.sentences.length}, loopTimerActive = ${this.loopTimerActive}`);
+
+                if (this.currentSentenceIndex >= this.sentences.length) {
+                    console.log(`🔊 DEBUG: Reached end of sentences, calling onReadingComplete()`);
+                    this.onReadingComplete();
+                    return;
+                }
+
+                const sentence = this.sentences[this.currentSentenceIndex];
+                console.log(`🔊 DEBUG: Speaking sentence #${this.currentSentenceIndex + 1}: "${sentence.text.substring(0, 50)}..."`);
+
+                // Update sentence indicator AFTER checking bounds, not before
+                this.updateSentenceIndicator();
+                this.updateProgress();
+                this.updateStatus(`Reading sentence ${this.currentSentenceIndex + 1} of ${this.sentences.length}`);
+
+                // Track sentence start time for timing analysis
+                this.sentenceStartTime = performance.now();
+                
+                // Start word highlighting timer for this sentence
+                this.startWordHighlighting(sentence);
+                
+                // Clean text for speech synthesis (remove asterisks and verse numbers)
+                const cleanedText = this.cleanTextForSpeech(sentence.text);
+                this.utterance = new SpeechSynthesisUtterance(cleanedText);
+                this.utterance.rate = parseFloat(this.speedSelect.value);
+                this.utterance.pitch = 1;
+                this.utterance.volume = 1;
+                this.utterance.lang = 'en-US';
+                
+                // Simplified voice selection - use default first, then enhance if available
+                const voices = speechSynthesis.getVoices();
+                if (voices.length > 0) {
+                    let englishVoice = voices.find(voice =>
+                        (voice.lang.includes('en-') && voice.name.includes('Enhanced')) ||
+                        (voice.lang.includes('en-') && voice.name.includes('Premium')) ||
+                        (voice.lang.includes('en-') && voice.name.includes('Google'))
+                    );
+
+                    if (!englishVoice) {
+                        englishVoice = voices.find(voice => voice.lang.includes('en-'));
+                    }
+
+                    if (englishVoice) {
+                        this.utterance.voice = englishVoice;
+                    }
+                }
+                
+                this.utterance.onend = () => {
+                    console.log(`🔊 DEBUG onend: Sentence #${this.currentSentenceIndex + 1} finished`);
+
+                    // Analyze timing accuracy for future adjustments
+                    if (this.sentenceStartTime) {
+                        this.analyzeTimingAccuracy(sentence);
+                    }
+
+                    // Clear word highlighting timer when sentence ends
+                    if (this.wordHighlightTimer) {
+                        clearInterval(this.wordHighlightTimer);
+                        this.wordHighlightTimer = null;
+                    }
+
+                    if (this.isPlaying && !this.isPaused) {
+                        this.currentSentenceIndex++;
+                        console.log(`🔊 DEBUG onend: Incremented to sentence #${this.currentSentenceIndex + 1}`);
+
+                        // Small delay between sentences
+                        setTimeout(() => {
+                            if (this.isPlaying && !this.isPaused) {
+                                console.log(`🔊 DEBUG onend: About to call speakCurrentSentence() after delay`);
+                                this.speakCurrentSentence();
+                            }
+                        }, 300);
+                    }
+                };
+                
+                this.utterance.onerror = (event) => {
+                    console.error('Speech synthesis error:', event);
+                    
+                    // Clear word highlighting timer on error
+                    if (this.wordHighlightTimer) {
+                        clearInterval(this.wordHighlightTimer);
+                        this.wordHighlightTimer = null;
+                    }
+                    
+                    this.updateStatus(`Speech error - trying to continue`);
+                    // Try to continue despite the error
+                    if (this.isPlaying && !this.isPaused) {
+                        this.currentSentenceIndex++;
+                        setTimeout(() => {
+                            if (this.isPlaying && !this.isPaused) {
+                                this.speakCurrentSentence();
+                            }
+                        }, 500);
+                    }
+                };
+                
+                // Cancel any existing speech before starting new one
+                speechSynthesis.cancel();
+                
+                // Wait a bit longer to ensure complete cleanup
+                setTimeout(() => {
+                    if (this.isPlaying && !this.isPaused && this.utterance) {
+                        speechSynthesis.speak(this.utterance);
+                    }
+                }, 150);
+            }
+            
+            startWordHighlighting(sentence) {
+                // Clear any existing highlighting timer first
+                if (this.wordHighlightTimer) {
+                    clearInterval(this.wordHighlightTimer);
+                    this.wordHighlightTimer = null;
+                }
+                
+                // More accurate timing based on actual speech synthesis performance
+                // Base rate calibrated from real testing: 176 WPM at 1x speed
+                const baseWordsPerMinute = 176; 
+                const currentRate = parseFloat(this.speedSelect.value);
+                const actualWordsPerMinute = baseWordsPerMinute * currentRate;
+                let millisecondsPerWord = (60 * 1000) / actualWordsPerMinute;
+                
+                // Apply learned timing adjustment from previous sentences
+                millisecondsPerWord *= this.actualTimingAdjustment;
+                
+                // Account for sentence processing delay and initial startup time
+                const sentenceStartupDelay = 150; // Time for TTS to begin speaking
+                const wordProcessingAdjustment = 0.85; // Slight speed up to compensate for cumulative drift
+                const adjustedMillisecondsPerWord = millisecondsPerWord * wordProcessingAdjustment;
+                
+                const wordsInSentence = sentence.endWordIndex - sentence.startWordIndex + 1;
+                let currentWordInSentence = 0;
+                
+                // Start highlighting with initial delay to sync with speech start
+                setTimeout(() => {
+                    if (!this.isPlaying || this.isPaused) return;
+                    
+                    // Highlight first word immediately when speech starts
+                    const globalWordIndex = sentence.startWordIndex + currentWordInSentence;
+                    this.highlightWord(globalWordIndex);
+                    currentWordInSentence++;
+                    
+                    // Continue with remaining words
+                    this.wordHighlightTimer = setInterval(() => {
+                        if (!this.isPlaying || this.isPaused || currentWordInSentence >= wordsInSentence) {
+                            if (this.wordHighlightTimer) {
+                                clearInterval(this.wordHighlightTimer);
+                                this.wordHighlightTimer = null;
+                            }
+                            return;
+                        }
+                        
+                        const globalWordIndex = sentence.startWordIndex + currentWordInSentence;
+                        this.highlightWord(globalWordIndex);
+                        currentWordInSentence++;
+                    }, adjustedMillisecondsPerWord);
+                    
+                }, sentenceStartupDelay);
+            }
+            
+            highlightWord(wordIndex) {
+                this.clearHighlights();
+                
+                // Highlight in main reading area
+                const wordElements = this.readingArea.querySelectorAll('.word');
+                if (wordElements[wordIndex]) {
+                    wordElements[wordIndex].classList.add('current');
+                    this.currentWordIndex = wordIndex;
+                } else {
+                    // If word element doesn't exist, the content may have changed
+                    // Stop highlighting to prevent errors
+                    if (this.wordHighlightTimer) {
+                        clearInterval(this.wordHighlightTimer);
+                        this.wordHighlightTimer = null;
+                    }
+                    return;
+                }
+                
+                // Highlight in popup reading area if popup is open
+                if (this.popupOverlay.style.display === 'block') {
+                    const popupWordElements = this.popupReadingArea.querySelectorAll('.word');
+                    if (popupWordElements[wordIndex]) {
+                        popupWordElements[wordIndex].classList.add('current');
+                    }
+                }
+            }
+            
+            speakCurrentWord() {
+                // This method is now replaced by speakCurrentSentence
+                this.speakCurrentSentence();
+            }
+            
+            highlightCurrentWord() {
+                this.clearHighlights();
+                const wordElements = this.readingArea.querySelectorAll('.word');
+                if (wordElements[this.currentWordIndex]) {
+                    wordElements[this.currentWordIndex].classList.add('current');
+                }
+            }
+            
+            clearHighlights() {
+                // Clear highlights in main reading area
+                const wordElements = this.readingArea.querySelectorAll('.word');
+                wordElements.forEach(el => {
+                    el.classList.remove('current', 'highlight');
+                });
+                
+                // Clear highlights in popup reading area
+                const popupWordElements = this.popupReadingArea.querySelectorAll('.word');
+                popupWordElements.forEach(el => {
+                    el.classList.remove('current', 'highlight');
+                });
+            }
+            
+            analyzeTimingAccuracy(sentence) {
+                // Calculate actual speech duration
+                const actualDuration = performance.now() - this.sentenceStartTime;
+                const wordsInSentence = sentence.endWordIndex - sentence.startWordIndex + 1;
+                const actualWPM = (wordsInSentence / (actualDuration / 1000)) * 60;
+                
+                // Calculate expected WPM based on current settings
+                const currentRate = parseFloat(this.speedSelect.value);
+                const expectedWPM = 176 * currentRate; // Base 176 WPM
+                
+                // Calculate adjustment factor (with dampening to prevent overcorrection)
+                const rawAdjustment = expectedWPM / actualWPM;
+                const dampingFactor = 0.3; // Only adjust by 30% of the calculated difference
+                this.actualTimingAdjustment = this.actualTimingAdjustment + (rawAdjustment - this.actualTimingAdjustment) * dampingFactor;
+                
+                // Clamp adjustment to reasonable bounds (0.7x to 1.5x)
+                this.actualTimingAdjustment = Math.max(0.7, Math.min(1.5, this.actualTimingAdjustment));
+                
+                // Debug logging (can be removed in production)
+                console.log(`Timing analysis - Expected: ${expectedWPM.toFixed(1)} WPM, Actual: ${actualWPM.toFixed(1)} WPM, Adjustment: ${this.actualTimingAdjustment.toFixed(3)}`);
+            }
+            
+            updateProgress() {
+                const progress = this.sentences && this.sentences.length > 0 ? (this.currentSentenceIndex / this.sentences.length) * 100 : 0;
+                this.progressFill.style.width = `${progress}%`;
+            }
+            
+            updateSpeed() {
+                // If currently speaking, the speed will apply to the next word
+                this.updateStatus(`Speed changed to ${this.speedSelect.value}x`);
+            }
+            
+            updateButtonStates() {
+                if (this.isPlaying) {
+                    this.playButton.textContent = '⏸️ Pause';
+                    this.playButton.classList.remove('success-button');
+                    this.playButton.classList.add('secondary-button');
+                } else {
+                    this.playButton.textContent = '▶️ Play';
+                    this.playButton.classList.remove('secondary-button');
+                    this.playButton.classList.add('success-button');
+                }
+                this.stopButton.disabled = !this.isPlaying;
+            }
+            
+            updateStatus(message) {
+                this.statusDisplay.textContent = message;
+            }
+            
+            onReadingComplete() {
+                console.log(`🔊 DEBUG onReadingComplete: loopTimerActive = ${this.loopTimerActive}, time remaining = ${this.loopTimerEndTime ? (this.loopTimerEndTime - Date.now()) : 'N/A'}ms`);
+
+                // Check if loop timer is active
+                if (this.loopTimerActive && this.loopTimerEndTime && Date.now() < this.loopTimerEndTime) {
+                    console.log(`🔊 DEBUG onReadingComplete: Looping back to beginning...`);
+
+                    // Loop back to the beginning
+                    this.currentSentenceIndex = 0;
+                    this.currentWordIndex = 0;
+                    this.updateProgress();
+                    this.updateSentenceIndicator();
+
+                    // Small delay before restarting
+                    setTimeout(() => {
+                        if (this.loopTimerActive) {
+                            console.log(`🔊 DEBUG onReadingComplete: Calling startReading() to loop`);
+                            this.startReading();
+                        }
+                    }, 500);
+                } else {
+                    console.log(`🔊 DEBUG onReadingComplete: Normal completion (no loop)`);
+
+                    // Normal completion
+                    this.isPlaying = false;
+                    this.isPaused = false;
+                    this.clearHighlights();
+                    this.updateButtonStates();
+                    this.updateProgress();
+                    this.updateStatus('Reading completed!');
+
+                    // If loop timer just ended, stop it
+                    if (this.loopTimerActive) {
+                        this.stopLoopTimer();
+                    }
+                }
+            }
+
+            toggleLoopTimer(durationMinutes) {
+                if (this.loopTimerActive) {
+                    this.stopLoopTimer();
+                } else {
+                    this.startLoopTimer(durationMinutes);
+                }
+            }
+
+            startLoopTimer(durationMinutes) {
+                if (!this.sentences || this.sentences.length === 0) {
+                    this.updateStatus('Please load some text first', 'error');
+                    return;
+                }
+
+                this.loopTimerActive = true;
+                this.loopTimerEndTime = Date.now() + (durationMinutes * 60 * 1000);
+
+                // Reset speed to 1x
+                this.speedSelect.value = '1';
+                console.log('🔊 DEBUG: Speed reset to 1x for loop timer');
+
+                // Update UI
+                const loop5minBtn = document.getElementById('loopTimer5minBtn');
+                const loop25minBtn = document.getElementById('loopTimer25minBtn');
+                const statusDiv = document.getElementById('loopTimerStatus');
+
+                if (durationMinutes === 5) {
+                    loop5minBtn.textContent = '⏹️ Stop Loop';
+                    loop5minBtn.classList.add('stop');
+                } else {
+                    loop25minBtn.textContent = '⏹️ Stop Loop';
+                    loop25minBtn.classList.add('stop');
+                }
+
+                statusDiv.style.display = 'block';
+
+                // Start countdown display
+                this.loopTimerInterval = setInterval(() => this.updateLoopTimerDisplay(), 1000);
+
+                // Start reading from the beginning
+                this.currentSentenceIndex = 0;
+                this.currentWordIndex = 0;
+                this.updateProgress();
+                this.updateSentenceIndicator();
+                this.startReading();
+
+                this.updateStatus(`Loop timer started! Will loop for ${durationMinutes} minutes at 1x speed`, 'success');
+            }
+
+            stopLoopTimer() {
+                this.loopTimerActive = false;
+                this.loopTimerEndTime = null;
+
+                if (this.loopTimerInterval) {
+                    clearInterval(this.loopTimerInterval);
+                    this.loopTimerInterval = null;
+                }
+
+                // Reset UI
+                const loop5minBtn = document.getElementById('loopTimer5minBtn');
+                const loop25minBtn = document.getElementById('loopTimer25minBtn');
+                const statusDiv = document.getElementById('loopTimerStatus');
+
+                loop5minBtn.textContent = '▶️ 5 min Loop';
+                loop5minBtn.classList.remove('stop');
+                loop25minBtn.textContent = '▶️ 25 min Loop';
+                loop25minBtn.classList.remove('stop');
+
+                statusDiv.style.display = 'none';
+
+                // Reset page title
+                document.title = this.originalPageTitle;
+
+                this.updateStatus('Loop timer stopped', 'info');
+            }
+
+            updateLoopTimerDisplay() {
+                if (!this.loopTimerActive) return;
+
+                const statusDiv = document.getElementById('loopTimerStatus');
+                const remainingTime = this.loopTimerEndTime - Date.now();
+
+                if (remainingTime <= 0) {
+                    this.stop();
+                    this.stopLoopTimer();
+                    this.updateStatus('Loop timer completed!', 'success');
+
+                    // Show completion in title
+                    document.title = `✅ Timer Complete! | ${this.originalPageTitle}`;
+                    setTimeout(() => {
+                        document.title = this.originalPageTitle;
+                    }, 3000);
+                    return;
+                }
+
+                const minutes = Math.floor(remainingTime / 60000);
+                const seconds = Math.floor((remainingTime % 60000) / 1000);
+                const timeRemaining = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+                statusDiv.textContent = `Loop Timer: ${timeRemaining} remaining`;
+                document.title = `🔄 ${timeRemaining} | ${this.originalPageTitle}`;
+            }
+        }
+        
+        // Initialize the application when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize speech synthesis to load voices
+            speechSynthesis.addEventListener('voiceschanged', () => {
+                speechSynthesis.getVoices();
+            });
+            
+            new ClipboardTextToSpeech();
+        });
+    </script>
+</body>
+</html>
+

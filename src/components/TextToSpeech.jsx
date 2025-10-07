@@ -918,14 +918,16 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     };
   }, [speakVerseNumber]);
 
-  // Copy verse to clipboard
+  // Copy verse to clipboard with gloss prompt
   const copyVerseToClipboard = async (verseNumber) => {
     if (!verses[verseNumber - 1]) return;
-    
+
     const verseText = verses[verseNumber - 1];
-    
+    const glossPrompt = "Gloss this KJV Bible passage with brief definitions in parentheses after archaic or unclear words: ";
+    const textToCopy = glossPrompt + verseText;
+
     try {
-      await navigator.clipboard.writeText(verseText);
+      await navigator.clipboard.writeText(textToCopy);
     } catch (err) {
       console.error('Failed to copy to clipboard:', err);
     }
@@ -959,12 +961,8 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
                   onClick={() => {
                     setSelectedVerse(verseNumber);
                     setIsDropdownOpen(false);
-                    // Copy verse to clipboard
+                    // Copy verse to clipboard for glossing
                     copyVerseToClipboard(verseNumber);
-                    // Set up to read 5 verses starting from selected verse
-                    setVersesLeftToRead(5);
-                    // Automatically read the selected verse after a short delay
-                    setTimeout(() => speakVerse(verseNumber), 100);
                   }}
                   className={`block w-full text-left px-3 py-1 text-xs hover:bg-gray-100 ${
                     selectedVerse === verseNumber ? 'bg-purple-50 text-purple-700' : ''
