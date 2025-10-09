@@ -284,6 +284,22 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const verses = getCurrentVerses();
   const maxVerses = verses.length;
 
+  // Copy verse to clipboard with gloss prompt
+  const copyVerseToClipboard = useCallback(async (verseNumber) => {
+    if (!verses[verseNumber - 1]) return;
+
+    const verseText = verses[verseNumber - 1];
+    const glossPrompt = "Gloss this KJV Bible passage with brief definitions in parentheses after archaic or unclear words: ";
+    const textToCopy = glossPrompt + verseText;
+
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      console.log(`✓ Copied verse ${verseNumber} to clipboard for glossing`);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
+  }, [verses]);
+
   // Reset selected verse when chapter changes and restart auto-scroll
   useEffect(() => {
     setSelectedVerse(1);
@@ -302,10 +318,19 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   // Listen for keyboard navigation events
   useEffect(() => {
     const handleVerseNavigation = (event) => {
+      console.log('📖 navigateVerse event received, direction:', event.detail.direction);
       if (event.detail.direction === 'previous' && selectedVerse > 1) {
-        setSelectedVerse(selectedVerse - 1);
+        const prevVerse = selectedVerse - 1;
+        console.log('⬅️ Moving to previous verse:', prevVerse);
+        setSelectedVerse(prevVerse);
+        // Copy verse to clipboard for glossing
+        copyVerseToClipboard(prevVerse);
       } else if (event.detail.direction === 'next' && selectedVerse < maxVerses) {
-        setSelectedVerse(selectedVerse + 1);
+        const nextVerse = selectedVerse + 1;
+        console.log('➡️ Moving to next verse:', nextVerse);
+        setSelectedVerse(nextVerse);
+        // Copy verse to clipboard for glossing
+        copyVerseToClipboard(nextVerse);
       }
     };
 
@@ -315,12 +340,12 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
 
     window.addEventListener('navigateVerse', handleVerseNavigation);
     window.addEventListener('resetVerse', handleVerseReset);
-    
+
     return () => {
       window.removeEventListener('navigateVerse', handleVerseNavigation);
       window.removeEventListener('resetVerse', handleVerseReset);
     };
-  }, [selectedVerse, maxVerses]);
+  }, [selectedVerse, maxVerses, copyVerseToClipboard]);
 
   // Expose navigation functions to parent component
   useImperativeHandle(ref, () => ({
@@ -641,9 +666,12 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   // Scroll to next verse without reading
   const scrollToNextVerse = useCallback(() => {
     if (selectedVerse < maxVerses) {
-      setSelectedVerse(selectedVerse + 1);
+      const nextVerse = selectedVerse + 1;
+      setSelectedVerse(nextVerse);
+      // Copy verse to clipboard for glossing
+      copyVerseToClipboard(nextVerse);
     }
-  }, [selectedVerse, maxVerses, setSelectedVerse]);
+  }, [selectedVerse, maxVerses, setSelectedVerse, copyVerseToClipboard]);
 
 
   // Stop current speech
@@ -918,21 +946,6 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     };
   }, [speakVerseNumber]);
 
-  // Copy verse to clipboard with gloss prompt
-  const copyVerseToClipboard = async (verseNumber) => {
-    if (!verses[verseNumber - 1]) return;
-
-    const verseText = verses[verseNumber - 1];
-    const glossPrompt = "Gloss this KJV Bible passage with brief definitions in parentheses after archaic or unclear words: ";
-    const textToCopy = glossPrompt + verseText;
-
-    try {
-      await navigator.clipboard.writeText(textToCopy);
-    } catch (err) {
-      console.error('Failed to copy to clipboard:', err);
-    }
-  };
-
   if (!verses.length) return null;
 
   // Get current language info for UI display
@@ -976,6 +989,20 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         )}
       </div>
 
+      {/* Scroll to Next Verse Button */}
+      <button
+        onClick={scrollToNextVerse}
+        disabled={selectedVerse >= maxVerses}
+        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
+          selectedVerse >= maxVerses
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            : 'bg-green-100 text-green-700 hover:bg-green-200'
+        }`}
+        title="Scroll to next verse"
+      >
+        <ChevronRight className="w-3 h-3 mr-1" />
+        Scroll
+      </button>
 
       {/* Speak Button */}
       <button
@@ -990,14 +1017,14 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
           }
         }}
         className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
-          isSpeaking 
-            ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+          isSpeaking
+            ? 'bg-red-100 text-red-700 hover:bg-red-200'
             : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
         }`}
-        title={isSpeaking ? "Stop reading" : `Read selected verse in ${currentLanguageInfo.name}`}
+        title={isSpeaking ? "Stop reading" : `Read 5 verses continuously in ${currentLanguageInfo.name}`}
       >
         <Play className="w-3 h-3 mr-1" />
-        {isSpeaking ? 'Stop' : 'Read'}
+        {isSpeaking ? 'Stop' : 'Read(continuous)'}
       </button>
 
       {/* Next Verse Button - Hidden */}
@@ -1013,21 +1040,6 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       >
         <SkipForward className="w-3 h-3 mr-1" />
         Next
-      </button>
-
-      {/* Scroll to Next Verse Button */}
-      <button
-        onClick={scrollToNextVerse}
-        disabled={selectedVerse >= maxVerses}
-        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
-          selectedVerse >= maxVerses
-            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            : 'bg-green-100 text-green-700 hover:bg-green-200'
-        }`}
-        title="Scroll to next verse"
-      >
-        <ChevronRight className="w-3 h-3 mr-1" />
-        Scroll
       </button>
 
       {/* Repeat Current Verse Button */}
