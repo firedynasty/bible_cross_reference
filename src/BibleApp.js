@@ -3617,7 +3617,7 @@ const BibleApp = () => {
             {selectedBook && (
               <div className="flex items-center">
                 <span className="mr-1 text-sm">Ch:</span>
-                <select 
+                <select
                   value={selectedChapter}
                   onChange={(e) => handleChapterSelect(parseInt(e.target.value))}
                   className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded px-1 py-0 text-sm w-12`}
@@ -3628,7 +3628,53 @@ const BibleApp = () => {
                     </option>
                   ))}
                 </select>
-                <span className="ml-1 text-sm text-gray-500">(y:-1,e:+1,r:+10,t=1)</span>
+                <button
+                  onClick={() => {
+                    // Find and click the Previous Chapter button (same as 'y' key)
+                    const prevChapterButtons = document.querySelectorAll('button');
+                    let prevButton = null;
+
+                    for (let i = 0; i < prevChapterButtons.length; i++) {
+                      const buttonText = prevChapterButtons[i].textContent || prevChapterButtons[i].innerText;
+                      if (buttonText.includes('Previous Chapter') || buttonText.includes('Prev Chapter')) {
+                        prevButton = prevChapterButtons[i];
+                        break;
+                      }
+                    }
+
+                    if (prevButton && !prevButton.disabled) {
+                      prevButton.click();
+                    }
+                  }}
+                  className="ml-1 px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-sm font-bold"
+                  title="Previous chapter"
+                >
+                  ←(y)
+                </button>
+                <button
+                  onClick={() => {
+                    // Find and click the Next Chapter button (same as 'e' key)
+                    const nextChapterButtons = document.querySelectorAll('button');
+                    let nextButton = null;
+
+                    for (let i = 0; i < nextChapterButtons.length; i++) {
+                      const buttonText = nextChapterButtons[i].textContent || nextChapterButtons[i].innerText;
+                      if (buttonText.includes('Next Chapter')) {
+                        nextButton = nextChapterButtons[i];
+                        break;
+                      }
+                    }
+
+                    if (nextButton && !nextButton.disabled) {
+                      nextButton.click();
+                    }
+                  }}
+                  className="ml-1 px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-sm font-bold"
+                  title="Next chapter"
+                >
+                  →(e)
+                </button>
+                <span className="ml-1 text-sm text-gray-500">(r:+10,t=1)</span>
                 
                 {/* Speech Volume Controls */}
                 <div className="flex items-center ml-4 border-l pl-4">
