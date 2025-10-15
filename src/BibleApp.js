@@ -269,7 +269,7 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
   };
 
   return (
-    <div className="flex items-center space-x-2">
+    <div className="flex items-center space-x-2 hidden">
       {/* Next Translation button */}
       <button
         onClick={() => {
@@ -427,7 +427,9 @@ const NavigationPlaceholder = ({
   resetScrollTimerRef,
   speechVolume,
   showGlosses,
-  onGlossToggle
+  onGlossToggle,
+  translations,
+  onTranslationChange
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -440,47 +442,47 @@ const NavigationPlaceholder = ({
   const bibleStudyPrompts = [
     {
       id: 1,
-      label: "1. Meditation Connection (u,i)",
+      label: "1. Meditation",
       template: "Meditation Connection, For {book} {chapter}, tell me what is the theme connect to meditation like breathe in out"
     },
     {
       id: 2,
-      label: "Literary & Structure Analysis",
+      label: "Literary",
       template: 'Literary & Structure Analysis: For {book} {chapter}, "Analyze the literary structure, rhetorical devices, and narrative techniques used in this chapter - how do elements like repetition, imagery, parallelism, chiasm, or progression of ideas work together to reinforce the central message and create emotional or theological impact?"'
     },
     {
       id: 3,
-      label: "Historical & Cultural Context",
+      label: "Historical",
       template: 'Historical & Cultural Context: For {book} {chapter}, "Explore the historical setting, cultural practices, social structures, and contextual factors that shaped this chapter - how do understanding the original audience, historical circumstances, and cultural background illuminate the meaning and significance of the text?"'
     },
     {
       id: 4,
-      label: "Theological & Doctrinal",
+      label: "Theological",
       template: 'Theological & Doctrinal: For {book} {chapter}, "What does this chapter reveal about the nature and character of God, humanity\'s relationship with the divine, and major theological themes like covenant, salvation, justice, or redemption - and how do these teachings connect to or develop broader biblical doctrine?"'
     },
     {
       id: 5,
-      label: "Practical Application",
+      label: "Practical",
       template: 'Practical Application: For {book} {chapter}, "Given the original context and timeless principles in this chapter, what specific life situations, moral decisions, relationship dynamics, or spiritual challenges does this text address, and how can its wisdom be authentically applied to contemporary personal and communal life?"'
     },
     {
       id: 6,
-      label: "Comparative Analysis",
+      label: "Comparative",
       template: 'Comparative Analysis: For {book} {chapter}, "How does this chapter\'s themes, language, imagery, and theological content compare and contrast with similar passages throughout Scripture, what unique contribution does it make to biblical literature, and how do different translations or interpretative traditions handle its key concepts?"'
     },
     {
       id: 7,
-      label: "Spiritual Formation",
+      label: "Spiritual",
       template: 'Spiritual Formation: For {book} {chapter}, "How can this chapter inform and transform personal spiritual practices like prayer, meditation, worship, and discipleship - what spiritual disciplines does it model or encourage, and how might regular engagement with its content shape character and faith development?"'
     },
     {
       id: 8,
-      label: "Creative Engagement",
+      label: "Creative",
       template: 'Creative Engagement: For {book} {chapter}, "If you were to reimagine this chapter through contemporary storytelling, artistic expression, or modern parallels, what would it look like, what current situations mirror its dynamics, and how might creative interpretation help unlock its relevance for today\'s audience?"'
     },
     {
       id: 9,
-      label: "Additional Text",
+      label: "Additional",
       template: 'For {book} {chapter}, '
     }
   ];
@@ -621,12 +623,14 @@ const NavigationPlaceholder = ({
         </div>
         
         {/* Text to Speech Component */}
-        <TextToSpeech 
+        <TextToSpeech
           rightPaneBibleData={rightPaneBibleData}
           currentBook={book.abbrev}
           currentChapter={chapter}
           rightPaneTranslation={rightPaneTranslation}
           speechVolume={speechVolume}
+          translations={translations}
+          onTranslationChange={onTranslationChange}
         />
         
         {/* To Clipboard Button - Hidden */}
@@ -3473,12 +3477,15 @@ const BibleApp = () => {
   if (!scrollSyncInitialized.current && !loading && chapterContentRef.current && kjvContentRef.current) {
     // Use a small timeout to ensure the DOM is fully rendered
     setTimeout(() => {
-      // Initialize the last scroll position
-      lastPrimaryScrollPos.current = chapterContentRef.current.scrollTop;
-      
-      setupScrollSync();
-      scrollSyncInitialized.current = true;
-      console.log("Scroll sync initialized");
+      // Check refs again as they might have changed during timeout
+      if (chapterContentRef.current && kjvContentRef.current) {
+        // Initialize the last scroll position
+        lastPrimaryScrollPos.current = chapterContentRef.current.scrollTop;
+
+        setupScrollSync();
+        scrollSyncInitialized.current = true;
+        console.log("Scroll sync initialized");
+      }
     }, 100);
   }
 
@@ -3889,6 +3896,8 @@ const BibleApp = () => {
               speechVolume={speechVolume}
               showGlosses={showGlosses}
               onGlossToggle={() => setShowGlosses(!showGlosses)}
+              translations={translations}
+              onTranslationChange={setRightPaneTranslation}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
                   const bookObj = bibleData.find(b => b.abbrev === book);
@@ -3982,8 +3991,8 @@ const BibleApp = () => {
                       <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
                     </svg>
                   </button>
-                  <button 
-                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
+                  <button
+                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center"
                     title="Scroll to next verse"
                     onClick={() => {
                       const event = new CustomEvent('navigateVerse', {
@@ -3995,6 +4004,45 @@ const BibleApp = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right w-6 h-6">
                       <polyline points="9 18 15 12 9 6"></polyline>
                     </svg>
+                  </button>
+                  <button
+                    onClick={() => {
+                      try {
+                        // Find current translation index
+                        const currentIndex = translations.findIndex(t => t.id === rightPaneTranslation);
+
+                        // Calculate next index (loops back to 0 after last item)
+                        const nextIndex = (currentIndex + 1) % translations.length;
+                        const nextTranslation = translations[nextIndex].id;
+
+                        // Skip Hebrew translations if they cause issues
+                        let finalTranslation = nextTranslation;
+                        if (nextTranslation.includes('he_heb')) {
+                          const afterHebrewIndex = (nextIndex + 1) % translations.length;
+                          if (translations[afterHebrewIndex] && !translations[afterHebrewIndex].id.includes('he_heb')) {
+                            finalTranslation = translations[afterHebrewIndex].id;
+                          }
+                        }
+
+                        // Apply translation with delay to prevent scroll errors
+                        setTimeout(() => {
+                          try {
+                            setRightPaneTranslation(finalTranslation);
+                          } catch (error) {
+                            console.warn('Error applying translation:', error);
+                          }
+                        }, 150);
+                      } catch (error) {
+                        console.warn('Error cycling translation:', error);
+                      }
+                    }}
+                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center"
+                    title="Cycle to next translation and apply to pane 2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right w-3 h-3 mr-1">
+                      <path d="m9 18 6-6-6-6"></path>
+                    </svg>
+                    n t
                   </button>
                   {selectedBook && selectedChapter < selectedBook.chapters.length && (
                     <button
@@ -4246,8 +4294,8 @@ const BibleApp = () => {
                         <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
                       </svg>
                     </button>
-                    <button 
-                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
+                    <button
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center"
                       title="Scroll to next verse"
                       onClick={() => {
                         const event = new CustomEvent('navigateVerse', {
@@ -4259,6 +4307,45 @@ const BibleApp = () => {
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right w-6 h-6">
                         <path d="m9 18 6-6-6-6"></path>
                       </svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        try {
+                          // Find current translation index
+                          const currentIndex = translations.findIndex(t => t.id === rightPaneTranslation);
+
+                          // Calculate next index (loops back to 0 after last item)
+                          const nextIndex = (currentIndex + 1) % translations.length;
+                          const nextTranslation = translations[nextIndex].id;
+
+                          // Skip Hebrew translations if they cause issues
+                          let finalTranslation = nextTranslation;
+                          if (nextTranslation.includes('he_heb')) {
+                            const afterHebrewIndex = (nextIndex + 1) % translations.length;
+                            if (translations[afterHebrewIndex] && !translations[afterHebrewIndex].id.includes('he_heb')) {
+                              finalTranslation = translations[afterHebrewIndex].id;
+                            }
+                          }
+
+                          // Apply translation with delay to prevent scroll errors
+                          setTimeout(() => {
+                            try {
+                              setRightPaneTranslation(finalTranslation);
+                            } catch (error) {
+                              console.warn('Error applying translation:', error);
+                            }
+                          }, 150);
+                        } catch (error) {
+                          console.warn('Error cycling translation:', error);
+                        }
+                      }}
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center"
+                      title="Cycle to next translation and apply to pane 2"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right w-3 h-3 mr-1">
+                        <path d="m9 18 6-6-6-6"></path>
+                      </svg>
+                      n t
                     </button>
                     {selectedBook && selectedChapter < selectedBook.chapters.length && (
                       <button
