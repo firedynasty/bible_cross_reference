@@ -429,12 +429,7 @@ const NavigationPlaceholder = ({
   showGlosses,
   onGlossToggle,
   translations,
-  onTranslationChange,
-  verseFilterData,
-  showFilteredVersesOnly,
-  setShowFilteredVersesOnly,
-  filterFileName,
-  handleVerseFilterFile
+  onTranslationChange
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -843,7 +838,7 @@ const NavigationPlaceholder = ({
                 🔗
               </button>
               (links)
-
+              
               {showLinksDropdown && (
                 <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
                   {Object.entries(linksOut).map(([label, url]) => (
@@ -861,68 +856,7 @@ const NavigationPlaceholder = ({
                 </div>
               )}
             </div>
-
-            {/* Hidden file input for verse filter */}
-            <input
-              type="file"
-              id="verse_filter_input"
-              accept=".txt"
-              style={{ display: 'none' }}
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  handleVerseFilterFile(e.target.files[0]);
-                }
-              }}
-            />
-
-            {/* Drag-Drop Button for Verse Filter */}
-            <button
-              onClick={() => document.getElementById('verse_filter_input').click()}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const files = e.dataTransfer.files;
-                if (files && files[0]) {
-                  handleVerseFilterFile(files[0]);
-                }
-              }}
-              className={`ml-2 px-2 py-1 rounded text-xs font-bold ${
-                verseFilterData && verseFilterData.chapters && verseFilterData.chapters[chapter]
-                  ? 'bg-green-200 hover:bg-green-300'
-                  : filterFileName
-                  ? 'bg-yellow-200 hover:bg-yellow-300'
-                  : 'bg-gray-200 hover:bg-gray-300'
-              }`}
-              title={
-                verseFilterData && verseFilterData.chapters && verseFilterData.chapters[chapter]
-                  ? `Ch ${chapter} has ${verseFilterData.chapters[chapter].length} key verses (${filterFileName})`
-                  : filterFileName
-                  ? `Filter loaded but no data for Ch ${chapter} (${filterFileName})`
-                  : "Upload verse filter file (drag & drop or click)"
-              }
-            >
-              {verseFilterData && verseFilterData.chapters && verseFilterData.chapters[chapter] ? '✓📄' : '📄'}
-            </button>
-
-            {/* Show All Verses Toggle Button - only show when filter is loaded */}
-            {verseFilterData && (
-              <button
-                onClick={() => setShowFilteredVersesOnly(!showFilteredVersesOnly)}
-                className={`ml-2 px-2 py-1 rounded text-xs font-bold ${
-                  showFilteredVersesOnly
-                    ? 'bg-orange-200 hover:bg-orange-300'
-                    : 'bg-gray-200 hover:bg-gray-300'
-                }`}
-                title={showFilteredVersesOnly ? "Show all verses" : "Show filtered verses only"}
-              >
-                {showFilteredVersesOnly ? '👁️' : '👁️‍🗨️'}
-              </button>
-            )}
-
+            
           </div>
           
       </div>
@@ -1138,7 +1072,7 @@ const BibleApp = () => {
   
   // State to track touch scroll mode
   const [touchScrollMode, setTouchScrollMode] = useState('right-independent');
-
+  
   // Touch scroll mode options
   const touchScrollModes = [
     { id: 'disabled', label: 'X', description: 'Text selection enabled - no auto-scroll' },
@@ -1147,91 +1081,10 @@ const BibleApp = () => {
     { id: 'right-reduced', label: 'R R', description: 'Touch right pane with smaller scroll' },
     { id: 'right-independent', label: 'R I', description: 'Touch right pane scrolls only right pane (no sync)' }
   ];
-
-  // State for verse filtering from text file
-  const [verseFilterData, setVerseFilterData] = useState(null); // Stores parsed verse ranges by chapter
-  const [showFilteredVersesOnly, setShowFilteredVersesOnly] = useState(false); // Toggle for showing filtered vs all verses
-  const [filterFileName, setFilterFileName] = useState(''); // Name of the uploaded file
-  const [allVerseFilters, setAllVerseFilters] = useState(null); // Stores all verse filters from JSON
-  const [isManualUpload, setIsManualUpload] = useState(false); // Track if current filter is from manual upload
-
+  
   // State to track scroll position for mobile view during translation changes
   // eslint-disable-next-line no-unused-vars
   const [mobileScrollPosition, setMobileScrollPosition] = useState(0);
-
-  // Load verse filters JSON on startup
-  useEffect(() => {
-    const loadVerseFilters = async () => {
-      try {
-        const baseUrl = getBaseUrl();
-        const response = await fetch(`${baseUrl}/verse_filters.json`);
-        if (response.ok) {
-          const data = await response.json();
-          setAllVerseFilters(data);
-          console.log('Loaded verse filters for', Object.keys(data).length, 'books');
-        }
-      } catch (error) {
-        console.log('No verse_filters.json found, using manual upload only');
-      }
-    };
-    loadVerseFilters();
-  }, []);
-
-  // Update verse filter when book changes (if JSON filters are loaded)
-  useEffect(() => {
-    if (!allVerseFilters || !selectedBook) return;
-
-    const bookName = selectedBook.book || getBookName(selectedBook.abbrev);
-
-    // Don't auto-load if user has manually uploaded a filter for this book
-    if (isManualUpload) {
-      console.log(`Manual upload active, skipping auto-load for ${bookName}`);
-      return;
-    }
-
-    // Try exact match first
-    let filterData = allVerseFilters[bookName];
-
-    // Try variations if no exact match
-    if (!filterData) {
-      // Try without spaces (1Chronicles, 2Samuel, etc.)
-      const noSpaces = bookName.replace(/\s+/g, '');
-      filterData = allVerseFilters[noSpaces];
-    }
-
-    if (!filterData) {
-      // Try with underscore (1_Chronicles, Song_of_Solomon, etc.)
-      const withUnderscore = bookName.replace(/\s+/g, '_');
-      filterData = allVerseFilters[withUnderscore];
-    }
-
-    if (filterData) {
-      setVerseFilterData({
-        bookName: bookName,
-        chapters: filterData
-      });
-      setFilterFileName('verse_filters.json (auto-loaded)');
-      console.log(`Auto-loaded filter for ${bookName}`);
-    } else {
-      // No filter for this book, clear it only if it was auto-loaded
-      setVerseFilterData(null);
-      setFilterFileName('');
-    }
-  }, [selectedBook, allVerseFilters, isManualUpload]);
-
-  // Reset manual upload flag when changing books
-  useEffect(() => {
-    if (isManualUpload) {
-      const currentBookName = selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : '';
-      const uploadedBookName = verseFilterData ? verseFilterData.bookName : '';
-
-      // If we've moved to a different book, reset the manual upload flag
-      if (currentBookName !== uploadedBookName) {
-        console.log(`Changed from ${uploadedBookName} to ${currentBookName}, resetting manual upload flag`);
-        setIsManualUpload(false);
-      }
-    }
-  }, [selectedBook, isManualUpload, verseFilterData]);
 
   // Effect to detect mobile and tablet screen sizes and handle sidebar visibility
   useEffect(() => {
@@ -1336,100 +1189,6 @@ const BibleApp = () => {
     };
     
     return bookNames[abbrev] || abbrev;
-  };
-
-  // Helper function to parse verse filter file
-  const parseVerseFilterFile = (fileText) => {
-    const lines = fileText.split('\n').map(line => line.trim()).filter(line => line);
-    if (lines.length === 0) return null;
-
-    const filterData = {};
-    let currentBookName = '';
-
-    lines.forEach(line => {
-      // Check if this is a chapter line with two possible formats:
-      // Format 1: "Chapter 1: 1-3, 44-46" (from output.txt)
-      // Format 2: "Exodus 1: 1, 8-11, 15-16" (from exodus.txt)
-      const chapterMatch = line.match(/^Chapter\s+(\d+):\s*(.+)$/i);
-      const bookChapterMatch = line.match(/^[A-Za-z]+\s+(\d+):\s*(.+)$/i);
-
-      if (chapterMatch) {
-        const chapterNum = parseInt(chapterMatch[1]);
-        const versesText = chapterMatch[2];
-
-        // Parse verse ranges (e.g., "1-3, 44-46, 50")
-        const verseRanges = versesText.split(',').map(range => range.trim());
-        const verses = new Set();
-
-        verseRanges.forEach(range => {
-          if (range.includes('-')) {
-            // Range like "1-3"
-            const [start, end] = range.split('-').map(n => parseInt(n.trim()));
-            for (let i = start; i <= end; i++) {
-              verses.add(i);
-            }
-          } else {
-            // Single verse like "50"
-            verses.add(parseInt(range));
-          }
-        });
-
-        filterData[chapterNum] = Array.from(verses).sort((a, b) => a - b);
-      } else if (bookChapterMatch) {
-        // Handle "BookName ChapterNum: verses" format
-        const chapterNum = parseInt(bookChapterMatch[1]);
-        const versesText = bookChapterMatch[2];
-
-        // Parse verse ranges (e.g., "1-3, 44-46, 50")
-        const verseRanges = versesText.split(',').map(range => range.trim());
-        const verses = new Set();
-
-        verseRanges.forEach(range => {
-          if (range.includes('-')) {
-            // Range like "1-3"
-            const [start, end] = range.split('-').map(n => parseInt(n.trim()));
-            for (let i = start; i <= end; i++) {
-              verses.add(i);
-            }
-          } else {
-            // Single verse like "50"
-            verses.add(parseInt(range));
-          }
-        });
-
-        filterData[chapterNum] = Array.from(verses).sort((a, b) => a - b);
-      } else if (!line.includes(':') && line.length > 0) {
-        // This might be the book name (first non-empty line without colon)
-        currentBookName = line;
-      }
-    });
-
-    return { bookName: currentBookName, chapters: filterData };
-  };
-
-  // Handler for drag-drop file upload
-  const handleVerseFilterFile = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target.result;
-      const parsed = parseVerseFilterFile(text);
-      if (parsed && Object.keys(parsed.chapters).length > 0) {
-        // Override: Use current book name instead of the one from the file
-        const currentBookName = selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : parsed.bookName;
-
-        setVerseFilterData({
-          bookName: currentBookName,
-          chapters: parsed.chapters
-        });
-        setFilterFileName(file.name);
-        setIsManualUpload(true); // Mark as manual upload
-        setShowFilteredVersesOnly(true); // Automatically enable filtering when file is loaded
-        console.log(`Verse filter loaded for ${currentBookName}:`, parsed.chapters);
-      } else {
-        alert('Could not parse verse filter file. Please check the format.');
-      }
-    };
-    reader.readAsText(file);
   };
 
   // Add keyboard event handler for translation switching and KJV scrolling
@@ -4139,11 +3898,6 @@ const BibleApp = () => {
               onGlossToggle={() => setShowGlosses(!showGlosses)}
               translations={translations}
               onTranslationChange={setRightPaneTranslation}
-              verseFilterData={verseFilterData}
-              showFilteredVersesOnly={showFilteredVersesOnly}
-              setShowFilteredVersesOnly={setShowFilteredVersesOnly}
-              filterFileName={filterFileName}
-              handleVerseFilterFile={handleVerseFilterFile}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
                   const bookObj = bibleData.find(b => b.abbrev === book);
@@ -4341,28 +4095,14 @@ const BibleApp = () => {
                   </span>
                 </h2>
                 <div className="space-y-5">
-                  {selectedBook && selectedBook.chapters && selectedBook.chapters[selectedChapter - 1] && selectedBook.chapters[selectedChapter - 1]
-                    .map((verse, originalIndex) => ({ verse, verseNumber: originalIndex + 1 }))
-                    .filter(({ verseNumber }) => {
-                      // If filtering is disabled, show all verses
-                      if (!showFilteredVersesOnly || !verseFilterData) return true;
-
-                      // Check if we have filter data for current chapter
-                      const currentChapterFilter = verseFilterData.chapters[selectedChapter];
-
-                      // If no filter data for this chapter, show all verses
-                      if (!currentChapterFilter) return true;
-
-                      // Only show verses that are in the filter list
-                      return currentChapterFilter.includes(verseNumber);
-                    })
-                    .map(({ verse, verseNumber }, displayIndex) => {
+                  {selectedBook && selectedBook.chapters && selectedBook.chapters[selectedChapter - 1] && selectedBook.chapters[selectedChapter - 1].map((verse, index) => {
+                    const verseNumber = index + 1;
                     const refKey = `${selectedBook.abbrev}-${selectedChapter}-${verseNumber}`;
                     const hasReference = crossReferences[refKey] && crossReferences[refKey].length > 0;
-
+                    
                     return (
-                      <div
-                        key={verseNumber}
+                      <div 
+                        key={index} 
                         id={`verse-${verseNumber}`}
                         className={`leading-relaxed p-4 rounded-md transition-colors text-2xl ${
                           hasReference 
@@ -4664,25 +4404,12 @@ const BibleApp = () => {
                         
                         const rightPaneBook = rightPaneBibleData.find(b => b.abbrev === bookAbbrev);
                         if (rightPaneBook && rightPaneBook.chapters[selectedChapter - 1]) {
-                          return rightPaneBook.chapters[selectedChapter - 1]
-                            .map((verse, originalIndex) => ({ verse, verseNumber: originalIndex + 1 }))
-                            .filter(({ verseNumber }) => {
-                              // If filtering is disabled, show all verses
-                              if (!showFilteredVersesOnly || !verseFilterData) return true;
-
-                              // Check if we have filter data for current chapter
-                              const currentChapterFilter = verseFilterData.chapters[selectedChapter];
-
-                              // If no filter data for this chapter, show all verses
-                              if (!currentChapterFilter) return true;
-
-                              // Only show verses that are in the filter list
-                              return currentChapterFilter.includes(verseNumber);
-                            })
-                            .map(({ verse, verseNumber }) => {
+                          return rightPaneBook.chapters[selectedChapter - 1].map((verse, index) => {
+                            const verseNumber = index + 1;
+                            
                             return (
-                              <div
-                                key={verseNumber}
+                              <div 
+                                key={index} 
                                 id={`right-pane-verse-${verseNumber}`}
                                 className="leading-relaxed p-4 rounded-md transition-colors text-2xl"
                               >
