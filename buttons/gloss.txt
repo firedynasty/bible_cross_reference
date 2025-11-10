@@ -1,0 +1,12 @@
+ {/* Gloss Toggle Button */}
+        <button
+          onClick={() => onGlossToggle && onGlossToggle()}
+          className={`hidden ml-2 px-2 py-0.5 rounded focus:outline-none ${
+            showGlosses
+              ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+              : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
+          }`}
+          title={showGlosses ? "Hide glosses (definitions)" : "Show glosses (definitions)"}
+        >
+          {showGlosses ? 'Gloss: ON' : 'Gloss: OFF'}
+        </button>

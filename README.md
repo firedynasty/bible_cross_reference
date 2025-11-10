@@ -46,3 +46,11 @@ npm run deploy
 
 The application is deployed at [Vercel](https://bible-cross-reference.vercel.app/)
 
+## Ang Dating Biblia json (1905)
+
+Ang Dating Biblia (1905) .json 
+
+Ang Dating Biblia .json 
+
+./public/fil_adb1905.json
+
