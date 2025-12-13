@@ -4343,10 +4343,10 @@ const BibleApp = () => {
           >
             {selectedBook && selectedChapter > 0 && (
               <div>
-                {/* Read and Repeat buttons */}
-                <div className="mb-4 flex gap-2">
-                  <button 
-                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
+                {/* Read and Repeat buttons - Hidden */}
+                <div className="hidden mb-4 flex gap-2">
+                  <button
+                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center"
                     title="Read selected verse in English"
                     onClick={(event) => {
                       const readButtons = document.querySelectorAll('button[title="Read selected verse in English"]');
@@ -4661,10 +4661,10 @@ const BibleApp = () => {
               >
                 {selectedBook && selectedChapter > 0 && (
                 <div>
-                  {/* Read and Repeat buttons */}
-                  <div className="mb-4 flex gap-2">
-                    <button 
-                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center" 
+                  {/* Read and Repeat buttons - Hidden */}
+                  <div className="hidden mb-4 flex gap-2">
+                    <button
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center"
                       title="Read selected verse in English"
                       onClick={(event) => {
                         const readButtons = document.querySelectorAll('button[title="Read selected verse in English"]');
