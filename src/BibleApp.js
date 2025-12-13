@@ -1117,6 +1117,9 @@ const BibleApp = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
   const [showKJVOnMobile, setShowKJVOnMobile] = useState(true);
+
+  // Font size control (multiplier: 1 = base size)
+  const [fontScale, setFontScale] = useState(1);
   
   // Available translations
   const translations = React.useMemo(() => [
@@ -3814,7 +3817,6 @@ const BibleApp = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
-                <span className="ml-1 text-sm text-gray-500">(esc)</span>
               </>
             )}
             
@@ -3863,6 +3865,22 @@ const BibleApp = () => {
                   title="Cycle to next translation"
                 >
                   n t
+                </button>
+
+                {/* Font Size Controls */}
+                <button
+                  onClick={() => setFontScale(prev => Math.max(0.5, prev - 0.1))}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold"
+                  title="Decrease font size"
+                >
+                  -
+                </button>
+                <button
+                  onClick={() => setFontScale(prev => Math.min(2, prev + 0.1))}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold"
+                  title="Increase font size"
+                >
+                  +
                 </button>
 
                 {/* Chapter Navigation Input */}
@@ -4210,14 +4228,15 @@ const BibleApp = () => {
                           <div
                             key={`${item.type}-${item.verseNumber}-${index}`}
                             id={item.type === 'primary' ? `verse-${item.verseNumber}` : `right-pane-verse-${item.verseNumber}`}
-                            className={`leading-relaxed p-3 rounded-md transition-colors text-2xl ${
+                            className={`leading-relaxed p-3 rounded-md transition-colors ${
                               item.type === 'primary'
                                 ? (isDarkMode ? 'bg-gray-800' : 'bg-blue-50')
                                 : (isDarkMode ? 'bg-gray-700' : 'bg-gray-50')
                             } ${hasReference ? (isDarkMode ? 'hover:bg-blue-900' : 'hover:bg-blue-100') : ''}`}
+                            style={{ fontSize: `${fontScale * 1.125}rem` }}
                           >
                             <p className="flex">
-                              <span className={`font-bold mr-4 text-2xl ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                              <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                                 {item.verseNumber}
                               </span>
                               <span className="flex-1">{renderWithGlosses(item.text, showGlosses)}</span>
@@ -4486,14 +4505,15 @@ const BibleApp = () => {
                       <div
                         key={verseNumber}
                         id={`verse-${verseNumber}`}
-                        className={`leading-relaxed p-4 rounded-md transition-colors text-lg ${
+                        className={`leading-relaxed p-4 rounded-md transition-colors ${
                           hasReference
                             ? isDarkMode ? 'hover:bg-blue-900' : 'hover:bg-blue-50'
                             : ''
                         }`}
+                        style={{ fontSize: `${fontScale * 1.125}rem` }}
                       >
                         <p className="flex">
-                          <span className={`font-bold mr-4 text-lg ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
+                          <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
                           <span className="flex-1">{renderWithGlosses(verse, showGlosses)}</span>
                           
                           {hasReference && (
@@ -4806,7 +4826,8 @@ const BibleApp = () => {
                               <div
                                 key={verseNumber}
                                 id={`right-pane-verse-${verseNumber}`}
-                                className="leading-relaxed p-4 rounded-md transition-colors text-2xl"
+                                className="leading-relaxed p-4 rounded-md transition-colors"
+                                style={{ fontSize: `${fontScale * 1.125}rem` }}
                               >
                                 <p className="flex">
                                   <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
