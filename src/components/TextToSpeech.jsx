@@ -947,6 +947,47 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
 
   return (
     <div className="flex items-center gap-2">
+      {/* Next Translation Button - moved to first position */}
+      {translations && onTranslationChange && (
+        <button
+          onClick={() => {
+            try {
+              // Find current translation index
+              const currentIndex = translations.findIndex(t => t.id === rightPaneTranslation);
+
+              // Calculate next index (loops back to 0 after last item)
+              const nextIndex = (currentIndex + 1) % translations.length;
+              const nextTranslation = translations[nextIndex].id;
+
+              // Skip Hebrew translations if they cause issues
+              let finalTranslation = nextTranslation;
+              if (nextTranslation.includes('he_heb')) {
+                const afterHebrewIndex = (nextIndex + 1) % translations.length;
+                if (translations[afterHebrewIndex] && !translations[afterHebrewIndex].id.includes('he_heb')) {
+                  finalTranslation = translations[afterHebrewIndex].id;
+                }
+              }
+
+              // Apply translation with delay to prevent scroll errors
+              setTimeout(() => {
+                try {
+                  onTranslationChange(finalTranslation);
+                } catch (error) {
+                  console.warn('Error applying translation:', error);
+                }
+              }, 150);
+            } catch (error) {
+              console.warn('Error cycling translation:', error);
+            }
+          }}
+          className="px-2 py-0.5 rounded focus:outline-none flex items-center text-xs bg-blue-100 text-blue-700 hover:bg-blue-200"
+          title="Cycle to next translation and apply to pane 2"
+        >
+          <ChevronRight className="w-3 h-3 mr-1" />
+          n t
+        </button>
+      )}
+
       {/* Verse Dropdown */}
       <div className="relative">
         <button
@@ -997,47 +1038,6 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         <ChevronRight className="w-3 h-3 mr-1" />
         Scroll
       </button>
-
-      {/* Next Translation Button */}
-      {translations && onTranslationChange && (
-        <button
-          onClick={() => {
-            try {
-              // Find current translation index
-              const currentIndex = translations.findIndex(t => t.id === rightPaneTranslation);
-
-              // Calculate next index (loops back to 0 after last item)
-              const nextIndex = (currentIndex + 1) % translations.length;
-              const nextTranslation = translations[nextIndex].id;
-
-              // Skip Hebrew translations if they cause issues
-              let finalTranslation = nextTranslation;
-              if (nextTranslation.includes('he_heb')) {
-                const afterHebrewIndex = (nextIndex + 1) % translations.length;
-                if (translations[afterHebrewIndex] && !translations[afterHebrewIndex].id.includes('he_heb')) {
-                  finalTranslation = translations[afterHebrewIndex].id;
-                }
-              }
-
-              // Apply translation with delay to prevent scroll errors
-              setTimeout(() => {
-                try {
-                  onTranslationChange(finalTranslation);
-                } catch (error) {
-                  console.warn('Error applying translation:', error);
-                }
-              }, 150);
-            } catch (error) {
-              console.warn('Error cycling translation:', error);
-            }
-          }}
-          className="px-2 py-0.5 rounded focus:outline-none flex items-center text-xs bg-blue-100 text-blue-700 hover:bg-blue-200"
-          title="Cycle to next translation and apply to pane 2"
-        >
-          <ChevronRight className="w-3 h-3 mr-1" />
-          n t
-        </button>
-      )}
 
       {/* Speak Button */}
       <button

@@ -652,7 +652,8 @@ const NavigationPlaceholder = ({
           </svg>
         </button>
         
-        <div className="flex items-center">
+        {/* Bible study prompts - hidden (see prompts.txt for content) */}
+        <div className="hidden flex items-center">
           <select
             className="border border-gray-300 bg-white rounded px-2 py-1 text-sm max-w-xs ml-2"
             style={{width: 'auto'}}
@@ -666,7 +667,7 @@ const NavigationPlaceholder = ({
               </option>
             ))}
           </select>
-          
+
           <button
             onClick={() => {
               // Get current selection from the dropdown directly
@@ -3817,61 +3818,6 @@ const BibleApp = () => {
               </>
             )}
             
-            {/* Book Navigation Buttons */}
-            <div className="flex items-center ml-2">
-              <button 
-                onClick={() => {
-                  if (bibleData && selectedBook) {
-                    const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
-                    if (currentBookIndex !== -1) {
-                      const prevIndex = currentBookIndex > 0 ? currentBookIndex - 1 : bibleData.length - 1;
-                      const prevBook = bibleData[prevIndex];
-                      
-                      setSelectedBook(prevBook);
-                      setSelectedChapter(1);
-                      setShowCrossRef(null);
-                      
-                      setPrimaryReading({
-                        book: prevBook,
-                        chapter: 1
-                      });
-                    }
-                  }
-                }}
-                className="mr-2 px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-sm font-bold"
-                title="Previous book"
-              >
-                ←(q)
-              </button>
-              <button 
-                onClick={() => {
-                  if (bibleData && selectedBook) {
-                    const currentBookIndex = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
-                    if (currentBookIndex !== -1) {
-                      const nextIndex = currentBookIndex < bibleData.length - 1 ? currentBookIndex + 1 : 0;
-                      const nextBook = bibleData[nextIndex];
-                      
-                      setSelectedBook(nextBook);
-                      setSelectedChapter(1);
-                      setShowCrossRef(null);
-                      
-                      setPrimaryReading({
-                        book: nextBook,
-                        chapter: 1
-                      });
-                    }
-                  }
-                }}
-                className="mr-2 px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-sm font-bold"
-                title="Next book"
-              >
-                →(w)
-              </button>
-            </div>
-            
-            <h1 className="text-xl font-bold ml-2">
-              {selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)).substring(0, 6) : 'Select a Book'}
-            </h1>
             
             {selectedBook && (
               <div className="flex items-center">
@@ -3887,80 +3833,6 @@ const BibleApp = () => {
                     </option>
                   ))}
                 </select>
-                <button
-                  onClick={() => {
-                    // Find and click the Previous Chapter button (same as 'y' key)
-                    const prevChapterButtons = document.querySelectorAll('button');
-                    let prevButton = null;
-
-                    for (let i = 0; i < prevChapterButtons.length; i++) {
-                      const buttonText = prevChapterButtons[i].textContent || prevChapterButtons[i].innerText;
-                      if (buttonText.includes('Previous Chapter') || buttonText.includes('Prev Chapter')) {
-                        prevButton = prevChapterButtons[i];
-                        break;
-                      }
-                    }
-
-                    if (prevButton && !prevButton.disabled) {
-                      prevButton.click();
-                    }
-                  }}
-                  className="ml-1 px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-sm font-bold"
-                  title="Previous chapter"
-                >
-                  ←(y)
-                </button>
-                <button
-                  onClick={() => {
-                    // Find and click the Next Chapter button (same as 'e' key)
-                    const nextChapterButtons = document.querySelectorAll('button');
-                    let nextButton = null;
-
-                    for (let i = 0; i < nextChapterButtons.length; i++) {
-                      const buttonText = nextChapterButtons[i].textContent || nextChapterButtons[i].innerText;
-                      if (buttonText.includes('Next Chapter')) {
-                        nextButton = nextChapterButtons[i];
-                        break;
-                      }
-                    }
-
-                    if (nextButton && !nextButton.disabled) {
-                      nextButton.click();
-                    }
-                  }}
-                  className="ml-1 px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-sm font-bold"
-                  title="Next chapter"
-                >
-                  →(e)
-                </button>
-                <span className="ml-1 text-sm text-gray-500">(r:+10,t=1)</span>
-                
-                {/* Speech Volume Controls */}
-                <div className="flex items-center ml-4 border-l pl-4">
-                  <span className="text-sm text-gray-600 mr-2">Volume:</span>
-                  <label className="flex items-center mr-3 text-sm">
-                    <input
-                      type="radio"
-                      name="speechVolume"
-                      value="normal"
-                      checked={speechVolume === 'normal'}
-                      onChange={(e) => setSpeechVolume(e.target.value)}
-                      className="mr-1"
-                    />
-                    Normal
-                  </label>
-                  <label className="flex items-center text-sm">
-                    <input
-                      type="radio"
-                      name="speechVolume"
-                      value="softer"
-                      checked={speechVolume === 'softer'}
-                      onChange={(e) => setSpeechVolume(e.target.value)}
-                      className="mr-1"
-                    />
-                    Softer
-                  </label>
-                </div>
                 
                 {/* Chapter Navigation Input */}
                 <input 
@@ -4339,7 +4211,7 @@ const BibleApp = () => {
                                   ? 'bg-blue-900 border border-blue-700'
                                   : 'bg-blue-50 border border-blue-200'
                               }`}>
-                                <h4 className="font-medium mb-4 text-2xl">Cross References:</h4>
+                                <h4 className="font-medium mb-4 text-lg">Cross References:</h4>
                                 <ul className="space-y-4">
                                   {crossReferences[refKey].map((ref, i) => (
                                     <li key={i} className="text-xl">
@@ -4583,14 +4455,14 @@ const BibleApp = () => {
                       <div
                         key={verseNumber}
                         id={`verse-${verseNumber}`}
-                        className={`leading-relaxed p-4 rounded-md transition-colors text-2xl ${
-                          hasReference 
-                            ? isDarkMode ? 'hover:bg-blue-900' : 'hover:bg-blue-50' 
+                        className={`leading-relaxed p-4 rounded-md transition-colors text-lg ${
+                          hasReference
+                            ? isDarkMode ? 'hover:bg-blue-900' : 'hover:bg-blue-50'
                             : ''
                         }`}
                       >
                         <p className="flex">
-                          <span className={`font-bold mr-4 text-2xl ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
+                          <span className={`font-bold mr-4 text-lg ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
                           <span className="flex-1">{renderWithGlosses(verse, showGlosses)}</span>
                           
                           {hasReference && (
@@ -4611,7 +4483,7 @@ const BibleApp = () => {
                               ? 'bg-blue-900 border border-blue-700' 
                               : 'bg-blue-50 border border-blue-200'
                           }`}>
-                            <h4 className="font-medium mb-4 text-2xl">Cross References:</h4>
+                            <h4 className="font-medium mb-4 text-lg">Cross References:</h4>
                             <ul className="space-y-4">
                               {crossReferences[refKey].map((ref, i) => (
                                 <li key={i} className="text-xl">

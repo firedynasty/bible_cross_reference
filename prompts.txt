@@ -1,0 +1,29 @@
+# Bible Study Prompts
+# These prompts use {book} and {chapter} as placeholders
+
+## 1. Meditation
+Meditation Connection, For {book} {chapter}, tell me what is the theme connect to meditation like breathe in out
+
+## 2. Literary
+Literary & Structure Analysis: For {book} {chapter}, "Analyze the literary structure, rhetorical devices, and narrative techniques used in this chapter - how do elements like repetition, imagery, parallelism, chiasm, or progression of ideas work together to reinforce the central message and create emotional or theological impact?"
+
+## 3. Historical
+Historical & Cultural Context: For {book} {chapter}, "Explore the historical setting, cultural practices, social structures, and contextual factors that shaped this chapter - how do understanding the original audience, historical circumstances, and cultural background illuminate the meaning and significance of the text?"
+
+## 4. Theological
+Theological & Doctrinal: For {book} {chapter}, "What does this chapter reveal about the nature and character of God, humanity's relationship with the divine, and major theological themes like covenant, salvation, justice, or redemption - and how do these teachings connect to or develop broader biblical doctrine?"
+
+## 5. Practical
+Practical Application: For {book} {chapter}, "Given the original context and timeless principles in this chapter, what specific life situations, moral decisions, relationship dynamics, or spiritual challenges does this text address, and how can its wisdom be authentically applied to contemporary personal and communal life?"
+
+## 6. Comparative
+Comparative Analysis: For {book} {chapter}, "How does this chapter's themes, language, imagery, and theological content compare and contrast with similar passages throughout Scripture, what unique contribution does it make to biblical literature, and how do different translations or interpretative traditions handle its key concepts?"
+
+## 7. Spiritual
+Spiritual Formation: For {book} {chapter}, "How can this chapter inform and transform personal spiritual practices like prayer, meditation, worship, and discipleship - what spiritual disciplines does it model or encourage, and how might regular engagement with its content shape character and faith development?"
+
+## 8. Creative
+Creative Engagement: For {book} {chapter}, "If you were to reimagine this chapter through contemporary storytelling, artistic expression, or modern parallels, what would it look like, what current situations mirror its dynamics, and how might creative interpretation help unlock its relevance for today's audience?"
+
+## 9. Additional
+For {book} {chapter},
