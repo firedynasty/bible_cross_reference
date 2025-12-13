@@ -1,0 +1,2497 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bible Reader - Mobile</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            margin: 0;
+            padding: 0;
+            background: white;
+            min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            min-height: 100vh;
+            transition: background-color 0.3s;
+        }
+
+        /* Dark mode styles */
+        body.dark-mode {
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .container {
+            background: #1a1a1a;
+        }
+
+        body.dark-mode .controls {
+            background-color: #2a2a2a;
+            border-color: #3a3a3a;
+        }
+
+        body.dark-mode .control-group label {
+            color: #b0b0b0;
+        }
+
+        body.dark-mode select {
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+            border-color: #3a3a3a;
+        }
+
+        body.dark-mode .output {
+            background-color: #1a1a1a;
+            border-color: #3a3a3a;
+        }
+
+        body.dark-mode .verse-text {
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .verse-number {
+            color: #8b9cff;
+        }
+
+        body.dark-mode .chapter-header {
+            color: #ffffff;
+        }
+
+        body.dark-mode h1 {
+            color: #b0b0b0;
+        }
+
+        body.dark-mode .subtitle {
+            color: #808080;
+        }
+
+        body.dark-mode .verse.primary-translation {
+            background-color: #1e2a3a;
+            border-left-color: #5a7fc7;
+        }
+
+        body.dark-mode .verse.secondary-translation {
+            background-color: #252525;
+            border-left-color: #6a6a6a;
+        }
+
+        body.dark-mode .translation-label {
+            color: #909090;
+        }
+
+        body.dark-mode .verse.filtered {
+            background-color: #3a3420;
+            border-left-color: #d4a017;
+        }
+
+        body.dark-mode .toggle-label {
+            color: #b0b0b0;
+        }
+
+        body.dark-mode .slider {
+            background-color: #3a3a3a;
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2em;
+            font-weight: normal;
+            font-style: italic;
+            display: none;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            display: none;
+        }
+
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-size: 1em;
+            display: none;
+        }
+
+        .loading {
+            background-color: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .controls {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .control-group {
+            margin: 15px 0;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #495057;
+            font-size: 0.9em;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1em;
+            font-family: inherit;
+        }
+
+        .button-group {
+            margin-top: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: transform 0.2s, box-shadow 0.2s;
+            flex: 1;
+            min-width: 100px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+        }
+
+        .output {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .chapter-content {
+            margin: 20px 0;
+        }
+
+        .chapter-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin: 20px 0 15px 0;
+            font-size: 1.4em;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .verse {
+            margin: 18px 0;
+            line-height: 1.9;
+        }
+
+        .verse-number {
+            font-weight: bold;
+            color: #667eea;
+            margin-right: 8px;
+            font-size: 1em;
+            vertical-align: super;
+        }
+
+        .verse-text {
+            color: #212529;
+            font-size: 1.3em;
+        }
+
+        .verse.filtered {
+            background-color: #fff3cd;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 18px 0;
+            border-left: 4px solid #ffc107;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .verse-text {
+                font-size: 1.4em;
+            }
+
+            button {
+                font-size: 1em;
+                padding: 14px 18px;
+            }
+        }
+
+        /* Toggle switch for auto-scroll */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ddd;
+            transition: .4s;
+            border-radius: 30px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .toggle-label {
+            font-size: 0.95em;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        /* Interleaved view styles */
+        .verse.primary-translation {
+            background-color: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding-left: 20px;
+        }
+
+        .verse.secondary-translation {
+            background-color: #f9fafb;
+            border-left: 4px solid #9ca3af;
+            padding-left: 20px;
+        }
+
+        .translation-label {
+            font-size: 0.85em;
+            color: #6b7280;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+
+        /* Audio Player Styles */
+        .audio-player-container {
+            display: block;
+        }
+
+        .audio-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .audio-play-btn {
+            background: rgba(102, 62, 162, 0.3);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            min-width: 100px;
+            transition: transform 0.2s;
+        }
+
+        .audio-play-btn:hover {
+            transform: scale(1.05);
+            background: rgba(102, 62, 162, 0.4);
+        }
+
+        .audio-info {
+            flex: 1;
+            font-size: 0.95em;
+        }
+
+        .audio-speed {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid white;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .audio-progress-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            margin-bottom: 5px;
+        }
+
+        .audio-progress-bar {
+            height: 100%;
+            background: white;
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        .audio-time {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        .audio-indicator {
+            background: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-left: 10px;
+            display: inline-block;
+        }
+
+        .audio-toggle-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: transform 0.2s, box-shadow 0.2s;
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .audio-toggle-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+        }
+
+        .audio-toggle-btn.active {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+        }
+
+        /* Bible Reference Input Styles */
+        .reference-input-group {
+            margin-bottom: 15px;
+        }
+
+        .reference-input-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #495057;
+            font-size: 0.9em;
+        }
+
+        body.dark-mode .reference-input-group label {
+            color: #b0b0b0;
+        }
+
+        #referenceInput {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1em;
+            font-family: inherit;
+        }
+
+        body.dark-mode #referenceInput {
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+            border-color: #3a3a3a;
+        }
+
+        #referenceInput::placeholder {
+            color: #999;
+        }
+
+        /* Reference Buttons Container */
+        #refButtonsContainer {
+            display: flex;
+            justify-content: flex-start;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        #refButtonsContainer:not(:empty) {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 8px 12px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-top: 0;
+        }
+
+        body.dark-mode #refButtonsContainer:not(:empty) {
+            background: rgba(30, 30, 30, 0.7);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .ref-btn {
+            padding: 6px 12px;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0.5;
+        }
+
+        .ref-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            opacity: 0.9;
+        }
+
+        .ref-btn.active {
+            border: 3px solid #FFD700;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bible Reader</h1>
+        <div class="subtitle">King James Version</div>
+
+        <div id="status" class="status loading">Loading Bible data...</div>
+
+        <div id="controls" class="controls" style="display:none;">
+            <!-- Bible Reference Input -->
+            <div class="reference-input-group">
+                <label for="referenceInput">Go to Reference (e.g., Psalm 119:9-11, 105, 130):</label>
+                <input type="text" id="referenceInput" placeholder="Psalm 119:9-11, 105, 130">
+                <div id="refButtonsContainer"></div>
+            </div>
+
+            <div class="control-group">
+                <label for="bookSelect">Select Book:</label>
+                <select id="bookSelect">
+                    <option value="">-- Select a Book --</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="chapterSelect">Select Chapter:</label>
+                <select id="chapterSelect" disabled>
+                    <option value="">-- Select --</option>
+                </select>
+            </div>
+
+            <div class="button-group">
+                <button onclick="nextChapter()" class="secondary">Next Chapter →</button>
+                <button onclick="glossSelectedText()" class="secondary" id="glossButton" style="display: none;">📖 Gloss</button>
+                <button onclick="toggleFilteredVersesOnly()" class="secondary" id="filterButton" style="display: none;" title="Show filtered verses only">👁️‍🗨️</button>
+                <button onclick="toggleViewMode()" class="secondary" id="viewModeButton" title="Switch view mode">⇅ Interleaved</button>
+                <button onclick="toggleAudioPlayer()" class="audio-toggle-btn" id="audioToggleBtn" title="Toggle audio player">🔊 Audio</button>
+                <button onclick="toggleDarkMode()" class="secondary" id="darkModeButton" title="Toggle dark mode">🌙 Dark Mode</button>
+            </div>
+
+            <div class="button-group" style="align-items: center;">
+                <button onclick="getRefFromClipboard()" class="secondary" title="Get reference from clipboard">📋 Clipboard</button>
+                <button onclick="decreaseFontSize()" class="secondary">A-</button>
+                <button onclick="increaseFontSize()" class="secondary">A+</button>
+                <span class="toggle-label" style="margin-left: 10px;">Translation:</span>
+                <label style="margin-left: 5px; cursor: pointer;">
+                    <input type="radio" name="translationRadio" value="KJV" checked> KJV
+                </label>
+                <label style="margin-left: 8px; cursor: pointer;">
+                    <input type="radio" name="translationRadio" value="WEB"> WEB
+                </label>
+                <span class="toggle-label" style="margin-left: 10px;">Auto-Scroll:</span>
+                <label class="switch">
+                    <input type="checkbox" id="autoScrollToggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Audio Player (shown above text when enabled) -->
+        <div class="audio-player-container" id="audioPlayerContainer" style="position: relative; margin: 20px 0;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 8px;">
+                <div style="margin-bottom: 10px; font-size: 1.1em; font-weight: bold;" id="audioInfo">No audio loaded</div>
+                <audio id="audioElement" preload="metadata" controls volume="1.0" style="width: 100%; margin-bottom: 10px;"></audio>
+                <div style="text-align: center; margin-top: 5px; font-size: 0.85em; opacity: 0.9;" id="audioUrlDisplay"></div>
+                <div style="display: flex; gap: 10px; margin-top: 10px; justify-content: center;">
+                    <button class="audio-speed" id="audioSpeedBtn" onclick="cycleSpeed()">1x</button>
+                    <button class="audio-speed" id="audioReloadBtn" onclick="reloadAudio()" title="Reload audio" style="display: none;">🔄 Reload</button>
+                    <button class="audio-speed" id="audioDebugBtn" onclick="showAudioDebug()" title="Show audio format support" style="display: none;">🔧 Debug</button>
+                    <button class="audio-speed" id="readFilteredBtn" onclick="readFilteredVerses()" title="Read filtered verses aloud" style="display: none;">🔊 Read Filtered (esc)</button>
+                    <button class="audio-speed" id="stopTTSBtn" onclick="stopTTS()" title="Stop reading" style="display: none;">⏸️ Stop</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="output" class="output"></div>
+    </div>
+
+    <script>
+        // Translation configuration - define your translations here
+        const translationConfig = {
+            'KJV': {
+                name: 'King James Version',
+                url: 'https://assets.codepen.io/1075762/en_kjv.json'
+            },
+            'WEB': {
+                name: 'World English Bible',
+                url: 'https://assets.codepen.io/1075762/en_web.json'
+            }
+            // To add Chinese translation:
+            // 'CHN': {
+            //     name: 'Chinese',
+            //     url: 'https://example.com/chinese.json'
+            // }
+        };
+
+        let bibleData = null;
+        let filipinoBibleData = null;
+        let verseFilters = null;
+        let currentBookIndex = null;
+        let currentBookName = null;
+        let currentChapter = null;
+        let showFilteredOnly = false;
+        let viewMode = 'interleaved'; // 'side-by-side' or 'interleaved'
+        let primaryTranslationABBR = 'KJV'; // Abbreviation: 'KJV', 'WEB', 'CHN', etc.
+        let secondaryTranslationABBR = 'WEB'; // Abbreviation: 'KJV', 'WEB', 'CHN', etc.
+
+        // Text-to-speech variables
+        let isTTSSpeaking = false;
+        let ttsUtterance = null;
+        let currentTTSVerseIndex = 0;
+        let filteredVersesToRead = [];
+
+        // Audio player variables
+        // PASTE BIBLE AUDIO DATA HERE - Replace null with the array from bible_audio.json
+        let audioData = null;
+
+
+        let audioElement = null;
+        let isAudioPlayerVisible = false;
+        let currentAudioUrl = '';
+        let playbackSpeeds = [0.75, 1, 1.25, 1.5, 2];
+        let currentSpeedIndex = 1; // Default to 1x
+        let autoPlayEnabled = false;
+
+        // Mapping of abbreviations to full book names
+        const bookNameMapping = {
+            'gn': 'Genesis', 'ex': 'Exodus', 'lv': 'Leviticus', 'nm': 'Numbers', 'dt': 'Deuteronomy',
+            'js': 'Joshua', 'jud': 'Judges', 'rt': 'Ruth', '1sm': '1 Samuel', '2sm': '2 Samuel',
+            '1kgs': '1 Kings', '2kgs': '2 Kings', '1ch': '1 Chronicles', '2ch': '2 Chronicles',
+            'ezr': 'Ezra', 'ne': 'Nehemiah', 'et': 'Esther', 'job': 'Job', 'ps': 'Psalms',
+            'prv': 'Proverbs', 'ec': 'Ecclesiastes', 'so': 'Song of Solomon', 'is': 'Isaiah',
+            'jr': 'Jeremiah', 'lm': 'Lamentations', 'ez': 'Ezekiel', 'dn': 'Daniel', 'ho': 'Hosea',
+            'jl': 'Joel', 'am': 'Amos', 'ob': 'Obadiah', 'jn': 'Jonah', 'mi': 'Micah',
+            'na': 'Nahum', 'hk': 'Habakkuk', 'zp': 'Zephaniah', 'hg': 'Haggai', 'zc': 'Zechariah',
+            'ml': 'Malachi', 'mt': 'Matthew', 'mk': 'Mark', 'lk': 'Luke', 'jo': 'John',
+            'act': 'Acts', 'rm': 'Romans', '1co': '1 Corinthians', '2co': '2 Corinthians',
+            'gl': 'Galatians', 'eph': 'Ephesians', 'ph': 'Philippians', 'cl': 'Colossians',
+            '1ts': '1 Thessalonians', '2ts': '2 Thessalonians', '1tm': '1 Timothy', '2tm': '2 Timothy',
+            'tt': 'Titus', 'phm': 'Philemon', 'hb': 'Hebrews', 'jm': 'James', '1pe': '1 Peter',
+            '2pe': '2 Peter', '1jo': '1 John', '2jo': '2 John', '3jo': '3 John', 'jd': 'Jude',
+            're': 'Revelation'
+        };
+
+        // Bible book lookup - maps various name formats to book index (0-65)
+        const bibleBooks = [
+            { index: 0,  names: ['genesis', 'gen', 'ge', 'gn'] },
+            { index: 1,  names: ['exodus', 'exod', 'exo', 'ex'] },
+            { index: 2,  names: ['leviticus', 'lev', 'lv'] },
+            { index: 3,  names: ['numbers', 'num', 'nu', 'nm'] },
+            { index: 4,  names: ['deuteronomy', 'deut', 'deu', 'de', 'dt'] },
+            { index: 5,  names: ['joshua', 'josh', 'jos', 'js'] },
+            { index: 6,  names: ['judges', 'judg', 'jdg', 'jud'] },
+            { index: 7,  names: ['ruth', 'rut', 'ru', 'rt'] },
+            { index: 8,  names: ['1 samuel', '1samuel', '1 sam', '1sam', '1 sa', '1sa', '1sm'] },
+            { index: 9,  names: ['2 samuel', '2samuel', '2 sam', '2sam', '2 sa', '2sa', '2sm'] },
+            { index: 10, names: ['1 kings', '1kings', '1 kgs', '1kgs', '1 ki', '1ki'] },
+            { index: 11, names: ['2 kings', '2kings', '2 kgs', '2kgs', '2 ki', '2ki'] },
+            { index: 12, names: ['1 chronicles', '1chronicles', '1 chron', '1chron', '1 chr', '1chr', '1ch'] },
+            { index: 13, names: ['2 chronicles', '2chronicles', '2 chron', '2chron', '2 chr', '2chr', '2ch'] },
+            { index: 14, names: ['ezra', 'ezr'] },
+            { index: 15, names: ['nehemiah', 'neh', 'ne'] },
+            { index: 16, names: ['esther', 'esth', 'est', 'et'] },
+            { index: 17, names: ['job', 'jb'] },
+            { index: 18, names: ['psalms', 'psalm', 'psa', 'ps'] },
+            { index: 19, names: ['proverbs', 'prov', 'pro', 'prv'] },
+            { index: 20, names: ['ecclesiastes', 'eccles', 'eccl', 'ecc', 'ec'] },
+            { index: 21, names: ['song of solomon', 'song of songs', 'song', 'sos', 'so', 'ss'] },
+            { index: 22, names: ['isaiah', 'isa', 'is'] },
+            { index: 23, names: ['jeremiah', 'jer', 'jr'] },
+            { index: 24, names: ['lamentations', 'lam', 'la', 'lm'] },
+            { index: 25, names: ['ezekiel', 'ezek', 'eze', 'ez'] },
+            { index: 26, names: ['daniel', 'dan', 'da', 'dn'] },
+            { index: 27, names: ['hosea', 'hos', 'ho'] },
+            { index: 28, names: ['joel', 'joe', 'jl'] },
+            { index: 29, names: ['amos', 'amo', 'am'] },
+            { index: 30, names: ['obadiah', 'obad', 'oba', 'ob'] },
+            { index: 31, names: ['jonah', 'jon', 'jnh', 'jn'] },
+            { index: 32, names: ['micah', 'mic', 'mi'] },
+            { index: 33, names: ['nahum', 'nah', 'na'] },
+            { index: 34, names: ['habakkuk', 'hab', 'hk'] },
+            { index: 35, names: ['zephaniah', 'zeph', 'zep', 'zp'] },
+            { index: 36, names: ['haggai', 'hag', 'hg'] },
+            { index: 37, names: ['zechariah', 'zech', 'zec', 'zc'] },
+            { index: 38, names: ['malachi', 'mal', 'ml'] },
+            { index: 39, names: ['matthew', 'matt', 'mat', 'mt'] },
+            { index: 40, names: ['mark', 'mrk', 'mk'] },
+            { index: 41, names: ['luke', 'luk', 'lk'] },
+            { index: 42, names: ['john', 'joh', 'jhn', 'jo'] },
+            { index: 43, names: ['acts', 'act', 'ac'] },
+            { index: 44, names: ['romans', 'rom', 'ro', 'rm'] },
+            { index: 45, names: ['1 corinthians', '1corinthians', '1 cor', '1cor', '1 co', '1co'] },
+            { index: 46, names: ['2 corinthians', '2corinthians', '2 cor', '2cor', '2 co', '2co'] },
+            { index: 47, names: ['galatians', 'gal', 'ga', 'gl'] },
+            { index: 48, names: ['ephesians', 'eph'] },
+            { index: 49, names: ['philippians', 'phil', 'php', 'ph'] },
+            { index: 50, names: ['colossians', 'col', 'cl'] },
+            { index: 51, names: ['1 thessalonians', '1thessalonians', '1 thess', '1thess', '1 th', '1th', '1ts'] },
+            { index: 52, names: ['2 thessalonians', '2thessalonians', '2 thess', '2thess', '2 th', '2th', '2ts'] },
+            { index: 53, names: ['1 timothy', '1timothy', '1 tim', '1tim', '1 ti', '1ti', '1tm'] },
+            { index: 54, names: ['2 timothy', '2timothy', '2 tim', '2tim', '2 ti', '2ti', '2tm'] },
+            { index: 55, names: ['titus', 'tit', 'tt'] },
+            { index: 56, names: ['philemon', 'philem', 'phlm', 'phm'] },
+            { index: 57, names: ['hebrews', 'heb', 'hb'] },
+            { index: 58, names: ['james', 'jam', 'jas', 'jm'] },
+            { index: 59, names: ['1 peter', '1peter', '1 pet', '1pet', '1 pe', '1pe'] },
+            { index: 60, names: ['2 peter', '2peter', '2 pet', '2pet', '2 pe', '2pe'] },
+            { index: 61, names: ['1 john', '1john', '1 joh', '1joh', '1 jn', '1jn', '1jo'] },
+            { index: 62, names: ['2 john', '2john', '2 joh', '2joh', '2 jn', '2jn', '2jo'] },
+            { index: 63, names: ['3 john', '3john', '3 joh', '3joh', '3 jn', '3jn', '3jo'] },
+            { index: 64, names: ['jude', 'jd'] },
+            { index: 65, names: ['revelation', 'revelations', 'rev', 're'] }
+        ];
+
+        // Build flat lookup from grouped structure
+        const bibleBookLookup = {};
+        bibleBooks.forEach(book => {
+            book.names.forEach(name => {
+                bibleBookLookup[name] = book.index;
+            });
+        });
+
+        // Color palette for reference buttons
+        const refButtonColors = [
+            'linear-gradient(45deg, #4CAF50, #45a049)',  // Green
+            'linear-gradient(45deg, #2196F3, #1976D2)',  // Blue
+            'linear-gradient(45deg, #9C27B0, #7B1FA2)',  // Purple
+            'linear-gradient(45deg, #FF9800, #F57C00)',  // Orange
+            'linear-gradient(45deg, #607D8B, #455A64)',  // Gray
+            'linear-gradient(45deg, #E91E63, #C2185B)',  // Pink
+            'linear-gradient(45deg, #00BCD4, #0097A7)',  // Cyan
+            'linear-gradient(45deg, #8BC34A, #689F38)',  // Light Green
+            'linear-gradient(45deg, #FF5722, #E64A19)'   // Deep Orange
+        ];
+
+        // Current parsed reference state
+        let currentParsedRef = null;
+
+        // Parse a single book reference like "Psalm 119:9-11, 105, 130"
+        function parseSingleReference(input) {
+            if (!input || !input.trim()) return null;
+
+            const trimmed = input.trim();
+
+            // Split by comma to get main reference and additional chapters
+            const parts = trimmed.split(',').map(p => p.trim());
+
+            // Parse the main reference (first part): "Psalm 119:9-11" or "Psalm 119"
+            const mainPart = parts[0];
+
+            // Match pattern: optional number, book name, chapter, optional :verse or :verse-verse
+            const mainRegex = /^(\d?\s*[a-zA-Z]+(?:\s+of\s+[a-zA-Z]+)?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?$/i;
+            const match = mainPart.match(mainRegex);
+
+            if (!match) return null;
+
+            const bookName = match[1].toLowerCase().trim();
+            const chapter = parseInt(match[2]);
+            const verseStart = match[3] ? parseInt(match[3]) : null;
+            const verseEnd = match[4] ? parseInt(match[4]) : verseStart;
+
+            const bookIndex = bibleBookLookup[bookName];
+            if (bookIndex === undefined) return null;
+
+            // Get full book name for display
+            const abbrev = bibleData ? bibleData[bookIndex].abbrev : null;
+            const fullBookName = abbrev ? bookNameMapping[abbrev] : bookName;
+
+            // Parse additional chapters (e.g., "105, 130" become chapters to navigate to)
+            const additionalChapters = [];
+            for (let i = 1; i < parts.length; i++) {
+                const chapterNum = parseInt(parts[i].trim());
+                if (!isNaN(chapterNum)) {
+                    additionalChapters.push(chapterNum);
+                }
+            }
+
+            return {
+                bookIndex: bookIndex,
+                bookName: fullBookName,
+                chapter: chapter,
+                verseStart: verseStart,
+                verseEnd: verseEnd,
+                additionalChapters: additionalChapters
+            };
+        }
+
+        // Parse multiple references separated by semicolons or multiple whitespace/newlines
+        function parseBibleReference(input) {
+            if (!input || !input.trim()) return null;
+
+            // Normalize: replace newlines and multiple spaces with semicolons
+            // This handles pasted multi-line input
+            let normalized = input.trim()
+                .replace(/\r\n|\r|\n/g, ';')  // newlines to semicolons
+                .replace(/\s{2,}/g, ';');      // 2+ spaces to semicolons
+
+            // Split by semicolons to get separate book references
+            const refStrings = normalized.split(';')
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
+
+            // If only one reference, return single parsed result (backward compatible)
+            if (refStrings.length === 1) {
+                return parseSingleReference(refStrings[0]);
+            }
+
+            // Parse all references and return array
+            const allRefs = [];
+            for (const refStr of refStrings) {
+                const parsed = parseSingleReference(refStr);
+                if (parsed) {
+                    allRefs.push(parsed);
+                }
+            }
+
+            return allRefs.length > 0 ? allRefs : null;
+        }
+
+        // Navigate to a specific book, chapter, and optionally scroll to verse
+        function goToReference(bookIndex, chapter, verseStart) {
+            if (!bibleData) return;
+
+            const bookSelect = document.getElementById('bookSelect');
+            const chapterSelect = document.getElementById('chapterSelect');
+
+            // Set book
+            bookSelect.value = bookIndex.toString();
+            currentBookIndex = bookIndex;
+            const selectedOption = bookSelect.options[bookIndex + 1];
+            currentBookName = selectedOption ? selectedOption.dataset.fullName : '';
+
+            // Populate chapters for this book
+            populateChapterSelect();
+
+            // Set chapter (chapter is 1-based, but select value is 0-based index)
+            setTimeout(() => {
+                const chapterIndex = chapter - 1;
+                if (chapterIndex >= 0 && chapterIndex < chapterSelect.options.length - 1) {
+                    chapterSelect.value = chapterIndex.toString();
+                    displayChapter();
+
+                    // Scroll to verse if specified
+                    if (verseStart) {
+                        setTimeout(() => {
+                            scrollToVerse(verseStart);
+                        }, 100);
+                    } else {
+                        window.scrollTo(0, 0);
+                    }
+                }
+            }, 100);
+        }
+
+        // Scroll to a specific verse number
+        function scrollToVerse(verseNumber) {
+            const verses = document.querySelectorAll('.verse');
+            for (const verse of verses) {
+                const verseNumEl = verse.querySelector('.verse-number');
+                if (verseNumEl && parseInt(verseNumEl.textContent) === verseNumber) {
+                    verse.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Highlight the verse briefly
+                    verse.style.transition = 'background-color 0.3s';
+                    verse.style.backgroundColor = '#fff3cd';
+                    setTimeout(() => {
+                        verse.style.backgroundColor = '';
+                    }, 2000);
+                    break;
+                }
+            }
+        }
+
+        // Render buttons for a single parsed reference, returns number of buttons created
+        function renderSingleRefButtons(container, parsedRef, colorOffset, isFirst) {
+            let buttonCount = 0;
+
+            // Create button for main reference
+            const mainBtn = document.createElement('button');
+            mainBtn.className = isFirst ? 'ref-btn active' : 'ref-btn';
+            mainBtn.style.background = refButtonColors[colorOffset % refButtonColors.length];
+
+            let mainLabel = `${parsedRef.bookName} ${parsedRef.chapter}`;
+            if (parsedRef.verseStart) {
+                mainLabel += `:${parsedRef.verseStart}`;
+                if (parsedRef.verseEnd && parsedRef.verseEnd !== parsedRef.verseStart) {
+                    mainLabel += `-${parsedRef.verseEnd}`;
+                }
+            }
+            mainBtn.textContent = mainLabel;
+            mainBtn.dataset.bookIndex = parsedRef.bookIndex;
+            mainBtn.dataset.chapter = parsedRef.chapter;
+            mainBtn.dataset.verseStart = parsedRef.verseStart || '';
+            mainBtn.onclick = function() {
+                setActiveRefButton(this);
+                goToReference(
+                    parseInt(this.dataset.bookIndex),
+                    parseInt(this.dataset.chapter),
+                    this.dataset.verseStart ? parseInt(this.dataset.verseStart) : null
+                );
+            };
+            container.appendChild(mainBtn);
+            buttonCount++;
+
+            // Create buttons for additional chapters
+            parsedRef.additionalChapters.forEach((chapterNum, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'ref-btn';
+                btn.style.background = refButtonColors[(colorOffset + buttonCount) % refButtonColors.length];
+                btn.textContent = `${parsedRef.bookName} ${chapterNum}`;
+                btn.dataset.bookIndex = parsedRef.bookIndex;
+                btn.dataset.chapter = chapterNum;
+                btn.dataset.verseStart = '';
+                btn.onclick = function() {
+                    setActiveRefButton(this);
+                    goToReference(
+                        parseInt(this.dataset.bookIndex),
+                        parseInt(this.dataset.chapter),
+                        null
+                    );
+                };
+                container.appendChild(btn);
+                buttonCount++;
+            });
+
+            return buttonCount;
+        }
+
+        // Render reference buttons from parsed reference (single or array)
+        function renderRefButtons(parsedRef) {
+            const container = document.getElementById('refButtonsContainer');
+            container.innerHTML = '';
+
+            if (!parsedRef) return;
+
+            // Clear input after buttons are populated
+            document.getElementById('referenceInput').value = '';
+
+            // Handle array of references (multiple books)
+            if (Array.isArray(parsedRef)) {
+                let colorOffset = 0;
+                parsedRef.forEach((ref, index) => {
+                    const buttonsCreated = renderSingleRefButtons(container, ref, colorOffset, index === 0);
+                    colorOffset += buttonsCreated;
+                });
+            } else {
+                // Handle single reference (backward compatible)
+                renderSingleRefButtons(container, parsedRef, 0, true);
+            }
+        }
+
+        // Set active state on reference button
+        function setActiveRefButton(activeBtn) {
+            document.querySelectorAll('.ref-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            activeBtn.classList.add('active');
+        }
+
+        // Handle reference input changes
+        function handleReferenceInput() {
+            const input = document.getElementById('referenceInput');
+            const value = input.value;
+
+            const parsed = parseBibleReference(value);
+            currentParsedRef = parsed;
+            renderRefButtons(parsed);
+        }
+
+        // Initialize reference input listener
+        function initReferenceInput() {
+            const input = document.getElementById('referenceInput');
+
+            // Parse on input change (with debounce)
+            let debounceTimer;
+            input.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(handleReferenceInput, 300);
+            });
+
+            // Navigate on Enter key
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const parsed = parseBibleReference(this.value);
+                    if (parsed) {
+                        currentParsedRef = parsed;
+                        renderRefButtons(parsed);
+                        // Navigate to first reference
+                        const firstRef = Array.isArray(parsed) ? parsed[0] : parsed;
+                        goToReference(firstRef.bookIndex, firstRef.chapter, firstRef.verseStart);
+                    }
+                }
+            });
+        }
+
+        // Get reference from clipboard and navigate
+        async function getRefFromClipboard() {
+            try {
+                const clipboardText = await navigator.clipboard.readText();
+                if (clipboardText && clipboardText.trim()) {
+                    // Truncate to 250 characters max (increased for multiple refs)
+                    const trimmed = clipboardText.trim().substring(0, 250);
+
+                    const input = document.getElementById('referenceInput');
+                    input.value = trimmed;
+
+                    // Parse and render buttons
+                    const parsed = parseBibleReference(trimmed);
+                    if (parsed) {
+                        currentParsedRef = parsed;
+                        renderRefButtons(parsed);
+                        // Navigate to first reference
+                        const firstRef = Array.isArray(parsed) ? parsed[0] : parsed;
+                        goToReference(firstRef.bookIndex, firstRef.chapter, firstRef.verseStart);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to read clipboard:', err);
+                alert('Could not access clipboard. Please paste manually.');
+            }
+        }
+
+        // Load JSON data
+        async function loadBibleData() {
+            const statusEl = document.getElementById('status');
+            const controlsEl = document.getElementById('controls');
+
+            try {
+                statusEl.textContent = 'Loading Bible data...';
+                statusEl.className = 'status loading';
+                statusEl.style.display = 'block';
+
+                // Load all JSON files with cache buster
+                const cacheBuster = `?v=${Date.now()}`;
+                const [bibleResponse, filterResponse, filipinoResponse] = await Promise.all([
+                    fetch(`https://assets.codepen.io/1075762/en_kjv.json${cacheBuster}`),
+                    fetch(`https://assets.codepen.io/1075762/verse_filters.json${cacheBuster}`),
+                    fetch(`https://assets.codepen.io/1075762/en_web.json${cacheBuster}`)
+                ]);
+
+                if (!bibleResponse.ok) {
+                    throw new Error(`Failed to load Bible data: ${bibleResponse.status}`);
+                }
+
+                bibleData = await bibleResponse.json();
+
+                // Audio data is embedded directly in the script (see audioData variable above)
+                if (audioData && audioData.length > 0) {
+                    console.log('Audio data loaded successfully from embedded data');
+                } else {
+                    console.log('Audio data not available - paste data into audioData variable');
+                }
+
+                // Load Filipino Bible (optional)
+                if (filipinoResponse.ok) {
+                    filipinoBibleData = await filipinoResponse.json();
+                    console.log('Filipino Bible loaded successfully');
+                } else {
+                    console.log('Filipino Bible not available');
+                }
+
+                // Verse filters are optional
+                if (filterResponse.ok) {
+                    verseFilters = await filterResponse.json();
+                    console.log('Verse filters loaded for', Object.keys(verseFilters).length, 'books');
+                } else {
+                    console.log('Verse filters not available');
+                }
+
+                statusEl.className = 'status success';
+                statusEl.textContent = 'Bible data loaded successfully!';
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 2000);
+
+                populateBookSelect();
+                controlsEl.style.display = 'block';
+
+                // Load saved reading position
+                loadReadingPosition();
+
+                // Initialize reference input after data is loaded
+                initReferenceInput();
+
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.textContent = `Failed to load Bible data: ${error.message}`;
+            }
+        }
+
+        function populateBookSelect() {
+            const bookSelect = document.getElementById('bookSelect');
+            bookSelect.innerHTML = '<option value="">-- Select a Book --</option>';
+
+            // Bible data is an array, each element has abbrev and chapters
+            bibleData.forEach((book, index) => {
+                const abbrev = book.abbrev;
+                const fullName = bookNameMapping[abbrev] || abbrev.toUpperCase();
+
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = fullName;
+                option.dataset.abbrev = abbrev;
+                option.dataset.fullName = fullName;
+                bookSelect.appendChild(option);
+            });
+
+            bookSelect.addEventListener('change', function() {
+                if (this.value !== '') {
+                    // Stop TTS when changing books
+                    stopTTS();
+
+                    currentBookIndex = parseInt(this.value);
+                    const selectedOption = this.options[this.selectedIndex];
+                    currentBookName = selectedOption.dataset.fullName;
+                    populateChapterSelect();
+                    // Auto-select first chapter
+                    setTimeout(() => {
+                        const chapterSelect = document.getElementById('chapterSelect');
+                        if (chapterSelect.options.length > 1) {
+                            chapterSelect.value = '0'; // First chapter is at index 0
+                            displayChapter();
+                        }
+                    }, 100);
+                }
+            });
+        }
+
+        function populateChapterSelect() {
+            const chapterSelect = document.getElementById('chapterSelect');
+            chapterSelect.innerHTML = '<option value="">-- Select --</option>';
+
+            if (currentBookIndex === null || !bibleData[currentBookIndex]) return;
+
+            const chapters = bibleData[currentBookIndex].chapters;
+
+            chapters.forEach((chapter, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `Chapter ${index + 1}`;
+                chapterSelect.appendChild(option);
+            });
+
+            chapterSelect.disabled = false;
+
+            chapterSelect.addEventListener('change', function() {
+                if (this.value !== '') {
+                    // Stop TTS when changing chapters
+                    stopTTS();
+                    displayChapter();
+                }
+            });
+        }
+
+        function displayChapter() {
+            const chapterSelect = document.getElementById('chapterSelect');
+            const outputEl = document.getElementById('output');
+            const filterButton = document.getElementById('filterButton');
+
+            // Reset bottom confirmation counter when changing chapters
+            bottomConfirmationCount = 0;
+
+            if (currentBookIndex === null || chapterSelect.value === '') {
+                outputEl.innerHTML = '<div class="status error">Please select a book and chapter</div>';
+                return;
+            }
+
+            const chapterIndex = parseInt(chapterSelect.value);
+            currentChapter = chapterIndex + 1; // Display chapter numbers start at 1
+            const verses = bibleData[currentBookIndex].chapters[chapterIndex];
+
+            if (!verses) {
+                outputEl.innerHTML = '<div class="status error">Chapter data not found</div>';
+                return;
+            }
+
+            // Check if we have filters for this book and chapter (using full book name)
+            const hasFilters = verseFilters &&
+                               verseFilters[currentBookName] &&
+                               verseFilters[currentBookName][currentChapter.toString()];
+
+            // Show/hide filter button and TTS read button based on whether filters exist
+            filterButton.style.display = hasFilters ? 'inline-block' : 'none';
+
+            // Show/hide TTS buttons based on filters (initially show read button, hide stop button)
+            const readFilteredBtn = document.getElementById('readFilteredBtn');
+            if (readFilteredBtn) {
+                readFilteredBtn.style.display = hasFilters ? 'inline-block' : 'none';
+            }
+
+            let html = `
+                <div class="chapter-content">
+                    <div class="chapter-header">${currentBookName} - Chapter ${currentChapter}${viewMode === 'interleaved' ? ' - Interleaved' : ''}</div>
+            `;
+
+            // Get Filipino verses if available
+            let filipinoVerses = [];
+            if (filipinoBibleData && currentBookIndex !== null) {
+                const filipinoBook = filipinoBibleData[currentBookIndex];
+                if (filipinoBook && filipinoBook.chapters && filipinoBook.chapters[chapterIndex]) {
+                    filipinoVerses = filipinoBook.chapters[chapterIndex];
+                }
+            }
+
+            if (viewMode === 'interleaved' && filipinoVerses.length > 0) {
+                // Interleaved view - alternate between English and Filipino
+                const maxLength = Math.max(verses.length, filipinoVerses.length);
+
+                for (let index = 0; index < maxLength; index++) {
+                    const verseNumber = index + 1;
+
+                    // Check if this verse should be displayed
+                    let shouldShow = true;
+                    if (showFilteredOnly && hasFilters) {
+                        const filterList = verseFilters[currentBookName][currentChapter.toString()];
+                        shouldShow = filterList.includes(verseNumber);
+                    }
+
+                    if (!shouldShow) continue;
+
+                    // Check if this verse is in the filtered list (for highlighting)
+                    let isHighlighted = false;
+                    if (hasFilters) {
+                        const filterList = verseFilters[currentBookName][currentChapter.toString()];
+                        isHighlighted = filterList.includes(verseNumber);
+                    }
+
+                    // Display verses based on primaryTranslationABBR setting
+                    if (primaryTranslationABBR === 'KJV') {
+                        // KJV first
+                        if (verses[index]) {
+                            html += `
+                                <div class="verse primary-translation${isHighlighted ? ' filtered' : ''}">
+                                    <span class="verse-number">${verseNumber}</span>
+                                    <span class="verse-text">${verses[index]}</span>
+                                    <span class="translation-label">KJV</span>
+                                </div>
+                            `;
+                        }
+
+                        // WEB second
+                        if (filipinoVerses[index]) {
+                            html += `
+                                <div class="verse secondary-translation${isHighlighted ? ' filtered' : ''}">
+                                    <span class="verse-number">${verseNumber}</span>
+                                    <span class="verse-text">${filipinoVerses[index]}</span>
+                                    <span class="translation-label">WEB</span>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        // WEB first
+                        if (filipinoVerses[index]) {
+                            html += `
+                                <div class="verse primary-translation${isHighlighted ? ' filtered' : ''}">
+                                    <span class="verse-number">${verseNumber}</span>
+                                    <span class="verse-text">${filipinoVerses[index]}</span>
+                                    <span class="translation-label">WEB</span>
+                                </div>
+                            `;
+                        }
+
+                        // KJV second
+                        if (verses[index]) {
+                            html += `
+                                <div class="verse secondary-translation${isHighlighted ? ' filtered' : ''}">
+                                    <span class="verse-number">${verseNumber}</span>
+                                    <span class="verse-text">${verses[index]}</span>
+                                    <span class="translation-label">KJV</span>
+                                </div>
+                            `;
+                        }
+                    }
+                }
+            } else {
+                // Side-by-side view - show only primary translation
+                const primaryVerses = primaryTranslationABBR === 'KJV' ? verses : filipinoVerses;
+
+                primaryVerses.forEach((verseText, index) => {
+                    const verseNumber = index + 1;
+
+                    // Check if this verse should be displayed
+                    if (showFilteredOnly && hasFilters) {
+                        const filterList = verseFilters[currentBookName][currentChapter.toString()];
+                        const isFiltered = filterList.includes(verseNumber);
+
+                        if (!isFiltered) return; // Skip this verse
+                    }
+
+                    // Check if this verse is in the filtered list (for highlighting)
+                    let isHighlighted = false;
+                    if (hasFilters) {
+                        const filterList = verseFilters[currentBookName][currentChapter.toString()];
+                        isHighlighted = filterList.includes(verseNumber);
+                    }
+
+                    html += `
+                        <div class="verse${isHighlighted ? ' filtered' : ''}">
+                            <span class="verse-number">${verseNumber}</span>
+                            <span class="verse-text">${verseText}</span>
+                        </div>
+                    `;
+                });
+            }
+
+            html += '</div>';
+
+            // Add bottom navigation buttons
+            html += `
+                <div style="text-align: center; margin: 30px 0; padding: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button onclick="scrollToTop()" class="secondary" style="font-size: 1.1em; padding: 15px 30px;">
+                        ↑ Back to Top
+                    </button>
+                    <button onclick="nextChapter()" class="secondary" style="font-size: 1.1em; padding: 15px 30px;">
+                        Next Chapter →
+                    </button>
+                </div>
+            `;
+
+            outputEl.innerHTML = html;
+            outputEl.scrollTop = 0;
+
+            // Reapply saved font size
+            applyFontSize();
+
+            // Save reading position
+            saveReadingPosition();
+
+            // Load audio for this chapter
+            loadAudioForCurrentChapter();
+        }
+
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        function nextChapter() {
+            if (currentBookIndex === null || currentChapter === null) {
+                // Start from Genesis 1 if nothing selected
+                const bookSelect = document.getElementById('bookSelect');
+                if (bookSelect.options.length > 1) {
+                    bookSelect.value = '0';
+                    currentBookIndex = 0;
+                    currentBookName = bookSelect.options[1].dataset.fullName;
+                    populateChapterSelect();
+                    setTimeout(() => {
+                        const chapterSelect = document.getElementById('chapterSelect');
+                        chapterSelect.value = '0';
+                        displayChapter();
+                        window.scrollTo(0, 0);
+                    }, 100);
+                }
+                return;
+            }
+
+            const book = bibleData[currentBookIndex];
+            const totalChapters = book.chapters.length;
+            const currentChapterIndex = currentChapter - 1;
+
+            // Try to move to next chapter
+            if (currentChapterIndex + 1 < totalChapters) {
+                const chapterSelect = document.getElementById('chapterSelect');
+                chapterSelect.value = (currentChapterIndex + 1).toString();
+                displayChapter();
+                window.scrollTo(0, 0);
+            } else {
+                // Move to next book, chapter 1
+                if (currentBookIndex + 1 < bibleData.length) {
+                    currentBookIndex++;
+                    const bookSelect = document.getElementById('bookSelect');
+                    bookSelect.value = currentBookIndex.toString();
+                    currentBookName = bookSelect.options[currentBookIndex + 1].dataset.fullName;
+                    populateChapterSelect();
+
+                    setTimeout(() => {
+                        const chapterSelect = document.getElementById('chapterSelect');
+                        chapterSelect.value = '0';
+                        displayChapter();
+                        window.scrollTo(0, 0);
+                    }, 100);
+                } else {
+                    // Wrap around to first book
+                    currentBookIndex = 0;
+                    const bookSelect = document.getElementById('bookSelect');
+                    bookSelect.value = '0';
+                    currentBookName = bookSelect.options[1].dataset.fullName;
+                    populateChapterSelect();
+
+                    setTimeout(() => {
+                        const chapterSelect = document.getElementById('chapterSelect');
+                        chapterSelect.value = '0';
+                        displayChapter();
+                        window.scrollTo(0, 0);
+                    }, 100);
+                }
+            }
+        }
+
+        function toggleFilteredVersesOnly() {
+            showFilteredOnly = !showFilteredOnly;
+            const filterButton = document.getElementById('filterButton');
+
+            if (showFilteredOnly) {
+                filterButton.textContent = '👁️';
+                filterButton.title = 'Show all verses';
+            } else {
+                filterButton.textContent = '👁️‍🗨️';
+                filterButton.title = 'Show filtered verses only';
+            }
+
+            displayChapter();
+            saveReadingPosition();
+        }
+
+        function toggleTranslation() {
+            const selected = document.querySelector('input[name="translationRadio"]:checked');
+
+            if (selected && selected.value === 'WEB') {
+                primaryTranslationABBR = 'WEB';
+                secondaryTranslationABBR = 'KJV';
+            } else {
+                primaryTranslationABBR = 'KJV';
+                secondaryTranslationABBR = 'WEB';
+            }
+
+            // Save preference
+            localStorage.setItem('bibleMobilePrimaryTranslation', primaryTranslationABBR);
+
+            displayChapter();
+        }
+
+        function loadTranslationPreference() {
+            const savedPref = localStorage.getItem('bibleMobilePrimaryTranslation');
+            const kjvRadio = document.querySelector('input[name="translationRadio"][value="KJV"]');
+            const webRadio = document.querySelector('input[name="translationRadio"][value="WEB"]');
+
+            if (savedPref === 'WEB') {
+                primaryTranslationABBR = 'WEB';
+                secondaryTranslationABBR = 'KJV';
+                if (webRadio) webRadio.checked = true;
+            } else {
+                primaryTranslationABBR = 'KJV';
+                secondaryTranslationABBR = 'WEB';
+                if (kjvRadio) kjvRadio.checked = true;
+            }
+        }
+
+        // Text-to-Speech functions for filtered verses
+        function readFilteredVerses() {
+            if (currentBookIndex === null || currentChapter === null) {
+                alert('Please select a book and chapter first');
+                return;
+            }
+
+            // Check if we have filters for this book and chapter
+            const hasFilters = verseFilters &&
+                               verseFilters[currentBookName] &&
+                               verseFilters[currentBookName][currentChapter.toString()];
+
+            if (!hasFilters) {
+                alert('No filtered verses found for this chapter');
+                return;
+            }
+
+            // Get the filtered verse numbers
+            const filterList = verseFilters[currentBookName][currentChapter.toString()];
+            if (!filterList || filterList.length === 0) {
+                alert('No filtered verses found for this chapter');
+                return;
+            }
+
+            // Get the verses based on current translation toggle (KJV or WEB)
+            const selectedBibleData = primaryTranslationABBR === 'KJV' ? bibleData : filipinoBibleData;
+            if (!selectedBibleData || !selectedBibleData[currentBookIndex]) {
+                alert('Bible data not available for ' + primaryTranslationABBR);
+                return;
+            }
+
+            const verses = selectedBibleData[currentBookIndex].chapters[currentChapter - 1];
+            if (!verses) {
+                alert('Chapter verses not available');
+                return;
+            }
+
+            // Build array of verse texts to read (verse number + text)
+            filteredVersesToRead = [];
+            filterList.forEach(verseNum => {
+                if (verseNum >= 1 && verseNum <= verses.length) {
+                    const verseText = verses[verseNum - 1];
+                    filteredVersesToRead.push({
+                        number: verseNum,
+                        text: verseText
+                    });
+                }
+            });
+
+            if (filteredVersesToRead.length === 0) {
+                alert('No valid verses to read');
+                return;
+            }
+
+            // Start reading from the first verse
+            currentTTSVerseIndex = 0;
+            isTTSSpeaking = true;
+            updateTTSButtons();
+            speakNextVerse();
+        }
+
+        function speakNextVerse() {
+            if (currentTTSVerseIndex >= filteredVersesToRead.length) {
+                // Finished reading all verses
+                stopTTS();
+                return;
+            }
+
+            const verse = filteredVersesToRead[currentTTSVerseIndex];
+            const textToSpeak = `Verse ${verse.number}. ${verse.text}`;
+
+            // Create speech utterance
+            ttsUtterance = new SpeechSynthesisUtterance(textToSpeak);
+            ttsUtterance.lang = 'en-US';
+            ttsUtterance.rate = 0.9;
+            ttsUtterance.pitch = 1;
+            ttsUtterance.volume = 1;
+
+            // Voice selection - prefer high quality English voices
+            const voices = speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                // Priority 1: Google voices
+                let selectedVoice = voices.find(voice =>
+                    voice.lang.startsWith('en') && voice.name.includes('Google')
+                );
+
+                // Priority 2: Enhanced/Premium voices
+                if (!selectedVoice) {
+                    selectedVoice = voices.find(voice =>
+                        voice.lang.startsWith('en') &&
+                        (voice.name.includes('Enhanced') || voice.name.includes('Premium'))
+                    );
+                }
+
+                // Priority 3: Any English voice
+                if (!selectedVoice) {
+                    selectedVoice = voices.find(voice => voice.lang.startsWith('en'));
+                }
+
+                if (selectedVoice) {
+                    ttsUtterance.voice = selectedVoice;
+                }
+            }
+
+            // When verse finishes, move to next verse
+            ttsUtterance.onend = () => {
+                if (isTTSSpeaking) {
+                    currentTTSVerseIndex++;
+                    setTimeout(() => {
+                        if (isTTSSpeaking) {
+                            speakNextVerse();
+                        }
+                    }, 500); // Small delay between verses
+                }
+            };
+
+            ttsUtterance.onerror = (event) => {
+                console.error('TTS error:', event);
+                stopTTS();
+            };
+
+            // Speak the verse
+            speechSynthesis.cancel(); // Cancel any existing speech
+            setTimeout(() => {
+                if (isTTSSpeaking && ttsUtterance) {
+                    speechSynthesis.speak(ttsUtterance);
+                }
+            }, 100);
+        }
+
+        function stopTTS() {
+            speechSynthesis.cancel();
+            isTTSSpeaking = false;
+            currentTTSVerseIndex = 0;
+            filteredVersesToRead = [];
+            if (ttsUtterance) {
+                ttsUtterance.onend = null;
+                ttsUtterance.onerror = null;
+                ttsUtterance = null;
+            }
+            updateTTSButtons();
+        }
+
+        function updateTTSButtons() {
+            const readBtn = document.getElementById('readFilteredBtn');
+            const stopBtn = document.getElementById('stopTTSBtn');
+
+            if (isTTSSpeaking) {
+                readBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+            } else {
+                readBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'none';
+            }
+        }
+
+        function toggleViewMode() {
+            viewMode = viewMode === 'side-by-side' ? 'interleaved' : 'side-by-side';
+            const viewModeButton = document.getElementById('viewModeButton');
+
+            if (viewMode === 'interleaved') {
+                viewModeButton.textContent = '⇅ Interleaved';
+                viewModeButton.title = 'Switch to side-by-side view';
+            } else {
+                viewModeButton.textContent = '⇔ Side-by-Side';
+                viewModeButton.title = 'Switch to interleaved view';
+            }
+
+            displayChapter();
+            saveViewMode();
+        }
+
+        function glossSelectedText() {
+            const selection = window.getSelection();
+            let selectedText = selection.toString().trim();
+
+            if (!selectedText) {
+                alert('Please highlight some text first before clicking the Gloss button.');
+                return;
+            }
+
+            // Create the gloss prompt
+            const glossPrompt = `Gloss this Bible passage, with brief definitions in parentheses after archaic or unclear words:
+
+${currentBookName} ${currentChapter}
+
+${selectedText}`;
+
+            // Copy to clipboard
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(glossPrompt).then(() => {
+                    // Show success message
+                    const glossButton = document.getElementById('glossButton');
+                    const originalText = glossButton.innerHTML;
+                    glossButton.innerHTML = '✅ Copied!';
+                    glossButton.style.backgroundColor = '#28a745';
+
+                    setTimeout(() => {
+                        glossButton.innerHTML = originalText;
+                        glossButton.style.backgroundColor = '';
+                    }, 2000);
+                }).catch(err => {
+                    alert('Failed to copy to clipboard. Please try again.');
+                    console.error('Clipboard error:', err);
+                });
+            } else {
+                alert('Gloss prompt created (clipboard not available):\n\n' + glossPrompt);
+            }
+        }
+
+        // Save and load reading position
+        function saveReadingPosition() {
+            if (currentBookIndex !== null && currentChapter !== null) {
+                localStorage.setItem('bibleMobileBookIndex', currentBookIndex.toString());
+                localStorage.setItem('bibleMobileChapter', currentChapter.toString());
+                localStorage.setItem('bibleMobileShowFilteredOnly', showFilteredOnly.toString());
+            }
+        }
+
+        function loadReadingPosition() {
+            const savedBookIndex = localStorage.getItem('bibleMobileBookIndex');
+            const savedChapter = localStorage.getItem('bibleMobileChapter');
+            const savedFilterState = localStorage.getItem('bibleMobileShowFilteredOnly');
+
+            if (savedBookIndex !== null && savedChapter !== null) {
+                currentBookIndex = parseInt(savedBookIndex);
+                currentChapter = parseInt(savedChapter);
+                showFilteredOnly = savedFilterState === 'true';
+
+                // Set the book dropdown
+                const bookSelect = document.getElementById('bookSelect');
+                bookSelect.value = currentBookIndex.toString();
+                currentBookName = bookSelect.options[currentBookIndex + 1].dataset.fullName;
+
+                // Populate chapters for this book
+                populateChapterSelect();
+
+                // Set the chapter dropdown and display
+                setTimeout(() => {
+                    const chapterSelect = document.getElementById('chapterSelect');
+                    chapterSelect.value = (currentChapter - 1).toString();
+                    displayChapter();
+                }, 100);
+            }
+        }
+
+        // Save and load view mode
+        function saveViewMode() {
+            localStorage.setItem('bibleMobileViewMode', viewMode);
+        }
+
+        function loadViewMode() {
+            const savedViewMode = localStorage.getItem('bibleMobileViewMode');
+            if (savedViewMode) {
+                viewMode = savedViewMode;
+                const viewModeButton = document.getElementById('viewModeButton');
+                if (viewModeButton) {
+                    if (viewMode === 'interleaved') {
+                        viewModeButton.textContent = '⇅ Interleaved';
+                        viewModeButton.title = 'Switch to side-by-side view';
+                    } else {
+                        viewModeButton.textContent = '⇔ Side-by-Side';
+                        viewModeButton.title = 'Switch to interleaved view';
+                    }
+                }
+            }
+        }
+
+        // Dark mode toggle
+        let darkModeEnabled = false;
+
+        function toggleDarkMode() {
+            darkModeEnabled = !darkModeEnabled;
+            const body = document.body;
+            const darkModeButton = document.getElementById('darkModeButton');
+
+            if (darkModeEnabled) {
+                body.classList.add('dark-mode');
+                darkModeButton.textContent = '☀️ Light Mode';
+                darkModeButton.title = 'Switch to light mode';
+            } else {
+                body.classList.remove('dark-mode');
+                darkModeButton.textContent = '🌙 Dark Mode';
+                darkModeButton.title = 'Switch to dark mode';
+            }
+
+            saveDarkMode();
+        }
+
+        function saveDarkMode() {
+            localStorage.setItem('bibleMobileDarkMode', darkModeEnabled.toString());
+        }
+
+        function loadDarkMode() {
+            const savedDarkMode = localStorage.getItem('bibleMobileDarkMode');
+            if (savedDarkMode === 'true') {
+                darkModeEnabled = true;
+                document.body.classList.add('dark-mode');
+                const darkModeButton = document.getElementById('darkModeButton');
+                if (darkModeButton) {
+                    darkModeButton.textContent = '☀️ Light Mode';
+                    darkModeButton.title = 'Switch to light mode';
+                }
+            }
+        }
+
+        // Font size control
+        let currentFontSize = 1.3;
+
+        function loadFontSize() {
+            const savedSize = localStorage.getItem('bibleMobileFontSize');
+            if (savedSize) {
+                currentFontSize = parseFloat(savedSize);
+            }
+        }
+
+        function saveFontSize() {
+            localStorage.setItem('bibleMobileFontSize', currentFontSize.toString());
+        }
+
+        function decreaseFontSize() {
+            currentFontSize = Math.max(0.8, currentFontSize - 0.1);
+            applyFontSize();
+            saveFontSize();
+        }
+
+        function increaseFontSize() {
+            currentFontSize = Math.min(3.0, currentFontSize + 0.1);
+            applyFontSize();
+            saveFontSize();
+        }
+
+        function applyFontSize() {
+            const outputEl = document.getElementById('output');
+            const verseTexts = outputEl.querySelectorAll('.verse-text');
+            const verseNumbers = outputEl.querySelectorAll('.verse-number');
+
+            verseTexts.forEach(el => {
+                el.style.fontSize = currentFontSize + 'em';
+            });
+
+            verseNumbers.forEach(el => {
+                el.style.fontSize = currentFontSize + 'em';
+            });
+        }
+
+        // Auto-scroll functionality
+        let autoScrollEnabled = false; // Disabled by default
+        let bottomConfirmationCount = 0; // Counter for consecutive bottom confirmations
+        const REQUIRED_CONFIRMATIONS = 3; // Must confirm bottom this many times
+
+        // Scroll down by page height (similar to Page Down)
+        function handleTouchPageDown() {
+            if (!autoScrollEnabled) return;
+
+            // Check if we're already at the bottom BEFORE scrolling
+            const preScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const preScrollHeight = document.documentElement.scrollHeight;
+            const preClientHeight = window.innerHeight;
+            const strictThreshold = 20; // Very strict threshold - must be within 20px of true bottom
+
+            // If we're already at the bottom, increment confirmation counter
+            if (preScrollTop + preClientHeight >= preScrollHeight - strictThreshold) {
+                const preDistanceFromBottom = preScrollHeight - (preScrollTop + preClientHeight);
+                bottomConfirmationCount++;
+
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('⚡ PRE-SCROLL CHECK:');
+                console.log('  Already at bottom! Distance:', Math.round(preDistanceFromBottom), 'px');
+                console.log('  Threshold:', strictThreshold, 'px');
+                console.log('✅ CONFIRMED AT BOTTOM (#' + bottomConfirmationCount + ' of ' + REQUIRED_CONFIRMATIONS + ' required)');
+
+                if (bottomConfirmationCount >= REQUIRED_CONFIRMATIONS) {
+                    console.log('🎉 REQUIRED CONFIRMATIONS REACHED - Advancing to next chapter');
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    bottomConfirmationCount = 0; // Reset counter
+                    nextChapter();
+                } else {
+                    console.log('⏳ Waiting for ' + (REQUIRED_CONFIRMATIONS - bottomConfirmationCount) + ' more confirmation(s)');
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                }
+                return;
+            }
+
+            // Scroll first
+            const pageHeight = window.innerHeight * 0.9; // Scroll 90% of viewport height
+            window.scrollBy({
+                top: pageHeight,
+                behavior: 'smooth'
+            });
+
+            // After scroll animation, check if we're NOW at the bottom
+            setTimeout(() => {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const scrollHeight = document.documentElement.scrollHeight;
+                const clientHeight = window.innerHeight;
+
+                // Calculate distance from bottom
+                const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('📊 SCROLL DEBUG INFO:');
+                console.log('  📍 Current scroll position:', Math.round(scrollTop), 'px');
+                console.log('  📐 Viewport height:', Math.round(clientHeight), 'px');
+                console.log('  📏 Total page height:', Math.round(scrollHeight), 'px');
+                console.log('  ⬇️  Distance from bottom:', Math.round(distanceFromBottom), 'px');
+                console.log('  🎯 Threshold (must be ≤):', strictThreshold, 'px');
+                console.log('  ✅ Will check for advance?', distanceFromBottom <= strictThreshold);
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+                // Only advance if we're TRULY at the bottom (within strict threshold)
+                // AND we can't scroll any further
+                if (distanceFromBottom <= strictThreshold) {
+                    console.log('⚠️  WITHIN THRESHOLD - Performing double-check test...');
+                    // Double-check by attempting a small scroll
+                    const beforeTest = window.pageYOffset || document.documentElement.scrollTop;
+                    window.scrollBy(0, 10);
+
+                    setTimeout(() => {
+                        const afterTest = window.pageYOffset || document.documentElement.scrollTop;
+                        const scrollDiff = Math.abs(afterTest - beforeTest);
+
+                        console.log('🔍 Double-check result:');
+                        console.log('  Before test:', Math.round(beforeTest), 'px');
+                        console.log('  After test:', Math.round(afterTest), 'px');
+                        console.log('  Difference:', Math.round(scrollDiff), 'px');
+
+                        // If scroll position didn't change, we're truly at bottom
+                        if (scrollDiff < 1) {
+                            bottomConfirmationCount++;
+                            console.log('✅ CONFIRMED AT BOTTOM (#' + bottomConfirmationCount + ' of ' + REQUIRED_CONFIRMATIONS + ' required)');
+
+                            if (bottomConfirmationCount >= REQUIRED_CONFIRMATIONS) {
+                                console.log('🎉 REQUIRED CONFIRMATIONS REACHED - Advancing to next chapter');
+                                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                                bottomConfirmationCount = 0; // Reset counter
+                                nextChapter();
+                            } else {
+                                console.log('⏳ Waiting for ' + (REQUIRED_CONFIRMATIONS - bottomConfirmationCount) + ' more confirmation(s)');
+                                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                            }
+                        } else {
+                            console.log('❌ NOT AT BOTTOM - Page can still scroll by', Math.round(scrollDiff), 'px');
+                            console.log('🔄 Resetting confirmation counter');
+                            bottomConfirmationCount = 0; // Reset if we're not at bottom
+                            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                        }
+                    }, 50);
+                } else {
+                    console.log('ℹ️  Still far from bottom - no advancement check needed');
+                    if (bottomConfirmationCount > 0) {
+                        console.log('🔄 Resetting confirmation counter (was at ' + bottomConfirmationCount + ')');
+                        bottomConfirmationCount = 0; // Reset if we scrolled away from bottom
+                    }
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                }
+            }, 500); // Wait for smooth scroll to complete
+        }
+
+        // Toggle auto-scroll on/off
+        function toggleAutoScroll() {
+            const toggle = document.getElementById('autoScrollToggle');
+            autoScrollEnabled = toggle.checked;
+
+            // Save preference
+            localStorage.setItem('bibleMobileAutoScroll', autoScrollEnabled.toString());
+        }
+
+        // Load auto-scroll preference
+        function loadAutoScrollPreference() {
+            const savedPref = localStorage.getItem('bibleMobileAutoScroll');
+            const toggle = document.getElementById('autoScrollToggle');
+
+            // Default to false if no saved preference
+            if (savedPref === null) {
+                toggle.checked = false;
+                autoScrollEnabled = false;
+            } else {
+                toggle.checked = savedPref === 'true';
+                autoScrollEnabled = savedPref === 'true';
+            }
+        }
+
+        // Handle touch and click events for auto-scroll
+        function handlePaneClick(event) {
+            // Don't trigger scroll if clicking on a button or interactive element
+            if (event.target.tagName === 'BUTTON' ||
+                event.target.tagName === 'SELECT' ||
+                event.target.tagName === 'INPUT' ||
+                event.target.tagName === 'AUDIO' ||
+                event.target.closest('button') ||
+                event.target.closest('.controls') ||
+                event.target.closest('.audio-player-container') ||
+                event.target.closest('audio')) {
+                return;
+            }
+
+            if (autoScrollEnabled) {
+                handleTouchPageDown();
+            }
+        }
+
+        // Add event listeners for touch and click
+        document.addEventListener('touchstart', handlePaneClick);
+        document.addEventListener('click', handlePaneClick);
+
+        // Add keyboard event listener for Enter key to go to next chapter
+        document.addEventListener('keydown', function(event) {
+            // Check if Enter key is pressed (keyCode 13 or key 'Enter')
+            if (event.key === 'Enter' || event.keyCode === 13) {
+                // Don't trigger if user is typing in a select element
+                if (event.target.tagName === 'SELECT' || event.target.tagName === 'INPUT') {
+                    return;
+                }
+
+                event.preventDefault();
+                nextChapter();
+            }
+
+            // Check if Escape key is pressed (keyCode 27 or key 'Escape') - Read Filtered Verses
+            if (event.key === 'Escape' || event.keyCode === 27) {
+                // Don't trigger if user is typing in a select element or input
+                if (event.target.tagName === 'SELECT' || event.target.tagName === 'INPUT') {
+                    return;
+                }
+
+                event.preventDefault();
+                readFilteredVerses();
+            }
+
+            // Check if Space key is pressed (keyCode 32 or key ' ')
+            if (event.key === ' ' || event.keyCode === 32) {
+                // Don't trigger if user is typing in a select element or input
+                if (event.target.tagName === 'SELECT' || event.target.tagName === 'INPUT') {
+                    return;
+                }
+
+                event.preventDefault(); // Prevent default page scroll
+
+                // Check if we're already at the bottom BEFORE scrolling
+                const preScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const preScrollHeight = document.documentElement.scrollHeight;
+                const preClientHeight = window.innerHeight;
+                const strictThreshold = 20;
+
+                // If already at the bottom, increment confirmation counter
+                if (preScrollTop + preClientHeight >= preScrollHeight - strictThreshold) {
+                    bottomConfirmationCount++;
+                    console.log('Spacebar: At bottom - confirmation #' + bottomConfirmationCount + ' of ' + REQUIRED_CONFIRMATIONS);
+
+                    if (bottomConfirmationCount >= REQUIRED_CONFIRMATIONS) {
+                        console.log('Spacebar: Required confirmations reached - advancing to next chapter');
+                        bottomConfirmationCount = 0;
+                        nextChapter();
+                    }
+                    return;
+                }
+
+                // Scroll down by page height
+                const pageHeight = window.innerHeight * 0.9;
+                window.scrollBy({
+                    top: pageHeight,
+                    behavior: 'smooth'
+                });
+
+                // After scroll, check if we're now at the bottom
+                setTimeout(() => {
+                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                    const scrollHeight = document.documentElement.scrollHeight;
+                    const clientHeight = window.innerHeight;
+                    const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+                    if (distanceFromBottom <= strictThreshold) {
+                        // Double-check by attempting a small scroll
+                        const beforeTest = window.pageYOffset || document.documentElement.scrollTop;
+                        window.scrollBy(0, 10);
+
+                        setTimeout(() => {
+                            const afterTest = window.pageYOffset || document.documentElement.scrollTop;
+                            const scrollDiff = Math.abs(afterTest - beforeTest);
+
+                            if (scrollDiff < 1) {
+                                bottomConfirmationCount++;
+                                console.log('Spacebar: Reached bottom - confirmation #' + bottomConfirmationCount + ' of ' + REQUIRED_CONFIRMATIONS);
+
+                                if (bottomConfirmationCount >= REQUIRED_CONFIRMATIONS) {
+                                    console.log('Spacebar: Required confirmations reached - advancing to next chapter');
+                                    bottomConfirmationCount = 0;
+                                    nextChapter();
+                                }
+                            } else {
+                                bottomConfirmationCount = 0;
+                            }
+                        }, 50);
+                    } else {
+                        bottomConfirmationCount = 0;
+                    }
+                }, 500);
+            }
+
+            // Check if Page Down key is pressed (keyCode 34 or key 'PageDown')
+            if (event.key === 'PageDown' || event.keyCode === 34) {
+                // Don't trigger if user is typing in a select element
+                if (event.target.tagName === 'SELECT' || event.target.tagName === 'INPUT') {
+                    return;
+                }
+
+                // Check if we're at the bottom of the page
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const scrollHeight = document.documentElement.scrollHeight;
+                const clientHeight = window.innerHeight;
+                const threshold = 100; // pixels from bottom to trigger next chapter
+
+                if (scrollTop + clientHeight >= scrollHeight - threshold) {
+                    // We're at the bottom, prevent default page down and go to next chapter
+                    event.preventDefault();
+                    nextChapter();
+                }
+                // If not at bottom, let the browser handle the normal Page Down behavior
+            }
+        });
+
+        // ===== AUDIO PLAYER FUNCTIONS =====
+
+        // Initialize audio element
+        function initAudioPlayer() {
+            // Use regular audio element
+            const regularAudioElement = document.getElementById('audioElement');
+            audioElement = regularAudioElement;
+
+            // Ensure volume is at maximum
+            audioElement.volume = 1.0;
+            audioElement.muted = false;
+
+            // Audio event listeners
+            audioElement.addEventListener('loadedmetadata', function() {
+                document.getElementById('audioDuration').textContent = formatTime(audioElement.duration);
+            });
+
+            audioElement.addEventListener('timeupdate', function() {
+                const progress = (audioElement.currentTime / audioElement.duration) * 100;
+                document.getElementById('audioProgressBar').style.width = progress + '%';
+                document.getElementById('audioCurrentTime').textContent = formatTime(audioElement.currentTime);
+            });
+
+            audioElement.addEventListener('ended', function() {
+                document.getElementById('audioPlayBtn').textContent = '▶ Play';
+                // Auto-advance to next chapter if enabled
+                if (autoPlayEnabled) {
+                    nextChapter();
+                }
+            });
+
+            audioElement.addEventListener('error', function(e) {
+                // Only show error if we actually have a URL loaded
+                if (!currentAudioUrl || currentAudioUrl === '') {
+                    return; // Ignore errors when no audio is loaded
+                }
+
+                let errorMsg = 'Error loading audio';
+                if (audioElement.error) {
+                    switch(audioElement.error.code) {
+                        case 1: errorMsg += ' - ABORTED'; break;
+                        case 2: errorMsg += ' - NETWORK ERROR'; break;
+                        case 3: errorMsg += ' - DECODE ERROR (format not supported)'; break;
+                        case 4: errorMsg += ' - SRC NOT SUPPORTED'; break;
+                        default: errorMsg += ' - UNKNOWN ERROR';
+                    }
+                }
+                const audioInfo = document.getElementById('audioInfo');
+                if (audioInfo) {
+                    audioInfo.textContent = errorMsg;
+                    audioInfo.style.color = '#ff6b6b';
+                }
+            });
+
+            // Load audio preferences
+            loadAudioPreferences();
+        }
+
+        // Toggle audio player visibility
+        function toggleAudioPlayer() {
+            isAudioPlayerVisible = !isAudioPlayerVisible;
+            const container = document.getElementById('audioPlayerContainer');
+            const toggleBtn = document.getElementById('audioToggleBtn');
+
+            if (isAudioPlayerVisible) {
+                container.classList.add('visible');
+                toggleBtn.classList.add('active');
+                toggleBtn.textContent = '🔇 Hide Audio';
+                // Load audio for current chapter
+                loadAudioForCurrentChapter();
+            } else {
+                container.classList.remove('visible');
+                toggleBtn.classList.remove('active');
+                toggleBtn.textContent = '🔊 Audio';
+                // Pause audio if playing
+                if (audioElement && !audioElement.paused) {
+                    audioElement.pause();
+                    document.getElementById('audioPlayBtn').textContent = '▶ Play';
+                }
+            }
+
+            saveAudioPreferences();
+        }
+
+        // Load audio for current chapter
+        function loadAudioForCurrentChapter() {
+            if (!audioData || currentBookIndex === null || currentChapter === null) {
+                document.getElementById('audioInfo').textContent = 'No audio available';
+                return;
+            }
+
+            // Find the book in audio data
+            const bookData = audioData.find(book => book.book === currentBookName);
+
+            if (!bookData) {
+                const audioInfo = document.getElementById('audioInfo');
+                if (audioInfo) {
+                    audioInfo.textContent = 'No audio for this book';
+                }
+                return;
+            }
+
+            // Find the chapter audio
+            const chapterData = bookData.chapters.find(ch => ch.chapter === currentChapter);
+
+            if (!chapterData || !chapterData.audioUrl || chapterData.audioUrl === '') {
+                const audioInfo = document.getElementById('audioInfo');
+                if (audioInfo) {
+                    audioInfo.textContent = `${currentBookName} ${currentChapter} - No audio available`;
+                }
+                currentAudioUrl = '';
+                return;
+            }
+
+            // Load the audio
+            currentAudioUrl = chapterData.audioUrl;
+
+            // Force reload to fix potential TV browser issues
+            audioElement.pause();
+            audioElement.src = '';
+            audioElement.load();
+
+            // Try to fix Dropbox links - convert to direct download format
+            let fixedUrl = currentAudioUrl;
+            if (fixedUrl.includes('dropbox.com')) {
+                // Change dl=0 to dl=1 for direct download
+                fixedUrl = fixedUrl.replace('dl=0', 'dl=1');
+                // Also try raw parameter
+                if (!fixedUrl.includes('dl=1') && !fixedUrl.includes('raw=1')) {
+                    fixedUrl += (fixedUrl.includes('?') ? '&' : '?') + 'raw=1';
+                }
+            }
+
+            audioElement.src = fixedUrl;
+            audioElement.load(); // Force load
+            audioElement.volume = 1.0; // Ensure volume
+            audioElement.muted = false; // Ensure unmuted
+            audioElement.playbackRate = playbackSpeeds[currentSpeedIndex];
+
+            const audioInfo = document.getElementById('audioInfo');
+            const audioPlayBtn = document.getElementById('audioPlayBtn');
+            if (audioInfo) audioInfo.textContent = `${currentBookName} ${currentChapter}`;
+            if (audioPlayBtn) audioPlayBtn.textContent = '▶ Play';
+
+            // Display the URL for debugging
+            const urlDisplay = document.getElementById('audioUrlDisplay');
+            if (urlDisplay) {
+                urlDisplay.textContent = 'Audio URL: ' + fixedUrl.substring(0, 80) + '...';
+            }
+
+            // Auto-play if enabled
+            if (autoPlayEnabled && isAudioPlayerVisible) {
+                setTimeout(() => {
+                    audioElement.play().catch(err => {
+                        console.log('Auto-play prevented:', err);
+                    });
+                }, 300);
+            }
+        }
+
+        // Toggle play/pause
+        function toggleAudio() {
+            if (!audioElement || !currentAudioUrl) {
+                const audioInfo = document.getElementById('audioInfo');
+                if (audioInfo) {
+                    audioInfo.textContent = 'No audio URL available';
+                    audioInfo.style.color = '#ff6b6b';
+                }
+                return;
+            }
+
+            if (audioElement.paused) {
+                const audioInfo = document.getElementById('audioInfo');
+                if (audioInfo) {
+                    audioInfo.style.color = 'white';
+                }
+
+                // Force unmute and volume before playing (LG TV fix)
+                audioElement.muted = false;
+                audioElement.volume = 1.0;
+
+                audioElement.play()
+                    .then(() => {
+                        const audioPlayBtn = document.getElementById('audioPlayBtn');
+                        const audioInfo = document.getElementById('audioInfo');
+                        if (audioPlayBtn) audioPlayBtn.textContent = '⏸ Pause';
+                        if (audioInfo) audioInfo.textContent = `${currentBookName} ${currentChapter} - Playing`;
+
+                        // Double-check volume after play starts (LG TV workaround)
+                        setTimeout(() => {
+                            audioElement.volume = 1.0;
+                            audioElement.muted = false;
+                        }, 100);
+                    })
+                    .catch(err => {
+                        const audioInfo = document.getElementById('audioInfo');
+                        const audioPlayBtn = document.getElementById('audioPlayBtn');
+                        if (audioInfo) {
+                            audioInfo.textContent = 'Playback failed: ' + err.message;
+                            audioInfo.style.color = '#ff6b6b';
+                        }
+                        if (audioPlayBtn) audioPlayBtn.textContent = '▶ Play';
+                    });
+            } else {
+                audioElement.pause();
+                const audioPlayBtn = document.getElementById('audioPlayBtn');
+                const audioInfo = document.getElementById('audioInfo');
+                if (audioPlayBtn) audioPlayBtn.textContent = '▶ Play';
+                if (audioInfo) audioInfo.textContent = `${currentBookName} ${currentChapter} - Paused`;
+            }
+        }
+
+        // Reload audio
+        function reloadAudio() {
+            if (!currentAudioUrl) {
+                document.getElementById('audioInfo').textContent = 'No audio to reload';
+                document.getElementById('audioInfo').style.color = '#ff6b6b';
+                return;
+            }
+
+            // Stop current playback
+            audioElement.pause();
+            audioElement.currentTime = 0;
+
+            // Clear and reload
+            audioElement.src = '';
+            audioElement.load();
+
+            // Reload the URL
+            setTimeout(() => {
+                // Try to fix Dropbox links - convert to direct download format
+                let fixedUrl = currentAudioUrl;
+                if (fixedUrl.includes('dropbox.com')) {
+                    // Change dl=0 to dl=1 for direct download
+                    fixedUrl = fixedUrl.replace('dl=0', 'dl=1');
+                    // Also try raw parameter
+                    if (!fixedUrl.includes('dl=1') && !fixedUrl.includes('raw=1')) {
+                        fixedUrl += (fixedUrl.includes('?') ? '&' : '?') + 'raw=1';
+                    }
+                }
+
+                audioElement.src = fixedUrl;
+                audioElement.load();
+                audioElement.volume = 1.0;
+                audioElement.muted = false;
+
+                document.getElementById('audioInfo').textContent = `${currentBookName} ${currentChapter} - Reloaded`;
+                document.getElementById('audioInfo').style.color = 'white';
+                document.getElementById('audioPlayBtn').textContent = '▶ Play';
+
+                // Show feedback
+                const reloadBtn = document.getElementById('audioReloadBtn');
+                const originalText = reloadBtn.textContent;
+                reloadBtn.textContent = '✓';
+                setTimeout(() => {
+                    reloadBtn.textContent = originalText;
+                }, 1000);
+            }, 100);
+        }
+
+        // Cycle through playback speeds
+        function cycleSpeed() {
+            currentSpeedIndex = (currentSpeedIndex + 1) % playbackSpeeds.length;
+            const speed = playbackSpeeds[currentSpeedIndex];
+            audioElement.playbackRate = speed;
+            document.getElementById('audioSpeedBtn').textContent = speed + 'x';
+            saveAudioPreferences();
+        }
+
+        // Seek audio by clicking on progress bar
+        function seekAudio(event) {
+            if (!audioElement || !currentAudioUrl) return;
+
+            const progressContainer = document.getElementById('audioProgressContainer');
+            const rect = progressContainer.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const percentage = clickX / rect.width;
+            const newTime = percentage * audioElement.duration;
+
+            audioElement.currentTime = newTime;
+        }
+
+        // Format time in MM:SS
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return mins + ':' + (secs < 10 ? '0' : '') + secs;
+        }
+
+        // Save audio preferences to localStorage
+        function saveAudioPreferences() {
+            localStorage.setItem('audioPlayerVisible', isAudioPlayerVisible.toString());
+            localStorage.setItem('audioSpeedIndex', currentSpeedIndex.toString());
+            localStorage.setItem('audioAutoPlay', autoPlayEnabled.toString());
+        }
+
+        // Load audio preferences from localStorage
+        function loadAudioPreferences() {
+            const savedVisible = localStorage.getItem('audioPlayerVisible');
+            const savedSpeedIndex = localStorage.getItem('audioSpeedIndex');
+            const savedAutoPlay = localStorage.getItem('audioAutoPlay');
+
+            if (savedVisible === 'true') {
+                // Restore audio player visibility
+                setTimeout(() => {
+                    toggleAudioPlayer();
+                }, 500);
+            }
+
+            if (savedSpeedIndex !== null) {
+                currentSpeedIndex = parseInt(savedSpeedIndex);
+                const speed = playbackSpeeds[currentSpeedIndex];
+                if (audioElement) {
+                    audioElement.playbackRate = speed;
+                }
+                document.getElementById('audioSpeedBtn').textContent = speed + 'x';
+            }
+
+            if (savedAutoPlay !== null) {
+                autoPlayEnabled = savedAutoPlay === 'true';
+            }
+        }
+
+        // Show audio format support diagnostic
+        function showAudioDebug() {
+            const audio = document.createElement('audio');
+            let debugInfo = 'AUDIO FORMAT SUPPORT:\n\n';
+
+            const formats = {
+                'MP3': 'audio/mpeg',
+                'OGG': 'audio/ogg',
+                'WAV': 'audio/wav',
+                'AAC': 'audio/aac',
+                'M4A': 'audio/mp4',
+                'WEBM': 'audio/webm'
+            };
+
+            for (let format in formats) {
+                const support = audio.canPlayType(formats[format]);
+                debugInfo += format + ': ' + (support === 'probably' ? '✓ YES' : support === 'maybe' ? '? MAYBE' : '✗ NO') + '\n';
+            }
+
+            debugInfo += '\nCURRENT AUDIO URL:\n' + (currentAudioUrl || 'None');
+
+            debugInfo += '\n\nAUDIO ELEMENT STATE:\n';
+            debugInfo += 'Ready State: ' + (audioElement ? audioElement.readyState : 'No element') + '\n';
+            debugInfo += 'Network State: ' + (audioElement ? audioElement.networkState : 'No element') + '\n';
+            debugInfo += 'Paused: ' + (audioElement ? audioElement.paused : 'N/A') + '\n';
+            debugInfo += 'Duration: ' + (audioElement ? audioElement.duration : 'N/A') + '\n';
+            debugInfo += 'Volume: ' + (audioElement ? audioElement.volume : 'N/A') + '\n';
+            debugInfo += 'Muted: ' + (audioElement ? audioElement.muted : 'N/A') + '\n';
+            debugInfo += 'Current Time: ' + (audioElement ? audioElement.currentTime : 'N/A') + '\n';
+
+            alert(debugInfo);
+        }
+
+        // Load data when page loads
+        window.addEventListener('DOMContentLoaded', function() {
+            loadFontSize();
+            loadBibleData();
+            loadAutoScrollPreference();
+            loadViewMode();
+            loadDarkMode();
+            loadTranslationPreference();
+            initAudioPlayer();
+
+            // Setup toggle listeners
+            const autoScrollToggle = document.getElementById('autoScrollToggle');
+            autoScrollToggle.addEventListener('change', toggleAutoScroll);
+
+            const translationRadios = document.querySelectorAll('input[name="translationRadio"]');
+            translationRadios.forEach(radio => {
+                radio.addEventListener('change', toggleTranslation);
+            });
+        });
+    </script>
+</body>
+</html>
+
