@@ -1120,15 +1120,8 @@ const BibleApp = () => {
   // Available translations
   const translations = React.useMemo(() => [
     { id: 'en_kjv.json', name: 'English - King James Version (KJV)' },
-    { id: 'en_bbe.json', name: 'English - Bible in Basic English (BBE)' },
-    { id: 'fil_adb1905.json', name: 'Filipino - Ang Dating Biblia (1905)'},
-    { id: 'zh_cuv_cantonese.json', name: 'Chinese - CUV, Cantonese' },
-    { id: 'zh_cuv_chinese.json', name: 'Chinese - CUV, Chinese' },
-    { id: 'es_rvr.json', name: 'Spanish - Reina Valera Revisada (RVR)' },
-    { id: 'fr_apee.json', name: 'French - Louis Segond (APEE)' },
-    { id: 'ko_ko.json', name: 'Korean - Korean Version' },
-    { id: 'he_heb_no_strong.json', name: 'Hebrew - Modern Hebrew Bible' },
-    { id: 'he_heb_strong.json', name: 'Hebrew - Modern Hebrew Bible (with Strong\'s)' },
+    { id: 'en_web.json', name: 'English - World English Bible (WEB)' },
+    { id: 'zh_cuv_no_space.json', name: 'Chinese - CUV (No Space)' },
   ], []);
   
   // Store current position for translation changes

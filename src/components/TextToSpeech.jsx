@@ -70,14 +70,8 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const getLanguageFromTranslation = (translation) => {
     const langMap = {
       'en_kjv.json': { lang: 'en-US', name: 'English' },
-      'en_bbe.json': { lang: 'en-US', name: 'English' },
-      'zh_cuv_cantonese.json': { lang: 'zh-HK', name: 'Cantonese' },
-      'zh_cuv_chinese.json': { lang: 'zh-CN', name: 'Chinese' },
-      'es_rvr.json': { lang: 'es-ES', name: 'Spanish' },
-      'fr_apee.json': { lang: 'fr-FR', name: 'French' },
-      'ko_ko.json': { lang: 'ko-KR', name: 'Korean' },
-      'he_heb_no_strong.json': { lang: 'he-IL', name: 'Hebrew' },
-      'he_heb_strong.json': { lang: 'he-IL', name: 'Hebrew' }
+      'en_web.json': { lang: 'en-US', name: 'English' },
+      'zh_cuv_no_space.json': { lang: 'zh-CN', name: 'Chinese' },
     };
     return langMap[translation] || { lang: 'en-US', name: 'English' };
   };
