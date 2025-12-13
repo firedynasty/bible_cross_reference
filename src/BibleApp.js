@@ -129,7 +129,7 @@ const renderWithGlosses = (text, showGlosses) => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle, showGlosses, onGlossToggle, onDarkModeToggle, onTouchScrollModeChange, touchScrollMode }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle, showGlosses, onGlossToggle, onDarkModeToggle, onTouchScrollModeChange, touchScrollMode, viewMode, onViewModeToggle }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -434,7 +434,9 @@ const NavigationPlaceholder = ({
   showFilteredVersesOnly,
   setShowFilteredVersesOnly,
   filterFileName,
-  handleVerseFilterFile
+  handleVerseFilterFile,
+  viewMode,
+  onViewModeToggle
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -568,7 +570,7 @@ const NavigationPlaceholder = ({
         {/* Gloss Toggle Button */}
         <button
           onClick={() => onGlossToggle && onGlossToggle()}
-          className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
+          className={`hidden ml-2 px-2 py-0.5 rounded focus:outline-none ${
             showGlosses
               ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
               : 'bg-gray-300 text-gray-600 hover:bg-gray-400'
@@ -576,6 +578,62 @@ const NavigationPlaceholder = ({
           title={showGlosses ? "Hide glosses (definitions)" : "Show glosses (definitions)"}
         >
           {showGlosses ? 'Gloss: ON' : 'Gloss: OFF'}
+        </button>
+
+        {/* External Links Dropdown */}
+        <div className="relative ml-2 flex-shrink-0">
+          <button
+            onClick={() => setShowLinksDropdown(!showLinksDropdown)}
+            className="px-2 py-0.5 bg-blue-200 hover:bg-blue-300 rounded text-xs font-bold"
+            title="External Links"
+          >
+            links
+          </button>
+
+          {showLinksDropdown && (
+            <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+              {Object.entries(linksOut).map(([label, url]) => (
+                <button
+                  key={label}
+                  onClick={() => {
+                    window.open(url, '_blank');
+                    setShowLinksDropdown(false);
+                  }}
+                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Show All Verses Toggle Button - only show when filter is loaded */}
+        {verseFilterData && (
+          <button
+            onClick={() => setShowFilteredVersesOnly(!showFilteredVersesOnly)}
+            className={`ml-2 px-2 py-0.5 rounded text-xs font-bold ${
+              showFilteredVersesOnly
+                ? 'bg-orange-200 hover:bg-orange-300'
+                : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+            title={showFilteredVersesOnly ? "Show all verses" : "Show filtered verses only"}
+          >
+            {showFilteredVersesOnly ? '👁️' : '👁️‍🗨️'}
+          </button>
+        )}
+
+        {/* View Mode Toggle Button */}
+        <button
+          onClick={() => onViewModeToggle && onViewModeToggle()}
+          className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
+            viewMode === 'interleaved'
+              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+          }`}
+          title={viewMode === 'interleaved' ? "Switch to side-by-side view" : "Switch to interleaved view"}
+        >
+          {viewMode === 'interleaved' ? '⇅ Interleaved' : '⇔ Side-by-Side'}
         </button>
 
         {/* Touch Options Cycling Button */}
@@ -813,7 +871,7 @@ const NavigationPlaceholder = ({
           
           
           {/* Up Arrow Key Button */}
-          <div className="hidden md:flex ml-2 items-center border-l border-gray-300 pl-2">
+          <div className="hidden md:flex ml-2 items-center border-l border-gray-300 pl-2 flex-nowrap">
             <button
               onClick={() => {
                 // Simulate an ArrowUp key press event
@@ -832,35 +890,6 @@ const NavigationPlaceholder = ({
             >
               ↑
             </button>
-            
-            {/* External Links Dropdown */}
-            <div className="relative ml-2">
-              <button
-                onClick={() => setShowLinksDropdown(!showLinksDropdown)}
-                className="px-2 py-1 bg-blue-200 hover:bg-blue-300 rounded text-xs font-bold"
-                title="External Links"
-              >
-                🔗
-              </button>
-              (links)
-
-              {showLinksDropdown && (
-                <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                  {Object.entries(linksOut).map(([label, url]) => (
-                    <button
-                      key={label}
-                      onClick={() => {
-                        window.open(url, '_blank');
-                        setShowLinksDropdown(false);
-                      }}
-                      className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Hidden file input for verse filter */}
             <input
@@ -890,7 +919,7 @@ const NavigationPlaceholder = ({
                   handleVerseFilterFile(files[0]);
                 }
               }}
-              className={`ml-2 px-2 py-1 rounded text-xs font-bold ${
+              className={`hidden ml-2 px-2 py-1 rounded text-xs font-bold ${
                 verseFilterData && verseFilterData.chapters && verseFilterData.chapters[chapter]
                   ? 'bg-green-200 hover:bg-green-300'
                   : filterFileName
@@ -907,21 +936,6 @@ const NavigationPlaceholder = ({
             >
               {verseFilterData && verseFilterData.chapters && verseFilterData.chapters[chapter] ? '✓📄' : '📄'}
             </button>
-
-            {/* Show All Verses Toggle Button - only show when filter is loaded */}
-            {verseFilterData && (
-              <button
-                onClick={() => setShowFilteredVersesOnly(!showFilteredVersesOnly)}
-                className={`ml-2 px-2 py-1 rounded text-xs font-bold ${
-                  showFilteredVersesOnly
-                    ? 'bg-orange-200 hover:bg-orange-300'
-                    : 'bg-gray-200 hover:bg-gray-300'
-                }`}
-                title={showFilteredVersesOnly ? "Show all verses" : "Show filtered verses only"}
-              >
-                {showFilteredVersesOnly ? '👁️' : '👁️‍🗨️'}
-              </button>
-            )}
 
           </div>
           
@@ -1095,6 +1109,9 @@ const BibleApp = () => {
   // Gloss display control
   const [showGlosses, setShowGlosses] = useState(true);
 
+  // View mode control (side-by-side or interleaved)
+  const [viewMode, setViewMode] = useState('side-by-side'); // 'side-by-side' or 'interleaved'
+
   // Mobile responsiveness states
   const [showSidebar, setShowSidebar] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
@@ -1104,13 +1121,14 @@ const BibleApp = () => {
   const translations = React.useMemo(() => [
     { id: 'en_kjv.json', name: 'English - King James Version (KJV)' },
     { id: 'en_bbe.json', name: 'English - Bible in Basic English (BBE)' },
+    { id: 'fil_adb1905.json', name: 'Filipino - Ang Dating Biblia (1905)'},
     { id: 'zh_cuv_cantonese.json', name: 'Chinese - CUV, Cantonese' },
     { id: 'zh_cuv_chinese.json', name: 'Chinese - CUV, Chinese' },
     { id: 'es_rvr.json', name: 'Spanish - Reina Valera Revisada (RVR)' },
     { id: 'fr_apee.json', name: 'French - Louis Segond (APEE)' },
     { id: 'ko_ko.json', name: 'Korean - Korean Version' },
     { id: 'he_heb_no_strong.json', name: 'Hebrew - Modern Hebrew Bible' },
-    { id: 'he_heb_strong.json', name: 'Hebrew - Modern Hebrew Bible (with Strong\'s)' }
+    { id: 'he_heb_strong.json', name: 'Hebrew - Modern Hebrew Bible (with Strong\'s)' },
   ], []);
   
   // Store current position for translation changes
@@ -4111,6 +4129,8 @@ const BibleApp = () => {
               onDarkModeToggle={() => setIsDarkMode(!isDarkMode)}
               onTouchScrollModeChange={setTouchScrollMode}
               touchScrollMode={touchScrollMode}
+              viewMode={viewMode}
+              onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : 'side-by-side')}
             />
           </div>
           
@@ -4144,6 +4164,8 @@ const BibleApp = () => {
               setShowFilteredVersesOnly={setShowFilteredVersesOnly}
               filterFileName={filterFileName}
               handleVerseFilterFile={handleVerseFilterFile}
+              viewMode={viewMode}
+              onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : 'side-by-side')}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
                   const bookObj = bibleData.find(b => b.abbrev === book);
@@ -4193,6 +4215,210 @@ const BibleApp = () => {
         
         {/* Bible Text and KJV Split View - Responsive layout for different devices */}
         <div className="flex-1 flex overflow-hidden">
+          {viewMode === 'interleaved' ? (
+            /* Interleaved View - Single pane with alternating verses */
+            <div
+              ref={chapterContentRef}
+              className="w-full overflow-y-auto p-4 md:p-8 bg-white relative"
+              style={{ backgroundColor: isDarkMode ? '#1f2937' : 'white', color: isDarkMode ? 'white' : 'black' }}
+            >
+              {selectedBook && selectedChapter > 0 && (
+                <div>
+                  {/* Controls for interleaved view */}
+                  <div className="mb-4 flex gap-2">
+                    <button
+                      onClick={() => {
+                        handleChapterSelect(selectedChapter + 1, true);
+                        if (chapterContentRef.current) {
+                          setTimeout(() => {
+                            chapterContentRef.current.scrollTop = 0;
+                          }, 100);
+                        }
+                      }}
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl flex items-center"
+                      title="Next Chapter"
+                    >
+                      Next Ch
+                    </button>
+                  </div>
+                  <h2 className="text-3xl font-semibold flex items-center mb-5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open mr-3 h-8 w-8">
+                      <path d="M12 7v14"></path>
+                      <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path>
+                    </svg>
+                    {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter} - Interleaved
+                  </h2>
+                  <div className="space-y-2">
+                    {selectedBook && selectedBook.chapters && selectedBook.chapters[selectedChapter - 1] && (() => {
+                      // Get verses from both translations
+                      const primaryVerses = selectedBook.chapters[selectedChapter - 1];
+
+                      // Get right pane verses
+                      let rightPaneVerses = [];
+                      if (rightPaneBibleData && selectedBook) {
+                        let bookAbbrev = selectedBook.abbrev;
+                        if (selectedTranslation.includes('he_heb')) {
+                          bookAbbrev = getKjvBookAbbrev(bookAbbrev);
+                        }
+                        const rightPaneBook = rightPaneBibleData.find(b => b.abbrev === bookAbbrev);
+                        if (rightPaneBook && rightPaneBook.chapters[selectedChapter - 1]) {
+                          rightPaneVerses = rightPaneBook.chapters[selectedChapter - 1];
+                        }
+                      }
+
+                      // Create interleaved array
+                      const maxLength = Math.max(primaryVerses.length, rightPaneVerses.length);
+                      const interleavedVerses = [];
+
+                      for (let i = 0; i < maxLength; i++) {
+                        const verseNumber = i + 1;
+
+                        // Check if should be filtered
+                        let shouldShow = true;
+                        if (showFilteredVersesOnly && verseFilterData) {
+                          const currentChapterFilter = verseFilterData.chapters[selectedChapter];
+                          if (currentChapterFilter) {
+                            shouldShow = currentChapterFilter.includes(verseNumber);
+                          }
+                        }
+
+                        if (shouldShow) {
+                          // Add primary translation verse
+                          if (primaryVerses[i]) {
+                            interleavedVerses.push({
+                              type: 'primary',
+                              verseNumber,
+                              text: primaryVerses[i],
+                              translation: getTranslationShortName(selectedTranslation)
+                            });
+                          }
+
+                          // Add right pane translation verse
+                          if (rightPaneVerses[i]) {
+                            interleavedVerses.push({
+                              type: 'secondary',
+                              verseNumber,
+                              text: rightPaneVerses[i],
+                              translation: rightPaneTranslation === 'en_kjv.json' ? 'KJV' : 'BBE'
+                            });
+                          }
+                        }
+                      }
+
+                      // Render interleaved verses
+                      return interleavedVerses.map((item, index) => {
+                        const refKey = `${selectedBook.abbrev}-${selectedChapter}-${item.verseNumber}`;
+                        const hasReference = item.type === 'primary' && crossReferences[refKey] && crossReferences[refKey].length > 0;
+
+                        return (
+                          <div
+                            key={`${item.type}-${item.verseNumber}-${index}`}
+                            id={item.type === 'primary' ? `verse-${item.verseNumber}` : `right-pane-verse-${item.verseNumber}`}
+                            className={`leading-relaxed p-3 rounded-md transition-colors text-2xl ${
+                              item.type === 'primary'
+                                ? (isDarkMode ? 'bg-gray-800' : 'bg-blue-50')
+                                : (isDarkMode ? 'bg-gray-700' : 'bg-gray-50')
+                            } ${hasReference ? (isDarkMode ? 'hover:bg-blue-900' : 'hover:bg-blue-100') : ''}`}
+                          >
+                            <p className="flex">
+                              <span className={`font-bold mr-4 text-2xl ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                                {item.verseNumber}
+                              </span>
+                              <span className="flex-1">{renderWithGlosses(item.text, showGlosses)}</span>
+                              <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                ({item.translation})
+                              </span>
+                              {hasReference && (
+                                <button
+                                  onClick={() => setShowCrossRef(showCrossRef === refKey ? null : refKey)}
+                                  className="ml-3 text-blue-500 hover:text-blue-700 focus:outline-none"
+                                  title="Show cross-references"
+                                >
+                                  <Link className="h-6 w-6" />
+                                </button>
+                              )}
+                            </p>
+
+                            {/* Cross-reference popup */}
+                            {hasReference && showCrossRef === refKey && (
+                              <div className={`mt-4 p-5 rounded-md shadow-sm ${
+                                isDarkMode
+                                  ? 'bg-blue-900 border border-blue-700'
+                                  : 'bg-blue-50 border border-blue-200'
+                              }`}>
+                                <h4 className="font-medium mb-4 text-2xl">Cross References:</h4>
+                                <ul className="space-y-4">
+                                  {crossReferences[refKey].map((ref, i) => (
+                                    <li key={i} className="text-xl">
+                                      <button
+                                        onClick={() => handleCrossRefNavigate(ref)}
+                                        className={`font-medium ${
+                                          isDarkMode
+                                            ? 'text-blue-300 hover:text-blue-200'
+                                            : 'text-blue-600 hover:text-blue-800'
+                                        }`}
+                                      >
+                                        {getBookName(ref.book)} {ref.chapter}:{ref.verse}
+                                      </button>
+                                      <p className={`mt-2 ${
+                                        isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                      }`}>{renderWithGlosses(ref.text, showGlosses)}</p>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+
+                  {/* Chapter Navigation */}
+                  <div className="mt-10 flex justify-between pb-4">
+                    {selectedChapter > 1 ? (
+                      <button
+                        onClick={() => {
+                          handleChapterSelect(selectedChapter - 1, true);
+                          handleHomeReset();
+                        }}
+                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
+                      >
+                        &lt; Previous Chapter (z)
+                      </button>
+                    ) : (
+                      <div></div>
+                    )}
+
+                    <button
+                      onClick={handleHomeReset}
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
+                    >
+                      Home (esc)
+                    </button>
+
+                    {selectedBook && selectedChapter < selectedBook.chapters.length && (
+                      <button
+                        onClick={() => {
+                          handleChapterSelect(selectedChapter + 1, true);
+                          if (chapterContentRef.current) {
+                            setTimeout(() => {
+                              chapterContentRef.current.scrollTop = 0;
+                            }, 100);
+                          }
+                        }}
+                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
+                      >
+                        Next Chapter (m,;e) &gt;
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Side-by-side View - Original two-pane layout */
+            <>
           {/* Bible Text Display */}
           <div 
             ref={chapterContentRef} 
@@ -4806,6 +5032,8 @@ const BibleApp = () => {
             </div>
           </div>
         )}
+            </>
+          )}
         </div>
       </div>
     </div>

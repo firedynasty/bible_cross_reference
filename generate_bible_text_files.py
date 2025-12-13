@@ -30,8 +30,13 @@ BOOK_NAMES = {
 }
 
 def clean_verse_text(text):
-    """Remove annotation markers {} from verse text."""
-    return re.sub(r'\{[^}]*\}', '', text).strip()
+    """Remove annotation markers {} from verse text and spaces between Chinese characters."""
+    # Remove annotation markers
+    text = re.sub(r'\{[^}]*\}', '', text)
+    # Remove spaces between Chinese characters (CJK Unified Ideographs)
+    # This regex matches spaces that are between Chinese characters
+    text = re.sub(r'(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])', '', text)
+    return text.strip()
 
 def sanitize_filename(name):
     """Convert book name to safe filename format (lowercase, spaces to underscores)."""
@@ -47,7 +52,7 @@ def generate_bible_files(json_path, output_dir='./bible'):
     """
     # Load the Bible JSON
     print(f"Loading Bible from {json_path}...")
-    with open(json_path, 'r', encoding='utf-8') as f:
+    with open(json_path, 'r', encoding='utf-8-sig') as f:
         bible_data = json.load(f)
 
     # Create base output directory
@@ -60,8 +65,9 @@ def generate_bible_files(json_path, output_dir='./bible'):
         abbrev = book['abbrev']
         book_name = BOOK_NAMES.get(abbrev, abbrev.upper())
 
-        # Create book directory
-        book_dir = os.path.join(output_dir, book_name)
+        # Create book directory (with underscores instead of spaces)
+        safe_book_dir_name = book_name.replace(' ', '_')
+        book_dir = os.path.join(output_dir, safe_book_dir_name)
         os.makedirs(book_dir, exist_ok=True)
 
         # Process each chapter
@@ -76,15 +82,10 @@ def generate_bible_files(json_path, output_dir='./bible'):
 
             # Write verses to file
             with open(filepath, 'w', encoding='utf-8') as f:
-                # Write header
-                f.write(f"{book_name} {chapter_num}\n")
-                f.write("=" * 50 + "\n\n")
-
-                # Write each verse
-                for verse_idx, verse_text in enumerate(verses):
-                    verse_num = verse_idx + 1
+                # Write each verse (one per line, no numbering for round-trip compatibility)
+                for verse_text in verses:
                     cleaned_text = clean_verse_text(verse_text)
-                    f.write(f"{verse_num}. {cleaned_text}\n\n")
+                    f.write(f"{cleaned_text}\n")
 
             total_chapters += 1
 

@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bible Reader - Mobile</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            margin: 0;
+            padding: 0;
+            background: white;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2em;
+            font-weight: normal;
+            font-style: italic;
+            display: none;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            display: none;
+        }
+
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-size: 1em;
+            display: none;
+        }
+
+        .loading {
+            background-color: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .controls {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .control-group {
+            margin: 15px 0;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #495057;
+            font-size: 0.9em;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1em;
+            font-family: inherit;
+        }
+
+        .button-group {
+            margin-top: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: transform 0.2s, box-shadow 0.2s;
+            flex: 1;
+            min-width: 100px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+        }
+
+        .output {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .chapter-content {
+            margin: 20px 0;
+        }
+
+        .chapter-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin: 20px 0 15px 0;
+            font-size: 1.4em;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .verse {
+            margin: 18px 0;
+            line-height: 1.9;
+        }
+
+        .verse-number {
+            font-weight: bold;
+            color: #667eea;
+            margin-right: 8px;
+            font-size: 1em;
+            vertical-align: super;
+        }
+
+        .verse-text {
+            color: #212529;
+            font-size: 1.3em;
+        }
+
+        .verse.filtered {
+            background-color: #fff3cd;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 18px 0;
+            border-left: 4px solid #ffc107;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .verse-text {
+                font-size: 1.4em;
+            }
+
+            button {
+                font-size: 1em;
+                padding: 14px 18px;
+            }
+        }
+
+        /* Toggle switch for auto-scroll */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ddd;
+            transition: .4s;
+            border-radius: 30px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        input:checked + .slider {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .toggle-label {
+            font-size: 0.95em;
+            color: #495057;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bible Reader</h1>
+        <div class="subtitle">King James Version</div>
+
+        <div id="status" class="status loading">Loading Bible data...</div>
+
+        <div id="controls" class="controls" style="display:none;">
+            <div class="control-group">
+                <label for="bookSelect">Select Book:</label>
+                <select id="bookSelect">
+                    <option value="">-- Select a Book --</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="chapterSelect">Select Chapter:</label>
+                <select id="chapterSelect" disabled>
+                    <option value="">-- Select --</option>
+                </select>
+            </div>
+
+            <div class="button-group">
+                <button onclick="nextChapter()" class="secondary">Next Chapter →</button>
+                <button onclick="glossSelectedText()" class="secondary" id="glossButton">📖 Gloss</button>
+                <button onclick="toggleFilteredVersesOnly()" class="secondary" id="filterButton" style="display: none;" title="Show filtered verses only">👁️‍🗨️</button>
+            </div>
+
+            <div class="button-group" style="align-items: center;">
+                <button onclick="decreaseFontSize()" class="secondary">A-</button>
+                <button onclick="increaseFontSize()" class="secondary">A+</button>
+                <span class="toggle-label" style="margin-left: 10px;">Auto-Scroll:</span>
+                <label class="switch">
+                    <input type="checkbox" id="autoScrollToggle" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div id="output" class="output"></div>
+    </div>
+
+    <script>
+        let bibleData = null;
+        let verseFilters = null;
+        let currentBookIndex = null;
+        let currentBookName = null;
+        let currentChapter = null;
+        let showFilteredOnly = false;
+
+        // Mapping of abbreviations to full book names
+        const bookNameMapping = {
+            'gn': 'Genesis', 'ex': 'Exodus', 'lv': 'Leviticus', 'nm': 'Numbers', 'dt': 'Deuteronomy',
+            'js': 'Joshua', 'jud': 'Judges', 'rt': 'Ruth', '1sm': '1 Samuel', '2sm': '2 Samuel',
+            '1kgs': '1 Kings', '2kgs': '2 Kings', '1ch': '1 Chronicles', '2ch': '2 Chronicles',
+            'ezr': 'Ezra', 'ne': 'Nehemiah', 'et': 'Esther', 'job': 'Job', 'ps': 'Psalms',
+            'prv': 'Proverbs', 'ec': 'Ecclesiastes', 'so': 'Song of Solomon', 'is': 'Isaiah',
+            'jr': 'Jeremiah', 'lm': 'Lamentations', 'ez': 'Ezekiel', 'dn': 'Daniel', 'ho': 'Hosea',
+            'jl': 'Joel', 'am': 'Amos', 'ob': 'Obadiah', 'jn': 'Jonah', 'mi': 'Micah',
+            'na': 'Nahum', 'hk': 'Habakkuk', 'zp': 'Zephaniah', 'hg': 'Haggai', 'zc': 'Zechariah',
+            'ml': 'Malachi', 'mt': 'Matthew', 'mk': 'Mark', 'lk': 'Luke', 'jo': 'John',
+            'act': 'Acts', 'rm': 'Romans', '1co': '1 Corinthians', '2co': '2 Corinthians',
+            'gl': 'Galatians', 'eph': 'Ephesians', 'ph': 'Philippians', 'cl': 'Colossians',
+            '1ts': '1 Thessalonians', '2ts': '2 Thessalonians', '1tm': '1 Timothy', '2tm': '2 Timothy',
+            'tt': 'Titus', 'phm': 'Philemon', 'hb': 'Hebrews', 'jm': 'James', '1pe': '1 Peter',
+            '2pe': '2 Peter', '1jo': '1 John', '2jo': '2 John', '3jo': '3 John', 'jd': 'Jude',
+            're': 'Revelation'
+        };
+
+        // Load JSON data
+        async function loadBibleData() {
+            const statusEl = document.getElementById('status');
+            const controlsEl = document.getElementById('controls');
+
+            try {
+                statusEl.textContent = 'Loading Bible data...';
+                statusEl.className = 'status loading';
+                statusEl.style.display = 'block';
+
+                // Load both JSON files
+                const [bibleResponse, filterResponse] = await Promise.all([
+                    fetch('https://assets.codepen.io/1075762/en_kjv.json'),
+                    fetch('https://assets.codepen.io/1075762/verse_filters.json')
+                ]);
+
+                if (!bibleResponse.ok) {
+                    throw new Error(`Failed to load Bible data: ${bibleResponse.status}`);
+                }
+
+                bibleData = await bibleResponse.json();
+
+                // Verse filters are optional
+                if (filterResponse.ok) {
+                    verseFilters = await filterResponse.json();
+                    console.log('Verse filters loaded for', Object.keys(verseFilters).length, 'books');
+                } else {
+                    console.log('Verse filters not available');
+                }
+
+                statusEl.className = 'status success';
+                statusEl.textContent = 'Bible data loaded successfully!';
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 2000);
+
+                populateBookSelect();
+                controlsEl.style.display = 'block';
+
+                // Load saved reading position
+                loadReadingPosition();
+
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.textContent = `Failed to load Bible data: ${error.message}`;
+            }
+        }
+
+        function populateBookSelect() {
+            const bookSelect = document.getElementById('bookSelect');
+            bookSelect.innerHTML = '<option value="">-- Select a Book --</option>';
+
+            // Bible data is an array, each element has abbrev and chapters
+            bibleData.forEach((book, index) => {
+                const abbrev = book.abbrev;
+                const fullName = bookNameMapping[abbrev] || abbrev.toUpperCase();
+
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = fullName;
+                option.dataset.abbrev = abbrev;
+                option.dataset.fullName = fullName;
+                bookSelect.appendChild(option);
+            });
+
+            bookSelect.addEventListener('change', function() {
+                if (this.value !== '') {
+                    currentBookIndex = parseInt(this.value);
+                    const selectedOption = this.options[this.selectedIndex];
+                    currentBookName = selectedOption.dataset.fullName;
+                    populateChapterSelect();
+                    // Auto-select first chapter
+                    setTimeout(() => {
+                        const chapterSelect = document.getElementById('chapterSelect');
+                        if (chapterSelect.options.length > 1) {
+                            chapterSelect.value = '0'; // First chapter is at index 0
+                            displayChapter();
+                        }
+                    }, 100);
+                }
+            });
+        }
+
+        function populateChapterSelect() {
+            const chapterSelect = document.getElementById('chapterSelect');
+            chapterSelect.innerHTML = '<option value="">-- Select --</option>';
+
+            if (currentBookIndex === null || !bibleData[currentBookIndex]) return;
+
+            const chapters = bibleData[currentBookIndex].chapters;
+
+            chapters.forEach((chapter, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `Chapter ${index + 1}`;
+                chapterSelect.appendChild(option);
+            });
+
+            chapterSelect.disabled = false;
+
+            chapterSelect.addEventListener('change', function() {
+                if (this.value !== '') {
+                    displayChapter();
+                }
+            });
+        }
+
+        function displayChapter() {
+            const chapterSelect = document.getElementById('chapterSelect');
+            const outputEl = document.getElementById('output');
+            const filterButton = document.getElementById('filterButton');
+
+            if (currentBookIndex === null || chapterSelect.value === '') {
+                outputEl.innerHTML = '<div class="status error">Please select a book and chapter</div>';
+                return;
+            }
+
+            const chapterIndex = parseInt(chapterSelect.value);
+            currentChapter = chapterIndex + 1; // Display chapter numbers start at 1
+            const verses = bibleData[currentBookIndex].chapters[chapterIndex];
+
+            if (!verses) {
+                outputEl.innerHTML = '<div class="status error">Chapter data not found</div>';
+                return;
+            }
+
+            // Check if we have filters for this book and chapter (using full book name)
+            const hasFilters = verseFilters &&
+                               verseFilters[currentBookName] &&
+                               verseFilters[currentBookName][currentChapter.toString()];
+
+            // Show/hide filter button based on whether filters exist
+            filterButton.style.display = hasFilters ? 'inline-block' : 'none';
+
+            let html = `
+                <div class="chapter-content">
+                    <div class="chapter-header">${currentBookName} - Chapter ${currentChapter}</div>
+            `;
+
+            verses.forEach((verseText, index) => {
+                const verseNumber = index + 1;
+
+                // Check if this verse should be displayed
+                if (showFilteredOnly && hasFilters) {
+                    const filterList = verseFilters[currentBookName][currentChapter.toString()];
+                    const isFiltered = filterList.includes(verseNumber);
+
+                    if (!isFiltered) return; // Skip this verse
+                }
+
+                // Check if this verse is in the filtered list (for highlighting)
+                let isHighlighted = false;
+                if (hasFilters) {
+                    const filterList = verseFilters[currentBookName][currentChapter.toString()];
+                    isHighlighted = filterList.includes(verseNumber);
+                }
+
+                html += `
+                    <div class="verse${isHighlighted ? ' filtered' : ''}">
+                        <span class="verse-number">${verseNumber}</span>
+                        <span class="verse-text">${verseText}</span>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+
+            // Add bottom navigation buttons
+            html += `
+                <div style="text-align: center; margin: 30px 0; padding: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button onclick="scrollToTop()" class="secondary" style="font-size: 1.1em; padding: 15px 30px;">
+                        ↑ Back to Top
+                    </button>
+                    <button onclick="nextChapter()" class="secondary" style="font-size: 1.1em; padding: 15px 30px;">
+                        Next Chapter →
+                    </button>
+                </div>
+            `;
+
+            outputEl.innerHTML = html;
+            outputEl.scrollTop = 0;
+
+            // Reapply saved font size
+            applyFontSize();
+
+            // Save reading position
+            saveReadingPosition();
+        }
+
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        function nextChapter() {
+            if (currentBookIndex === null || currentChapter === null) {
+                // Start from Genesis 1 if nothing selected
+                const bookSelect = document.getElementById('bookSelect');
+                if (bookSelect.options.length > 1) {
+                    bookSelect.value = '0';
+                    currentBookIndex = 0;
+                    currentBookName = bookSelect.options[1].dataset.fullName;
+                    populateChapterSelect();
+                    setTimeout(() => {
+                        const chapterSelect = document.getElementById('chapterSelect');
+                        chapterSelect.value = '0';
+                        displayChapter();
+                        window.scrollTo(0, 0);
+                    }, 100);
+                }
+                return;
+            }
+
+            const book = bibleData[currentBookIndex];
+            const totalChapters = book.chapters.length;
+            const currentChapterIndex = currentChapter - 1;
+
+            // Try to move to next chapter
+            if (currentChapterIndex + 1 < totalChapters) {
+                const chapterSelect = document.getElementById('chapterSelect');
+                chapterSelect.value = (currentChapterIndex + 1).toString();
+                displayChapter();
+                window.scrollTo(0, 0);
+            } else {
+                // Move to next book, chapter 1
+                if (currentBookIndex + 1 < bibleData.length) {
+                    currentBookIndex++;
+                    const bookSelect = document.getElementById('bookSelect');
+                    bookSelect.value = currentBookIndex.toString();
+                    currentBookName = bookSelect.options[currentBookIndex + 1].dataset.fullName;
+                    populateChapterSelect();
+
+                    setTimeout(() => {
+                        const chapterSelect = document.getElementById('chapterSelect');
+                        chapterSelect.value = '0';
+                        displayChapter();
+                        window.scrollTo(0, 0);
+                    }, 100);
+                } else {
+                    // Wrap around to first book
+                    currentBookIndex = 0;
+                    const bookSelect = document.getElementById('bookSelect');
+                    bookSelect.value = '0';
+                    currentBookName = bookSelect.options[1].dataset.fullName;
+                    populateChapterSelect();
+
+                    setTimeout(() => {
+                        const chapterSelect = document.getElementById('chapterSelect');
+                        chapterSelect.value = '0';
+                        displayChapter();
+                        window.scrollTo(0, 0);
+                    }, 100);
+                }
+            }
+        }
+
+        function toggleFilteredVersesOnly() {
+            showFilteredOnly = !showFilteredOnly;
+            const filterButton = document.getElementById('filterButton');
+
+            if (showFilteredOnly) {
+                filterButton.textContent = '👁️';
+                filterButton.title = 'Show all verses';
+            } else {
+                filterButton.textContent = '👁️‍🗨️';
+                filterButton.title = 'Show filtered verses only';
+            }
+
+            displayChapter();
+            saveReadingPosition();
+        }
+
+        function glossSelectedText() {
+            const selection = window.getSelection();
+            let selectedText = selection.toString().trim();
+
+            if (!selectedText) {
+                alert('Please highlight some text first before clicking the Gloss button.');
+                return;
+            }
+
+            // Create the gloss prompt
+            const glossPrompt = `Gloss this Bible passage, with brief definitions in parentheses after archaic or unclear words:
+
+${currentBookName} ${currentChapter}
+
+${selectedText}`;
+
+            // Copy to clipboard
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(glossPrompt).then(() => {
+                    // Show success message
+                    const glossButton = document.getElementById('glossButton');
+                    const originalText = glossButton.innerHTML;
+                    glossButton.innerHTML = '✅ Copied!';
+                    glossButton.style.backgroundColor = '#28a745';
+
+                    setTimeout(() => {
+                        glossButton.innerHTML = originalText;
+                        glossButton.style.backgroundColor = '';
+                    }, 2000);
+                }).catch(err => {
+                    alert('Failed to copy to clipboard. Please try again.');
+                    console.error('Clipboard error:', err);
+                });
+            } else {
+                alert('Gloss prompt created (clipboard not available):\n\n' + glossPrompt);
+            }
+        }
+
+        // Save and load reading position
+        function saveReadingPosition() {
+            if (currentBookIndex !== null && currentChapter !== null) {
+                localStorage.setItem('bibleMobileBookIndex', currentBookIndex.toString());
+                localStorage.setItem('bibleMobileChapter', currentChapter.toString());
+                localStorage.setItem('bibleMobileShowFilteredOnly', showFilteredOnly.toString());
+            }
+        }
+
+        function loadReadingPosition() {
+            const savedBookIndex = localStorage.getItem('bibleMobileBookIndex');
+            const savedChapter = localStorage.getItem('bibleMobileChapter');
+            const savedFilterState = localStorage.getItem('bibleMobileShowFilteredOnly');
+
+            if (savedBookIndex !== null && savedChapter !== null) {
+                currentBookIndex = parseInt(savedBookIndex);
+                currentChapter = parseInt(savedChapter);
+                showFilteredOnly = savedFilterState === 'true';
+
+                // Set the book dropdown
+                const bookSelect = document.getElementById('bookSelect');
+                bookSelect.value = currentBookIndex.toString();
+                currentBookName = bookSelect.options[currentBookIndex + 1].dataset.fullName;
+
+                // Populate chapters for this book
+                populateChapterSelect();
+
+                // Set the chapter dropdown and display
+                setTimeout(() => {
+                    const chapterSelect = document.getElementById('chapterSelect');
+                    chapterSelect.value = (currentChapter - 1).toString();
+                    displayChapter();
+                }, 100);
+            }
+        }
+
+        // Font size control
+        let currentFontSize = 1.3;
+
+        function loadFontSize() {
+            const savedSize = localStorage.getItem('bibleMobileFontSize');
+            if (savedSize) {
+                currentFontSize = parseFloat(savedSize);
+            }
+        }
+
+        function saveFontSize() {
+            localStorage.setItem('bibleMobileFontSize', currentFontSize.toString());
+        }
+
+        function decreaseFontSize() {
+            currentFontSize = Math.max(0.8, currentFontSize - 0.1);
+            applyFontSize();
+            saveFontSize();
+        }
+
+        function increaseFontSize() {
+            currentFontSize = Math.min(3.0, currentFontSize + 0.1);
+            applyFontSize();
+            saveFontSize();
+        }
+
+        function applyFontSize() {
+            const outputEl = document.getElementById('output');
+            const verseTexts = outputEl.querySelectorAll('.verse-text');
+
+            verseTexts.forEach(el => {
+                el.style.fontSize = currentFontSize + 'em';
+            });
+        }
+
+        // Auto-scroll functionality
+        let autoScrollEnabled = true; // Enabled by default
+
+        // Scroll down by page height (similar to Page Down)
+        function handleTouchPageDown() {
+            if (!autoScrollEnabled) return;
+
+            const pageHeight = window.innerHeight * 0.9; // Scroll 90% of viewport height
+            window.scrollBy({
+                top: pageHeight,
+                behavior: 'smooth'
+            });
+        }
+
+        // Toggle auto-scroll on/off
+        function toggleAutoScroll() {
+            const toggle = document.getElementById('autoScrollToggle');
+            autoScrollEnabled = toggle.checked;
+
+            // Save preference
+            localStorage.setItem('bibleMobileAutoScroll', autoScrollEnabled.toString());
+        }
+
+        // Load auto-scroll preference
+        function loadAutoScrollPreference() {
+            const savedPref = localStorage.getItem('bibleMobileAutoScroll');
+            const toggle = document.getElementById('autoScrollToggle');
+
+            // Default to true if no saved preference
+            if (savedPref === null) {
+                toggle.checked = true;
+                autoScrollEnabled = true;
+            } else {
+                toggle.checked = savedPref === 'true';
+                autoScrollEnabled = savedPref === 'true';
+            }
+        }
+
+        // Handle touch and click events for auto-scroll
+        function handlePaneClick(event) {
+            // Don't trigger scroll if clicking on a button or interactive element
+            if (event.target.tagName === 'BUTTON' ||
+                event.target.tagName === 'SELECT' ||
+                event.target.tagName === 'INPUT' ||
+                event.target.closest('button') ||
+                event.target.closest('.controls')) {
+                return;
+            }
+
+            if (autoScrollEnabled) {
+                handleTouchPageDown();
+            }
+        }
+
+        // Add event listeners for touch and click
+        document.addEventListener('touchstart', handlePaneClick);
+        document.addEventListener('click', handlePaneClick);
+
+        // Add keyboard event listener for Enter key to go to next chapter
+        document.addEventListener('keydown', function(event) {
+            // Check if Enter key is pressed (keyCode 13 or key 'Enter')
+            if (event.key === 'Enter' || event.keyCode === 13) {
+                // Don't trigger if user is typing in a select element
+                if (event.target.tagName === 'SELECT' || event.target.tagName === 'INPUT') {
+                    return;
+                }
+
+                event.preventDefault();
+                nextChapter();
+            }
+        });
+
+        // Load data when page loads
+        window.addEventListener('DOMContentLoaded', function() {
+            loadFontSize();
+            loadBibleData();
+            loadAutoScrollPreference();
+
+            // Setup toggle listener
+            const toggle = document.getElementById('autoScrollToggle');
+            toggle.addEventListener('change', toggleAutoScroll);
+        });
+    </script>
+</body>
+</html>
