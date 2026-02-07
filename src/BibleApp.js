@@ -2444,30 +2444,9 @@ const BibleApp = () => {
   }, []);
 
   const handlePaneClick = useCallback((event, pane) => {
-    // Don't trigger scroll if clicking on a button or interactive element
-    if (event.target.tagName === 'BUTTON' || 
-        event.target.closest('button') ||
-        event.target.tagName === 'INPUT' ||
-        event.target.tagName === 'SELECT' ||
-        event.target.tagName === 'A' ||
-        event.target.closest('a')) {
-      return;
-    }
-
-    if (touchScrollMode === 'disabled') return;
-    
-    if (touchScrollMode === 'right-only' && pane === 'left') return;
-    if (touchScrollMode === 'right-independent' && pane === 'left') return;
-    
-    if (touchScrollMode === 'right-independent' && pane === 'right') {
-      const scrollAmount = 0.9;
-      handleIndependentRightScroll(scrollAmount);
-      return;
-    }
-    
-    const scrollAmount = touchScrollMode === 'right-reduced' && pane === 'right' ? 0.5 : 0.9;
-    handleTouchPageDown(scrollAmount);
-  }, [touchScrollMode, handleTouchPageDown, handleIndependentRightScroll]);
+    // Click-to-page-down disabled
+    return;
+  }, []);
 
   // Centralized Home function to reset all scroll positions and state
   const handleHomeReset = useCallback(() => {
@@ -4339,7 +4318,7 @@ const BibleApp = () => {
             ref={chapterContentRef} 
             className={`${isMobileView && !isTabletView && showKJVOnMobile ? 'hidden' : isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'} relative`}
             onClick={(event) => handlePaneClick(event, 'left')}
-            style={{ cursor: touchScrollMode !== 'disabled' && touchScrollMode === 'both-panes' ? 'pointer' : 'default' }}
+            style={{ cursor: 'default' }}
           >
             {selectedBook && selectedChapter > 0 && (
               <div>
@@ -4657,7 +4636,7 @@ const BibleApp = () => {
                 ref={kjvContentRef} 
                 className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'}`}
                 onClick={(event) => handlePaneClick(event, 'right')}
-                style={{ cursor: touchScrollMode !== 'disabled' && (touchScrollMode === 'right-only' || touchScrollMode === 'both-panes' || touchScrollMode === 'right-reduced' || touchScrollMode === 'right-independent') ? 'pointer' : 'default' }}
+                style={{ cursor: 'default' }}
               >
                 {selectedBook && selectedChapter > 0 && (
                 <div>
