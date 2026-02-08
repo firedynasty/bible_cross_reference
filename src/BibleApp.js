@@ -4054,7 +4054,12 @@ const BibleApp = () => {
               onTranslationChange={setRightPaneTranslation}
               verseFilterData={verseFilterData}
               showFilteredVersesOnly={showFilteredVersesOnly}
-              setShowFilteredVersesOnly={setShowFilteredVersesOnly}
+              setShowFilteredVersesOnly={(val) => {
+                setShowFilteredVersesOnly(val);
+                // Scroll panes to top so the filter change is immediately visible
+                if (chapterContentRef.current) chapterContentRef.current.scrollTop = 0;
+                if (kjvContentRef.current) kjvContentRef.current.scrollTop = 0;
+              }}
               filterFileName={filterFileName}
               handleVerseFilterFile={handleVerseFilterFile}
               viewMode={viewMode}
