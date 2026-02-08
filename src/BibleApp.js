@@ -984,6 +984,69 @@ const getRelativeTime = (timestamp) => {
   return `${Math.floor(diff / 86400000)}d ago`;
 };
 
+// Reference collections data (outside component to avoid re-creation)
+const referenceCollections = {
+  "Rest": `Matthew 11:28-30
+2 Corinthians 1:3-4
+Psalm 23
+Matthew 5:4
+Psalm 34:18
+Lamentations 3:22-26
+John 14:1-3
+Romans 8:35, 37-39`,
+  "Comfort": `John 3:16
+Matthew 4
+Lamentations 1
+2 Corinthians 1:3-6
+Matthew 11:28
+John 14:1
+Joshua 1:9
+Matthew 5:4
+Isaiah 61:1-3
+John 11:25
+1 Corinthians 15:55-58
+1 Thessalonians 4:13-18
+Psalms 147:3`,
+  "Strength": `Exodus 15:1-4
+Nehemiah 8:10
+Psalm 46:1-3
+Psalm 119:28
+Proverbs 18:10
+Isaiah 40:29-31
+Isaiah 41:9-10
+2 Corinthians 12:9-10
+Ephesians 6:10-11
+Philippians 4:11-13`,
+  "Anxiety": `Philippians 4:6-7
+Isaiah 41:10
+Psalm 23:4
+1 Peter 5:7
+Proverbs 3:5-6
+Matthew 6:34`,
+  "Faith": `Hebrews 11:1
+Romans 10:17
+Mark 11:22-24
+Matthew 17:20
+2 Corinthians 5:7
+Galatians 2:20
+James 1:6
+1 Peter 1:7-9`,
+  "Love": `1 Corinthians 13:4-8
+John 3:16
+Romans 8:38-39
+1 John 4:7-8
+John 15:12-13
+Ephesians 3:17-19
+Song of Solomon 8:6-7`,
+  "Wisdom": `Proverbs 1:7
+James 1:5
+Proverbs 3:13-18
+Proverbs 9:10
+Colossians 2:2-3
+Ecclesiastes 7:12
+Psalm 111:10`
+};
+
 // Main component
 const BibleApp = () => {
   const [bibleData, setBibleData] = useState(null);
@@ -1169,6 +1232,75 @@ const BibleApp = () => {
   const [filterFileName, setFilterFileName] = useState(''); // Name of the uploaded file
   const [allVerseFilters, setAllVerseFilters] = useState(null); // Stores all verse filters from JSON
   const [isManualUpload, setIsManualUpload] = useState(false); // Track if current filter is from manual upload
+
+  // State for reference prompt and collection modal
+  const [showRefPrompt, setShowRefPrompt] = useState(false);
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
+  const [refPromptValue, setRefPromptValue] = useState('');
+
+  // Parse a single Bible reference string like "Psalm 23:4" or "Matthew 11:28-30"
+  const parseSingleBibleRef = useCallback((refStr) => {
+    const bookNameToAbbrev = {
+      'genesis': 'gn', 'exodus': 'ex', 'leviticus': 'lv', 'numbers': 'nm', 'deuteronomy': 'dt',
+      'joshua': 'js', 'judges': 'jud', 'ruth': 'rt', '1 samuel': '1sm', '2 samuel': '2sm',
+      '1 kings': '1kgs', '2 kings': '2kgs', '1 chronicles': '1ch', '2 chronicles': '2ch',
+      'ezra': 'ezr', 'nehemiah': 'ne', 'esther': 'et', 'job': 'job', 'psalm': 'ps', 'psalms': 'ps',
+      'proverbs': 'prv', 'ecclesiastes': 'ec', 'song of solomon': 'so', 'isaiah': 'is',
+      'jeremiah': 'jr', 'lamentations': 'lm', 'ezekiel': 'ez', 'daniel': 'dn',
+      'hosea': 'ho', 'joel': 'jl', 'amos': 'am', 'obadiah': 'ob', 'jonah': 'jn',
+      'micah': 'mi', 'nahum': 'na', 'habakkuk': 'hk', 'zephaniah': 'zp', 'haggai': 'hg',
+      'zechariah': 'zc', 'malachi': 'ml', 'matthew': 'mt', 'mark': 'mk', 'luke': 'lk',
+      'john': 'jo', 'acts': 'act', 'romans': 'rm', '1 corinthians': '1co', '2 corinthians': '2co',
+      'galatians': 'gl', 'ephesians': 'eph', 'philippians': 'ph', 'colossians': 'cl',
+      '1 thessalonians': '1ts', '2 thessalonians': '2ts', '1 timothy': '1tm', '2 timothy': '2tm',
+      'titus': 'tt', 'philemon': 'phm', 'hebrews': 'hb', 'james': 'jm', '1 peter': '1pe',
+      '2 peter': '2pe', '1 john': '1jo', '2 john': '2jo', '3 john': '3jo', 'jude': 'jd',
+      'revelation': 're'
+    };
+
+    const trimmed = refStr.trim();
+    if (!trimmed) return null;
+
+    // Match patterns like "Matthew 11:28-30" or "Psalm 23" or "1 Corinthians 13:4-8"
+    const match = trimmed.match(/^(\d?\s*[A-Za-z]+(?:\s+of\s+[A-Za-z]+)?)\s+(\d+)(?::(.+))?$/i);
+    if (!match) return null;
+
+    const bookName = match[1].trim().toLowerCase();
+    const chapter = parseInt(match[2]);
+    const abbrev = bookNameToAbbrev[bookName];
+    if (!abbrev) return null;
+
+    return { abbrev, chapter };
+  }, []);
+
+  // Navigate to a Bible reference string
+  const navigateToRef = useCallback((refStr) => {
+    const parsed = parseSingleBibleRef(refStr);
+    if (!parsed || !bibleData) return;
+
+    const book = bibleData.find(b => b.abbrev === parsed.abbrev);
+    if (book) {
+      setSelectedBook(book);
+      setSelectedChapter(parsed.chapter);
+      setPrimaryReading({ book, chapter: parsed.chapter });
+      setIsViewingCrossRef(false);
+      if (chapterContentRef.current) chapterContentRef.current.scrollTop = 0;
+      if (kjvContentRef.current) kjvContentRef.current.scrollTop = 0;
+      lastPrimaryScrollPos.current = 0;
+      scrollSyncInitialized.current = false;
+    }
+  }, [bibleData, parseSingleBibleRef]);
+
+  // Load a collection by name - navigates to first reference
+  const loadCollection = useCallback((collectionName) => {
+    const refs = referenceCollections[collectionName];
+    if (!refs) return;
+    const lines = refs.split('\n').map(l => l.trim()).filter(l => l);
+    if (lines.length > 0) {
+      navigateToRef(lines[0]);
+    }
+    setShowCollectionModal(false);
+  }, [navigateToRef]);
 
   // State to track scroll position for mobile view during translation changes
   // eslint-disable-next-line no-unused-vars
@@ -3862,6 +3994,24 @@ const BibleApp = () => {
                   +
                 </button>
 
+                {/* Reference Prompt Button */}
+                <button
+                  onClick={() => setShowRefPrompt(true)}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-500 text-white hover:bg-blue-600 font-semibold"
+                  title="Go to a Bible reference"
+                >
+                  Ref
+                </button>
+
+                {/* Collection Modal Button */}
+                <button
+                  onClick={() => setShowCollectionModal(true)}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
+                  title="Select a verse collection"
+                >
+                  Col
+                </button>
+
                 {/* Chapter Navigation Input */}
                 <input 
                   type="number" 
@@ -4937,6 +5087,92 @@ const BibleApp = () => {
           )}
         </div>
       </div>
+      {/* Reference Prompt Modal */}
+      {showRefPrompt && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowRefPrompt(false); }}
+        >
+          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ margin: '0 0 16px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>Go to Reference</h3>
+            <input
+              type="text"
+              value={refPromptValue}
+              onChange={(e) => setRefPromptValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && refPromptValue.trim()) {
+                  navigateToRef(refPromptValue);
+                  setRefPromptValue('');
+                  setShowRefPrompt(false);
+                }
+              }}
+              placeholder="e.g. Psalm 23, Matthew 11:28"
+              autoFocus
+              style={{
+                width: '100%', padding: '12px', fontSize: '16px', border: `2px solid ${isDarkMode ? '#555' : '#ccc'}`,
+                borderRadius: 8, background: isDarkMode ? '#333' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333',
+                boxSizing: 'border-box'
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button
+                onClick={() => {
+                  if (refPromptValue.trim()) {
+                    navigateToRef(refPromptValue);
+                    setRefPromptValue('');
+                    setShowRefPrompt(false);
+                  }
+                }}
+                style={{ flex: 1, padding: '12px', fontSize: 15, border: 'none', borderRadius: 8, background: '#007bff', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Go
+              </button>
+              <button
+                onClick={() => { setShowRefPrompt(false); setRefPromptValue(''); }}
+                style={{ flex: 1, padding: '12px', fontSize: 15, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Collection Modal */}
+      {showCollectionModal && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowCollectionModal(false); }}
+        >
+          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ margin: '0 0 16px', fontSize: '1.2em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>Select a Collection</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {Object.keys(referenceCollections).map((name) => (
+                <button
+                  key={name}
+                  onClick={() => loadCollection(name)}
+                  style={{
+                    padding: '14px 18px', fontSize: 16, border: `2px solid ${isDarkMode ? '#444' : '#e0e0e0'}`,
+                    borderRadius: 10, background: isDarkMode ? '#333' : 'white', cursor: 'pointer',
+                    textAlign: 'left', color: isDarkMode ? '#e0e0e0' : '#333', fontWeight: 500,
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => { e.target.style.borderColor = '#667eea'; e.target.style.background = isDarkMode ? '#3a3a5a' : '#f0f2ff'; }}
+                  onMouseLeave={(e) => { e.target.style.borderColor = isDarkMode ? '#444' : '#e0e0e0'; e.target.style.background = isDarkMode ? '#333' : 'white'; }}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowCollectionModal(false)}
+              style={{ marginTop: 16, width: '100%', padding: 12, fontSize: 15, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,0 +1,13 @@
+Summary - February 8, 2026
+
+Added Reference and Collection buttons with modal dialogs to the React Bible app.
+
+Changes:
+- Added two new buttons (Ref, Col) in the top bar next to font size controls
+- "Ref" button (blue): Opens a prompt modal to type a Bible reference (e.g. Psalm 23, Matthew 11:28) and navigate directly to it
+- "Col" button (purple): Opens a modal to select from themed verse collections (Rest, Comfort, Strength, Anxiety, Faith, Love, Wisdom)
+- Selecting a collection navigates to the first reference in that collection
+- Both modals support dark mode and can be dismissed by clicking outside or pressing Cancel
+- Reference input auto-focuses and supports Enter key to navigate
+- Added parseSingleBibleRef helper to parse reference strings into book abbreviation + chapter
+- Moved referenceCollections data outside component to avoid unnecessary re-creation
