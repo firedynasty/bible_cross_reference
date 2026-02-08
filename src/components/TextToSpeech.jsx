@@ -951,7 +951,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       <div className="relative">
         <button
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="px-2 py-0.5 rounded focus:outline-none bg-purple-100 text-purple-700 hover:bg-purple-200 flex items-center text-xs"
+          className="hidden px-2 py-0.5 rounded focus:outline-none bg-purple-100 text-purple-700 hover:bg-purple-200 flex items-center text-xs"
           title={`Select verse to read in ${currentLanguageInfo.name}`}
         >
           Verse {selectedVerse}
@@ -987,7 +987,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       <button
         onClick={scrollToNextVerse}
         disabled={selectedVerse >= maxVerses}
-        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
+        className={`hidden px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
           selectedVerse >= maxVerses
             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
             : 'bg-green-100 text-green-700 hover:bg-green-200'
@@ -1010,7 +1010,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
             speakVerse();
           }
         }}
-        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
+        className={`hidden px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
           isSpeaking
             ? 'bg-red-100 text-red-700 hover:bg-red-200'
             : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
@@ -1039,9 +1039,9 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       {/* Repeat Current Verse Button */}
       <button
         onClick={repeatCurrentVerse}
-        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
-          isSpeaking 
-            ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+        className={`hidden px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
+          isSpeaking
+            ? 'bg-red-100 text-red-700 hover:bg-red-200'
             : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
         }`}
         title={isSpeaking ? "Stop reading" : `Repeat selected verse in ${currentLanguageInfo.name}`}
