@@ -947,6 +947,23 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
 
   return (
     <div className="flex items-center gap-2">
+      {/* Copy Pane 2 to Clipboard Button */}
+      <button
+        onClick={async () => {
+          if (!verses.length) return;
+          const text = verses.map((v, i) => `${i + 1}. ${v}`).join('\n');
+          try {
+            await navigator.clipboard.writeText(text);
+          } catch (err) {
+            console.warn('Clipboard write failed:', err);
+          }
+        }}
+        className="px-2 py-0.5 rounded focus:outline-none flex items-center text-xs bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+        title="Copy pane 2 contents to clipboard"
+      >
+        Copy
+      </button>
+
       {/* Verse Dropdown */}
       <div className="relative">
         <button
