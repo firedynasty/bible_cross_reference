@@ -636,14 +636,14 @@ const NavigationPlaceholder = ({
           {viewMode === 'interleaved' ? '⇅ Interleaved' : '⇔ Side-by-Side'}
         </button>
 
-        {/* Touch Options Cycling Button */}
+        {/* Touch Options Cycling Button - hidden */}
         <button
           onClick={() => {
             const currentIndex = touchScrollModes.findIndex(mode => mode.id === touchScrollMode);
             const nextIndex = (currentIndex + 1) % touchScrollModes.length;
             onTouchScrollModeChange(touchScrollModes[nextIndex].id);
           }}
-          className="ml-2 px-2 py-0.5 rounded focus:outline-none bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center"
+          className="hidden ml-2 px-2 py-0.5 rounded focus:outline-none bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center"
           title={`Current: ${touchScrollModes.find(mode => mode.id === touchScrollMode)?.label || 'Unknown'} - Click to cycle through touch options`}
         >
           {touchScrollModes.find(mode => mode.id === touchScrollMode)?.label || 'Disabled'}
@@ -1236,6 +1236,7 @@ const BibleApp = () => {
   // State for reference prompt and collection modal
   const [showRefPrompt, setShowRefPrompt] = useState(false);
   const [showCollectionModal, setShowCollectionModal] = useState(false);
+  const [expandedCollection, setExpandedCollection] = useState(null);
   const [refPromptValue, setRefPromptValue] = useState('');
 
   // Parse a single Bible reference string like "Psalm 23:4" or "Matthew 11:28-30"
@@ -4074,8 +4075,8 @@ const BibleApp = () => {
               <select 
                 value={selectedDropdownTranslation}
                 onChange={handleTranslationChange}
-                className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded px-2 py-1 text-sm max-w-xs`}
-                style={{ width: "auto" }}
+                className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded px-2 py-1 text-sm`}
+                style={{ width: "auto", maxWidth: "150px" }}
                 id="translationSelector"
               >
                 {translations && translations.map(translation => (
@@ -4112,7 +4113,7 @@ const BibleApp = () => {
                   <BookOpen className="h-3 w-3" />
                   <span className="text-xs font-bold ml-0.5 mr-1">2</span>
                 </span>
-                Apply (for read)
+                Apply
               </button>
 
               {/* Book Selection Dropdown */}
@@ -5167,30 +5168,53 @@ const BibleApp = () => {
       {showCollectionModal && (
         <div
           style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-          onClick={(e) => { if (e.target === e.currentTarget) setShowCollectionModal(false); }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowCollectionModal(false); setExpandedCollection(null); } }}
         >
-          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400, maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '1.2em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>Select a Collection</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {Object.keys(referenceCollections).map((name) => (
-                <button
-                  key={name}
-                  onClick={() => loadCollection(name)}
-                  style={{
-                    padding: '14px 18px', fontSize: 16, border: `2px solid ${isDarkMode ? '#444' : '#e0e0e0'}`,
-                    borderRadius: 10, background: isDarkMode ? '#333' : 'white', cursor: 'pointer',
-                    textAlign: 'left', color: isDarkMode ? '#e0e0e0' : '#333', fontWeight: 500,
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => { e.target.style.borderColor = '#667eea'; e.target.style.background = isDarkMode ? '#3a3a5a' : '#f0f2ff'; }}
-                  onMouseLeave={(e) => { e.target.style.borderColor = isDarkMode ? '#444' : '#e0e0e0'; e.target.style.background = isDarkMode ? '#333' : 'white'; }}
-                >
-                  {name}
-                </button>
+                <div key={name}>
+                  <button
+                    onClick={() => setExpandedCollection(expandedCollection === name ? null : name)}
+                    style={{
+                      width: '100%', padding: '14px 18px', fontSize: 16, border: `2px solid ${expandedCollection === name ? '#667eea' : (isDarkMode ? '#444' : '#e0e0e0')}`,
+                      borderRadius: expandedCollection === name ? '10px 10px 0 0' : 10, background: expandedCollection === name ? (isDarkMode ? '#3a3a5a' : '#f0f2ff') : (isDarkMode ? '#333' : 'white'), cursor: 'pointer',
+                      textAlign: 'left', color: isDarkMode ? '#e0e0e0' : '#333', fontWeight: 600,
+                      transition: 'all 0.2s', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                    }}
+                  >
+                    {name}
+                    <span style={{ fontSize: 12, opacity: 0.6 }}>{expandedCollection === name ? '▲' : '▼'}</span>
+                  </button>
+                  {expandedCollection === name && (
+                    <div style={{
+                      border: `2px solid #667eea`, borderTop: 'none', borderRadius: '0 0 10px 10px',
+                      background: isDarkMode ? '#1e1e2e' : '#fafbff', padding: '8px 0'
+                    }}>
+                      {referenceCollections[name].split('\n').map(l => l.trim()).filter(l => l).map((ref, i) => (
+                        <button
+                          key={i}
+                          onClick={() => { navigateToRef(ref); setShowCollectionModal(false); setExpandedCollection(null); }}
+                          style={{
+                            display: 'block', width: '100%', padding: '8px 18px', fontSize: 14,
+                            border: 'none', background: 'transparent', cursor: 'pointer',
+                            textAlign: 'left', color: isDarkMode ? '#a0b0ff' : '#3355cc', fontWeight: 400,
+                            transition: 'background 0.15s'
+                          }}
+                          onMouseEnter={(e) => { e.target.style.background = isDarkMode ? '#2a2a4a' : '#e8ecff'; }}
+                          onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
+                        >
+                          {ref}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
             <button
-              onClick={() => setShowCollectionModal(false)}
+              onClick={() => { setShowCollectionModal(false); setExpandedCollection(null); }}
               style={{ marginTop: 16, width: '100%', padding: 12, fontSize: 15, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}
             >
               Cancel
