@@ -1241,6 +1241,7 @@ const BibleApp = () => {
   // Parse a single Bible reference string like "Psalm 23:4" or "Matthew 11:28-30"
   const parseSingleBibleRef = useCallback((refStr) => {
     const bookNameToAbbrev = {
+      // Full names
       'genesis': 'gn', 'exodus': 'ex', 'leviticus': 'lv', 'numbers': 'nm', 'deuteronomy': 'dt',
       'joshua': 'js', 'judges': 'jud', 'ruth': 'rt', '1 samuel': '1sm', '2 samuel': '2sm',
       '1 kings': '1kgs', '2 kings': '2kgs', '1 chronicles': '1ch', '2 chronicles': '2ch',
@@ -1255,7 +1256,31 @@ const BibleApp = () => {
       '1 thessalonians': '1ts', '2 thessalonians': '2ts', '1 timothy': '1tm', '2 timothy': '2tm',
       'titus': 'tt', 'philemon': 'phm', 'hebrews': 'hb', 'james': 'jm', '1 peter': '1pe',
       '2 peter': '2pe', '1 john': '1jo', '2 john': '2jo', '3 john': '3jo', 'jude': 'jd',
-      'revelation': 're'
+      'revelation': 're',
+      // Short abbreviations
+      'gen': 'gn', 'exo': 'ex', 'exod': 'ex', 'lev': 'lv', 'num': 'nm', 'deut': 'dt', 'deu': 'dt',
+      'josh': 'js', 'jos': 'js', 'judg': 'jud',
+      '1sam': '1sm', '1 sam': '1sm', '2sam': '2sm', '2 sam': '2sm',
+      '1kgs': '1kgs', '1 kgs': '1kgs', '2kgs': '2kgs', '2 kgs': '2kgs',
+      '1chr': '1ch', '1 chr': '1ch', '2chr': '2ch', '2 chr': '2ch',
+      'neh': 'ne', 'est': 'et', 'ps': 'ps', 'psa': 'ps',
+      'prov': 'prv', 'pro': 'prv', 'eccl': 'ec', 'ecc': 'ec',
+      'song': 'so', 'sos': 'so', 'songs': 'so',
+      'isa': 'is', 'jer': 'jr', 'lam': 'lm', 'ezek': 'ez', 'eze': 'ez',
+      'dan': 'dn', 'hos': 'ho', 'oba': 'ob', 'ob': 'ob', 'jon': 'jn',
+      'mic': 'mi', 'nah': 'na', 'hab': 'hk', 'zeph': 'zp', 'zep': 'zp',
+      'hag': 'hg', 'zech': 'zc', 'zec': 'zc', 'mal': 'ml',
+      'matt': 'mt', 'mat': 'mt', 'mrk': 'mk', 'luk': 'lk',
+      'joh': 'jo', 'jn': 'jo', 'rom': 'rm',
+      '1cor': '1co', '1 cor': '1co', '2cor': '2co', '2 cor': '2co',
+      'gal': 'gl', 'phil': 'ph', 'php': 'ph', 'col': 'cl',
+      '1thess': '1ts', '1 thess': '1ts', '2thess': '2ts', '2 thess': '2ts',
+      '1tim': '1tm', '1 tim': '1tm', '2tim': '2tm', '2 tim': '2tm',
+      'tit': 'tt', 'phlm': 'phm', 'heb': 'hb',
+      'jas': 'jm', 'jam': 'jm',
+      '1pet': '1pe', '1 pet': '1pe', '2pet': '2pe', '2 pet': '2pe',
+      '1jn': '1jo', '1 jn': '1jo', '2jn': '2jo', '2 jn': '2jo', '3jn': '3jo', '3 jn': '3jo',
+      'rev': 're', 'revelations': 're'
     };
 
     const trimmed = refStr.trim();
@@ -5106,7 +5131,7 @@ const BibleApp = () => {
                   setShowRefPrompt(false);
                 }
               }}
-              placeholder="e.g. Psalm 23, Matthew 11:28"
+              placeholder="e.g. Ps 23, Matt 11:28, Gen 1"
               autoFocus
               style={{
                 width: '100%', padding: '12px', fontSize: '16px', border: `2px solid ${isDarkMode ? '#555' : '#ccc'}`,
