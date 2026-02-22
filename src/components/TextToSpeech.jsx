@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { ChevronDown, ChevronRight, Play, SkipForward } from 'lucide-react';
 
-const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData }, ref) => {
+const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse }, ref) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -947,9 +947,24 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
 
   return (
     <div className="flex items-center gap-2">
-      {/* Copy Pane 2 to Clipboard Button */}
+      {/* Copy to Clipboard Button - copies last grid verse (Chinese) or pane 2 */}
       <button
         onClick={async () => {
+          // If a verse was last read from the grid, copy that Chinese verse
+          if (lastGridVerse && chineseBibleData) {
+            const chBook = chineseBibleData.find(b => b.abbrev === currentBook);
+            const chVerses = chBook && chBook.chapters[(currentChapter || 1) - 1] ? chBook.chapters[(currentChapter || 1) - 1] : [];
+            const verseText = chVerses[lastGridVerse - 1];
+            if (verseText) {
+              try {
+                await navigator.clipboard.writeText(verseText);
+              } catch (err) {
+                console.warn('Clipboard write failed:', err);
+              }
+              return;
+            }
+          }
+          // Fallback: copy pane 2 contents
           if (!verses.length) return;
           const text = verses.map((v, i) => `${i + 1}. ${v}`).join('\n');
           try {
@@ -958,10 +973,10 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
             console.warn('Clipboard write failed:', err);
           }
         }}
-        className="px-2 py-0.5 rounded focus:outline-none flex items-center text-xs bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
-        title="Copy pane 2 contents to clipboard"
+        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${lastGridVerse ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'}`}
+        title={lastGridVerse ? `Copy Chinese verse ${lastGridVerse} to clipboard` : "Copy pane 2 contents to clipboard"}
       >
-        Copy
+        Copy{lastGridVerse ? ` ${lastGridVerse}` : ''}
       </button>
 
       {/* Chinese Verse Copy Dropdown */}

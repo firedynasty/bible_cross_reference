@@ -438,7 +438,8 @@ const NavigationPlaceholder = ({
   viewMode,
   onViewModeToggle,
   onShowVerseGrid,
-  chineseBibleData
+  chineseBibleData,
+  lastGridVerse
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -698,6 +699,7 @@ const NavigationPlaceholder = ({
           translations={translations}
           onTranslationChange={onTranslationChange}
           chineseBibleData={chineseBibleData}
+          lastGridVerse={lastGridVerse}
         />
         
         {/* To Clipboard Button - Hidden */}
@@ -1247,6 +1249,7 @@ const BibleApp = () => {
   const [showVerseGrid, setShowVerseGrid] = useState(false);
   const [speakingVerseNumber, setSpeakingVerseNumber] = useState(null);
   const [chineseBibleData, setChineseBibleData] = useState(null);
+  const [lastGridVerse, setLastGridVerse] = useState(null);
   const gridSpeechIdRef = useRef(0);
 
   // Parse a single Bible reference string like "Psalm 23:4" or "Matthew 11:28-30"
@@ -1559,6 +1562,7 @@ const BibleApp = () => {
     window.speechSynthesis.cancel();
     const speechId = ++gridSpeechIdRef.current;
     setSpeakingVerseNumber({ verse: verseNumber, lang });
+    setLastGridVerse(verseNumber);
 
     const langCode = lang === 'cantonese' ? 'zh-HK' : 'zh-CN';
 
@@ -4301,6 +4305,7 @@ const BibleApp = () => {
               onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : 'side-by-side')}
               onShowVerseGrid={() => setShowVerseGrid(true)}
               chineseBibleData={chineseBibleData}
+              lastGridVerse={lastGridVerse}
             />
           </div>
 
@@ -4343,6 +4348,7 @@ const BibleApp = () => {
               onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : 'side-by-side')}
               onShowVerseGrid={() => setShowVerseGrid(true)}
               chineseBibleData={chineseBibleData}
+              lastGridVerse={lastGridVerse}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
                   const bookObj = bibleData.find(b => b.abbrev === book);
