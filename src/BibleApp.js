@@ -436,7 +436,9 @@ const NavigationPlaceholder = ({
   filterFileName,
   handleVerseFilterFile,
   viewMode,
-  onViewModeToggle
+  onViewModeToggle,
+  onShowVerseGrid,
+  chineseBibleData
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -695,6 +697,7 @@ const NavigationPlaceholder = ({
           speechVolume={speechVolume}
           translations={translations}
           onTranslationChange={onTranslationChange}
+          chineseBibleData={chineseBibleData}
         />
         
         {/* To Clipboard Button - Hidden */}
@@ -1174,7 +1177,8 @@ const BibleApp = () => {
   const [showGlosses, setShowGlosses] = useState(true);
 
   // View mode control (side-by-side or interleaved)
-  const [viewMode, setViewMode] = useState('side-by-side'); // 'side-by-side' or 'interleaved'
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('bibleAppViewMode') || 'side-by-side'); // 'side-by-side' or 'interleaved'
+  useEffect(() => { localStorage.setItem('bibleAppViewMode', viewMode); }, [viewMode]);
 
   // Mobile responsiveness states
   const [showSidebar, setShowSidebar] = useState(false);
@@ -1238,6 +1242,12 @@ const BibleApp = () => {
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [expandedCollection, setExpandedCollection] = useState(null);
   const [refPromptValue, setRefPromptValue] = useState('');
+
+  // State for Verse Grid TTS Modal
+  const [showVerseGrid, setShowVerseGrid] = useState(false);
+  const [speakingVerseNumber, setSpeakingVerseNumber] = useState(null);
+  const [chineseBibleData, setChineseBibleData] = useState(null);
+  const gridSpeechIdRef = useRef(0);
 
   // Parse a single Bible reference string like "Psalm 23:4" or "Matthew 11:28-30"
   const parseSingleBibleRef = useCallback((refStr) => {
@@ -1406,6 +1416,31 @@ const BibleApp = () => {
     }
   }, [selectedBook, isManualUpload, verseFilterData]);
 
+  // Load Chinese CUV data for Verse Grid TTS (independent of pane translations)
+  useEffect(() => {
+    const loadChineseData = async () => {
+      try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}/zh_cuv_no_space.json`);
+        if (response.ok) {
+          const data = await response.json();
+          setChineseBibleData(data);
+        }
+      } catch (err) {
+        console.error('Failed to load Chinese CUV data for verse grid:', err);
+      }
+    };
+    loadChineseData();
+  }, []);
+
+  // Cancel speech when chapter/book changes while verse grid is open
+  useEffect(() => {
+    if (showVerseGrid) {
+      window.speechSynthesis.cancel();
+      setSpeakingVerseNumber(null);
+    }
+  }, [selectedBook, selectedChapter]);
+
   // Effect to detect mobile and tablet screen sizes and handle sidebar visibility
   useEffect(() => {
     const checkDeviceView = () => {
@@ -1509,6 +1544,52 @@ const BibleApp = () => {
     };
     
     return bookNames[abbrev] || abbrev;
+  };
+
+  // Speak a single verse in Mandarin or Cantonese (for Verse Grid sidebar)
+  const speakVerseInGrid = (verseNumber, lang = 'mandarin') => {
+    if (!chineseBibleData || !primaryReading.book) return;
+    const abbrev = primaryReading.book.abbrev;
+    const chapterIdx = (primaryReading.chapter || 1) - 1;
+    const bookObj = chineseBibleData.find(b => b.abbrev === abbrev);
+    if (!bookObj || !bookObj.chapters[chapterIdx]) return;
+    const verseText = bookObj.chapters[chapterIdx][verseNumber - 1];
+    if (!verseText) return;
+
+    window.speechSynthesis.cancel();
+    const speechId = ++gridSpeechIdRef.current;
+    setSpeakingVerseNumber({ verse: verseNumber, lang });
+
+    const langCode = lang === 'cantonese' ? 'zh-HK' : 'zh-CN';
+
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(verseText);
+      utterance.lang = langCode;
+      utterance.rate = 0.8;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        let voice = voices.find(v => v.lang === langCode && v.name.includes('Google'));
+        if (!voice) voice = voices.find(v => v.lang === langCode && (v.name.includes('Enhanced') || v.name.includes('Premium')));
+        if (!voice) voice = voices.find(v => v.lang === langCode);
+        if (!voice && lang === 'cantonese') voice = voices.find(v => v.lang === 'yue' || v.lang === 'yue-HK' || v.lang.startsWith('yue'));
+        if (!voice) voice = voices.find(v => v.lang.startsWith('zh'));
+        if (voice) utterance.voice = voice;
+      }
+
+      utterance.onend = () => { if (gridSpeechIdRef.current === speechId) setSpeakingVerseNumber(null); };
+      utterance.onerror = () => { if (gridSpeechIdRef.current === speechId) setSpeakingVerseNumber(null); };
+      window.speechSynthesis.speak(utterance);
+    }, 100);
+  };
+
+  // Close verse grid and cancel speech
+  const closeVerseGrid = () => {
+    window.speechSynthesis.cancel();
+    setSpeakingVerseNumber(null);
+    setShowVerseGrid(false);
   };
 
   // Helper function to parse verse filter file
@@ -4038,6 +4119,15 @@ const BibleApp = () => {
                   Col
                 </button>
 
+                {/* Verse Grid TTS Button */}
+                <button
+                  onClick={() => setShowVerseGrid(prev => !prev)}
+                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showVerseGrid ? 'bg-green-700 text-white' : 'bg-green-500 text-white hover:bg-green-600'}`}
+                  title="Toggle verse grid to hear verses in Mandarin"
+                >
+                  Grid
+                </button>
+
                 {/* Chapter Navigation Input */}
                 <input 
                   type="number" 
@@ -4200,9 +4290,11 @@ const BibleApp = () => {
               touchScrollMode={touchScrollMode}
               viewMode={viewMode}
               onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : 'side-by-side')}
+              onShowVerseGrid={() => setShowVerseGrid(true)}
+              chineseBibleData={chineseBibleData}
             />
           </div>
-          
+
           {/* Navigation History / Breadcrumb */}
           <div className="flex items-center space-x-1 mr-2">
             <NavigationPlaceholder
@@ -4240,6 +4332,8 @@ const BibleApp = () => {
               handleVerseFilterFile={handleVerseFilterFile}
               viewMode={viewMode}
               onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : 'side-by-side')}
+              onShowVerseGrid={() => setShowVerseGrid(true)}
+              chineseBibleData={chineseBibleData}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
                   const bookObj = bibleData.find(b => b.abbrev === book);
@@ -5113,6 +5207,79 @@ const BibleApp = () => {
           )}
         </div>
       </div>
+
+      {/* Verse Grid TTS Right Sidebar */}
+      {showVerseGrid && (() => {
+        const abbrev = primaryReading.book ? primaryReading.book.abbrev : null;
+        const chapterIdx = (primaryReading.chapter || 1) - 1;
+        const bookObj = abbrev && chineseBibleData ? chineseBibleData.find(b => b.abbrev === abbrev) : null;
+        const verses = bookObj && bookObj.chapters[chapterIdx] ? bookObj.chapters[chapterIdx] : [];
+        const bookName = abbrev ? getBookName(abbrev) : '';
+        return (
+          <div className={`${isMobileView || isTabletView ? 'absolute right-0 z-10 h-full' : 'w-64'} ${isDarkMode ? 'bg-gray-800 text-white border-l border-gray-700' : 'bg-white border-l border-gray-200'} overflow-y-auto flex flex-col`}>
+            <div className={`p-2 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-between items-center`}>
+              <h3 className="text-sm font-semibold truncate flex-1">
+                {bookName} {primaryReading.chapter}
+              </h3>
+              <button
+                onClick={closeVerseGrid}
+                className={`p-1 rounded-full ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'} focus:outline-none ml-1`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-2 flex-1 overflow-y-auto">
+              {verses.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
+                  {verses.flatMap((_, idx) => {
+                    const vNum = idx + 1;
+                    const isSpeakingM = speakingVerseNumber && speakingVerseNumber.verse === vNum && speakingVerseNumber.lang === 'mandarin';
+                    const isSpeakingC = speakingVerseNumber && speakingVerseNumber.verse === vNum && speakingVerseNumber.lang === 'cantonese';
+                    return [
+                      <button
+                        key={`${vNum}-m`}
+                        onClick={() => speakVerseInGrid(vNum, 'mandarin')}
+                        style={{
+                          width: '100%', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 14, fontWeight: 600, border: 'none', borderRadius: 8, cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          background: isSpeakingM ? '#3b82f6' : (isDarkMode ? '#3a3a3a' : '#f0f0f0'),
+                          color: isSpeakingM ? 'white' : (isDarkMode ? '#d0d0d0' : '#333'),
+                          boxShadow: isSpeakingM ? '0 0 12px rgba(59,130,246,0.5)' : 'none'
+                        }}
+                      >
+                        {vNum}
+                      </button>,
+                      <button
+                        key={`${vNum}-c`}
+                        onClick={() => speakVerseInGrid(vNum, 'cantonese')}
+                        style={{
+                          width: '100%', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 14, fontWeight: 600, border: '2px solid', borderRadius: 8, cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          background: isSpeakingC ? '#f59e0b' : (isDarkMode ? '#2a2a2a' : '#fff8f0'),
+                          borderColor: isSpeakingC ? '#f59e0b' : (isDarkMode ? '#6b5b3a' : '#e0c090'),
+                          color: isSpeakingC ? 'white' : (isDarkMode ? '#e0c080' : '#8b6914'),
+                          boxShadow: isSpeakingC ? '0 0 12px rgba(245,158,11,0.5)' : 'none'
+                        }}
+                      >
+                        {vNum}
+                      </button>
+                    ];
+                  })}
+                </div>
+              ) : (
+                <p className={`text-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {chineseBibleData ? 'No verses found.' : 'Loading...'}
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Reference Prompt Modal */}
       {showRefPrompt && (
         <div
@@ -5222,6 +5389,7 @@ const BibleApp = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };

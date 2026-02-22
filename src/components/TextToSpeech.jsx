@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { ChevronDown, ChevronRight, Play, SkipForward } from 'lucide-react';
 
-const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange }, ref) => {
+const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData }, ref) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -963,6 +963,38 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       >
         Copy
       </button>
+
+      {/* Chinese Verse Copy Dropdown */}
+      {(() => {
+        const chBook = chineseBibleData ? chineseBibleData.find(b => b.abbrev === currentBook) : null;
+        const chVerses = chBook && chBook.chapters[(currentChapter || 1) - 1] ? chBook.chapters[(currentChapter || 1) - 1] : [];
+        if (!chVerses.length) return null;
+        return (
+          <select
+            defaultValue=""
+            onChange={async (e) => {
+              const idx = parseInt(e.target.value);
+              if (isNaN(idx)) return;
+              const text = chVerses[idx];
+              if (text) {
+                try {
+                  await navigator.clipboard.writeText(text);
+                } catch (err) {
+                  console.warn('Clipboard write failed:', err);
+                }
+              }
+              e.target.value = '';
+            }}
+            className="px-1 py-0.5 rounded focus:outline-none text-xs bg-amber-100 text-amber-800 border border-amber-300 w-14"
+            title="Select a Chinese verse to copy to clipboard"
+          >
+            <option value="" disabled>Ch</option>
+            {chVerses.map((_, i) => (
+              <option key={i} value={i}>{i + 1}</option>
+            ))}
+          </select>
+        );
+      })()}
 
       {/* Verse Dropdown */}
       <div className="relative">
