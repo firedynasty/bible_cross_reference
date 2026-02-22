@@ -2435,6 +2435,7 @@ const BibleApp = () => {
           bookAbbrev: selectedBook.abbrev,
           chapter: selectedChapter,
           translation: selectedTranslation,
+          rightPaneTranslation,
           primaryReading: {
             bookAbbrev: primaryReading.book?.abbrev,
             chapter: primaryReading.chapter
@@ -2450,7 +2451,7 @@ const BibleApp = () => {
         console.warn("Error saving state to localStorage:", e);
       }
     }
-  }, [selectedBook, selectedChapter, selectedTranslation, primaryReading, isViewingCrossRef, scrollSyncMode, stickyPane, isDarkMode, isMobileView]);
+  }, [selectedBook, selectedChapter, selectedTranslation, rightPaneTranslation, primaryReading, isViewingCrossRef, scrollSyncMode, stickyPane, isDarkMode, isMobileView]);
 
   // Initialize Firebase database keys if they don't exist
   useEffect(() => {
@@ -2843,7 +2844,15 @@ const BibleApp = () => {
             if (parsedState.isDarkMode !== undefined) {
               setIsDarkMode(parsedState.isDarkMode);
             }
-            
+
+            // Restore right pane translation if available
+            if (parsedState.rightPaneTranslation) {
+              const isRightTranslationAvailable = translations.some(t => t.id === parsedState.rightPaneTranslation);
+              if (isRightTranslationAvailable) {
+                setRightPaneTranslation(parsedState.rightPaneTranslation);
+              }
+            }
+
             // Check if the saved translation is still available
             const isTranslationAvailable = translations.some(t => t.id === savedTranslation);
             
