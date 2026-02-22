@@ -72,6 +72,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       'en_kjv.json': { lang: 'en-US', name: 'English' },
       'en_web.json': { lang: 'en-US', name: 'English' },
       'zh_cuv_no_space.json': { lang: 'zh-CN', name: 'Chinese' },
+      'es_rvr.json': { lang: 'es-ES', name: 'Spanish' },
     };
     return langMap[translation] || { lang: 'en-US', name: 'English' };
   };

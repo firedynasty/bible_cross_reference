@@ -1195,6 +1195,7 @@ const BibleApp = () => {
     { id: 'en_kjv.json', name: 'English - King James Version (KJV)' },
     { id: 'en_web.json', name: 'English - World English Bible (WEB)' },
     { id: 'zh_cuv_no_space.json', name: 'Chinese - CUV (No Space)' },
+    { id: 'es_rvr.json', name: 'Spanish - Reina Valera Revisada (RVR)' },
   ], []);
   
   // Store current position for translation changes
@@ -1243,6 +1244,8 @@ const BibleApp = () => {
   const [showRefPrompt, setShowRefPrompt] = useState(false);
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [expandedCollection, setExpandedCollection] = useState(null);
+  const [highlightedVerses, setHighlightedVerses] = useState([]);
+  const [lastCollectionClick, setLastCollectionClick] = useState({ collection: null, ref: null });
   const [refPromptValue, setRefPromptValue] = useState('');
 
   // State for Verse Grid TTS Modal
@@ -1251,6 +1254,12 @@ const BibleApp = () => {
   const [chineseBibleData, setChineseBibleData] = useState(null);
   const [lastGridVerse, setLastGridVerse] = useState(null);
   const gridSpeechIdRef = useRef(0);
+
+  // State for Spanish Verse Grid TTS
+  const [showSpanishGrid, setShowSpanishGrid] = useState(false);
+  const [spanishBibleData, setSpanishBibleData] = useState(null);
+  const [speakingSpanishVerse, setSpeakingSpanishVerse] = useState(null);
+  const spanishSpeechIdRef = useRef(0);
 
   // Parse a single Bible reference string like "Psalm 23:4" or "Matthew 11:28-30"
   const parseSingleBibleRef = useCallback((refStr) => {
@@ -1323,10 +1332,49 @@ const BibleApp = () => {
       setSelectedChapter(parsed.chapter);
       setPrimaryReading({ book, chapter: parsed.chapter });
       setIsViewingCrossRef(false);
+      setHighlightedVerses([]);
       if (chapterContentRef.current) chapterContentRef.current.scrollTop = 0;
       if (kjvContentRef.current) kjvContentRef.current.scrollTop = 0;
       lastPrimaryScrollPos.current = 0;
       scrollSyncInitialized.current = false;
+    }
+  }, [bibleData, parseSingleBibleRef]);
+
+  // Navigate to a Bible reference and highlight specific verses (for Collections)
+  const navigateToRefWithHighlight = useCallback((refStr) => {
+    const parsed = parseSingleBibleRef(refStr);
+    if (!parsed || !bibleData) return;
+
+    // Parse verse numbers from ref string (e.g., "John 3:16" → [16], "2 Cor 1:3-6" → [3,4,5,6], "Isaiah 61:1-3" → [1,2,3])
+    const verseMatch = refStr.trim().match(/:(\d+)(?:\s*[-–]\s*(\d+))?/);
+    let verses = [];
+    if (verseMatch) {
+      const start = parseInt(verseMatch[1]);
+      const end = verseMatch[2] ? parseInt(verseMatch[2]) : start;
+      for (let v = start; v <= end; v++) verses.push(v);
+    }
+
+    const book = bibleData.find(b => b.abbrev === parsed.abbrev);
+    if (book) {
+      setSelectedBook(book);
+      setSelectedChapter(parsed.chapter);
+      setPrimaryReading({ book, chapter: parsed.chapter });
+      setIsViewingCrossRef(false);
+      if (chapterContentRef.current) chapterContentRef.current.scrollTop = 0;
+      if (kjvContentRef.current) kjvContentRef.current.scrollTop = 0;
+      lastPrimaryScrollPos.current = 0;
+      scrollSyncInitialized.current = false;
+
+      // Set highlighted verses
+      setHighlightedVerses(verses);
+
+      // Scroll to the first highlighted verse after render
+      if (verses.length > 0) {
+        setTimeout(() => {
+          const el = document.getElementById(`verse-${verses[0]}`);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      }
     }
   }, [bibleData, parseSingleBibleRef]);
 
@@ -1436,13 +1484,34 @@ const BibleApp = () => {
     loadChineseData();
   }, []);
 
+  // Load Spanish RVR data for Spanish Verse Grid TTS
+  useEffect(() => {
+    const loadSpanishData = async () => {
+      try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}/es_rvr.json`);
+        if (response.ok) {
+          const data = await response.json();
+          setSpanishBibleData(data);
+        }
+      } catch (err) {
+        console.error('Failed to load Spanish RVR data for verse grid:', err);
+      }
+    };
+    loadSpanishData();
+  }, []);
+
   // Cancel speech when chapter/book changes while verse grid is open
   useEffect(() => {
     if (showVerseGrid) {
       window.speechSynthesis.cancel();
       setSpeakingVerseNumber(null);
     }
-  }, [selectedBook, selectedChapter]);
+    if (showSpanishGrid) {
+      window.speechSynthesis.cancel();
+      setSpeakingSpanishVerse(null);
+    }
+  }, [selectedBook, selectedChapter, showVerseGrid, showSpanishGrid]);
 
   // Effect to detect mobile and tablet screen sizes and handle sidebar visibility
   useEffect(() => {
@@ -1594,6 +1663,49 @@ const BibleApp = () => {
     window.speechSynthesis.cancel();
     setSpeakingVerseNumber(null);
     setShowVerseGrid(false);
+  };
+
+  // Speak a single verse in Spanish (for Spanish Verse Grid sidebar)
+  const speakVerseInSpanishGrid = (verseNumber) => {
+    if (!spanishBibleData || !primaryReading.book) return;
+    const abbrev = primaryReading.book.abbrev;
+    const chapterIdx = (primaryReading.chapter || 1) - 1;
+    const bookObj = spanishBibleData.find(b => b.abbrev === abbrev);
+    if (!bookObj || !bookObj.chapters[chapterIdx]) return;
+    const verseText = bookObj.chapters[chapterIdx][verseNumber - 1];
+    if (!verseText) return;
+
+    window.speechSynthesis.cancel();
+    const speechId = ++spanishSpeechIdRef.current;
+    setSpeakingSpanishVerse(verseNumber);
+
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(verseText);
+      utterance.lang = 'es-ES';
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        let voice = voices.find(v => v.lang === 'es-ES' && v.name.includes('Google'));
+        if (!voice) voice = voices.find(v => v.lang.startsWith('es') && (v.name.includes('Enhanced') || v.name.includes('Premium')));
+        if (!voice) voice = voices.find(v => v.lang === 'es-ES');
+        if (!voice) voice = voices.find(v => v.lang.startsWith('es'));
+        if (voice) utterance.voice = voice;
+      }
+
+      utterance.onend = () => { if (spanishSpeechIdRef.current === speechId) setSpeakingSpanishVerse(null); };
+      utterance.onerror = () => { if (spanishSpeechIdRef.current === speechId) setSpeakingSpanishVerse(null); };
+      window.speechSynthesis.speak(utterance);
+    }, 100);
+  };
+
+  // Close Spanish verse grid and cancel speech
+  const closeSpanishGrid = () => {
+    window.speechSynthesis.cancel();
+    setSpeakingSpanishVerse(null);
+    setShowSpanishGrid(false);
   };
 
   // Helper function to parse verse filter file
@@ -4125,7 +4237,7 @@ const BibleApp = () => {
 
                 {/* Collection Modal Button */}
                 <button
-                  onClick={() => setShowCollectionModal(true)}
+                  onClick={() => { setExpandedCollection(lastCollectionClick.collection); setShowCollectionModal(true); }}
                   className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
                   title="Select a verse collection"
                 >
@@ -4139,6 +4251,15 @@ const BibleApp = () => {
                   title="Toggle verse grid to hear verses in Mandarin"
                 >
                   Grid
+                </button>
+
+                {/* Spanish Verse Grid TTS Button */}
+                <button
+                  onClick={() => setShowSpanishGrid(prev => !prev)}
+                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showSpanishGrid ? 'bg-orange-700 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
+                  title="Toggle verse grid to hear verses in Spanish"
+                >
+                  Span TTS
                 </button>
 
                 {/* Chapter Navigation Input */}
@@ -4498,11 +4619,13 @@ const BibleApp = () => {
                             key={`${item.type}-${item.verseNumber}-${index}`}
                             id={item.type === 'primary' ? `verse-${item.verseNumber}` : `right-pane-verse-${item.verseNumber}`}
                             className={`leading-relaxed p-3 rounded-md transition-colors ${
-                              item.type === 'primary'
-                                ? (isDarkMode ? 'bg-gray-800' : 'bg-blue-50')
-                                : (isDarkMode ? 'bg-gray-700' : 'bg-gray-50')
+                              highlightedVerses.includes(item.verseNumber)
+                                ? (isDarkMode ? 'bg-yellow-900' : 'bg-yellow-200')
+                                : item.type === 'primary'
+                                  ? (isDarkMode ? 'bg-gray-800' : 'bg-blue-50')
+                                  : (isDarkMode ? 'bg-gray-700' : 'bg-gray-50')
                             } ${hasReference ? (isDarkMode ? 'hover:bg-blue-900' : 'hover:bg-blue-100') : ''}`}
-                            style={{ fontSize: `${fontScale * 1.125}rem` }}
+                            style={{ fontSize: `${fontScale * 1.125}rem`, ...(highlightedVerses.includes(item.verseNumber) ? { borderLeft: '4px solid #eab308' } : {}) }}
                           >
                             <p className="flex">
                               <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
@@ -5295,6 +5418,62 @@ const BibleApp = () => {
         );
       })()}
 
+      {/* Spanish Verse Grid TTS Right Sidebar */}
+      {showSpanishGrid && (() => {
+        const abbrev = primaryReading.book ? primaryReading.book.abbrev : null;
+        const chapterIdx = (primaryReading.chapter || 1) - 1;
+        const bookObj = abbrev && spanishBibleData ? spanishBibleData.find(b => b.abbrev === abbrev) : null;
+        const verses = bookObj && bookObj.chapters[chapterIdx] ? bookObj.chapters[chapterIdx] : [];
+        const bookName = abbrev ? getBookName(abbrev) : '';
+        return (
+          <div className={`${isMobileView || isTabletView ? 'absolute right-0 z-10 h-full' : 'w-64'} ${isDarkMode ? 'bg-gray-800 text-white border-l border-gray-700' : 'bg-white border-l border-gray-200'} overflow-y-auto flex flex-col`}>
+            <div className={`p-2 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-between items-center`}>
+              <h3 className="text-sm font-semibold truncate flex-1">
+                {bookName} {primaryReading.chapter} <span className="text-orange-500">(ES)</span>
+              </h3>
+              <button
+                onClick={closeSpanishGrid}
+                className={`p-1 rounded-full ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'} focus:outline-none ml-1`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-2 flex-1 overflow-y-auto">
+              {verses.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                  {verses.map((_, idx) => {
+                    const vNum = idx + 1;
+                    const isSpeaking = speakingSpanishVerse === vNum;
+                    return (
+                      <button
+                        key={vNum}
+                        onClick={() => speakVerseInSpanishGrid(vNum)}
+                        style={{
+                          width: '100%', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 14, fontWeight: 600, border: 'none', borderRadius: 8, cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          background: isSpeaking ? '#f97316' : (isDarkMode ? '#3a3a3a' : '#f0f0f0'),
+                          color: isSpeaking ? 'white' : (isDarkMode ? '#d0d0d0' : '#333'),
+                          boxShadow: isSpeaking ? '0 0 12px rgba(249,115,22,0.5)' : 'none'
+                        }}
+                      >
+                        {vNum}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className={`text-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {spanishBibleData ? 'No verses found.' : 'Loading...'}
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Reference Prompt Modal */}
       {showRefPrompt && (
         <div
@@ -5352,7 +5531,16 @@ const BibleApp = () => {
           style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
           onClick={(e) => { if (e.target === e.currentTarget) { setShowCollectionModal(false); setExpandedCollection(null); } }}
         >
-          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400, maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400, maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', position: 'relative' }}>
+            <button
+              onClick={() => { setShowCollectionModal(false); setExpandedCollection(null); }}
+              style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 1, color: isDarkMode ? '#aaa' : '#666', fontSize: 20 }}
+              title="Close"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
             <h3 style={{ margin: '0 0 16px', fontSize: '1.2em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>Select a Collection</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {Object.keys(referenceCollections).map((name) => (
@@ -5374,22 +5562,28 @@ const BibleApp = () => {
                       border: `2px solid #667eea`, borderTop: 'none', borderRadius: '0 0 10px 10px',
                       background: isDarkMode ? '#1e1e2e' : '#fafbff', padding: '8px 0'
                     }}>
-                      {referenceCollections[name].split('\n').map(l => l.trim()).filter(l => l).map((ref, i) => (
-                        <button
-                          key={i}
-                          onClick={() => { navigateToRef(ref); setShowCollectionModal(false); setExpandedCollection(null); }}
-                          style={{
-                            display: 'block', width: '100%', padding: '8px 18px', fontSize: 14,
-                            border: 'none', background: 'transparent', cursor: 'pointer',
-                            textAlign: 'left', color: isDarkMode ? '#a0b0ff' : '#3355cc', fontWeight: 400,
-                            transition: 'background 0.15s'
-                          }}
-                          onMouseEnter={(e) => { e.target.style.background = isDarkMode ? '#2a2a4a' : '#e8ecff'; }}
-                          onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
-                        >
-                          {ref}
-                        </button>
-                      ))}
+                      {referenceCollections[name].split('\n').map(l => l.trim()).filter(l => l).map((ref, i) => {
+                        const isLastClicked = lastCollectionClick.collection === name && lastCollectionClick.ref === ref;
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => { navigateToRefWithHighlight(ref); setLastCollectionClick({ collection: name, ref }); setShowCollectionModal(false); }}
+                            style={{
+                              display: 'block', width: '100%', padding: '8px 18px', fontSize: 14,
+                              border: 'none', cursor: 'pointer',
+                              textAlign: 'left', fontWeight: isLastClicked ? 700 : 400,
+                              transition: 'background 0.15s',
+                              background: isLastClicked ? (isDarkMode ? '#3a3a2a' : '#fef9c3') : 'transparent',
+                              color: isLastClicked ? (isDarkMode ? '#fde047' : '#854d0e') : (isDarkMode ? '#a0b0ff' : '#3355cc'),
+                              borderLeft: isLastClicked ? '3px solid #eab308' : '3px solid transparent'
+                            }}
+                            onMouseEnter={(e) => { if (!isLastClicked) e.target.style.background = isDarkMode ? '#2a2a4a' : '#e8ecff'; }}
+                            onMouseLeave={(e) => { if (!isLastClicked) e.target.style.background = 'transparent'; }}
+                          >
+                            {ref}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
