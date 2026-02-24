@@ -15,6 +15,11 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const [autoScrollTimer, setAutoScrollTimer] = useState(null);
   const [autoScrollRunning, setAutoScrollRunning] = useState(false);
   const timerIdRef = useRef(null);
+
+  // Part-by-part reading state
+  const [partParts, setPartParts] = useState([]);
+  const [partIndex, setPartIndex] = useState(0);
+  const [partVerseKey, setPartVerseKey] = useState(null);
   
   // Clean text for TTS (remove annotations in curly braces and parentheses)
   const cleanTextForTTS = useCallback((text) => {
@@ -941,6 +946,59 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     };
   }, [speakVerseNumber]);
 
+  // Part-by-part reading: split Chinese verse by punctuation and read one segment per click
+  const speakNextPart = useCallback(() => {
+    if (!chineseBibleData || !lastGridVerse) return;
+
+    const chBook = chineseBibleData.find(b => b.abbrev === currentBook);
+    const chVerses = chBook && chBook.chapters[(currentChapter || 1) - 1] ? chBook.chapters[(currentChapter || 1) - 1] : [];
+    const verseText = chVerses[lastGridVerse - 1];
+    if (!verseText) return;
+
+    const verseKey = `${currentBook}-${currentChapter}-${lastGridVerse}`;
+
+    // If verse changed or first time, split into parts and reset
+    let parts = partParts;
+    let idx = partIndex;
+    if (verseKey !== partVerseKey || parts.length === 0) {
+      parts = verseText.split(/(?<=[，、。！？；：\n])/).map(s => s.trim()).filter(s => s.length > 0);
+      if (parts.length === 0) parts = [verseText];
+      idx = 0;
+      setPartParts(parts);
+      setPartIndex(0);
+      setPartVerseKey(verseKey);
+    }
+
+    // If we've read all parts, loop back to start
+    if (idx >= parts.length) {
+      idx = 0;
+      setPartIndex(0);
+    }
+
+    const segment = parts[idx];
+
+    // Stop any current speech
+    if (speechSynthesis.speaking) {
+      speechSynthesis.cancel();
+    }
+
+    const utterance = new SpeechSynthesisUtterance(segment);
+    utterance.lang = 'zh-CN';
+    utterance.rate = 0.7;
+    utterance.volume = speechVolume === 'softer' ? 0.4 : 1.0;
+
+    const chineseVoice = selectBestVoice('zh-CN', availableVoices);
+    if (chineseVoice) {
+      utterance.voice = chineseVoice;
+    }
+
+    utterance.onend = () => {
+      setPartIndex(prev => prev + 1);
+    };
+
+    speechSynthesis.speak(utterance);
+  }, [chineseBibleData, lastGridVerse, currentBook, currentChapter, partParts, partIndex, partVerseKey, availableVoices, speechVolume]);
+
   if (!verses.length) return null;
 
   // Get current language info for UI display
@@ -979,6 +1037,19 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       >
         Copy{lastGridVerse ? ` ${lastGridVerse}` : ''}
       </button>
+
+      {/* Part-by-part Chinese reading button */}
+      {lastGridVerse && chineseBibleData && (
+        <button
+          onClick={speakNextPart}
+          className="px-2 py-0.5 rounded focus:outline-none flex items-center text-xs bg-teal-100 text-teal-800 hover:bg-teal-200"
+          title={`Read verse ${lastGridVerse} part-by-part (${partVerseKey === `${currentBook}-${currentChapter}-${lastGridVerse}` && partParts.length > 0 ? `${Math.min(partIndex + 1, partParts.length)}/${partParts.length}` : 'start'})`}
+        >
+          {partVerseKey === `${currentBook}-${currentChapter}-${lastGridVerse}` && partParts.length > 0 && partIndex > 0
+            ? `Part ${Math.min(partIndex, partParts.length)}/${partParts.length}`
+            : `Part`}
+        </button>
+      )}
 
       {/* Chinese Verse Copy Dropdown */}
       {(() => {
