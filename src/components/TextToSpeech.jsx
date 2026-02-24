@@ -16,10 +16,10 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const [autoScrollRunning, setAutoScrollRunning] = useState(false);
   const timerIdRef = useRef(null);
 
-  // Part-by-part reading state
-  const [partParts, setPartParts] = useState([]);
-  const [partIndex, setPartIndex] = useState(0);
-  const [partVerseKey, setPartVerseKey] = useState(null);
+  // Part-by-part reading state (using refs to avoid stale closures)
+  const partPartsRef = useRef([]);
+  const partIndexRef = useRef(0);
+  const partVerseKeyRef = useRef(null);
   
   // Clean text for TTS (remove annotations in curly braces and parentheses)
   const cleanTextForTTS = useCallback((text) => {
@@ -947,7 +947,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   }, [speakVerseNumber]);
 
   // Part-by-part reading: split verse by punctuation and read one segment per click
-  // Works for Chinese (from chineseBibleData) or any right-pane translation (Spanish, English, etc.)
+  // Uses refs to avoid stale closure issues with speechSynthesis.cancel() triggering onend
   const speakNextPart = useCallback(() => {
     if (!lastGridVerse) return;
 
@@ -971,30 +971,28 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     const verseKey = `${currentBook}-${currentChapter}-${lastGridVerse}-${rightPaneTranslation}`;
 
     // If verse or translation changed, split into parts and reset
-    let parts = partParts;
-    let idx = partIndex;
-    if (verseKey !== partVerseKey || parts.length === 0) {
+    if (verseKey !== partVerseKeyRef.current || partPartsRef.current.length === 0) {
+      let parts;
       if (isChinese) {
-        // Split by Chinese punctuation
         parts = verseText.split(/(?<=[，、。！？；：\n])/).map(s => s.trim()).filter(s => s.length > 0);
       } else {
-        // Split by commas, semicolons, colons, periods, and other Latin punctuation
         parts = verseText.split(/(?<=[,;:.!?\n])/).map(s => s.trim()).filter(s => s.length > 0);
       }
       if (parts.length === 0) parts = [verseText];
-      idx = 0;
-      setPartParts(parts);
-      setPartIndex(0);
-      setPartVerseKey(verseKey);
+      partPartsRef.current = parts;
+      partIndexRef.current = 0;
+      partVerseKeyRef.current = verseKey;
     }
 
     // If we've read all parts, loop back to start
-    if (idx >= parts.length) {
-      idx = 0;
-      setPartIndex(0);
+    if (partIndexRef.current >= partPartsRef.current.length) {
+      partIndexRef.current = 0;
     }
 
-    const segment = parts[idx];
+    const segment = partPartsRef.current[partIndexRef.current];
+
+    // Advance index immediately (before speech, so next click gets next part)
+    partIndexRef.current += 1;
 
     // Stop any current speech
     if (speechSynthesis.speaking) {
@@ -1017,12 +1015,8 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       utterance.voice = voice;
     }
 
-    utterance.onend = () => {
-      setPartIndex(prev => prev + 1);
-    };
-
     speechSynthesis.speak(utterance);
-  }, [chineseBibleData, rightPaneBibleData, lastGridVerse, currentBook, currentChapter, rightPaneTranslation, partParts, partIndex, partVerseKey, availableVoices, speechVolume]);
+  }, [chineseBibleData, rightPaneBibleData, lastGridVerse, currentBook, currentChapter, rightPaneTranslation, availableVoices, speechVolume]);
 
   if (!verses.length) return null;
 
