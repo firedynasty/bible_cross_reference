@@ -129,7 +129,7 @@ const renderWithGlosses = (text, showGlosses) => {
 };
 
 // Firebase Key Selector Component
-const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle, showGlosses, onGlossToggle, onDarkModeToggle, onTouchScrollModeChange, touchScrollMode, viewMode, onViewModeToggle }) => {
+const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, currentTranslation, onApplyTranslationToPane1, onApplyTranslationToPane2, selectedDropdownTranslation, setSelectedDropdownTranslation, translations, isMobileView, isTabletView, stickyPane, isDarkMode, onNextChapter, bibleData, setSelectedBook, firebaseEnabled, onFirebaseToggle, showGlosses, onGlossToggle, onDarkModeToggle, onTouchScrollModeChange, touchScrollMode, viewMode, onViewModeToggle, gridReadMode, onGridReadModeToggle }) => {
   const [savedPositions, setSavedPositions] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [loading, setLoading] = useState(true);
@@ -439,7 +439,9 @@ const NavigationPlaceholder = ({
   onViewModeToggle,
   onShowVerseGrid,
   chineseBibleData,
-  lastGridVerse
+  lastGridVerse,
+  gridReadMode,
+  onGridReadModeToggle
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -637,6 +639,19 @@ const NavigationPlaceholder = ({
           title={viewMode === 'interleaved' ? "Switch to side-by-side view" : "Switch to interleaved view"}
         >
           {viewMode === 'interleaved' ? '⇅ Interleaved' : '⇔ Side-by-Side'}
+        </button>
+
+        {/* Grid TTS Read Mode Toggle */}
+        <button
+          onClick={() => onGridReadModeToggle && onGridReadModeToggle()}
+          className={`ml-2 px-2 py-0.5 rounded focus:outline-none text-xs ${
+            gridReadMode === 'undelimit'
+              ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+          title={gridReadMode === 'undelimit' ? 'Auto-read: reads full verse with pauses (click to switch to part-by-part)' : 'Part-by-part: click to advance each segment (click to switch to auto-read)'}
+        >
+          {gridReadMode === 'undelimit' ? 'Auto' : 'Parts'}
         </button>
 
         {/* Touch Options Cycling Button - hidden */}
@@ -1182,6 +1197,11 @@ const BibleApp = () => {
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('bibleAppViewMode') || 'side-by-side'); // 'side-by-side' or 'interleaved'
   useEffect(() => { localStorage.setItem('bibleAppViewMode', viewMode); }, [viewMode]);
 
+  // Grid TTS read mode: 'delimit' (part-by-part click) or 'undelimit' (auto-read all parts with pauses)
+  const [gridReadMode, setGridReadMode] = useState('delimit');
+  const gridReadModeRef = useRef('delimit');
+  useEffect(() => { gridReadModeRef.current = gridReadMode; }, [gridReadMode]);
+
   // Mobile responsiveness states
   const [showSidebar, setShowSidebar] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
@@ -1658,6 +1678,49 @@ const BibleApp = () => {
     return bookNames[abbrev] || abbrev;
   };
 
+  // Helper: speak all parts sequentially with 1.5s pauses (for undelimit mode)
+  const speakAllParts = (parts, langCode, rate, speechIdRef, setSpeakingState, verseNumber) => {
+    const speechId = speechIdRef.current;
+    let partIdx = 0;
+
+    const speakNext = () => {
+      if (partIdx >= parts.length || speechIdRef.current !== speechId) {
+        if (speechIdRef.current === speechId) setSpeakingState(null);
+        return;
+      }
+      const segment = parts[partIdx];
+      partIdx += 1;
+
+      const utterance = new SpeechSynthesisUtterance(segment);
+      utterance.lang = langCode;
+      utterance.rate = rate;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        let voice = voices.find(v => v.lang === langCode && v.name.includes('Google'));
+        if (!voice) voice = voices.find(v => v.lang.startsWith(langCode.split('-')[0]) && (v.name.includes('Enhanced') || v.name.includes('Premium')));
+        if (!voice) voice = voices.find(v => v.lang === langCode);
+        if (!voice) voice = voices.find(v => v.lang.startsWith(langCode.split('-')[0]));
+        if (voice) utterance.voice = voice;
+      }
+
+      utterance.onend = () => {
+        if (speechIdRef.current !== speechId) return;
+        if (partIdx < parts.length) {
+          setTimeout(speakNext, 1500);
+        } else {
+          setSpeakingState(null);
+        }
+      };
+      utterance.onerror = () => { if (speechIdRef.current === speechId) setSpeakingState(null); };
+      window.speechSynthesis.speak(utterance);
+    };
+
+    speakNext();
+  };
+
   // Speak a verse part-by-part in Mandarin or Cantonese (for Verse Grid sidebar)
   const speakVerseInGrid = (verseNumber, lang = 'mandarin') => {
     if (!chineseBibleData || !primaryReading.book) return;
@@ -1678,20 +1741,26 @@ const BibleApp = () => {
       gridPartVerseKeyRef.current = verseKey;
     }
 
-    // Loop back if all parts read
-    if (gridPartIndexRef.current >= gridPartPartsRef.current.length) {
-      gridPartIndexRef.current = 0;
-    }
-
-    const segment = gridPartPartsRef.current[gridPartIndexRef.current];
-    gridPartIndexRef.current += 1;
+    const langCode = lang === 'cantonese' ? 'zh-HK' : 'zh-CN';
 
     window.speechSynthesis.cancel();
     const speechId = ++gridSpeechIdRef.current;
     setSpeakingVerseNumber({ verse: verseNumber, lang });
     setLastGridVerse(verseNumber);
 
-    const langCode = lang === 'cantonese' ? 'zh-HK' : 'zh-CN';
+    // Undelimit mode: read all parts with 1.5s pauses
+    if (gridReadModeRef.current === 'undelimit') {
+      gridPartIndexRef.current = 0;
+      setTimeout(() => speakAllParts(gridPartPartsRef.current, langCode, 0.8, gridSpeechIdRef, (val) => setSpeakingVerseNumber(val === null ? null : { verse: verseNumber, lang }), verseNumber), 100);
+      return;
+    }
+
+    // Delimit mode: one part per click
+    if (gridPartIndexRef.current >= gridPartPartsRef.current.length) {
+      gridPartIndexRef.current = 0;
+    }
+    const segment = gridPartPartsRef.current[gridPartIndexRef.current];
+    gridPartIndexRef.current += 1;
 
     setTimeout(() => {
       const utterance = new SpeechSynthesisUtterance(segment);
@@ -1743,18 +1812,24 @@ const BibleApp = () => {
       spanishPartVerseKeyRef.current = verseKey;
     }
 
-    // Loop back if all parts read
-    if (spanishPartIndexRef.current >= spanishPartPartsRef.current.length) {
-      spanishPartIndexRef.current = 0;
-    }
-
-    const segment = spanishPartPartsRef.current[spanishPartIndexRef.current];
-    spanishPartIndexRef.current += 1;
-
     window.speechSynthesis.cancel();
     const speechId = ++spanishSpeechIdRef.current;
     setSpeakingSpanishVerse(verseNumber);
     setLastGridVerse(verseNumber);
+
+    // Undelimit mode: read all parts with 1.5s pauses
+    if (gridReadModeRef.current === 'undelimit') {
+      spanishPartIndexRef.current = 0;
+      setTimeout(() => speakAllParts(spanishPartPartsRef.current, 'es-ES', 0.9, spanishSpeechIdRef, setSpeakingSpanishVerse, verseNumber), 100);
+      return;
+    }
+
+    // Delimit mode: one part per click
+    if (spanishPartIndexRef.current >= spanishPartPartsRef.current.length) {
+      spanishPartIndexRef.current = 0;
+    }
+    const segment = spanishPartPartsRef.current[spanishPartIndexRef.current];
+    spanishPartIndexRef.current += 1;
 
     setTimeout(() => {
       const utterance = new SpeechSynthesisUtterance(segment);
@@ -1817,18 +1892,24 @@ const BibleApp = () => {
       hebrewPartVerseKeyRef.current = verseKey;
     }
 
-    // Loop back if all parts read
-    if (hebrewPartIndexRef.current >= hebrewPartPartsRef.current.length) {
-      hebrewPartIndexRef.current = 0;
-    }
-
-    const segment = hebrewPartPartsRef.current[hebrewPartIndexRef.current];
-    hebrewPartIndexRef.current += 1;
-
     window.speechSynthesis.cancel();
     const speechId = ++hebrewSpeechIdRef.current;
     setSpeakingHebrewVerse(verseNumber);
     setLastGridVerse(verseNumber);
+
+    // Undelimit mode: read all parts with 1.5s pauses
+    if (gridReadModeRef.current === 'undelimit') {
+      hebrewPartIndexRef.current = 0;
+      setTimeout(() => speakAllParts(hebrewPartPartsRef.current, 'he-IL', 0.5, hebrewSpeechIdRef, setSpeakingHebrewVerse, verseNumber), 100);
+      return;
+    }
+
+    // Delimit mode: one part per click
+    if (hebrewPartIndexRef.current >= hebrewPartPartsRef.current.length) {
+      hebrewPartIndexRef.current = 0;
+    }
+    const segment = hebrewPartPartsRef.current[hebrewPartIndexRef.current];
+    hebrewPartIndexRef.current += 1;
 
     setTimeout(() => {
       const utterance = new SpeechSynthesisUtterance(segment);
@@ -4556,6 +4637,8 @@ const BibleApp = () => {
               touchScrollMode={touchScrollMode}
               viewMode={viewMode}
               onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : 'side-by-side')}
+              gridReadMode={gridReadMode}
+              onGridReadModeToggle={() => setGridReadMode(prev => prev === 'delimit' ? 'undelimit' : 'delimit')}
               onShowVerseGrid={() => setShowVerseGrid(true)}
               chineseBibleData={chineseBibleData}
               lastGridVerse={lastGridVerse}
@@ -4599,6 +4682,8 @@ const BibleApp = () => {
               handleVerseFilterFile={handleVerseFilterFile}
               viewMode={viewMode}
               onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : 'side-by-side')}
+              gridReadMode={gridReadMode}
+              onGridReadModeToggle={() => setGridReadMode(prev => prev === 'delimit' ? 'undelimit' : 'delimit')}
               onShowVerseGrid={() => setShowVerseGrid(true)}
               chineseBibleData={chineseBibleData}
               lastGridVerse={lastGridVerse}
