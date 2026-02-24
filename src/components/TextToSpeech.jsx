@@ -14,6 +14,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const [shouldContinueAfterCurrent, setShouldContinueAfterCurrent] = useState(false);
   const [autoScrollTimer, setAutoScrollTimer] = useState(null);
   const [autoScrollRunning, setAutoScrollRunning] = useState(false);
+  const [chineseAction, setChineseAction] = useState(() => localStorage.getItem('bibleAppChineseAction') || 'copy');
   const timerIdRef = useRef(null);
 
   // Part-by-part reading state (using refs to avoid stale closures)
@@ -1028,34 +1029,19 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     <div className="flex items-center gap-2">
       {/* Copy to Clipboard Button - copies last grid verse (Chinese) or pane 2 */}
       <button
-        onClick={async () => {
-          // If a verse was last read from the grid, copy that Chinese verse
-          if (lastGridVerse && chineseBibleData) {
-            const chBook = chineseBibleData.find(b => b.abbrev === currentBook);
-            const chVerses = chBook && chBook.chapters[(currentChapter || 1) - 1] ? chBook.chapters[(currentChapter || 1) - 1] : [];
-            const verseText = chVerses[lastGridVerse - 1];
-            if (verseText) {
-              try {
-                await navigator.clipboard.writeText(verseText);
-              } catch (err) {
-                console.warn('Clipboard write failed:', err);
-              }
-              return;
-            }
-          }
-          // Fallback: copy pane 2 contents
-          if (!verses.length) return;
-          const text = verses.map((v, i) => `${i + 1}. ${v}`).join('\n');
-          try {
-            await navigator.clipboard.writeText(text);
-          } catch (err) {
-            console.warn('Clipboard write failed:', err);
-          }
+        onClick={() => {
+          const next = chineseAction === 'copy' ? 'go' : 'copy';
+          setChineseAction(next);
+          localStorage.setItem('bibleAppChineseAction', next);
         }}
-        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${lastGridVerse ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'}`}
-        title={lastGridVerse ? `Copy Chinese verse ${lastGridVerse} to clipboard` : "Copy pane 2 contents to clipboard"}
+        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
+          chineseAction === 'go'
+            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+            : lastGridVerse ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+        }`}
+        title={chineseAction === 'go' ? 'Go mode: opens verse in MDBG dictionary (click to switch to Copy)' : 'Copy mode: copies verse to clipboard (click to switch to Go)'}
       >
-        Copy{lastGridVerse ? ` ${lastGridVerse}` : ''}
+        {chineseAction === 'go' ? 'Go' : 'Copy'}{lastGridVerse && chineseAction === 'copy' ? ` ${lastGridVerse}` : ''}
       </button>
 
       {/* Part-by-part reading button - hidden, functionality moved to grid clicks */}
@@ -1073,16 +1059,25 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
               if (isNaN(idx)) return;
               const text = chVerses[idx];
               if (text) {
-                try {
-                  await navigator.clipboard.writeText(text);
-                } catch (err) {
-                  console.warn('Clipboard write failed:', err);
+                if (chineseAction === 'go') {
+                  const encoded = encodeURIComponent(text);
+                  window.open(`https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqtm=0&wdqcham=1&wdqt=${encoded}`, '_blank');
+                } else {
+                  try {
+                    await navigator.clipboard.writeText(text);
+                  } catch (err) {
+                    console.warn('Clipboard write failed:', err);
+                  }
                 }
               }
               e.target.value = '';
             }}
-            className="px-1 py-0.5 rounded focus:outline-none text-xs bg-amber-100 text-amber-800 border border-amber-300 w-14"
-            title="Select a Chinese verse to copy to clipboard"
+            className={`px-1 py-0.5 rounded focus:outline-none text-xs border w-14 ${
+              chineseAction === 'go'
+                ? 'bg-green-100 text-green-800 border-green-300'
+                : 'bg-amber-100 text-amber-800 border-amber-300'
+            }`}
+            title={chineseAction === 'go' ? "Select a Chinese verse to look up in MDBG dictionary" : "Select a Chinese verse to copy to clipboard"}
           >
             <option value="" disabled>Ch</option>
             {chVerses.map((_, i) => (

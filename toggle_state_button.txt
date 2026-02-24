@@ -1,0 +1,96 @@
+Toggle State Button Pattern
+===========================
+
+A button that cycles between modes, persisted in localStorage,
+that changes the behavior of a nearby control (dropdown, click, etc).
+
+Example: Copy/Go toggle that switches a dropdown between
+copying text to clipboard vs opening MDBG dictionary.
+
+
+1. STATE (with localStorage persistence)
+-----------------------------------------
+
+const [myMode, setMyMode] = useState(() =>
+  localStorage.getItem('bibleAppMyMode') || 'default'
+);
+
+
+2. TOGGLE BUTTON
+-----------------------------------------
+
+<button
+  onClick={() => {
+    const next = myMode === 'default' ? 'alt' : 'default';
+    setMyMode(next);
+    localStorage.setItem('bibleAppMyMode', next);
+  }}
+  className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
+    myMode === 'alt'
+      ? 'bg-green-100 text-green-700 hover:bg-green-200'
+      : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+  }`}
+  title={myMode === 'alt'
+    ? 'Alt mode description (click to switch to Default)'
+    : 'Default mode description (click to switch to Alt)'}
+>
+  {myMode === 'alt' ? 'Alt' : 'Default'}
+</button>
+
+
+3. CONSUMER (dropdown/control that reads the mode)
+-----------------------------------------
+
+<select
+  onChange={async (e) => {
+    const value = e.target.value;
+    if (myMode === 'alt') {
+      // Alt action, e.g. open URL in new tab
+      window.open(`https://example.com?q=${encodeURIComponent(value)}`, '_blank');
+    } else {
+      // Default action, e.g. copy to clipboard
+      await navigator.clipboard.writeText(value);
+    }
+    e.target.value = '';
+  }}
+  className={`px-1 py-0.5 rounded text-xs border ${
+    myMode === 'alt'
+      ? 'bg-green-100 text-green-800 border-green-300'
+      : 'bg-amber-100 text-amber-800 border-amber-300'
+  }`}
+>
+  <option value="" disabled>Pick</option>
+  {items.map((item, i) => (
+    <option key={i} value={item}>{i + 1}</option>
+  ))}
+</select>
+
+
+4. CONCRETE EXAMPLE (Copy/Go for MDBG Chinese dictionary)
+-----------------------------------------
+
+State key:   bibleAppChineseAction
+Values:      'copy' | 'go'
+Default:     'copy'
+
+Copy mode:   navigator.clipboard.writeText(chineseVerseText)
+Go mode:     window.open(mdbgUrl, '_blank')
+
+MDBG URL format:
+  https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqtm=0&wdqcham=1&wdqt={encoded}
+
+Color scheme:
+  copy  → indigo (bg-indigo-100 text-indigo-700) or amber when contextual
+  go    → green  (bg-green-100 text-green-700)
+
+Implementation in: src/components/TextToSpeech.jsx lines ~17, ~1031-1045, ~1055-1080
+
+
+5. CHECKLIST FOR ADDING A NEW TOGGLE
+-----------------------------------------
+  [ ] Add useState with localStorage.getItem initializer
+  [ ] Add button with onClick that flips state + localStorage.setItem
+  [ ] Style button differently per mode (className ternary)
+  [ ] Add descriptive title/tooltip per mode
+  [ ] Update consumer control to branch on the mode value
+  [ ] Match consumer styling to the toggle color scheme
