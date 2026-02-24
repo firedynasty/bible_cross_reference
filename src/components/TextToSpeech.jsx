@@ -946,22 +946,41 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     };
   }, [speakVerseNumber]);
 
-  // Part-by-part reading: split Chinese verse by punctuation and read one segment per click
+  // Part-by-part reading: split verse by punctuation and read one segment per click
+  // Works for Chinese (from chineseBibleData) or any right-pane translation (Spanish, English, etc.)
   const speakNextPart = useCallback(() => {
-    if (!chineseBibleData || !lastGridVerse) return;
+    if (!lastGridVerse) return;
 
-    const chBook = chineseBibleData.find(b => b.abbrev === currentBook);
-    const chVerses = chBook && chBook.chapters[(currentChapter || 1) - 1] ? chBook.chapters[(currentChapter || 1) - 1] : [];
-    const verseText = chVerses[lastGridVerse - 1];
+    // Determine verse text and language based on current right pane translation
+    let verseText = null;
+    const languageInfo = getLanguageFromTranslation(rightPaneTranslation || 'en_kjv.json');
+    const isChinese = (rightPaneTranslation || '').includes('zh_');
+
+    if (isChinese && chineseBibleData) {
+      const chBook = chineseBibleData.find(b => b.abbrev === currentBook);
+      const chVerses = chBook && chBook.chapters[(currentChapter || 1) - 1] ? chBook.chapters[(currentChapter || 1) - 1] : [];
+      verseText = chVerses[lastGridVerse - 1];
+    }
+    if (!verseText && rightPaneBibleData) {
+      const book = rightPaneBibleData.find(b => b.abbrev === currentBook);
+      const rpVerses = book && book.chapters[(currentChapter || 1) - 1] ? book.chapters[(currentChapter || 1) - 1] : [];
+      verseText = rpVerses[lastGridVerse - 1];
+    }
     if (!verseText) return;
 
-    const verseKey = `${currentBook}-${currentChapter}-${lastGridVerse}`;
+    const verseKey = `${currentBook}-${currentChapter}-${lastGridVerse}-${rightPaneTranslation}`;
 
-    // If verse changed or first time, split into parts and reset
+    // If verse or translation changed, split into parts and reset
     let parts = partParts;
     let idx = partIndex;
     if (verseKey !== partVerseKey || parts.length === 0) {
-      parts = verseText.split(/(?<=[，、。！？；：\n])/).map(s => s.trim()).filter(s => s.length > 0);
+      if (isChinese) {
+        // Split by Chinese punctuation
+        parts = verseText.split(/(?<=[，、。！？；：\n])/).map(s => s.trim()).filter(s => s.length > 0);
+      } else {
+        // Split by commas, semicolons, colons, periods, and other Latin punctuation
+        parts = verseText.split(/(?<=[,;:.!?\n])/).map(s => s.trim()).filter(s => s.length > 0);
+      }
       if (parts.length === 0) parts = [verseText];
       idx = 0;
       setPartParts(parts);
@@ -983,13 +1002,19 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     }
 
     const utterance = new SpeechSynthesisUtterance(segment);
-    utterance.lang = 'zh-CN';
-    utterance.rate = 0.7;
+    utterance.lang = languageInfo.lang;
+    if (languageInfo.lang.startsWith('he-')) {
+      utterance.rate = 0.5;
+    } else if (languageInfo.lang.startsWith('en-')) {
+      utterance.rate = 0.9;
+    } else {
+      utterance.rate = 0.7;
+    }
     utterance.volume = speechVolume === 'softer' ? 0.4 : 1.0;
 
-    const chineseVoice = selectBestVoice('zh-CN', availableVoices);
-    if (chineseVoice) {
-      utterance.voice = chineseVoice;
+    const voice = selectBestVoice(languageInfo.lang, availableVoices);
+    if (voice) {
+      utterance.voice = voice;
     }
 
     utterance.onend = () => {
@@ -997,7 +1022,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     };
 
     speechSynthesis.speak(utterance);
-  }, [chineseBibleData, lastGridVerse, currentBook, currentChapter, partParts, partIndex, partVerseKey, availableVoices, speechVolume]);
+  }, [chineseBibleData, rightPaneBibleData, lastGridVerse, currentBook, currentChapter, rightPaneTranslation, partParts, partIndex, partVerseKey, availableVoices, speechVolume]);
 
   if (!verses.length) return null;
 
@@ -1038,16 +1063,14 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         Copy{lastGridVerse ? ` ${lastGridVerse}` : ''}
       </button>
 
-      {/* Part-by-part Chinese reading button */}
-      {lastGridVerse && chineseBibleData && (
+      {/* Part-by-part reading button - works for any translation */}
+      {lastGridVerse && (chineseBibleData || rightPaneBibleData) && (
         <button
           onClick={speakNextPart}
           className="px-2 py-0.5 rounded focus:outline-none flex items-center text-xs bg-teal-100 text-teal-800 hover:bg-teal-200"
-          title={`Read verse ${lastGridVerse} part-by-part (${partVerseKey === `${currentBook}-${currentChapter}-${lastGridVerse}` && partParts.length > 0 ? `${Math.min(partIndex + 1, partParts.length)}/${partParts.length}` : 'start'})`}
+          title={`Read verse ${lastGridVerse} part-by-part`}
         >
-          {partVerseKey === `${currentBook}-${currentChapter}-${lastGridVerse}` && partParts.length > 0 && partIndex > 0
-            ? `Part ${Math.min(partIndex, partParts.length)}/${partParts.length}`
-            : `Part`}
+          Part
         </button>
       )}
 
