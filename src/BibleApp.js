@@ -4524,7 +4524,7 @@ const BibleApp = () => {
             <div
               ref={chapterContentRef}
               className="w-full overflow-y-auto p-4 md:p-8 bg-white relative"
-              style={{ backgroundColor: isDarkMode ? '#1f2937' : 'white', color: isDarkMode ? 'white' : 'black' }}
+              style={{ backgroundColor: isDarkMode ? '#1f2937' : '#E7DFC8', color: isDarkMode ? 'white' : '#5A4333' }}
             >
               {selectedBook && selectedChapter > 0 && (
                 <div className="max-w-[85ch] mx-auto">
