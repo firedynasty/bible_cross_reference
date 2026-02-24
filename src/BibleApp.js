@@ -1270,6 +1270,16 @@ const BibleApp = () => {
   const spanishPartIndexRef = useRef(0);
   const spanishPartVerseKeyRef = useRef(null);
 
+  // State for Hebrew Verse Grid TTS
+  const [showHebrewGrid, setShowHebrewGrid] = useState(false);
+  const [hebrewNikkudData, setHebrewNikkudData] = useState(null);
+  const [speakingHebrewVerse, setSpeakingHebrewVerse] = useState(null);
+  const hebrewSpeechIdRef = useRef(0);
+  // Part-by-part reading refs for Hebrew grid
+  const hebrewPartPartsRef = useRef([]);
+  const hebrewPartIndexRef = useRef(0);
+  const hebrewPartVerseKeyRef = useRef(null);
+
   // Parse a single Bible reference string like "Psalm 23:4" or "Matthew 11:28-30"
   const parseSingleBibleRef = useCallback((refStr) => {
     const bookNameToAbbrev = {
@@ -1510,6 +1520,23 @@ const BibleApp = () => {
     loadSpanishData();
   }, []);
 
+  // Load Hebrew Nikkud data for Hebrew Verse Grid TTS
+  useEffect(() => {
+    const loadHebrewData = async () => {
+      try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}/he_heb_nikkud.json`);
+        if (response.ok) {
+          const data = await response.json();
+          setHebrewNikkudData(data);
+        }
+      } catch (err) {
+        console.error('Failed to load Hebrew Nikkud data for verse grid:', err);
+      }
+    };
+    loadHebrewData();
+  }, []);
+
   // Cancel speech when chapter/book changes while verse grid is open
   useEffect(() => {
     if (showVerseGrid) {
@@ -1520,7 +1547,11 @@ const BibleApp = () => {
       window.speechSynthesis.cancel();
       setSpeakingSpanishVerse(null);
     }
-  }, [selectedBook, selectedChapter, showVerseGrid, showSpanishGrid]);
+    if (showHebrewGrid) {
+      window.speechSynthesis.cancel();
+      setSpeakingHebrewVerse(null);
+    }
+  }, [selectedBook, selectedChapter, showVerseGrid, showSpanishGrid, showHebrewGrid]);
 
   // Effect to detect mobile and tablet screen sizes and handle sidebar visibility
   useEffect(() => {
@@ -1752,6 +1783,80 @@ const BibleApp = () => {
     window.speechSynthesis.cancel();
     setSpeakingSpanishVerse(null);
     setShowSpanishGrid(false);
+  };
+
+  // Speak a verse part-by-part in Hebrew (for Hebrew Verse Grid sidebar)
+  const speakVerseInHebrewGrid = (verseNumber) => {
+    if (!hebrewNikkudData || !primaryReading.book) return;
+    const abbrev = primaryReading.book.abbrev;
+    const chapterIdx = (primaryReading.chapter || 1) - 1;
+    const bookObj = hebrewNikkudData.find(b => b.abbrev === abbrev);
+    if (!bookObj || !bookObj.chapters[chapterIdx]) return;
+    const verseText = bookObj.chapters[chapterIdx][verseNumber - 1];
+    if (!verseText) return;
+
+    const verseKey = `${abbrev}-${chapterIdx}-${verseNumber}`;
+
+    // If verse changed, split into parts and reset
+    if (verseKey !== hebrewPartVerseKeyRef.current || hebrewPartPartsRef.current.length === 0) {
+      // Split by Hebrew punctuation: sof pasuq (׃), maqaf (־), or spaces between word groups
+      const parts = verseText.split(/(?<=[׃\n])/).map(s => s.trim()).filter(s => s.length > 0);
+      // If no split points, split by roughly 4-5 words
+      if (parts.length <= 1) {
+        const words = verseText.split(/\s+/);
+        const chunkSize = 4;
+        const wordParts = [];
+        for (let i = 0; i < words.length; i += chunkSize) {
+          wordParts.push(words.slice(i, i + chunkSize).join(' '));
+        }
+        hebrewPartPartsRef.current = wordParts.length > 0 ? wordParts : [verseText];
+      } else {
+        hebrewPartPartsRef.current = parts;
+      }
+      hebrewPartIndexRef.current = 0;
+      hebrewPartVerseKeyRef.current = verseKey;
+    }
+
+    // Loop back if all parts read
+    if (hebrewPartIndexRef.current >= hebrewPartPartsRef.current.length) {
+      hebrewPartIndexRef.current = 0;
+    }
+
+    const segment = hebrewPartPartsRef.current[hebrewPartIndexRef.current];
+    hebrewPartIndexRef.current += 1;
+
+    window.speechSynthesis.cancel();
+    const speechId = ++hebrewSpeechIdRef.current;
+    setSpeakingHebrewVerse(verseNumber);
+    setLastGridVerse(verseNumber);
+
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(segment);
+      utterance.lang = 'he-IL';
+      utterance.rate = 0.5;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        let voice = voices.find(v => v.lang === 'he-IL' && v.name.includes('Google'));
+        if (!voice) voice = voices.find(v => v.lang.startsWith('he') && (v.name.includes('Enhanced') || v.name.includes('Premium')));
+        if (!voice) voice = voices.find(v => v.lang === 'he-IL');
+        if (!voice) voice = voices.find(v => v.lang.startsWith('he'));
+        if (voice) utterance.voice = voice;
+      }
+
+      utterance.onend = () => { if (hebrewSpeechIdRef.current === speechId) setSpeakingHebrewVerse(null); };
+      utterance.onerror = () => { if (hebrewSpeechIdRef.current === speechId) setSpeakingHebrewVerse(null); };
+      window.speechSynthesis.speak(utterance);
+    }, 100);
+  };
+
+  // Close Hebrew verse grid and cancel speech
+  const closeHebrewGrid = () => {
+    window.speechSynthesis.cancel();
+    setSpeakingHebrewVerse(null);
+    setShowHebrewGrid(false);
   };
 
   // Helper function to parse verse filter file
@@ -4280,6 +4385,15 @@ const BibleApp = () => {
                   Span TTS
                 </button>
 
+                {/* Hebrew Verse Grid TTS Button */}
+                <button
+                  onClick={() => setShowHebrewGrid(prev => !prev)}
+                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showHebrewGrid ? 'bg-indigo-700 text-white' : 'bg-indigo-500 text-white hover:bg-indigo-600'}`}
+                  title="Toggle verse grid to hear verses in Hebrew"
+                >
+                  Hebrew
+                </button>
+
                 {/* Chapter Navigation Input */}
                 <input 
                   type="number" 
@@ -5485,6 +5599,62 @@ const BibleApp = () => {
               ) : (
                 <p className={`text-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                   {spanishBibleData ? 'No verses found.' : 'Loading...'}
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Hebrew Verse Grid TTS Right Sidebar */}
+      {showHebrewGrid && (() => {
+        const abbrev = primaryReading.book ? primaryReading.book.abbrev : null;
+        const chapterIdx = (primaryReading.chapter || 1) - 1;
+        const bookObj = abbrev && hebrewNikkudData ? hebrewNikkudData.find(b => b.abbrev === abbrev) : null;
+        const verses = bookObj && bookObj.chapters[chapterIdx] ? bookObj.chapters[chapterIdx] : [];
+        const bookName = abbrev ? getBookName(abbrev) : '';
+        return (
+          <div className={`${isMobileView || isTabletView ? 'absolute right-0 z-10 h-full' : 'w-64'} ${isDarkMode ? 'bg-gray-800 text-white border-l border-gray-700' : 'bg-white border-l border-gray-200'} overflow-y-auto flex flex-col`}>
+            <div className={`p-2 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-between items-center`}>
+              <h3 className="text-sm font-semibold truncate flex-1">
+                {bookName} {primaryReading.chapter} <span className="text-indigo-500">(HE)</span>
+              </h3>
+              <button
+                onClick={closeHebrewGrid}
+                className={`p-1 rounded-full ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'} focus:outline-none ml-1`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-2 flex-1 overflow-y-auto">
+              {verses.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                  {verses.map((_, idx) => {
+                    const vNum = idx + 1;
+                    const isSpeaking = speakingHebrewVerse === vNum;
+                    return (
+                      <button
+                        key={vNum}
+                        onClick={() => speakVerseInHebrewGrid(vNum)}
+                        style={{
+                          width: '100%', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 14, fontWeight: 600, border: 'none', borderRadius: 8, cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          background: isSpeaking ? '#6366f1' : (isDarkMode ? '#3a3a3a' : '#f0f0f0'),
+                          color: isSpeaking ? 'white' : (isDarkMode ? '#d0d0d0' : '#333'),
+                          boxShadow: isSpeaking ? '0 0 12px rgba(99,102,241,0.5)' : 'none'
+                        }}
+                      >
+                        {vNum}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className={`text-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {hebrewNikkudData ? 'No verses found for this book.' : 'Loading...'}
                 </p>
               )}
             </div>
