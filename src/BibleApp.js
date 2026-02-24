@@ -1198,9 +1198,9 @@ const BibleApp = () => {
   useEffect(() => { localStorage.setItem('bibleAppViewMode', viewMode); }, [viewMode]);
 
   // Grid TTS read mode: 'delimit' (part-by-part click) or 'undelimit' (auto-read all parts with pauses)
-  const [gridReadMode, setGridReadMode] = useState('delimit');
-  const gridReadModeRef = useRef('delimit');
-  useEffect(() => { gridReadModeRef.current = gridReadMode; }, [gridReadMode]);
+  const [gridReadMode, setGridReadMode] = useState(() => localStorage.getItem('bibleAppGridReadMode') || 'delimit');
+  const gridReadModeRef = useRef(localStorage.getItem('bibleAppGridReadMode') || 'delimit');
+  useEffect(() => { gridReadModeRef.current = gridReadMode; localStorage.setItem('bibleAppGridReadMode', gridReadMode); }, [gridReadMode]);
 
   // Mobile responsiveness states
   const [showSidebar, setShowSidebar] = useState(false);
