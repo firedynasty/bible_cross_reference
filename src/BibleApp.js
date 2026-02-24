@@ -4527,7 +4527,7 @@ const BibleApp = () => {
               style={{ backgroundColor: isDarkMode ? '#1f2937' : 'white', color: isDarkMode ? 'white' : 'black' }}
             >
               {selectedBook && selectedChapter > 0 && (
-                <div>
+                <div className="max-w-[85ch] mx-auto">
                   {/* Controls for interleaved view */}
                   <div className="mb-4 flex gap-2">
                     <button
