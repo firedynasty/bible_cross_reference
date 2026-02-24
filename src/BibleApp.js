@@ -1254,12 +1254,20 @@ const BibleApp = () => {
   const [chineseBibleData, setChineseBibleData] = useState(null);
   const [lastGridVerse, setLastGridVerse] = useState(null);
   const gridSpeechIdRef = useRef(0);
+  // Part-by-part reading refs for Chinese grid
+  const gridPartPartsRef = useRef([]);
+  const gridPartIndexRef = useRef(0);
+  const gridPartVerseKeyRef = useRef(null);
 
   // State for Spanish Verse Grid TTS
   const [showSpanishGrid, setShowSpanishGrid] = useState(false);
   const [spanishBibleData, setSpanishBibleData] = useState(null);
   const [speakingSpanishVerse, setSpeakingSpanishVerse] = useState(null);
   const spanishSpeechIdRef = useRef(0);
+  // Part-by-part reading refs for Spanish grid
+  const spanishPartPartsRef = useRef([]);
+  const spanishPartIndexRef = useRef(0);
+  const spanishPartVerseKeyRef = useRef(null);
 
   // Parse a single Bible reference string like "Psalm 23:4" or "Matthew 11:28-30"
   const parseSingleBibleRef = useCallback((refStr) => {
@@ -1618,7 +1626,7 @@ const BibleApp = () => {
     return bookNames[abbrev] || abbrev;
   };
 
-  // Speak a single verse in Mandarin or Cantonese (for Verse Grid sidebar)
+  // Speak a verse part-by-part in Mandarin or Cantonese (for Verse Grid sidebar)
   const speakVerseInGrid = (verseNumber, lang = 'mandarin') => {
     if (!chineseBibleData || !primaryReading.book) return;
     const abbrev = primaryReading.book.abbrev;
@@ -1628,6 +1636,24 @@ const BibleApp = () => {
     const verseText = bookObj.chapters[chapterIdx][verseNumber - 1];
     if (!verseText) return;
 
+    const verseKey = `${abbrev}-${chapterIdx}-${verseNumber}-${lang}`;
+
+    // If verse or lang changed, split into parts and reset
+    if (verseKey !== gridPartVerseKeyRef.current || gridPartPartsRef.current.length === 0) {
+      const parts = verseText.split(/(?<=[，、。！？；：\n])/).map(s => s.trim()).filter(s => s.length > 0);
+      gridPartPartsRef.current = parts.length > 0 ? parts : [verseText];
+      gridPartIndexRef.current = 0;
+      gridPartVerseKeyRef.current = verseKey;
+    }
+
+    // Loop back if all parts read
+    if (gridPartIndexRef.current >= gridPartPartsRef.current.length) {
+      gridPartIndexRef.current = 0;
+    }
+
+    const segment = gridPartPartsRef.current[gridPartIndexRef.current];
+    gridPartIndexRef.current += 1;
+
     window.speechSynthesis.cancel();
     const speechId = ++gridSpeechIdRef.current;
     setSpeakingVerseNumber({ verse: verseNumber, lang });
@@ -1636,7 +1662,7 @@ const BibleApp = () => {
     const langCode = lang === 'cantonese' ? 'zh-HK' : 'zh-CN';
 
     setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance(verseText);
+      const utterance = new SpeechSynthesisUtterance(segment);
       utterance.lang = langCode;
       utterance.rate = 0.8;
       utterance.pitch = 1;
@@ -1665,7 +1691,7 @@ const BibleApp = () => {
     setShowVerseGrid(false);
   };
 
-  // Speak a single verse in Spanish (for Spanish Verse Grid sidebar)
+  // Speak a verse part-by-part in Spanish (for Spanish Verse Grid sidebar)
   const speakVerseInSpanishGrid = (verseNumber) => {
     if (!spanishBibleData || !primaryReading.book) return;
     const abbrev = primaryReading.book.abbrev;
@@ -1675,12 +1701,31 @@ const BibleApp = () => {
     const verseText = bookObj.chapters[chapterIdx][verseNumber - 1];
     if (!verseText) return;
 
+    const verseKey = `${abbrev}-${chapterIdx}-${verseNumber}`;
+
+    // If verse changed, split into parts and reset
+    if (verseKey !== spanishPartVerseKeyRef.current || spanishPartPartsRef.current.length === 0) {
+      const parts = verseText.split(/(?<=[,;:.!?\n])/).map(s => s.trim()).filter(s => s.length > 0);
+      spanishPartPartsRef.current = parts.length > 0 ? parts : [verseText];
+      spanishPartIndexRef.current = 0;
+      spanishPartVerseKeyRef.current = verseKey;
+    }
+
+    // Loop back if all parts read
+    if (spanishPartIndexRef.current >= spanishPartPartsRef.current.length) {
+      spanishPartIndexRef.current = 0;
+    }
+
+    const segment = spanishPartPartsRef.current[spanishPartIndexRef.current];
+    spanishPartIndexRef.current += 1;
+
     window.speechSynthesis.cancel();
     const speechId = ++spanishSpeechIdRef.current;
     setSpeakingSpanishVerse(verseNumber);
+    setLastGridVerse(verseNumber);
 
     setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance(verseText);
+      const utterance = new SpeechSynthesisUtterance(segment);
       utterance.lang = 'es-ES';
       utterance.rate = 0.9;
       utterance.pitch = 1;

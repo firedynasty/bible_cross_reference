@@ -1057,16 +1057,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         Copy{lastGridVerse ? ` ${lastGridVerse}` : ''}
       </button>
 
-      {/* Part-by-part reading button - works for any translation */}
-      {lastGridVerse && (chineseBibleData || rightPaneBibleData) && (
-        <button
-          onClick={speakNextPart}
-          className="px-2 py-0.5 rounded focus:outline-none flex items-center text-xs bg-teal-100 text-teal-800 hover:bg-teal-200"
-          title={`Read verse ${lastGridVerse} part-by-part`}
-        >
-          Part
-        </button>
-      )}
+      {/* Part-by-part reading button - hidden, functionality moved to grid clicks */}
 
       {/* Chinese Verse Copy Dropdown */}
       {(() => {
