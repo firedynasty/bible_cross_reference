@@ -4179,36 +4179,7 @@ const BibleApp = () => {
                   ))}
                 </select>
 
-                {/* Next Translation Button */}
-                <button
-                  onClick={() => {
-                    try {
-                      const currentIndex = translations.findIndex(t => t.id === rightPaneTranslation);
-                      const nextIndex = (currentIndex + 1) % translations.length;
-                      const nextTranslation = translations[nextIndex].id;
-                      let finalTranslation = nextTranslation;
-                      if (nextTranslation.includes('he_heb')) {
-                        const afterHebrewIndex = (nextIndex + 1) % translations.length;
-                        if (translations[afterHebrewIndex] && !translations[afterHebrewIndex].id.includes('he_heb')) {
-                          finalTranslation = translations[afterHebrewIndex].id;
-                        }
-                      }
-                      setTimeout(() => {
-                        try {
-                          setRightPaneTranslation(finalTranslation);
-                        } catch (error) {
-                          console.warn('Error applying translation:', error);
-                        }
-                      }, 150);
-                    } catch (error) {
-                      console.warn('Error cycling translation:', error);
-                    }
-                  }}
-                  className="ml-1 px-2 py-0.5 rounded focus:outline-none flex items-center text-xs bg-blue-100 text-blue-700 hover:bg-blue-200"
-                  title="Cycle to next translation"
-                >
-                  n t
-                </button>
+                {/* Next Translation Button - hidden */}
 
                 {/* Font Size Controls */}
                 <button
