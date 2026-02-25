@@ -1095,6 +1095,10 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
                       console.warn('Clipboard write failed:', err);
                     }
                   }
+                  // Auto-toggle upper/lower after copy
+                  const next = chineseHalf === 'upper' ? 'lower' : 'upper';
+                  setChineseHalf(next);
+                  localStorage.setItem('bibleAppChineseHalf', next);
                 }
               }
               e.target.value = '';
