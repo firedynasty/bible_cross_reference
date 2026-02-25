@@ -1268,6 +1268,7 @@ const BibleApp = () => {
   const [highlightedVerses, setHighlightedVerses] = useState([]);
   const [lastCollectionClick, setLastCollectionClick] = useState({ collection: null, ref: null });
   const [refPromptValue, setRefPromptValue] = useState('');
+  const [refHistory, setRefHistory] = useState([]); // Session list of saved refs from Ref modal
 
   // State for Verse Grid TTS Modal
   const [showVerseGrid, setShowVerseGrid] = useState(false);
@@ -1652,7 +1653,7 @@ const BibleApp = () => {
       setCurrentBookAbbrev(selectedBook.abbrev);
     }
   }, [selectedBook]);
-  
+
   // Helper function to get book name based on abbreviation
   const getBookName = (abbrev) => {
     const bookNames = {
@@ -5748,25 +5749,85 @@ const BibleApp = () => {
       })()}
 
       {/* Reference Prompt Modal */}
-      {showRefPrompt && (
+      {showRefPrompt && (() => {
+        const refs = refPromptValue.split(',').map(r => r.trim()).filter(r => r);
+        const validRefs = refs.map(r => ({ raw: r, parsed: parseSingleBibleRef(r) })).filter(r => r.parsed);
+        // Helper: add current chapter + valid refs from input to history (deduped)
+        const addToHistory = () => {
+          setRefHistory(prev => {
+            const existing = new Set(prev.map(h => `${h.parsed.abbrev}_${h.parsed.chapter}`));
+            const toAdd = [];
+            // Add current chapter first
+            if (selectedBook && selectedChapter) {
+              const curKey = `${selectedBook.abbrev}_${selectedChapter}`;
+              if (!existing.has(curKey)) {
+                const curLabel = `${getBookName(selectedBook.abbrev)} ${selectedChapter}`;
+                toAdd.push({ raw: curLabel, parsed: { abbrev: selectedBook.abbrev, chapter: selectedChapter } });
+                existing.add(curKey);
+              }
+            }
+            // Then add typed refs
+            for (const r of validRefs) {
+              const key = `${r.parsed.abbrev}_${r.parsed.chapter}`;
+              if (!existing.has(key)) {
+                toAdd.push({ raw: r.raw, parsed: r.parsed });
+                existing.add(key);
+              }
+            }
+            if (toAdd.length === 0) return prev;
+            return [...prev, ...toAdd];
+          });
+        };
+        return (
         <div
           style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowRefPrompt(false); }}
         >
           <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>Go to Reference</h3>
+            {/* Persistent history buttons above input */}
+            {refHistory.length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>Saved</span>
+                  <button
+                    onClick={() => setRefHistory([])}
+                    style={{ fontSize: 11, color: isDarkMode ? '#f87171' : '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 6px' }}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {refHistory.map((h, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { navigateToRef(h.raw); setShowRefPrompt(false); }}
+                      style={{
+                        padding: '5px 10px', fontSize: 12, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 6,
+                        cursor: 'pointer', fontWeight: 600,
+                        background: isDarkMode ? '#383838' : '#f0f4ff',
+                        color: isDarkMode ? '#93c5fd' : '#1d4ed8',
+                        transition: 'background 0.15s'
+                      }}
+                      title={`Go to ${h.raw}`}
+                    >
+                      {h.raw}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <input
               type="text"
               value={refPromptValue}
               onChange={(e) => setRefPromptValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && refPromptValue.trim()) {
-                  navigateToRef(refPromptValue);
+                  addToHistory();
                   setRefPromptValue('');
-                  setShowRefPrompt(false);
                 }
               }}
-              placeholder="e.g. Ps 23, Matt 11:28, Gen 1"
+              placeholder="e.g. Ps 23, Ps 24, Matt 11:28"
               autoFocus
               style={{
                 width: '100%', padding: '12px', fontSize: '16px', border: `2px solid ${isDarkMode ? '#555' : '#ccc'}`,
@@ -5778,14 +5839,13 @@ const BibleApp = () => {
               <button
                 onClick={() => {
                   if (refPromptValue.trim()) {
-                    navigateToRef(refPromptValue);
+                    addToHistory();
                     setRefPromptValue('');
-                    setShowRefPrompt(false);
                   }
                 }}
                 style={{ flex: 1, padding: '12px', fontSize: 15, border: 'none', borderRadius: 8, background: '#007bff', color: 'white', cursor: 'pointer', fontWeight: 600 }}
               >
-                Go
+                Save
               </button>
               <button
                 onClick={() => { setShowRefPrompt(false); setRefPromptValue(''); }}
@@ -5796,7 +5856,8 @@ const BibleApp = () => {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Collection Modal */}
       {showCollectionModal && (
