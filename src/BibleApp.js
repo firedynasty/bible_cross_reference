@@ -1219,6 +1219,7 @@ const BibleApp = () => {
     { id: 'zh_cuv_no_space.json', name: 'Chinese - CUV (No Space)' },
     { id: 'es_rvr.json', name: 'Spanish - Reina Valera Revisada (RVR)' },
     { id: 'he_heb_nikkud.json', name: 'Hebrew - With Nikkud (Vowel Points)' },
+    { id: 'fr_apee.json', name: 'French - APEE' },
   ], []);
   
   // Store current position for translation changes
@@ -1302,6 +1303,16 @@ const BibleApp = () => {
   const hebrewPartPartsRef = useRef([]);
   const hebrewPartIndexRef = useRef(0);
   const hebrewPartVerseKeyRef = useRef(null);
+
+  // State for French Verse Grid TTS
+  const [showFrenchGrid, setShowFrenchGrid] = useState(false);
+  const [frenchBibleData, setFrenchBibleData] = useState(null);
+  const [speakingFrenchVerse, setSpeakingFrenchVerse] = useState(null);
+  const frenchSpeechIdRef = useRef(0);
+  // Part-by-part reading refs for French grid
+  const frenchPartPartsRef = useRef([]);
+  const frenchPartIndexRef = useRef(0);
+  const frenchPartVerseKeyRef = useRef(null);
 
   // Parse a single Bible reference string like "Psalm 23:4" or "Matthew 11:28-30"
   const parseSingleBibleRef = useCallback((refStr) => {
@@ -1560,6 +1571,23 @@ const BibleApp = () => {
     loadHebrewData();
   }, []);
 
+  // Load French APEE data for French Verse Grid TTS
+  useEffect(() => {
+    const loadFrenchData = async () => {
+      try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}/fr_apee.json`);
+        if (response.ok) {
+          const data = await response.json();
+          setFrenchBibleData(data);
+        }
+      } catch (err) {
+        console.error('Failed to load French APEE data for verse grid:', err);
+      }
+    };
+    loadFrenchData();
+  }, []);
+
   // Cancel speech when chapter/book changes while verse grid is open
   useEffect(() => {
     if (showVerseGrid) {
@@ -1574,7 +1602,11 @@ const BibleApp = () => {
       window.speechSynthesis.cancel();
       setSpeakingHebrewVerse(null);
     }
-  }, [selectedBook, selectedChapter, showVerseGrid, showSpanishGrid, showHebrewGrid]);
+    if (showFrenchGrid) {
+      window.speechSynthesis.cancel();
+      setSpeakingFrenchVerse(null);
+    }
+  }, [selectedBook, selectedChapter, showVerseGrid, showSpanishGrid, showHebrewGrid, showFrenchGrid]);
 
   // Effect to detect mobile and tablet screen sizes and handle sidebar visibility
   useEffect(() => {
@@ -1941,6 +1973,74 @@ const BibleApp = () => {
     window.speechSynthesis.cancel();
     setSpeakingHebrewVerse(null);
     setShowHebrewGrid(false);
+  };
+
+  // Speak a verse part-by-part in French (for French Verse Grid sidebar)
+  const speakVerseInFrenchGrid = (verseNumber) => {
+    if (!frenchBibleData || !primaryReading.book) return;
+    const abbrev = primaryReading.book.abbrev;
+    const chapterIdx = (primaryReading.chapter || 1) - 1;
+    const bookObj = frenchBibleData.find(b => b.abbrev === abbrev);
+    if (!bookObj || !bookObj.chapters[chapterIdx]) return;
+    const verseText = bookObj.chapters[chapterIdx][verseNumber - 1];
+    if (!verseText) return;
+
+    const verseKey = `${abbrev}-${chapterIdx}-${verseNumber}`;
+
+    // If verse changed, split into parts and reset
+    if (verseKey !== frenchPartVerseKeyRef.current || frenchPartPartsRef.current.length === 0) {
+      const parts = verseText.split(/(?<=[,;:.!?\n])/).map(s => s.trim()).filter(s => s.length > 0);
+      frenchPartPartsRef.current = parts.length > 0 ? parts : [verseText];
+      frenchPartIndexRef.current = 0;
+      frenchPartVerseKeyRef.current = verseKey;
+    }
+
+    window.speechSynthesis.cancel();
+    const speechId = ++frenchSpeechIdRef.current;
+    setSpeakingFrenchVerse(verseNumber);
+    setLastGridVerse(verseNumber);
+
+    // Undelimit mode: read all parts with 1.5s pauses
+    if (gridReadModeRef.current === 'undelimit') {
+      frenchPartIndexRef.current = 0;
+      setTimeout(() => speakAllParts(frenchPartPartsRef.current, 'fr-FR', 0.9, frenchSpeechIdRef, setSpeakingFrenchVerse, verseNumber), 100);
+      return;
+    }
+
+    // Delimit mode: one part per click
+    if (frenchPartIndexRef.current >= frenchPartPartsRef.current.length) {
+      frenchPartIndexRef.current = 0;
+    }
+    const segment = frenchPartPartsRef.current[frenchPartIndexRef.current];
+    frenchPartIndexRef.current += 1;
+
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(segment);
+      utterance.lang = 'fr-FR';
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        let voice = voices.find(v => v.lang === 'fr-FR' && v.name.includes('Google'));
+        if (!voice) voice = voices.find(v => v.lang.startsWith('fr') && (v.name.includes('Enhanced') || v.name.includes('Premium')));
+        if (!voice) voice = voices.find(v => v.lang === 'fr-FR');
+        if (!voice) voice = voices.find(v => v.lang.startsWith('fr'));
+        if (voice) utterance.voice = voice;
+      }
+
+      utterance.onend = () => { if (frenchSpeechIdRef.current === speechId) setSpeakingFrenchVerse(null); };
+      utterance.onerror = () => { if (frenchSpeechIdRef.current === speechId) setSpeakingFrenchVerse(null); };
+      window.speechSynthesis.speak(utterance);
+    }, 100);
+  };
+
+  // Close French verse grid and cancel speech
+  const closeFrenchGrid = () => {
+    window.speechSynthesis.cancel();
+    setSpeakingFrenchVerse(null);
+    setShowFrenchGrid(false);
   };
 
   // Helper function to parse verse filter file
@@ -4478,6 +4578,15 @@ const BibleApp = () => {
                   Hebrew
                 </button>
 
+                {/* French Verse Grid TTS Button */}
+                <button
+                  onClick={() => setShowFrenchGrid(prev => !prev)}
+                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showFrenchGrid ? 'bg-blue-800 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                  title="Toggle verse grid to hear verses in French"
+                >
+                  Fr
+                </button>
+
                 {/* Chapter Navigation Input */}
                 <input 
                   type="number" 
@@ -5750,6 +5859,62 @@ const BibleApp = () => {
               ) : (
                 <p className={`text-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                   {hebrewNikkudData ? 'No verses found for this book.' : 'Loading...'}
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* French Verse Grid TTS Right Sidebar */}
+      {showFrenchGrid && (() => {
+        const abbrev = primaryReading.book ? primaryReading.book.abbrev : null;
+        const chapterIdx = (primaryReading.chapter || 1) - 1;
+        const bookObj = abbrev && frenchBibleData ? frenchBibleData.find(b => b.abbrev === abbrev) : null;
+        const verses = bookObj && bookObj.chapters[chapterIdx] ? bookObj.chapters[chapterIdx] : [];
+        const bookName = abbrev ? getBookName(abbrev) : '';
+        return (
+          <div className={`${isMobileView || isTabletView ? 'absolute right-0 z-10 h-full' : 'w-64'} ${isDarkMode ? 'bg-gray-800 text-white border-l border-gray-700' : 'bg-white border-l border-gray-200'} overflow-y-auto flex flex-col`}>
+            <div className={`p-2 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-between items-center`}>
+              <h3 className="text-sm font-semibold truncate flex-1">
+                {bookName} {primaryReading.chapter} <span className="text-blue-600">(FR)</span>
+              </h3>
+              <button
+                onClick={closeFrenchGrid}
+                className={`p-1 rounded-full ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'} focus:outline-none ml-1`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-2 flex-1 overflow-y-auto">
+              {verses.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                  {verses.map((_, idx) => {
+                    const vNum = idx + 1;
+                    const isSpeaking = speakingFrenchVerse === vNum;
+                    return (
+                      <button
+                        key={vNum}
+                        onClick={() => speakVerseInFrenchGrid(vNum)}
+                        style={{
+                          width: '100%', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 14, fontWeight: 600, border: 'none', borderRadius: 8, cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          background: isSpeaking ? '#2563eb' : (isDarkMode ? '#3a3a3a' : '#f0f0f0'),
+                          color: isSpeaking ? 'white' : (isDarkMode ? '#d0d0d0' : '#333'),
+                          boxShadow: isSpeaking ? '0 0 12px rgba(37,99,235,0.5)' : 'none'
+                        }}
+                      >
+                        {vNum}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className={`text-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {frenchBibleData ? 'No verses found.' : 'Loading...'}
                 </p>
               )}
             </div>
