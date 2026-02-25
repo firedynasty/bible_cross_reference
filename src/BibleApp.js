@@ -632,13 +632,15 @@ const NavigationPlaceholder = ({
         <button
           onClick={() => onViewModeToggle && onViewModeToggle()}
           className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
-            viewMode === 'interleaved'
+            viewMode === 'interleaved-pd'
+              ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+              : viewMode === 'interleaved'
               ? 'bg-green-100 text-green-700 hover:bg-green-200'
               : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
           }`}
-          title={viewMode === 'interleaved' ? "Switch to side-by-side view" : "Switch to interleaved view"}
+          title={viewMode === 'interleaved-pd' ? "Switch to side-by-side view" : viewMode === 'interleaved' ? "Switch to interleaved PD view" : "Switch to interleaved view"}
         >
-          {viewMode === 'interleaved' ? '⇅ Interleaved' : '⇔ Side-by-Side'}
+          {viewMode === 'interleaved-pd' ? '⇅ Interleaved PD' : viewMode === 'interleaved' ? '⇅ Interleaved' : '⇔ Side-by-Side'}
         </button>
 
         {/* Grid TTS Read Mode Toggle */}
@@ -1193,8 +1195,8 @@ const BibleApp = () => {
   // Gloss display control
   const [showGlosses, setShowGlosses] = useState(true);
 
-  // View mode control (side-by-side or interleaved)
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem('bibleAppViewMode') || 'side-by-side'); // 'side-by-side' or 'interleaved'
+  // View mode control (side-by-side, interleaved, or interleaved-pd)
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('bibleAppViewMode') || 'side-by-side');
   useEffect(() => { localStorage.setItem('bibleAppViewMode', viewMode); }, [viewMode]);
 
   // Grid TTS read mode: 'delimit' (part-by-part click) or 'undelimit' (auto-read all parts with pauses)
@@ -4637,7 +4639,7 @@ const BibleApp = () => {
               onTouchScrollModeChange={setTouchScrollMode}
               touchScrollMode={touchScrollMode}
               viewMode={viewMode}
-              onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : 'side-by-side')}
+              onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : viewMode === 'interleaved' ? 'interleaved-pd' : 'side-by-side')}
               gridReadMode={gridReadMode}
               onGridReadModeToggle={() => setGridReadMode(prev => prev === 'delimit' ? 'undelimit' : 'delimit')}
               onShowVerseGrid={() => setShowVerseGrid(true)}
@@ -4682,7 +4684,7 @@ const BibleApp = () => {
               filterFileName={filterFileName}
               handleVerseFilterFile={handleVerseFilterFile}
               viewMode={viewMode}
-              onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : 'side-by-side')}
+              onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : viewMode === 'interleaved' ? 'interleaved-pd' : 'side-by-side')}
               gridReadMode={gridReadMode}
               onGridReadModeToggle={() => setGridReadMode(prev => prev === 'delimit' ? 'undelimit' : 'delimit')}
               onShowVerseGrid={() => setShowVerseGrid(true)}
@@ -4737,12 +4739,19 @@ const BibleApp = () => {
         
         {/* Bible Text and KJV Split View - Responsive layout for different devices */}
         <div className="flex-1 flex overflow-hidden">
-          {viewMode === 'interleaved' ? (
+          {(viewMode === 'interleaved' || viewMode === 'interleaved-pd') ? (
             /* Interleaved View - Single pane with alternating verses */
             <div
               ref={chapterContentRef}
               className="w-full overflow-y-auto p-4 md:p-8 bg-white relative"
               style={{ backgroundColor: isDarkMode ? '#1f2937' : '#E7DFC8', color: isDarkMode ? 'white' : '#5A4333' }}
+              onClick={viewMode === 'interleaved-pd' ? (e) => {
+                if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('a') || e.target.closest('select')) return;
+                const pane = chapterContentRef.current;
+                if (!pane) return;
+                const pageHeight = pane.clientHeight * 0.9;
+                pane.scrollTop = Math.min(pane.scrollHeight - pane.clientHeight, pane.scrollTop + pageHeight);
+              } : undefined}
             >
               {selectedBook && selectedChapter > 0 && (
                 <div className="max-w-[85ch] mx-auto">
