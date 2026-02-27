@@ -28,8 +28,7 @@ const theVocabDatabaseName = 'BibleChapterDatabase';
 
 // External links for dropdown
 const linksOut = {
-  "60 bpm": "https://www.youtube.com/watch?v=gSmf7W3DUjs",
-  "80 bpm": "https://www.youtube.com/watch?v=cNhD7utblss&t=117s",
+  "Bible mobile": "https://cdpn.io/pen/debug/KwVxmKR",
   "Holy Spirit": "https://www.youtube.com/watch?v=QuY5YPORvfs&t=1823s",
   "Test" : "https://www.google.com"
 };
