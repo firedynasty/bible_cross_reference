@@ -600,6 +600,9 @@ const NavigationPlaceholder = ({
                 <button
                   key={label}
                   onClick={() => {
+                    const bookName = book.book || getBookName(book.abbrev);
+                    const clipText = `${bookName} ${chapter}`;
+                    navigator.clipboard.writeText(clipText).catch(() => {});
                     window.open(url, '_blank');
                     setShowLinksDropdown(false);
                   }}
