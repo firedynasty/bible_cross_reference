@@ -1275,6 +1275,11 @@ const BibleApp = () => {
   const [refPromptValue, setRefPromptValue] = useState('');
   const [refHistory, setRefHistory] = useState([]); // Session list of saved refs from Ref modal
 
+  // State for Book Search Modal
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+
   // State for Verse Grid TTS Modal
   const [showVerseGrid, setShowVerseGrid] = useState(false);
   const [speakingVerseNumber, setSpeakingVerseNumber] = useState(null);
@@ -4118,8 +4123,10 @@ const BibleApp = () => {
   const getTranslationShortName = (translationId) => {
     const translationMap = {
       'en_kjv.json': 'KJV',
+      'en_web.json': 'WEB',
       'en_bbe.json': 'BBE',
       'zh_cuv.json': 'CUV',
+      'zh_cuv_no_space.json': 'CUV',
       'es_rvr.json': 'RVR',
       'fr_apee.json': 'APEE',
       'ko_ko.json': 'KO',
@@ -4609,6 +4616,15 @@ const BibleApp = () => {
                   Fr
                 </button>
 
+                {/* Book Search Button */}
+                <button
+                  onClick={() => { setShowSearchModal(true); setSearchKeyword(''); setSearchResults([]); }}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-teal-500 text-white hover:bg-teal-600 font-semibold"
+                  title="Search current book"
+                >
+                  Srch
+                </button>
+
                 {/* Chapter Navigation Input */}
                 <input 
                   type="number" 
@@ -4961,7 +4977,7 @@ const BibleApp = () => {
                               type: 'secondary',
                               verseNumber,
                               text: rightPaneVerses[i],
-                              translation: rightPaneTranslation === 'en_kjv.json' ? 'KJV' : 'BBE'
+                              translation: getTranslationShortName(rightPaneTranslation)
                             });
                           }
                         }
@@ -5533,7 +5549,7 @@ const BibleApp = () => {
                         Show Pane 1
                       </button>
                     )}
-                    {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter} <span className="text-gray-500 ml-2">({rightPaneTranslation === 'en_kjv.json' ? 'KJV' : 'BBE'})</span>
+                    {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter} <span className="text-gray-500 ml-2">({getTranslationShortName(rightPaneTranslation)})</span>
                     <span className="ml-3 px-2 py-1 rounded text-xs bg-blue-50 text-blue-800">
                       Exact Sync
                     </span>
@@ -5589,7 +5605,7 @@ const BibleApp = () => {
                         } else {
                           return (
                             <div className="p-4 text-amber-600">
-                              <p>Could not find matching {rightPaneTranslation === 'en_kjv.json' ? 'KJV' : 'BBE'} text for this book/chapter.</p>
+                              <p>Could not find matching {getTranslationShortName(rightPaneTranslation)} text for this book/chapter.</p>
                               <p className="mt-2 text-sm">
                                 Book code: {selectedBook.abbrev}
                               </p>
@@ -6128,6 +6144,107 @@ const BibleApp = () => {
           </div>
         </div>
       )}
+
+      {/* Book Search Modal */}
+      {showSearchModal && (() => {
+        const bookName = selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : 'Book';
+        const handleSearch = (keyword) => {
+          if (!keyword.trim() || !selectedBook || !selectedBook.chapters) {
+            setSearchResults([]);
+            return;
+          }
+          const kw = keyword.toLowerCase();
+          const results = [];
+          selectedBook.chapters.forEach((verses, chIdx) => {
+            if (!verses) return;
+            verses.forEach((text, vIdx) => {
+              if (text.toLowerCase().includes(kw)) {
+                results.push({ chapter: chIdx + 1, verse: vIdx + 1, text });
+              }
+            });
+          });
+          setSearchResults(results);
+        };
+        return (
+          <div
+            style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowSearchModal(false); }}
+          >
+            <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <h3 style={{ margin: '0 0 12px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
+                Search {bookName}
+              </h3>
+              <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchKeyword); }} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <input
+                  type="text"
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  placeholder="Enter keyword..."
+                  autoFocus
+                  style={{
+                    flex: 1, padding: '8px 12px', fontSize: 15, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 8,
+                    background: isDarkMode ? '#1a1a1a' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333', outline: 'none'
+                  }}
+                />
+                <button
+                  type="submit"
+                  style={{
+                    padding: '8px 16px', fontSize: 14, border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
+                    background: '#0d9488', color: 'white'
+                  }}
+                >
+                  Search
+                </button>
+              </form>
+              <div style={{ overflowY: 'auto', flex: 1 }}>
+                {searchResults.length > 0 ? (
+                  <>
+                    <p style={{ fontSize: 12, color: isDarkMode ? '#999' : '#888', marginBottom: 8 }}>
+                      {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
+                    </p>
+                    {searchResults.map((r, i) => {
+                      const kw = searchKeyword.toLowerCase();
+                      const idx = r.text.toLowerCase().indexOf(kw);
+                      const before = r.text.slice(0, idx);
+                      const match = r.text.slice(idx, idx + searchKeyword.length);
+                      const after = r.text.slice(idx + searchKeyword.length);
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => { handleChapterSelect(r.chapter); setShowSearchModal(false); }}
+                          style={{
+                            display: 'block', width: '100%', padding: '10px 12px', marginBottom: 6, fontSize: 13,
+                            border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, cursor: 'pointer',
+                            textAlign: 'left', background: isDarkMode ? '#1e1e1e' : '#fafafa',
+                            color: isDarkMode ? '#d0d0d0' : '#333', transition: 'background 0.15s'
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = isDarkMode ? '#2a2a3a' : '#e8f4f8'}
+                          onMouseLeave={(e) => e.target.style.background = isDarkMode ? '#1e1e1e' : '#fafafa'}
+                        >
+                          <span style={{ fontWeight: 700, color: isDarkMode ? '#5eead4' : '#0d9488', marginRight: 8 }}>
+                            {r.chapter}:{r.verse}
+                          </span>
+                          <span>{before}<strong style={{ background: isDarkMode ? '#365314' : '#fef08a', padding: '0 2px', borderRadius: 2 }}>{match}</strong>{after}</span>
+                        </button>
+                      );
+                    })}
+                  </>
+                ) : searchKeyword.trim() ? (
+                  <p style={{ textAlign: 'center', fontSize: 14, color: isDarkMode ? '#888' : '#999', marginTop: 20 }}>
+                    No results found.
+                  </p>
+                ) : null}
+              </div>
+              <button
+                onClick={() => setShowSearchModal(false)}
+                style={{ marginTop: 12, width: '100%', padding: 10, fontSize: 14, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
