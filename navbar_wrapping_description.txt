@@ -1,0 +1,134 @@
+Navbar Wrapping Behavior on Mobile
+====================================
+
+The top navbar is a single container div with these key Tailwind classes:
+  flex flex-wrap items-center justify-between
+
+The "flex-wrap" class is what allows content to flow onto a second line
+when the viewport is too narrow to fit everything on one row.
+
+STRUCTURE (two main child groups):
+----------------------------------
+
+LINE 1 (left-aligned group):
+  <div class="flex items-center space-x-2">
+    - Hamburger menu button (sidebar toggle)
+    - Chapter selector:  Ch: [dropdown]
+    - nt button (orange, cycles pane 2 translation)
+    - Font size controls:  [-] [+]
+    - Ref button (blue, reference prompt)
+    - Col button (purple, verse collection)
+    - Grid button (green, Mandarin TTS)
+    - Span TTS button (orange, Spanish TTS)
+    - Hebrew button (indigo, Hebrew TTS)
+    - Fr button (blue, French TTS)
+    - Hidden: chapter input + Go button
+
+LINE 2 (wraps below on mobile):
+  <div class="flex items-center ml-2 md:ml-2 w-full md:w-auto flex-wrap md:flex-nowrap mt-2 md:mt-0">
+    - BookOpen icon
+    - Translation dropdown selector
+    - Apply 1 button (indigo, apply to pane 1)
+    - Apply 2 button (purple, apply to pane 2)
+    - Book selection dropdown (hidden)
+
+HOW THE WRAPPING WORKS:
+-----------------------
+
+1. The outer container uses "flex flex-wrap" so its children can wrap
+   to the next line when they exceed the container width.
+
+2. The second child div (translation controls) uses responsive classes:
+   - "w-full md:w-auto"  --> On mobile (< md breakpoint), it takes
+     full width, which forces it onto its own line. On desktop (md+),
+     it is auto-width and stays on the same line.
+   - "mt-2 md:mt-0"  --> On mobile, it adds top margin (spacing from
+     line 1). On desktop, no top margin since it sits on the same row.
+   - "flex-wrap md:flex-nowrap"  --> On mobile, items within this group
+     can also wrap further if needed. On desktop they stay on one line.
+
+3. The first child div (chapter + buttons) uses "flex items-center space-x-2"
+   with no wrapping, so all buttons in line 1 stay in a single row and
+   may overflow/scroll horizontally if extremely narrow.
+
+VISUAL SUMMARY:
+---------------
+
+Desktop (md+ breakpoint, ~768px and wider):
++------------------------------------------------------------------+
+| [=] Ch:[1] nt [-][+] Ref Col Grid SpanTTS Hebrew Fr | [Translation v] Apply1 Apply2 |
++------------------------------------------------------------------+
+
+Mobile (below md breakpoint):
++------------------------------------+
+| [=] Ch:[1] nt [-][+] Ref Col Grid SpanTTS Hebrew Fr |
+| [Translation dropdown v] Apply1 Apply2              |
++------------------------------------+
+
+The second line appears because "w-full" on the translation div
+forces it to occupy the entire row width, pushing it below line 1.
+The "mt-2" class adds a small gap between the two lines on mobile.
+
+
+REUSABLE CODE SNIPPET:
+======================
+
+<!-- Outer container: flex-wrap allows children to wrap to next line -->
+<div class="bg-white border-b border-gray-200 p-1 flex flex-wrap items-center justify-between">
+
+  <!-- LINE 1: stays on one row, items flow horizontally -->
+  <div class="flex items-center space-x-2">
+    <button class="p-2 rounded-md text-gray-700 hover:bg-gray-100">Menu</button>
+    <span class="text-sm">Ch:</span>
+    <select class="border border-gray-300 bg-white rounded px-1 py-0 text-sm w-12">
+      <option>1</option>
+    </select>
+    <button class="ml-1 px-2 py-0.5 rounded text-xs bg-orange-500 text-white hover:bg-orange-600 font-semibold">nt</button>
+    <button class="ml-1 px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold">-</button>
+    <button class="ml-1 px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold">+</button>
+    <button class="ml-1 px-2 py-0.5 rounded text-xs bg-blue-500 text-white hover:bg-blue-600 font-semibold">Ref</button>
+    <button class="ml-1 px-2 py-0.5 rounded text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold">Col</button>
+    <button class="ml-1 px-2 py-0.5 rounded text-xs bg-green-500 text-white hover:bg-green-600 font-semibold">Grid</button>
+  </div>
+
+  <!-- LINE 2: wraps to second row on mobile thanks to w-full / md:w-auto -->
+  <!--
+    KEY CLASSES that make this wrap:
+      w-full      => on mobile, takes 100% width, forcing a new line
+      md:w-auto   => on desktop (768px+), shrinks to content, stays on same line
+      mt-2        => on mobile, adds top spacing from line 1
+      md:mt-0     => on desktop, no top spacing (same row)
+      flex-wrap   => items inside can also wrap if needed on mobile
+      md:flex-nowrap => items inside stay on one line on desktop
+  -->
+  <div class="flex items-center ml-2 md:ml-2 w-full md:w-auto flex-wrap md:flex-nowrap mt-2 md:mt-0">
+    <select class="border border-gray-300 bg-white rounded px-2 py-1 text-sm" style="width: auto; max-width: 150px;">
+      <option>English - KJV</option>
+      <option>English - WEB</option>
+    </select>
+    <button class="ml-2 px-2 py-1 text-sm bg-indigo-500 text-white rounded hover:bg-indigo-600">Apply 1</button>
+    <button class="ml-2 px-2 py-1 text-sm bg-purple-500 text-white rounded hover:bg-purple-600">Apply 2</button>
+  </div>
+
+</div>
+
+
+MINIMAL REPURPOSABLE PATTERN:
+=============================
+
+The core pattern for a navbar that wraps to 2 lines on mobile is just 3 things:
+
+1. Outer div: "flex flex-wrap"
+2. First child: "flex items-center" (line 1 content)
+3. Second child: "w-full md:w-auto mt-2 md:mt-0" (forces new line on mobile)
+
+Minimal example:
+
+<div class="flex flex-wrap items-center p-1 border-b">
+  <div class="flex items-center space-x-2">
+    <!-- line 1 items -->
+  </div>
+  <div class="flex items-center w-full md:w-auto mt-2 md:mt-0">
+    <!-- line 2 items (wraps below on mobile, inline on desktop) -->
+  </div>
+</div>

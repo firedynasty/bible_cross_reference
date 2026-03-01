@@ -16,6 +16,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const [autoScrollRunning, setAutoScrollRunning] = useState(false);
   const [chineseAction, setChineseAction] = useState(() => localStorage.getItem('bibleAppChineseAction') || 'copy');
   const [chineseHalf, setChineseHalf] = useState(() => localStorage.getItem('bibleAppChineseHalf') || 'upper');
+  const [lastChineseVerseIdx, setLastChineseVerseIdx] = useState(0);
   const timerIdRef = useRef(null);
 
   // Part-by-part reading state (using refs to avoid stale closures)
@@ -1046,19 +1047,28 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         {chineseAction === 'go' ? 'Go' : 'Copy'}{lastGridVerse && chineseAction === 'copy' ? ` ${lastGridVerse}` : ''}
       </button>
 
-      {/* Upper/Lower half toggle for Chinese verse copy */}
+      {/* Upper/Lower - copies upper or lower half of stored verse index */}
       {chineseAction === 'copy' && (
         <button
-          onClick={() => {
-            const next = chineseHalf === 'upper' ? 'lower' : 'upper';
-            setChineseHalf(next);
-            localStorage.setItem('bibleAppChineseHalf', next);
+          onClick={async () => {
+            const chBook = chineseBibleData ? chineseBibleData.find(b => b.abbrev === currentBook) : null;
+            const chVerses = chBook && chBook.chapters[(currentChapter || 1) - 1] ? chBook.chapters[(currentChapter || 1) - 1] : [];
+            const text = chVerses[lastChineseVerseIdx];
+            if (text) {
+              const copyText = chineseHalf === 'upper' ? text.slice(0, 20) : (text.length > 20 ? text.slice(20) : '');
+              if (copyText) {
+                try { await navigator.clipboard.writeText(copyText); } catch (err) { console.warn('Clipboard write failed:', err); }
+              }
+              const next = chineseHalf === 'upper' ? 'lower' : 'upper';
+              setChineseHalf(next);
+              localStorage.setItem('bibleAppChineseHalf', next);
+            }
           }}
           className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${
             chineseHalf === 'upper' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
             : 'bg-teal-100 text-teal-700 hover:bg-teal-200'
           }`}
-          title={chineseHalf === 'upper' ? 'Upper: copies first ~20 chars (click for Lower)' : 'Lower: copies from char 20 onward (click for Upper)'}
+          title={chineseHalf === 'upper' ? 'Upper: copies first ~20 chars (click to copy & switch to Lower)' : 'Lower: copies from char 20 onward (click to copy & switch to Upper)'}
         >
           {chineseHalf === 'upper' ? 'Upper' : 'Lower'}
         </button>
@@ -1083,12 +1093,11 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
                   const encoded = encodeURIComponent(text);
                   window.open(`https://www.mdbg.net/chinese/dictionary?page=worddict&wdrst=0&wdqtm=0&wdqcham=1&wdqt=${encoded}`, '_blank');
                 } else {
-                  let copyText = text;
-                  if (chineseHalf === 'upper') {
-                    copyText = text.slice(0, 20);
-                  } else if (chineseHalf === 'lower') {
-                    copyText = text.length > 20 ? text.slice(20) : '';
-                  }
+                  // Store verse index, reset to upper, and copy upper half
+                  setLastChineseVerseIdx(idx);
+                  setChineseHalf('upper');
+                  localStorage.setItem('bibleAppChineseHalf', 'upper');
+                  const copyText = text.slice(0, 20);
                   if (copyText) {
                     try {
                       await navigator.clipboard.writeText(copyText);
@@ -1096,10 +1105,6 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
                       console.warn('Clipboard write failed:', err);
                     }
                   }
-                  // Auto-toggle upper/lower after copy
-                  const next = chineseHalf === 'upper' ? 'lower' : 'upper';
-                  setChineseHalf(next);
-                  localStorage.setItem('bibleAppChineseHalf', next);
                 }
               }
               e.target.value = '';

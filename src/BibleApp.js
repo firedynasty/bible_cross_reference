@@ -2836,38 +2836,28 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // 'n' key - cycle to next translation (like Next Transl button)
+      // 'n' key - ensure pane 1 is KJV, cycle pane 2 translation
       else if (e.key === 'n' || e.key === 'N') {
         try {
-          // Find current translation index
-          const currentIndex = translations.findIndex(t => t.id === selectedDropdownTranslation);
-          
-          // Calculate next index (loops back to 0 after last item)
+          // Always set pane 1 to KJV
+          if (selectedTranslation !== 'en_kjv.json') {
+            handleApplySelectedTranslationToPane1('en_kjv.json');
+          }
+          // Cycle pane 2 based on current right pane translation
+          const currentIndex = translations.findIndex(t => t.id === rightPaneTranslation);
           const nextIndex = (currentIndex + 1) % translations.length;
-          const nextTranslation = translations[nextIndex].id;
-          
-          // Skip Hebrew translations if they cause issues
-          let finalTranslation = nextTranslation;
-          if (nextTranslation.includes('he_heb')) {
+          let finalTranslation = translations[nextIndex].id;
+          if (finalTranslation.includes('he_heb')) {
             const afterHebrewIndex = (nextIndex + 1) % translations.length;
             if (translations[afterHebrewIndex] && !translations[afterHebrewIndex].id.includes('he_heb')) {
               finalTranslation = translations[afterHebrewIndex].id;
             }
           }
-          
-          // Update dropdown selection
           setSelectedDropdownTranslation(finalTranslation);
-          
-          // Apply translation with delay to prevent scroll errors
           setTimeout(() => {
-            try {
-              handleApplySelectedTranslationToPane2(finalTranslation);
-            } catch (error) {
-              console.warn('Error applying translation:', error);
-            }
+            try { handleApplySelectedTranslationToPane2(finalTranslation); } catch (error) { console.warn('Error applying translation:', error); }
           }, 150);
-          
-          console.log(`n key pressed - cycled to translation: ${finalTranslation}`);
+          console.log(`n key pressed - pane 1: KJV, pane 2 cycled to: ${finalTranslation}`);
         } catch (error) {
           console.warn('Error cycling translation:', error);
         }
@@ -4517,7 +4507,37 @@ const BibleApp = () => {
                   ))}
                 </select>
 
-                {/* Next Translation Button - hidden */}
+                {/* Next Translation Button - ensures pane 1 is KJV, cycles pane 2 */}
+                <button
+                  onClick={() => {
+                    try {
+                      // Always set pane 1 to KJV
+                      if (selectedTranslation !== 'en_kjv.json') {
+                        handleApplySelectedTranslationToPane1('en_kjv.json');
+                      }
+                      // Cycle pane 2 to next translation
+                      const currentIndex = translations.findIndex(t => t.id === rightPaneTranslation);
+                      const nextIndex = (currentIndex + 1) % translations.length;
+                      let finalTranslation = translations[nextIndex].id;
+                      if (finalTranslation.includes('he_heb')) {
+                        const afterHebrewIndex = (nextIndex + 1) % translations.length;
+                        if (translations[afterHebrewIndex] && !translations[afterHebrewIndex].id.includes('he_heb')) {
+                          finalTranslation = translations[afterHebrewIndex].id;
+                        }
+                      }
+                      setSelectedDropdownTranslation(finalTranslation);
+                      setTimeout(() => {
+                        try { handleApplySelectedTranslationToPane2(finalTranslation); } catch (e) { console.warn('Error applying translation:', e); }
+                      }, 150);
+                    } catch (error) {
+                      console.warn('Error cycling translation:', error);
+                    }
+                  }}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-orange-500 text-white hover:bg-orange-600 font-semibold"
+                  title="Pane 1 = KJV, cycle pane 2 translation (n)"
+                >
+                  nt
+                </button>
 
                 {/* Font Size Controls */}
                 <button
