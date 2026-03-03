@@ -1071,6 +1071,29 @@ Ecclesiastes 7:12
 Psalm 111:10`
 };
 
+// Dropbox PKCE OAuth helpers
+const DROPBOX_APP_KEY = process.env.REACT_APP_DROPBOX_APP_KEY || '';
+const DROPBOX_REDIRECT_URI = window.location.origin;
+
+const generateCodeVerifier = () => {
+  const array = new Uint8Array(64);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+};
+
+const generateCodeChallenge = async (verifier) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+};
+
 // Main component
 const BibleApp = () => {
   const [bibleData, setBibleData] = useState(null);
@@ -1275,6 +1298,15 @@ const BibleApp = () => {
   const [refPromptValue, setRefPromptValue] = useState('');
   const [refHistory, setRefHistory] = useState([]); // Session list of saved refs from Ref modal
 
+  // State for Dropbox integration
+  const [dropboxAccessToken, setDropboxAccessToken] = useState(null);
+  const [showDropboxModal, setShowDropboxModal] = useState(false);
+  const [dropboxRefs, setDropboxRefs] = useState([]);
+  const [dropboxFiles, setDropboxFiles] = useState([]);
+  const [dropboxStatus, setDropboxStatus] = useState('');
+  const [dropboxView, setDropboxView] = useState('files'); // 'files' | 'content'
+  const [dropboxFolderPath, setDropboxFolderPath] = useState('');
+
   // State for Book Search Modal
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -1449,6 +1481,103 @@ const BibleApp = () => {
     setShowCollectionModal(false);
   }, [navigateToRef]);
 
+  // Dropbox OAuth sign-in
+  const handleDropboxSignIn = useCallback(async () => {
+    const verifier = generateCodeVerifier();
+    const challenge = await generateCodeChallenge(verifier);
+    sessionStorage.setItem('dropbox_code_verifier', verifier);
+    const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${DROPBOX_APP_KEY}&response_type=code&code_challenge=${challenge}&code_challenge_method=S256&redirect_uri=${encodeURIComponent(DROPBOX_REDIRECT_URI)}&token_access_type=online`;
+    window.location.href = authUrl;
+  }, []);
+
+  // Parse Dropbox verse file: quoted refs as delimiters
+  const parseDropboxVerseFile = useCallback((text) => {
+    const refs = [];
+    const lines = text.split('\n');
+    let currentRef = null;
+    let currentDesc = [];
+
+    for (const line of lines) {
+      const match = line.match(/^"(.+?)"\s*$/);
+      if (match) {
+        if (currentRef) {
+          refs.push({ ref: currentRef, description: currentDesc.join('\n').trim() });
+        }
+        currentRef = match[1];
+        currentDesc = [];
+      } else if (currentRef) {
+        currentDesc.push(line);
+      }
+    }
+    if (currentRef) {
+      refs.push({ ref: currentRef, description: currentDesc.join('\n').trim() });
+    }
+    return refs;
+  }, []);
+
+  // Load Dropbox folder contents
+  const loadDropboxFolder = useCallback(async (path) => {
+    if (!dropboxAccessToken) return;
+    setDropboxStatus('Loading folder...');
+    try {
+      const response = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${dropboxAccessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ path: path || '' }),
+      });
+      if (!response.ok) throw new Error('Failed to list folder');
+      const data = await response.json();
+      const entries = (data.entries || []).map((entry) => ({
+        name: entry.name,
+        path: entry.path_lower || entry.path_display,
+        isFolder: entry['.tag'] === 'folder',
+      }));
+      entries.sort((a, b) => {
+        if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+      setDropboxFiles(entries);
+      setDropboxFolderPath(path || '');
+      setDropboxStatus(`${entries.length} items`);
+    } catch (error) {
+      setDropboxStatus('Error: ' + error.message);
+    }
+  }, [dropboxAccessToken]);
+
+  // Load and parse a Dropbox .txt file
+  const loadDropboxFile = useCallback(async (filePath) => {
+    if (!dropboxAccessToken) return;
+    setDropboxStatus('Loading file...');
+    try {
+      const response = await fetch('https://content.dropboxapi.com/2/files/download', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${dropboxAccessToken}`,
+          'Dropbox-API-Arg': JSON.stringify({ path: filePath }),
+        },
+      });
+      if (!response.ok) throw new Error('Download failed');
+      const text = await response.text();
+      const parsed = parseDropboxVerseFile(text);
+      setDropboxRefs(parsed);
+      setDropboxView('content');
+      setDropboxStatus(`${parsed.length} references found`);
+    } catch (error) {
+      setDropboxStatus('Error: ' + error.message);
+    }
+  }, [dropboxAccessToken, parseDropboxVerseFile]);
+
+  // Handle DB button click
+  const handleDbxClick = useCallback(() => {
+    setShowDropboxModal(true);
+    if (dropboxAccessToken) {
+      loadDropboxFolder('/blob_vercel_replacement/bible');
+    }
+  }, [dropboxAccessToken, loadDropboxFolder]);
+
   // State to track scroll position for mobile view during translation changes
   // eslint-disable-next-line no-unused-vars
   const [mobileScrollPosition, setMobileScrollPosition] = useState(0);
@@ -1542,6 +1671,41 @@ const BibleApp = () => {
       }
     };
     loadChineseData();
+  }, []);
+
+  // Handle Dropbox OAuth redirect on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code) {
+      const verifier = sessionStorage.getItem('dropbox_code_verifier');
+      if (verifier) {
+        const body = new URLSearchParams({
+          code,
+          grant_type: 'authorization_code',
+          client_id: DROPBOX_APP_KEY,
+          redirect_uri: DROPBOX_REDIRECT_URI,
+          code_verifier: verifier,
+        });
+        fetch('https://api.dropboxapi.com/oauth2/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString(),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.access_token) {
+              setDropboxAccessToken(data.access_token);
+              setDropboxStatus('Signed in');
+              sessionStorage.removeItem('dropbox_code_verifier');
+              window.history.replaceState({}, document.title, DROPBOX_REDIRECT_URI);
+            } else {
+              setDropboxStatus('Auth failed: ' + (data.error_description || data.error || 'Unknown'));
+            }
+          })
+          .catch((err) => setDropboxStatus('Auth error: ' + err.message));
+      }
+    }
   }, []);
 
   // Load Spanish RVR data for Spanish Verse Grid TTS
@@ -4580,6 +4744,15 @@ const BibleApp = () => {
                   Col
                 </button>
 
+                {/* Dropbox Highlights Button */}
+                <button
+                  onClick={handleDbxClick}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-700 text-white hover:bg-blue-800 font-semibold"
+                  title="Dropbox highlights"
+                >
+                  DB
+                </button>
+
                 {/* Verse Grid TTS Button */}
                 <button
                   onClick={() => setShowVerseGrid(prev => !prev)}
@@ -6137,6 +6310,121 @@ const BibleApp = () => {
             </div>
             <button
               onClick={() => { setShowCollectionModal(false); setExpandedCollection(null); }}
+              style={{ marginTop: 16, width: '100%', padding: 12, fontSize: 15, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Dropbox Highlights Modal */}
+      {showDropboxModal && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowDropboxModal(false); }}
+        >
+          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', position: 'relative' }}>
+            <button
+              onClick={() => setShowDropboxModal(false)}
+              style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 1, color: isDarkMode ? '#aaa' : '#666', fontSize: 20 }}
+              title="Close"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <h3 style={{ margin: '0 0 12px', fontSize: '1.2em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
+              Dropbox Highlights
+            </h3>
+            {dropboxStatus && (
+              <div style={{ fontSize: 12, color: isDarkMode ? '#aaa' : '#888', textAlign: 'center', marginBottom: 8 }}>{dropboxStatus}</div>
+            )}
+
+            {!dropboxAccessToken ? (
+              <button
+                onClick={handleDropboxSignIn}
+                style={{ padding: '12px 24px', fontSize: 15, border: 'none', borderRadius: 8, background: '#0061fe', color: 'white', cursor: 'pointer', fontWeight: 600, width: '100%' }}
+              >
+                Sign In to Dropbox
+              </button>
+            ) : dropboxView === 'content' ? (
+              <div style={{ flex: 1, overflow: 'auto' }}>
+                <button
+                  onClick={() => { setDropboxView('files'); setDropboxRefs([]); }}
+                  style={{ marginBottom: 12, padding: '6px 14px', fontSize: 13, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 6, background: isDarkMode ? '#333' : '#f5f5f5', color: isDarkMode ? '#ddd' : '#333', cursor: 'pointer' }}
+                >
+                  Back to Files
+                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {dropboxRefs.map((item, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { navigateToRefWithHighlight(item.ref); setShowDropboxModal(false); }}
+                      style={{
+                        display: 'block', width: '100%', padding: '10px 14px', fontSize: 14,
+                        border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8,
+                        background: isDarkMode ? '#333' : '#fafbff', cursor: 'pointer',
+                        textAlign: 'left', color: isDarkMode ? '#e0e0e0' : '#333',
+                        transition: 'background 0.15s'
+                      }}
+                    >
+                      <span style={{ fontWeight: 600, color: '#667eea' }}>{item.ref}</span>
+                      {item.description && (
+                        <span style={{ display: 'block', fontSize: 12, color: isDarkMode ? '#aaa' : '#888', marginTop: 4 }}>
+                          {item.description.length > 120 ? item.description.slice(0, 120) + '...' : item.description}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ flex: 1, overflow: 'auto' }}>
+                {dropboxFolderPath && (
+                  <button
+                    onClick={() => {
+                      const parent = dropboxFolderPath.substring(0, dropboxFolderPath.lastIndexOf('/')) || '';
+                      loadDropboxFolder(parent);
+                    }}
+                    style={{ marginBottom: 8, padding: '6px 14px', fontSize: 13, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 6, background: isDarkMode ? '#333' : '#f5f5f5', color: isDarkMode ? '#ddd' : '#333', cursor: 'pointer' }}
+                  >
+                    .. (Up)
+                  </button>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {dropboxFiles.map((file, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        if (file.isFolder) {
+                          loadDropboxFolder(file.path);
+                        } else {
+                          loadDropboxFile(file.path);
+                        }
+                      }}
+                      style={{
+                        display: 'block', width: '100%', padding: '10px 14px', fontSize: 14,
+                        border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8,
+                        background: isDarkMode ? '#333' : 'white', cursor: 'pointer',
+                        textAlign: 'left', color: isDarkMode ? '#e0e0e0' : '#333',
+                        transition: 'background 0.15s'
+                      }}
+                    >
+                      {file.isFolder ? '📁 ' : '📄 '}{file.name}
+                    </button>
+                  ))}
+                  {dropboxFiles.length === 0 && (
+                    <div style={{ textAlign: 'center', color: isDarkMode ? '#888' : '#999', padding: 20, fontSize: 14 }}>
+                      No files found. Click above to browse.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => setShowDropboxModal(false)}
               style={{ marginTop: 16, width: '100%', padding: 12, fontSize: 15, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}
             >
               Cancel
