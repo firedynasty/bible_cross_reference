@@ -436,6 +436,8 @@ const NavigationPlaceholder = ({
   handleVerseFilterFile,
   viewMode,
   onViewModeToggle,
+  showPane2Only,
+  onPane2OnlyToggle,
   onShowVerseGrid,
   chineseBibleData,
   lastGridVerse,
@@ -644,6 +646,21 @@ const NavigationPlaceholder = ({
         >
           {viewMode === 'interleaved-pd' ? '⇅ Interleaved PD' : viewMode === 'interleaved' ? '⇅ Interleaved' : '⇔ Side-by-Side'}
         </button>
+
+        {/* Pane 2 Only Toggle Button */}
+        {viewMode === 'side-by-side' && (
+          <button
+            onClick={() => onPane2OnlyToggle && onPane2OnlyToggle()}
+            className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
+              showPane2Only
+                ? 'bg-green-200 text-green-800 hover:bg-green-300'
+                : 'bg-green-100 text-green-700 hover:bg-green-200'
+            }`}
+            title={showPane2Only ? "Switch back to dual pane view" : "Hide pane 1, show only pane 2"}
+          >
+            {showPane2Only ? '⇅ Pane 2 Only' : '⇅ Dual Pane'}
+          </button>
+        )}
 
         {/* Grid TTS Read Mode Toggle */}
         <button
@@ -1223,6 +1240,9 @@ const BibleApp = () => {
   // View mode control (side-by-side, interleaved, or interleaved-pd)
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('bibleAppViewMode') || 'side-by-side');
   useEffect(() => { localStorage.setItem('bibleAppViewMode', viewMode); }, [viewMode]);
+
+  // Pane 2 only mode - hides pane 1, shows only pane 2 at full width
+  const [showPane2Only, setShowPane2Only] = useState(false);
 
   // Grid TTS read mode: 'delimit' (part-by-part click) or 'undelimit' (auto-read all parts with pauses)
   const [gridReadMode, setGridReadMode] = useState(() => localStorage.getItem('bibleAppGridReadMode') || 'delimit');
@@ -4960,6 +4980,8 @@ const BibleApp = () => {
               touchScrollMode={touchScrollMode}
               viewMode={viewMode}
               onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : viewMode === 'interleaved' ? 'interleaved-pd' : 'side-by-side')}
+              showPane2Only={showPane2Only}
+              onPane2OnlyToggle={() => setShowPane2Only(!showPane2Only)}
               gridReadMode={gridReadMode}
               onGridReadModeToggle={() => setGridReadMode(prev => prev === 'delimit' ? 'undelimit' : 'delimit')}
               onShowVerseGrid={() => setShowVerseGrid(true)}
@@ -5005,6 +5027,8 @@ const BibleApp = () => {
               handleVerseFilterFile={handleVerseFilterFile}
               viewMode={viewMode}
               onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : viewMode === 'interleaved' ? 'interleaved-pd' : 'side-by-side')}
+              showPane2Only={showPane2Only}
+              onPane2OnlyToggle={() => setShowPane2Only(!showPane2Only)}
               gridReadMode={gridReadMode}
               onGridReadModeToggle={() => setGridReadMode(prev => prev === 'delimit' ? 'undelimit' : 'delimit')}
               onShowVerseGrid={() => setShowVerseGrid(true)}
@@ -5276,7 +5300,7 @@ const BibleApp = () => {
           {/* Bible Text Display */}
           <div 
             ref={chapterContentRef} 
-            className={`${isMobileView && !isTabletView && showKJVOnMobile ? 'hidden' : isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'} relative`}
+            className={`${showPane2Only ? 'hidden' : isMobileView && !isTabletView && showKJVOnMobile ? 'hidden' : isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'} relative`}
             onClick={(event) => handlePaneClick(event, 'left')}
             style={{ cursor: 'default' }}
           >
@@ -5589,8 +5613,8 @@ const BibleApp = () => {
           </div>
           
           {/* Right Pane Bible Panel - Toggle visibility on mobile, always show on tablet and desktop */}
-          {(!isMobileView || isTabletView || showKJVOnMobile) && (
-            <div className={`${isMobileView && !isTabletView ? 'w-full' : 'w-1/2'} border-l border-gray-200 bg-gray-50 flex flex-col`}>
+          {(showPane2Only || !isMobileView || isTabletView || showKJVOnMobile) && (
+            <div className={`${showPane2Only ? 'w-full' : isMobileView && !isTabletView ? 'w-full' : 'w-1/2'} ${showPane2Only ? '' : 'border-l'} border-gray-200 bg-gray-50 flex flex-col`}>
               {/* KJV Bible Text Display */}
               <div 
                 ref={kjvContentRef} 
@@ -5599,7 +5623,7 @@ const BibleApp = () => {
                 style={{ cursor: 'default' }}
               >
                 {selectedBook && selectedChapter > 0 && (
-                <div>
+                <div className={showPane2Only ? 'max-w-[70ch] mx-auto' : ''}>
                   {/* Read and Repeat buttons - Hidden */}
                   <div className="hidden mb-4 flex gap-2">
                     <button
