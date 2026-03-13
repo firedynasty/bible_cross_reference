@@ -1336,6 +1336,7 @@ const BibleApp = () => {
   const [showQuizModal, setShowQuizModal] = useState(false);
   const [fitbData, setFitbData] = useState(null);
   const [fitbRevealed, setFitbRevealed] = useState({});
+  const [quizFontSize, setQuizFontSize] = useState(14);
 
   // State for Verse Grid TTS Modal
   const [showVerseGrid, setShowVerseGrid] = useState(false);
@@ -2972,10 +2973,20 @@ const BibleApp = () => {
         
         e.preventDefault();
       }
-      // Escape key - toggle sidebar open/close
+      // Escape key - close modals first, then toggle sidebar
       else if (e.key === 'Escape') {
-        console.log("Escape key pressed - toggling sidebar");
-        setShowSidebar(prev => !prev);
+        if (showQuizModal) {
+          setShowQuizModal(false);
+        } else if (showSearchModal) {
+          setShowSearchModal(false);
+        } else if (showCollectionModal) {
+          setShowCollectionModal(false);
+        } else if (showDropboxModal) {
+          setShowDropboxModal(false);
+        } else {
+          console.log("Escape key pressed - toggling sidebar");
+          setShowSidebar(prev => !prev);
+        }
         e.preventDefault();
       }
       
@@ -3062,7 +3073,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar]);
+  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, showDropboxModal]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
@@ -6507,15 +6518,27 @@ const BibleApp = () => {
             onClick={(e) => { if (e.target === e.currentTarget) setShowQuizModal(false); }}
           >
             <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 700, height: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-              <h3 style={{ margin: '0 0 12px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center', flexShrink: 0 }}>
-                {bookName} {selectedChapter} — Fill in the Blanks
-              </h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 12px', flexShrink: 0 }}>
+                <button
+                  onClick={() => setQuizFontSize(prev => Math.max(10, prev - 2))}
+                  style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                  title="Decrease font size"
+                >−</button>
+                <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
+                  {bookName} {selectedChapter} — Fill in the Blanks
+                </h3>
+                <button
+                  onClick={() => setQuizFontSize(prev => Math.min(28, prev + 2))}
+                  style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                  title="Increase font size"
+                >+</button>
+              </div>
 
               {/* Top: Blanked verses */}
               <div style={{ flex: 1, overflowY: 'auto', border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, padding: 12, marginBottom: 12, background: isDarkMode ? '#1e1e1e' : '#fafafa' }}>
                 {verses.map((v, i) => (
-                  <p key={i} style={{ margin: '0 0 8px', fontSize: 14, lineHeight: 1.6, color: isDarkMode ? '#d0d0d0' : '#333' }}>
-                    <span style={{ fontWeight: 700, color: isDarkMode ? '#f9a8d4' : '#be185d', marginRight: 6, fontSize: 12 }}>{i + 1}</span>
+                  <p key={i} style={{ margin: '0 0 8px', fontSize: quizFontSize, lineHeight: 1.6, color: isDarkMode ? '#d0d0d0' : '#333' }}>
+                    <span style={{ fontWeight: 700, color: isDarkMode ? '#f9a8d4' : '#be185d', marginRight: 6, fontSize: quizFontSize - 2 }}>{i + 1}</span>
                     {v.split(/(________)/g).map((part, j) =>
                       part === '________'
                         ? <span key={j} style={{ display: 'inline-block', borderBottom: `2px solid ${isDarkMode ? '#f9a8d4' : '#be185d'}`, minWidth: 60, textAlign: 'center', margin: '0 2px', color: 'transparent', userSelect: 'none' }}>________</span>
@@ -6549,9 +6572,9 @@ const BibleApp = () => {
                   <div
                     key={i}
                     onClick={() => setFitbRevealed(prev => ({ ...prev, [i]: !prev[i] }))}
-                    style={{ margin: '0 0 4px', fontSize: 14, padding: '4px 8px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'baseline', gap: 6, background: fitbRevealed[i] ? (isDarkMode ? '#1a3a1a' : '#dcfce7') : 'transparent', transition: 'background 0.15s' }}
+                    style={{ margin: '0 0 4px', fontSize: quizFontSize, padding: '4px 8px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'baseline', gap: 6, background: fitbRevealed[i] ? (isDarkMode ? '#1a3a1a' : '#dcfce7') : 'transparent', transition: 'background 0.15s' }}
                   >
-                    <span style={{ fontWeight: 700, color: isDarkMode ? '#f9a8d4' : '#be185d', fontSize: 12, minWidth: 20 }}>{i + 1}</span>
+                    <span style={{ fontWeight: 700, color: isDarkMode ? '#f9a8d4' : '#be185d', fontSize: quizFontSize - 2, minWidth: 20 }}>{i + 1}</span>
                     <span style={{ color: fitbRevealed[i] ? (isDarkMode ? '#86efac' : '#166534') : 'transparent', fontWeight: 600, userSelect: fitbRevealed[i] ? 'auto' : 'none', transition: 'color 0.2s' }}>
                       {ans.length > 0 ? ans.join(', ') : '(no blanks)'}
                     </span>
