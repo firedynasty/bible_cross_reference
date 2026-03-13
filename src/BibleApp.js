@@ -1332,6 +1332,11 @@ const BibleApp = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState([]);
 
+  // State for Fill-in-the-Blank Quiz Modal
+  const [showQuizModal, setShowQuizModal] = useState(false);
+  const [fitbData, setFitbData] = useState(null);
+  const [fitbRevealed, setFitbRevealed] = useState({});
+
   // State for Verse Grid TTS Modal
   const [showVerseGrid, setShowVerseGrid] = useState(false);
   const [speakingVerseNumber, setSpeakingVerseNumber] = useState(null);
@@ -4818,6 +4823,30 @@ const BibleApp = () => {
                   Srch
                 </button>
 
+                {/* Fill-in-the-Blank Quiz Button */}
+                <button
+                  onClick={() => {
+                    if (!fitbData) {
+                      const baseUrl = getBaseUrl();
+                      fetch(`${baseUrl}/en_kjv_fitb.json`)
+                        .then(r => r.json())
+                        .then(data => {
+                          setFitbData(data);
+                          setFitbRevealed({});
+                          setShowQuizModal(true);
+                        })
+                        .catch(err => console.error('Failed to load FITB data:', err));
+                    } else {
+                      setFitbRevealed({});
+                      setShowQuizModal(true);
+                    }
+                  }}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-rose-500 text-white hover:bg-rose-600 font-semibold"
+                  title="Fill-in-the-blank quiz for current chapter"
+                >
+                  Quiz
+                </button>
+
                 {/* Chapter Navigation Input */}
                 <input 
                   type="number" 
@@ -6456,6 +6485,90 @@ const BibleApp = () => {
           </div>
         </div>
       )}
+
+      {/* Fill-in-the-Blank Quiz Modal */}
+      {showQuizModal && fitbData && selectedBook && (() => {
+        const bookName = selectedBook.book || getBookName(selectedBook.abbrev);
+        const fitbBook = fitbData.find(b => b.abbrev === selectedBook.abbrev);
+        const fitbChapter = fitbBook && fitbBook.chapters[selectedChapter - 1];
+        if (!fitbChapter) return (
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowQuizModal(false); }}>
+            <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 600, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <p style={{ color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>No quiz data for {bookName} {selectedChapter}</p>
+              <button onClick={() => setShowQuizModal(false)} style={{ marginTop: 12, width: '100%', padding: 10, fontSize: 14, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}>Close</button>
+            </div>
+          </div>
+        );
+        const { verses, answers } = fitbChapter;
+        return (
+          <div
+            style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowQuizModal(false); }}
+          >
+            <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 700, height: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <h3 style={{ margin: '0 0 12px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center', flexShrink: 0 }}>
+                {bookName} {selectedChapter} — Fill in the Blanks
+              </h3>
+
+              {/* Top: Blanked verses */}
+              <div style={{ flex: 1, overflowY: 'auto', border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, padding: 12, marginBottom: 12, background: isDarkMode ? '#1e1e1e' : '#fafafa' }}>
+                {verses.map((v, i) => (
+                  <p key={i} style={{ margin: '0 0 8px', fontSize: 14, lineHeight: 1.6, color: isDarkMode ? '#d0d0d0' : '#333' }}>
+                    <span style={{ fontWeight: 700, color: isDarkMode ? '#f9a8d4' : '#be185d', marginRight: 6, fontSize: 12 }}>{i + 1}</span>
+                    {v.split(/(________)/g).map((part, j) =>
+                      part === '________'
+                        ? <span key={j} style={{ display: 'inline-block', borderBottom: `2px solid ${isDarkMode ? '#f9a8d4' : '#be185d'}`, minWidth: 60, textAlign: 'center', margin: '0 2px', color: 'transparent', userSelect: 'none' }}>________</span>
+                        : <span key={j}>{part}</span>
+                    )}
+                  </p>
+                ))}
+              </div>
+
+              {/* Bottom: Answers */}
+              <div style={{ flex: 1, overflowY: 'auto', border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, padding: 12, background: isDarkMode ? '#1a2e1a' : '#f0fdf4' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexShrink: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: isDarkMode ? '#86efac' : '#166534' }}>Answer Key</span>
+                  <button
+                    onClick={() => {
+                      const allRevealed = Object.keys(fitbRevealed).length === answers.length && Object.values(fitbRevealed).every(v => v);
+                      if (allRevealed) {
+                        setFitbRevealed({});
+                      } else {
+                        const all = {};
+                        answers.forEach((_, i) => { all[i] = true; });
+                        setFitbRevealed(all);
+                      }
+                    }}
+                    style={{ fontSize: 12, padding: '3px 10px', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, background: isDarkMode ? '#166534' : '#bbf7d0', color: isDarkMode ? '#bbf7d0' : '#166534' }}
+                  >
+                    {Object.keys(fitbRevealed).length === answers.length && Object.values(fitbRevealed).every(v => v) ? 'Hide All' : 'Reveal All'}
+                  </button>
+                </div>
+                {answers.map((ans, i) => (
+                  <div
+                    key={i}
+                    onClick={() => setFitbRevealed(prev => ({ ...prev, [i]: !prev[i] }))}
+                    style={{ margin: '0 0 4px', fontSize: 14, padding: '4px 8px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'baseline', gap: 6, background: fitbRevealed[i] ? (isDarkMode ? '#1a3a1a' : '#dcfce7') : 'transparent', transition: 'background 0.15s' }}
+                  >
+                    <span style={{ fontWeight: 700, color: isDarkMode ? '#f9a8d4' : '#be185d', fontSize: 12, minWidth: 20 }}>{i + 1}</span>
+                    <span style={{ color: fitbRevealed[i] ? (isDarkMode ? '#86efac' : '#166534') : 'transparent', fontWeight: 600, userSelect: fitbRevealed[i] ? 'auto' : 'none', transition: 'color 0.2s' }}>
+                      {ans.length > 0 ? ans.join(', ') : '(no blanks)'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setShowQuizModal(false)}
+                style={{ marginTop: 12, width: '100%', padding: 10, fontSize: 14, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Book Search Modal */}
       {showSearchModal && (() => {
