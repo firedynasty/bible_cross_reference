@@ -1327,6 +1327,10 @@ const BibleApp = () => {
   const [dropboxView, setDropboxView] = useState('files'); // 'files' | 'content'
   const [dropboxFolderPath, setDropboxFolderPath] = useState('');
 
+  // State for Text Paste (in Go to Reference modal)
+  const [textPasteContent, setTextPasteContent] = useState('');
+  const [textParsedRefs, setTextParsedRefs] = useState([]);
+
   // State for Book Search Modal
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -1337,6 +1341,12 @@ const BibleApp = () => {
   const [fitbData, setFitbData] = useState(null);
   const [fitbRevealed, setFitbRevealed] = useState({});
   const [quizFontSize, setQuizFontSize] = useState(14);
+
+  // State for Study Questions Modal
+  const [showStudyQModal, setShowStudyQModal] = useState(false);
+  const [studyQData, setStudyQData] = useState(null);
+  const [studyQFontSize, setStudyQFontSize] = useState(14);
+  const [studyQRevealed, setStudyQRevealed] = useState({});
 
   // State for Verse Grid TTS Modal
   const [showVerseGrid, setShowVerseGrid] = useState(false);
@@ -2975,7 +2985,9 @@ const BibleApp = () => {
       }
       // Escape key - close modals first, then toggle sidebar
       else if (e.key === 'Escape') {
-        if (showQuizModal) {
+        if (showStudyQModal) {
+          setShowStudyQModal(false);
+        } else if (showQuizModal) {
           setShowQuizModal(false);
         } else if (showSearchModal) {
           setShowSearchModal(false);
@@ -4714,6 +4726,22 @@ const BibleApp = () => {
                   ))}
                 </select>
 
+                {/* Next Chapter Button (top bar) */}
+                {selectedBook && selectedChapter < selectedBook.chapters.length && (
+                  <button
+                    onClick={() => {
+                      handleChapterSelect(selectedChapter + 1, true);
+                      if (chapterContentRef.current) {
+                        setTimeout(() => { chapterContentRef.current.scrollTop = 0; }, 100);
+                      }
+                    }}
+                    className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-bold ${isDarkMode ? 'bg-gray-600 text-white hover:bg-gray-500' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+                    title="Next Chapter"
+                  >
+                    &gt;
+                  </button>
+                )}
+
                 {/* Next Translation Button - ensures pane 1 is KJV, cycles pane 2 */}
                 <button
                   onClick={() => {
@@ -4780,14 +4808,14 @@ const BibleApp = () => {
                   Col
                 </button>
 
-                {/* Dropbox Highlights Button */}
-                <button
+                {/* Dropbox Highlights Button - hidden */}
+                {false && <button
                   onClick={handleDbxClick}
                   className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-700 text-white hover:bg-blue-800 font-semibold"
                   title="Dropbox highlights"
                 >
                   DB
-                </button>
+                </button>}
 
                 {/* Verse Grid TTS Button */}
                 <button
@@ -4795,7 +4823,7 @@ const BibleApp = () => {
                   className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showVerseGrid ? 'bg-green-700 text-white' : 'bg-green-500 text-white hover:bg-green-600'}`}
                   title="Toggle verse grid to hear verses in Mandarin"
                 >
-                  Grid
+                  Cn
                 </button>
 
                 {/* Spanish Verse Grid TTS Button */}
@@ -4804,7 +4832,7 @@ const BibleApp = () => {
                   className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showSpanishGrid ? 'bg-orange-700 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
                   title="Toggle verse grid to hear verses in Spanish"
                 >
-                  Span TTS
+                  Span
                 </button>
 
                 {/* Hebrew Verse Grid TTS Button */}
@@ -4858,10 +4886,34 @@ const BibleApp = () => {
                   Quiz
                 </button>
 
+                {/* Study Questions Button */}
+                <button
+                  onClick={() => {
+                    if (!studyQData) {
+                      const baseUrl = getBaseUrl();
+                      fetch(`${baseUrl}/study_questions.json`)
+                        .then(r => r.json())
+                        .then(data => {
+                          setStudyQData(data);
+                          setStudyQRevealed({});
+                          setShowStudyQModal(true);
+                        })
+                        .catch(err => console.error('Failed to load study questions:', err));
+                    } else {
+                      setStudyQRevealed({});
+                      setShowStudyQModal(true);
+                    }
+                  }}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-amber-500 text-white hover:bg-amber-600 font-semibold"
+                  title="Study discussion questions for current chapter"
+                >
+                  QA
+                </button>
+
                 {/* Chapter Navigation Input */}
-                <input 
-                  type="number" 
-                  placeholder="1" 
+                <input
+                  type="number"
+                  placeholder="1"
                   className="hidden ml-2 px-1 py-0 border border-gray-300 rounded text-sm w-12"
                   min="1"
                   onKeyDown={(e) => {
@@ -6232,7 +6284,7 @@ const BibleApp = () => {
           style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowRefPrompt(false); }}
         >
-          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 450, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>Go to Reference</h3>
             {/* Persistent history buttons above input */}
             {refHistory.length > 0 && (
@@ -6302,6 +6354,61 @@ const BibleApp = () => {
               >
                 Cancel
               </button>
+            </div>
+
+            {/* Text Paste Area */}
+            <div style={{ marginTop: 16, borderTop: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, paddingTop: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>Paste text with verse references</span>
+                {textPasteContent && (
+                  <button
+                    onClick={() => { setTextPasteContent(''); setTextParsedRefs([]); }}
+                    style={{ fontSize: 11, color: isDarkMode ? '#f87171' : '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 6px' }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <textarea
+                value={textPasteContent}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setTextPasteContent(val);
+                  // Parse quoted verse references
+                  const refs = parseDropboxVerseFile(val);
+                  setTextParsedRefs(refs);
+                }}
+                placeholder={'Paste text with quoted refs, e.g.\n\n"Ephesians 5:25, 33"\n — Husbands are called to love...'}
+                style={{
+                  width: '100%', minHeight: 80, padding: 10, fontSize: 13, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
+                  borderRadius: 8, background: isDarkMode ? '#333' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333',
+                  boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4
+                }}
+              />
+              {textParsedRefs.length > 0 && (
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
+                  {textParsedRefs.map((item, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { navigateToRefWithHighlight(item.ref); setShowRefPrompt(false); }}
+                      style={{
+                        display: 'block', width: '100%', padding: '8px 12px', fontSize: 13,
+                        border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 6,
+                        background: isDarkMode ? '#333' : '#fafbff', cursor: 'pointer',
+                        textAlign: 'left', color: isDarkMode ? '#e0e0e0' : '#333',
+                        transition: 'background 0.15s'
+                      }}
+                    >
+                      <span style={{ fontWeight: 600, color: '#667eea' }}>{item.ref}</span>
+                      {item.description && (
+                        <span style={{ display: 'block', fontSize: 11, color: isDarkMode ? '#aaa' : '#888', marginTop: 2 }}>
+                          {item.description.length > 100 ? item.description.slice(0, 100) + '...' : item.description}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -6584,6 +6691,109 @@ const BibleApp = () => {
 
               <button
                 onClick={() => setShowQuizModal(false)}
+                style={{ marginTop: 12, width: '100%', padding: 10, fontSize: 14, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Study Questions Modal */}
+      {showStudyQModal && selectedBook && (() => {
+        const bookName = selectedBook.book || getBookName(selectedBook.abbrev);
+        const bookQuestions = studyQData && studyQData[selectedBook.abbrev];
+        const chapterQuestions = bookQuestions && bookQuestions[String(selectedChapter)];
+
+        if (!chapterQuestions || chapterQuestions.length === 0) return (
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowStudyQModal(false); }}>
+            <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 600, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <p style={{ color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>No study questions for {bookName} {selectedChapter}</p>
+              <p style={{ color: isDarkMode ? '#999' : '#666', textAlign: 'center', fontSize: 13, marginTop: 8 }}>
+                Questions available for: {studyQData ? Object.keys(studyQData).map(abbrev => {
+                  const chs = Object.keys(studyQData[abbrev]).sort((a, b) => Number(a) - Number(b));
+                  return `${abbrev.toUpperCase()} (ch ${chs.join(', ')})`;
+                }).join('; ') : 'loading...'}
+              </p>
+              <button onClick={() => setShowStudyQModal(false)} style={{ marginTop: 12, width: '100%', padding: 10, fontSize: 14, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}>Close</button>
+            </div>
+          </div>
+        );
+
+        // Flatten all questions with section info
+        const allQuestions = [];
+        chapterQuestions.forEach((section) => {
+          section.questions.forEach((q, qi) => {
+            allQuestions.push({ question: q, passage: section.passage, index: allQuestions.length });
+          });
+        });
+
+        return (
+          <div
+            style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowStudyQModal(false); }}
+          >
+            <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 700, height: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              {/* Header with font controls */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 12px', flexShrink: 0 }}>
+                <button
+                  onClick={() => setStudyQFontSize(prev => Math.max(10, prev - 2))}
+                  style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                  title="Decrease font size"
+                >−</button>
+                <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
+                  {bookName} {selectedChapter} — Study Questions
+                </h3>
+                <button
+                  onClick={() => setStudyQFontSize(prev => Math.min(28, prev + 2))}
+                  style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                  title="Increase font size"
+                >+</button>
+              </div>
+
+              {/* Questions list */}
+              <div style={{ flex: 1, overflowY: 'auto', border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, padding: 12, background: isDarkMode ? '#1e1e1e' : '#fafafa' }}>
+                {chapterQuestions.map((section, si) => (
+                  <div key={si} style={{ marginBottom: si < chapterQuestions.length - 1 ? 16 : 0 }}>
+                    {chapterQuestions.length > 1 && (
+                      <div style={{ fontSize: studyQFontSize - 2, fontWeight: 600, color: isDarkMode ? '#f59e0b' : '#b45309', marginBottom: 8, paddingBottom: 4, borderBottom: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}` }}>
+                        {section.passage}
+                      </div>
+                    )}
+                    {section.questions.map((q, qi) => {
+                      const globalIdx = `${si}-${qi}`;
+                      return (
+                        <div
+                          key={qi}
+                          onClick={() => setStudyQRevealed(prev => ({ ...prev, [globalIdx]: !prev[globalIdx] }))}
+                          style={{
+                            margin: '0 0 6px',
+                            fontSize: studyQFontSize,
+                            lineHeight: 1.6,
+                            padding: '6px 10px',
+                            borderRadius: 8,
+                            cursor: 'pointer',
+                            background: studyQRevealed[globalIdx] ? (isDarkMode ? '#3a2e1a' : '#fef3c7') : 'transparent',
+                            transition: 'background 0.15s',
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: 8,
+                          }}
+                        >
+                          <span style={{ fontWeight: 700, color: isDarkMode ? '#f59e0b' : '#b45309', fontSize: studyQFontSize - 2, minWidth: 20, flexShrink: 0 }}>{qi + 1}</span>
+                          <span style={{ color: isDarkMode ? '#d0d0d0' : '#333' }}>{q}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+
+              {/* Close button */}
+              <button
+                onClick={() => setShowStudyQModal(false)}
                 style={{ marginTop: 12, width: '100%', padding: 10, fontSize: 14, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
               >
                 Close
