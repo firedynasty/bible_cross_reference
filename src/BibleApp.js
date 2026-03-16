@@ -658,7 +658,7 @@ const NavigationPlaceholder = ({
             }`}
             title={showPane2Only ? "Switch back to dual pane view" : "Hide pane 1, show only pane 2"}
           >
-            {showPane2Only ? '⇅ Pane 2 Only' : '⇅ Dual Pane'}
+            {showPane2Only ? '⇅ Pane 2 Only PD' : '⇅ Dual Pane'}
           </button>
         )}
 
@@ -5708,10 +5708,20 @@ const BibleApp = () => {
           {(showPane2Only || !isMobileView || isTabletView || showKJVOnMobile) && (
             <div className={`${showPane2Only ? 'w-full' : isMobileView && !isTabletView ? 'w-full' : 'w-1/2'} ${showPane2Only ? '' : 'border-l'} border-gray-200 bg-gray-50 flex flex-col`}>
               {/* KJV Bible Text Display */}
-              <div 
-                ref={kjvContentRef} 
+              <div
+                ref={kjvContentRef}
                 className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'}`}
-                onClick={(event) => handlePaneClick(event, 'right')}
+                onClick={(event) => {
+                  if (showPane2Only) {
+                    if (event.target.tagName === 'A' || event.target.tagName === 'BUTTON' || event.target.closest('button') || event.target.closest('a') || event.target.closest('select')) return;
+                    const pane = kjvContentRef.current;
+                    if (!pane) return;
+                    const pageHeight = pane.clientHeight * 0.9;
+                    pane.scrollTop = Math.min(pane.scrollHeight - pane.clientHeight, pane.scrollTop + pageHeight);
+                  } else {
+                    handlePaneClick(event, 'right');
+                  }
+                }}
                 style={{ cursor: 'default' }}
               >
                 {selectedBook && selectedChapter > 0 && (
