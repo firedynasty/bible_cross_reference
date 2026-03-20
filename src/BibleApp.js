@@ -1140,7 +1140,9 @@ const BibleApp = () => {
   const lastPrimaryScrollPos = useRef(0);
   const lastKjvScrollPos = useRef(0);
   const resetScrollTimerRef = useRef(null);
-  
+  const swipeTouchStartX = useRef(null);
+  const swipeTouchStartY = useRef(null);
+
   // State to track primary reading vs cross-reference viewing
   const [isViewingCrossRef, setIsViewingCrossRef] = useState(false);
 
@@ -5174,7 +5176,31 @@ const BibleApp = () => {
         </div>
         
         {/* Bible Text and KJV Split View - Responsive layout for different devices */}
-        <div className="flex-1 flex overflow-hidden">
+        <div
+          className="flex-1 flex overflow-hidden"
+          onTouchStart={(e) => {
+            swipeTouchStartX.current = e.touches[0].clientX;
+            swipeTouchStartY.current = e.touches[0].clientY;
+          }}
+          onTouchEnd={(e) => {
+            if (swipeTouchStartX.current === null || !isMobileView || isTabletView || viewMode !== 'side-by-side' || showPane2Only) return;
+            const dx = e.changedTouches[0].clientX - swipeTouchStartX.current;
+            const dy = e.changedTouches[0].clientY - swipeTouchStartY.current;
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+              if (dx < 0 && !showKJVOnMobile) {
+                // Swipe left: go to pane 2
+                setShowKJVOnMobile(true);
+                localStorage.setItem('mobilePanePreference', 'pane2');
+              } else if (dx > 0 && showKJVOnMobile) {
+                // Swipe right: go to pane 1
+                setShowKJVOnMobile(false);
+                localStorage.setItem('mobilePanePreference', 'pane1');
+              }
+            }
+            swipeTouchStartX.current = null;
+            swipeTouchStartY.current = null;
+          }}
+        >
           {(viewMode === 'interleaved' || viewMode === 'interleaved-pd') ? (
             /* Interleaved View - Single pane with alternating verses */
             <div
