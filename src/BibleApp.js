@@ -6050,42 +6050,30 @@ const BibleApp = () => {
             </div>
             <div className="p-2 flex-1 overflow-y-auto">
               {verses.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
-                  {verses.flatMap((_, idx) => {
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 6 }}>
+                  {verses.map((_, idx) => {
                     const vNum = idx + 1;
-                    const isSpeakingM = speakingVerseNumber && speakingVerseNumber.verse === vNum && speakingVerseNumber.lang === 'mandarin';
-                    const isSpeakingC = speakingVerseNumber && speakingVerseNumber.verse === vNum && speakingVerseNumber.lang === 'cantonese';
-                    return [
+                    const isCantonese = sidebarLang === 'cant';
+                    const isSpeaking = speakingVerseNumber && speakingVerseNumber.verse === vNum &&
+                      speakingVerseNumber.lang === (isCantonese ? 'cantonese' : 'mandarin');
+                    return (
                       <button
-                        key={`${vNum}-m`}
-                        onClick={() => speakVerseInGrid(vNum, 'mandarin')}
+                        key={vNum}
+                        onClick={() => speakVerseInGrid(vNum, isCantonese ? 'cantonese' : 'mandarin')}
                         style={{
                           width: '100%', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 14, fontWeight: 600, border: 'none', borderRadius: 8, cursor: 'pointer',
+                          fontSize: 14, fontWeight: 600, borderRadius: 8, cursor: 'pointer',
                           transition: 'all 0.15s',
-                          background: isSpeakingM ? '#3b82f6' : (isDarkMode ? '#3a3a3a' : '#f0f0f0'),
-                          color: isSpeakingM ? 'white' : (isDarkMode ? '#d0d0d0' : '#333'),
-                          boxShadow: isSpeakingM ? '0 0 12px rgba(59,130,246,0.5)' : 'none'
-                        }}
-                      >
-                        {vNum}
-                      </button>,
-                      <button
-                        key={`${vNum}-c`}
-                        onClick={() => speakVerseInGrid(vNum, 'cantonese')}
-                        style={{
-                          width: '100%', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 14, fontWeight: 600, border: '2px solid', borderRadius: 8, cursor: 'pointer',
-                          transition: 'all 0.15s',
-                          background: isSpeakingC ? '#f59e0b' : (isDarkMode ? '#2a2a2a' : '#fff8f0'),
-                          borderColor: isSpeakingC ? '#f59e0b' : (isDarkMode ? '#6b5b3a' : '#e0c090'),
-                          color: isSpeakingC ? 'white' : (isDarkMode ? '#e0c080' : '#8b6914'),
-                          boxShadow: isSpeakingC ? '0 0 12px rgba(245,158,11,0.5)' : 'none'
+                          border: isCantonese ? '2px solid' : 'none',
+                          background: isSpeaking ? (isCantonese ? '#f59e0b' : '#3b82f6') : (isDarkMode ? '#3a3a3a' : '#f0f0f0'),
+                          borderColor: isCantonese ? (isSpeaking ? '#f59e0b' : (isDarkMode ? '#6b5b3a' : '#e0c090')) : 'transparent',
+                          color: isSpeaking ? 'white' : (isDarkMode ? '#d0d0d0' : '#333'),
+                          boxShadow: isSpeaking ? `0 0 12px rgba(${isCantonese ? '245,158,11' : '59,130,246'},0.5)` : 'none'
                         }}
                       >
                         {vNum}
                       </button>
-                    ];
+                    );
                   })}
                 </div>
               ) : (
@@ -6122,7 +6110,7 @@ const BibleApp = () => {
             </div>
             <div className="p-2 flex-1 overflow-y-auto">
               {verses.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 6 }}>
                   {verses.map((_, idx) => {
                     const vNum = idx + 1;
                     const isSpeaking = speakingSpanishVerse === vNum;
@@ -6178,7 +6166,7 @@ const BibleApp = () => {
             </div>
             <div className="p-2 flex-1 overflow-y-auto">
               {verses.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 6 }}>
                   {verses.map((_, idx) => {
                     const vNum = idx + 1;
                     const isSpeaking = speakingHebrewVerse === vNum;
@@ -6234,7 +6222,7 @@ const BibleApp = () => {
             </div>
             <div className="p-2 flex-1 overflow-y-auto">
               {verses.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 6 }}>
                   {verses.map((_, idx) => {
                     const vNum = idx + 1;
                     const isSpeaking = speakingFrenchVerse === vNum;
