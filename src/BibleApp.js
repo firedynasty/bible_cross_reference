@@ -6013,7 +6013,7 @@ const BibleApp = () => {
         const verses = bookObj && bookObj.chapters[chapterIdx] ? bookObj.chapters[chapterIdx] : [];
         const bookName = abbrev ? getBookName(abbrev) : '';
         return (
-          <div className={`${isMobileView || isTabletView ? 'absolute right-0 z-10 h-full' : 'w-64'} ${isDarkMode ? 'bg-gray-800 text-white border-l border-gray-700' : 'bg-white border-l border-gray-200'} overflow-y-auto flex flex-col`}>
+          <div className={`${isMobileView || isTabletView ? 'w-24' : 'w-64'} ${isDarkMode ? 'bg-gray-800 text-white border-l border-gray-700' : 'bg-white border-l border-gray-200'} overflow-y-auto flex flex-col`}>
             <div className={`p-2 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-between items-center`}>
               <h3 className="text-sm font-semibold truncate flex-1">
                 {bookName} {primaryReading.chapter}
@@ -6085,7 +6085,7 @@ const BibleApp = () => {
         const verses = bookObj && bookObj.chapters[chapterIdx] ? bookObj.chapters[chapterIdx] : [];
         const bookName = abbrev ? getBookName(abbrev) : '';
         return (
-          <div className={`${isMobileView || isTabletView ? 'absolute right-0 z-10 h-full' : 'w-64'} ${isDarkMode ? 'bg-gray-800 text-white border-l border-gray-700' : 'bg-white border-l border-gray-200'} overflow-y-auto flex flex-col`}>
+          <div className={`${isMobileView || isTabletView ? 'w-24' : 'w-64'} ${isDarkMode ? 'bg-gray-800 text-white border-l border-gray-700' : 'bg-white border-l border-gray-200'} overflow-y-auto flex flex-col`}>
             <div className={`p-2 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-between items-center`}>
               <h3 className="text-sm font-semibold truncate flex-1">
                 {bookName} {primaryReading.chapter} <span className="text-orange-500">(ES)</span>
@@ -6141,7 +6141,7 @@ const BibleApp = () => {
         const verses = bookObj && bookObj.chapters[chapterIdx] ? bookObj.chapters[chapterIdx] : [];
         const bookName = abbrev ? getBookName(abbrev) : '';
         return (
-          <div className={`${isMobileView || isTabletView ? 'absolute right-0 z-10 h-full' : 'w-64'} ${isDarkMode ? 'bg-gray-800 text-white border-l border-gray-700' : 'bg-white border-l border-gray-200'} overflow-y-auto flex flex-col`}>
+          <div className={`${isMobileView || isTabletView ? 'w-24' : 'w-64'} ${isDarkMode ? 'bg-gray-800 text-white border-l border-gray-700' : 'bg-white border-l border-gray-200'} overflow-y-auto flex flex-col`}>
             <div className={`p-2 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-between items-center`}>
               <h3 className="text-sm font-semibold truncate flex-1">
                 {bookName} {primaryReading.chapter} <span className="text-indigo-500">(HE)</span>
@@ -6197,7 +6197,7 @@ const BibleApp = () => {
         const verses = bookObj && bookObj.chapters[chapterIdx] ? bookObj.chapters[chapterIdx] : [];
         const bookName = abbrev ? getBookName(abbrev) : '';
         return (
-          <div className={`${isMobileView || isTabletView ? 'absolute right-0 z-10 h-full' : 'w-64'} ${isDarkMode ? 'bg-gray-800 text-white border-l border-gray-700' : 'bg-white border-l border-gray-200'} overflow-y-auto flex flex-col`}>
+          <div className={`${isMobileView || isTabletView ? 'w-24' : 'w-64'} ${isDarkMode ? 'bg-gray-800 text-white border-l border-gray-700' : 'bg-white border-l border-gray-200'} overflow-y-auto flex flex-col`}>
             <div className={`p-2 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-between items-center`}>
               <h3 className="text-sm font-semibold truncate flex-1">
                 {bookName} {primaryReading.chapter} <span className="text-blue-600">(FR)</span>
