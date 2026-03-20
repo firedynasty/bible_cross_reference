@@ -3055,28 +3055,16 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // 'n' key - ensure pane 1 is KJV, cycle pane 2 translation
+      // 'n' key - cycle pane 2 translation
       else if (e.key === 'n' || e.key === 'N') {
         try {
-          // Always set pane 1 to KJV
-          if (selectedTranslation !== 'en_kjv.json') {
-            handleApplySelectedTranslationToPane1('en_kjv.json');
-          }
-          // Cycle pane 2 based on current right pane translation
           const currentIndex = translations.findIndex(t => t.id === rightPaneTranslation);
           const nextIndex = (currentIndex + 1) % translations.length;
-          let finalTranslation = translations[nextIndex].id;
-          if (finalTranslation.includes('he_heb')) {
-            const afterHebrewIndex = (nextIndex + 1) % translations.length;
-            if (translations[afterHebrewIndex] && !translations[afterHebrewIndex].id.includes('he_heb')) {
-              finalTranslation = translations[afterHebrewIndex].id;
-            }
-          }
+          const finalTranslation = translations[nextIndex].id;
           setSelectedDropdownTranslation(finalTranslation);
           setTimeout(() => {
             try { handleApplySelectedTranslationToPane2(finalTranslation); } catch (error) { console.warn('Error applying translation:', error); }
           }, 150);
-          console.log(`n key pressed - pane 1: KJV, pane 2 cycled to: ${finalTranslation}`);
         } catch (error) {
           console.warn('Error cycling translation:', error);
         }
@@ -4744,37 +4732,56 @@ const BibleApp = () => {
                   </button>
                 )}
 
-                {/* Next Translation Button - ensures pane 1 is KJV, cycles pane 2 */}
-                <button
-                  onClick={() => {
+                {/* Cycle Pane 1 Translation Button */}
+                {(() => {
+                  const shortLabel = (id) => {
+                    if (!id) return '?';
+                    if (id.includes('kjv')) return 'kjv';
+                    if (id.includes('web')) return 'web';
+                    if (id.includes('cuv')) return 'cuv';
+                    if (id.includes('rvr')) return 'rvr';
+                    if (id.includes('he_heb')) return 'heb';
+                    if (id.includes('apee')) return 'apee';
+                    return id.split('_')[1] || id;
+                  };
+                  const cyclePane1 = () => {
                     try {
-                      // Always set pane 1 to KJV
-                      if (selectedTranslation !== 'en_kjv.json') {
-                        handleApplySelectedTranslationToPane1('en_kjv.json');
-                      }
-                      // Cycle pane 2 to next translation
+                      const currentIndex = translations.findIndex(t => t.id === selectedTranslation);
+                      const nextIndex = (currentIndex + 1) % translations.length;
+                      const next = translations[nextIndex].id;
+                      handleApplySelectedTranslationToPane1(next);
+                    } catch (e) { console.warn('Error cycling pane 1 translation:', e); }
+                  };
+                  const cyclePane2 = () => {
+                    try {
                       const currentIndex = translations.findIndex(t => t.id === rightPaneTranslation);
                       const nextIndex = (currentIndex + 1) % translations.length;
-                      let finalTranslation = translations[nextIndex].id;
-                      if (finalTranslation.includes('he_heb')) {
-                        const afterHebrewIndex = (nextIndex + 1) % translations.length;
-                        if (translations[afterHebrewIndex] && !translations[afterHebrewIndex].id.includes('he_heb')) {
-                          finalTranslation = translations[afterHebrewIndex].id;
-                        }
-                      }
-                      setSelectedDropdownTranslation(finalTranslation);
+                      const next = translations[nextIndex].id;
+                      setSelectedDropdownTranslation(next);
                       setTimeout(() => {
-                        try { handleApplySelectedTranslationToPane2(finalTranslation); } catch (e) { console.warn('Error applying translation:', e); }
+                        try { handleApplySelectedTranslationToPane2(next); } catch (e) { console.warn('Error applying translation:', e); }
                       }, 150);
-                    } catch (error) {
-                      console.warn('Error cycling translation:', error);
-                    }
-                  }}
-                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-orange-500 text-white hover:bg-orange-600 font-semibold"
-                  title="Pane 1 = KJV, cycle pane 2 translation (n)"
-                >
-                  nt
-                </button>
+                    } catch (e) { console.warn('Error cycling pane 2 translation:', e); }
+                  };
+                  return (
+                    <>
+                      <button
+                        onClick={cyclePane1}
+                        className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-indigo-500 text-white hover:bg-indigo-600 font-semibold"
+                        title="Cycle pane 1 translation"
+                      >
+                        1:{shortLabel(selectedTranslation)}
+                      </button>
+                      <button
+                        onClick={cyclePane2}
+                        className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-orange-500 text-white hover:bg-orange-600 font-semibold"
+                        title="Cycle pane 2 translation (n)"
+                      >
+                        2:{shortLabel(rightPaneTranslation)}
+                      </button>
+                    </>
+                  );
+                })()}
 
                 {/* Font Size Controls */}
                 <button
@@ -4945,50 +4952,6 @@ const BibleApp = () => {
             )}
 
             <div className="flex items-center ml-2 md:ml-2 w-full md:w-auto flex-wrap md:flex-nowrap mt-2 md:mt-0">
-              <BookOpen className="mr-1 h-4 w-4 text-blue-600" />
-              <select 
-                value={selectedDropdownTranslation}
-                onChange={handleTranslationChange}
-                className={`border ${isDarkMode ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white'} rounded px-2 py-1 text-sm`}
-                style={{ width: "auto", maxWidth: "150px" }}
-                id="translationSelector"
-              >
-                {translations && translations.map(translation => (
-                  <option key={translation.id} value={translation.id}>
-                    {translation.name}
-                  </option>
-                ))}
-              </select>
-              
-              {/* Load selected translation for pane 1 */}
-              <button
-                onClick={() => {
-                  handleApplySelectedTranslationToPane1(selectedDropdownTranslation);
-                }}
-                className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-indigo-700' : 'bg-indigo-500'} text-white rounded hover:bg-indigo-600 transition-colors`}
-                title="Apply selected translation to primary pane"
-              >
-                <span className="flex items-center">
-                  <BookOpen className="h-3 w-3" />
-                  <span className="text-xs font-bold ml-0.5 mr-1">1</span>
-                </span>
-                Apply
-              </button>
-
-              {/* Load selected translation for pane 2 (for read) */}
-              <button
-                onClick={() => {
-                  handleApplySelectedTranslationToPane2(selectedDropdownTranslation);
-                }}
-                className={`ml-2 flex items-center px-2 py-1 text-sm ${isDarkMode ? 'bg-purple-700' : 'bg-purple-500'} text-white rounded hover:bg-purple-600 transition-colors`}
-                title="Apply selected translation to secondary pane"
-              >
-                <span className="flex items-center">
-                  <BookOpen className="h-3 w-3" />
-                  <span className="text-xs font-bold ml-0.5 mr-1">2</span>
-                </span>
-                Apply
-              </button>
 
               {/* Book Selection Dropdown */}
               <div className="flex ml-2 items-center border-l border-gray-300 pl-2 relative">
