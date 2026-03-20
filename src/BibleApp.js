@@ -442,7 +442,8 @@ const NavigationPlaceholder = ({
   chineseBibleData,
   lastGridVerse,
   gridReadMode,
-  onGridReadModeToggle
+  onGridReadModeToggle,
+  onNextChapter
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -736,6 +737,7 @@ const NavigationPlaceholder = ({
           onTranslationChange={onTranslationChange}
           chineseBibleData={chineseBibleData}
           lastGridVerse={lastGridVerse}
+          onNextChapter={() => onNextChapter && book && chapter < book.chapters.length && onNextChapter(chapter + 1, true)}
         />
         
         {/* To Clipboard Button - Hidden */}

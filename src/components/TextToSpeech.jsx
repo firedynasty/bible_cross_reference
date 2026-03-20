@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { ChevronDown, ChevronRight, Play, SkipForward } from 'lucide-react';
 
-const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse }, ref) => {
+const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse, onNextChapter }, ref) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -1067,7 +1067,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         Upper
       </button>
 
-      {/* Lower - always visible, copies lower half of stored verse */}
+      {/* Lower - always visible, copies lower half of stored verse then advances chapter */}
       <button
         onClick={async () => {
           const chBook = chineseBibleData ? chineseBibleData.find(b => b.abbrev === currentBook) : null;
@@ -1080,6 +1080,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
               try { await navigator.clipboard.writeText(copyText); } catch (err) { console.warn('Clipboard write failed:', err); }
             }
           }
+          if (onNextChapter) onNextChapter();
         }}
         className="px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-teal-100 text-teal-700 hover:bg-teal-200"
         title="Lower: copies from char 20 onward of last selected verse"
