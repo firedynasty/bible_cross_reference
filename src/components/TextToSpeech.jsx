@@ -1030,7 +1030,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
 
   return (
     <div className="flex items-center gap-2">
-      {/* Copy to Clipboard Button - copies last grid verse (Chinese) or pane 2 */}
+      {/* Go/Copy mode toggle - always shows "Go" label */}
       <button
         onClick={() => {
           const next = chineseAction === 'copy' ? 'go' : 'copy';
@@ -1040,39 +1040,50 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
           chineseAction === 'go'
             ? 'bg-green-100 text-green-700 hover:bg-green-200'
-            : lastGridVerse ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+            : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
         }`}
         title={chineseAction === 'go' ? 'Go mode: opens verse in MDBG dictionary (click to switch to Copy)' : 'Copy mode: copies verse to clipboard (click to switch to Go)'}
       >
-        {chineseAction === 'go' ? 'Go' : 'Copy'}{lastGridVerse && chineseAction === 'copy' ? ` ${lastGridVerse}` : ''}
+        Go
       </button>
 
-      {/* Upper/Lower - copies upper or lower half of stored verse index */}
-      {chineseAction === 'copy' && (
-        <button
-          onClick={async () => {
-            const chBook = chineseBibleData ? chineseBibleData.find(b => b.abbrev === currentBook) : null;
-            const chVerses = chBook && chBook.chapters[(currentChapter || 1) - 1] ? chBook.chapters[(currentChapter || 1) - 1] : [];
-            const text = chVerses[lastChineseVerseIdx];
-            if (text) {
-              const copyText = chineseHalf === 'upper' ? text.slice(0, 20) : (text.length > 20 ? text.slice(20) : '');
-              if (copyText) {
-                try { await navigator.clipboard.writeText(copyText); } catch (err) { console.warn('Clipboard write failed:', err); }
-              }
-              const next = chineseHalf === 'upper' ? 'lower' : 'upper';
-              setChineseHalf(next);
-              localStorage.setItem('bibleAppChineseHalf', next);
+      {/* Upper - always visible, copies upper half of stored verse */}
+      <button
+        onClick={async () => {
+          const chBook = chineseBibleData ? chineseBibleData.find(b => b.abbrev === currentBook) : null;
+          const chVerses = chBook && chBook.chapters[(currentChapter || 1) - 1] ? chBook.chapters[(currentChapter || 1) - 1] : [];
+          const text = chVerses[lastChineseVerseIdx];
+          if (text) {
+            const copyText = text.slice(0, 20);
+            if (copyText) {
+              try { await navigator.clipboard.writeText(copyText); } catch (err) { console.warn('Clipboard write failed:', err); }
             }
-          }}
-          className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${
-            chineseHalf === 'upper' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-            : 'bg-teal-100 text-teal-700 hover:bg-teal-200'
-          }`}
-          title={chineseHalf === 'upper' ? 'Upper: copies first ~20 chars (click to copy & switch to Lower)' : 'Lower: copies from char 20 onward (click to copy & switch to Upper)'}
-        >
-          {chineseHalf === 'upper' ? 'Upper' : 'Lower'}
-        </button>
-      )}
+          }
+        }}
+        className="px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200"
+        title="Upper: copies first ~20 chars of last selected verse"
+      >
+        Upper
+      </button>
+
+      {/* Lower - always visible, copies lower half of stored verse */}
+      <button
+        onClick={async () => {
+          const chBook = chineseBibleData ? chineseBibleData.find(b => b.abbrev === currentBook) : null;
+          const chVerses = chBook && chBook.chapters[(currentChapter || 1) - 1] ? chBook.chapters[(currentChapter || 1) - 1] : [];
+          const text = chVerses[lastChineseVerseIdx];
+          if (text) {
+            const copyText = text.length > 20 ? text.slice(20) : '';
+            if (copyText) {
+              try { await navigator.clipboard.writeText(copyText); } catch (err) { console.warn('Clipboard write failed:', err); }
+            }
+          }
+        }}
+        className="px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-teal-100 text-teal-700 hover:bg-teal-200"
+        title="Lower: copies from char 20 onward of last selected verse"
+      >
+        Lower
+      </button>
 
       {/* Part-by-part reading button - hidden, functionality moved to grid clicks */}
 
@@ -1109,11 +1120,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
               }
               e.target.value = '';
             }}
-            className={`px-1 py-0.5 rounded focus:outline-none text-xs border w-14 ${
-              chineseAction === 'go'
-                ? 'bg-green-100 text-green-800 border-green-300'
-                : 'bg-amber-100 text-amber-800 border-amber-300'
-            }`}
+            className="hidden"
             title={chineseAction === 'go' ? "Select a Chinese verse to look up in MDBG dictionary" : "Select a Chinese verse to copy to clipboard"}
           >
             <option value="" disabled>Ch</option>
