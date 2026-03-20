@@ -1350,6 +1350,9 @@ const BibleApp = () => {
   const [studyQFontSize, setStudyQFontSize] = useState(14);
   const [studyQRevealed, setStudyQRevealed] = useState({});
 
+  // Language sidebar cycle state: null | 'cant' | 'chin' | 'heb' | 'span' | 'fr'
+  const [sidebarLang, setSidebarLang] = useState(null);
+
   // State for Verse Grid TTS Modal
   const [showVerseGrid, setShowVerseGrid] = useState(false);
   const [speakingVerseNumber, setSpeakingVerseNumber] = useState(null);
@@ -4688,17 +4691,47 @@ const BibleApp = () => {
           <div className="flex items-center space-x-2">
             {/* Sidebar toggle button for mobile, tablet and full screen */}
             {!showSidebar && (
-              <>
-                <button 
-                  onClick={() => setShowSidebar(true)} 
-                  className="flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-              </>
+              <button
+                onClick={() => setShowSidebar(true)}
+                className="flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
             )}
+
+            {/* Language verse-grid cycle button */}
+            {(() => {
+              const langOptions = [null, 'cant', 'chin', 'heb', 'span', 'fr'];
+              const langColors = {
+                cant: 'bg-amber-500 hover:bg-amber-600',
+                chin: 'bg-green-500 hover:bg-green-600',
+                heb: 'bg-indigo-500 hover:bg-indigo-600',
+                span: 'bg-orange-500 hover:bg-orange-600',
+                fr: 'bg-blue-600 hover:bg-blue-700',
+              };
+              const cycleLang = () => {
+                const idx = langOptions.indexOf(sidebarLang);
+                const next = langOptions[(idx + 1) % langOptions.length];
+                setSidebarLang(next);
+                setShowVerseGrid(next === 'cant' || next === 'chin');
+                setShowSpanishGrid(next === 'span');
+                setShowHebrewGrid(next === 'heb');
+                setShowFrenchGrid(next === 'fr');
+              };
+              const label = sidebarLang || 'lang';
+              const colorClass = sidebarLang ? langColors[sidebarLang] : 'bg-gray-400 hover:bg-gray-500';
+              return (
+                <button
+                  onClick={cycleLang}
+                  className={`px-2 py-0.5 rounded focus:outline-none text-xs text-white font-semibold ${colorClass}`}
+                  title="Cycle language verse grid (cant / chin / heb / span / fr)"
+                >
+                  {label}
+                </button>
+              );
+            })()}
             
             
             {selectedBook && (
@@ -4825,42 +4858,6 @@ const BibleApp = () => {
                 >
                   DB
                 </button>}
-
-                {/* Verse Grid TTS Button */}
-                <button
-                  onClick={() => setShowVerseGrid(prev => !prev)}
-                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showVerseGrid ? 'bg-green-700 text-white' : 'bg-green-500 text-white hover:bg-green-600'}`}
-                  title="Toggle verse grid to hear verses in Mandarin"
-                >
-                  Cn
-                </button>
-
-                {/* Spanish Verse Grid TTS Button */}
-                <button
-                  onClick={() => setShowSpanishGrid(prev => !prev)}
-                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showSpanishGrid ? 'bg-orange-700 text-white' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
-                  title="Toggle verse grid to hear verses in Spanish"
-                >
-                  Span
-                </button>
-
-                {/* Hebrew Verse Grid TTS Button */}
-                <button
-                  onClick={() => setShowHebrewGrid(prev => !prev)}
-                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showHebrewGrid ? 'bg-indigo-700 text-white' : 'bg-indigo-500 text-white hover:bg-indigo-600'}`}
-                  title="Toggle verse grid to hear verses in Hebrew"
-                >
-                  Hebrew
-                </button>
-
-                {/* French Verse Grid TTS Button */}
-                <button
-                  onClick={() => setShowFrenchGrid(prev => !prev)}
-                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showFrenchGrid ? 'bg-blue-800 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-                  title="Toggle verse grid to hear verses in French"
-                >
-                  Fr
-                </button>
 
                 {/* Book Search Button */}
                 <button
