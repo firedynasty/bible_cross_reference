@@ -588,7 +588,7 @@ const NavigationPlaceholder = ({
         </button>
 
         {/* External Links Dropdown */}
-        <div className="relative ml-2 flex-shrink-0">
+        <div className="relative ml-2 flex-shrink-0 hidden">
           <button
             onClick={() => setShowLinksDropdown(!showLinksDropdown)}
             className="px-2 py-0.5 bg-blue-200 hover:bg-blue-300 rounded text-xs font-bold"
@@ -618,8 +618,8 @@ const NavigationPlaceholder = ({
           )}
         </div>
 
-        {/* Show All Verses Toggle Button - only show when filter is loaded */}
-        {verseFilterData && (
+        {/* Show All Verses Toggle Button - hidden */}
+        {false && verseFilterData && (
           <button
             onClick={() => setShowFilteredVersesOnly(!showFilteredVersesOnly)}
             className={`ml-2 px-2 py-0.5 rounded text-xs font-bold ${
