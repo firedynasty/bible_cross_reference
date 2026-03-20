@@ -4701,9 +4701,9 @@ const BibleApp = () => {
               </button>
             )}
 
-            {/* Language verse-grid cycle button */}
+            {/* Language cycle + open buttons */}
             {(() => {
-              const langOptions = [null, 'cant', 'chin', 'heb', 'span', 'fr'];
+              const langOptions = ['cant', 'chin', 'heb', 'span', 'fr'];
               const langColors = {
                 cant: 'bg-amber-500 hover:bg-amber-600',
                 chin: 'bg-green-500 hover:bg-green-600',
@@ -4711,25 +4711,46 @@ const BibleApp = () => {
                 span: 'bg-orange-500 hover:bg-orange-600',
                 fr: 'bg-blue-600 hover:bg-blue-700',
               };
+              const isOpen = showVerseGrid || showSpanishGrid || showHebrewGrid || showFrenchGrid;
               const cycleLang = () => {
                 const idx = langOptions.indexOf(sidebarLang);
                 const next = langOptions[(idx + 1) % langOptions.length];
                 setSidebarLang(next);
-                setShowVerseGrid(next === 'cant' || next === 'chin');
-                setShowSpanishGrid(next === 'span');
-                setShowHebrewGrid(next === 'heb');
-                setShowFrenchGrid(next === 'fr');
               };
-              const label = sidebarLang || 'lang';
-              const colorClass = sidebarLang ? langColors[sidebarLang] : 'bg-gray-400 hover:bg-gray-500';
+              const toggleOpen = () => {
+                if (isOpen) {
+                  setShowVerseGrid(false);
+                  setShowSpanishGrid(false);
+                  setShowHebrewGrid(false);
+                  setShowFrenchGrid(false);
+                } else {
+                  const lang = sidebarLang || 'cant';
+                  setSidebarLang(lang);
+                  setShowVerseGrid(lang === 'cant' || lang === 'chin');
+                  setShowSpanishGrid(lang === 'span');
+                  setShowHebrewGrid(lang === 'heb');
+                  setShowFrenchGrid(lang === 'fr');
+                }
+              };
+              const label = sidebarLang || 'cant';
+              const colorClass = langColors[label];
               return (
-                <button
-                  onClick={cycleLang}
-                  className={`px-2 py-0.5 rounded focus:outline-none text-xs text-white font-semibold ${colorClass}`}
-                  title="Cycle language verse grid (cant / chin / heb / span / fr)"
-                >
-                  {label}
-                </button>
+                <>
+                  <button
+                    onClick={cycleLang}
+                    className={`px-2 py-0.5 rounded focus:outline-none text-xs text-white font-semibold ${colorClass}`}
+                    title="Cycle language (cant / chin / heb / span / fr)"
+                  >
+                    {label}
+                  </button>
+                  <button
+                    onClick={toggleOpen}
+                    className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${isOpen ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                    title={isOpen ? 'Close language sidebar' : 'Open language sidebar'}
+                  >
+                    {isOpen ? '✕' : '▶'}
+                  </button>
+                </>
               );
             })()}
             
