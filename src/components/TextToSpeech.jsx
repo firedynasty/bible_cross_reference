@@ -1052,7 +1052,8 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         onClick={async () => {
           const chBook = chineseBibleData ? chineseBibleData.find(b => b.abbrev === currentBook) : null;
           const chVerses = chBook && chBook.chapters[(currentChapter || 1) - 1] ? chBook.chapters[(currentChapter || 1) - 1] : [];
-          const text = chVerses[lastChineseVerseIdx];
+          const idx = lastGridVerse ? lastGridVerse - 1 : 0;
+          const text = chVerses[idx];
           if (text) {
             const copyText = text.slice(0, 20);
             if (copyText) {
@@ -1071,7 +1072,8 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         onClick={async () => {
           const chBook = chineseBibleData ? chineseBibleData.find(b => b.abbrev === currentBook) : null;
           const chVerses = chBook && chBook.chapters[(currentChapter || 1) - 1] ? chBook.chapters[(currentChapter || 1) - 1] : [];
-          const text = chVerses[lastChineseVerseIdx];
+          const idx = lastGridVerse ? lastGridVerse - 1 : 0;
+          const text = chVerses[idx];
           if (text) {
             const copyText = text.length > 20 ? text.slice(20) : '';
             if (copyText) {
