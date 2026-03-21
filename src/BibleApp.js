@@ -443,7 +443,9 @@ const NavigationPlaceholder = ({
   lastGridVerse,
   gridReadMode,
   onGridReadModeToggle,
-  onNextChapter
+  onNextChapter,
+  onQA,
+  showStudyQModal
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -738,6 +740,8 @@ const NavigationPlaceholder = ({
           chineseBibleData={chineseBibleData}
           lastGridVerse={lastGridVerse}
           onNextChapter={() => onNextChapter && book && chapter < book.chapters.length && onNextChapter(chapter + 1, true)}
+          onQA={onQA}
+          showStudyQModal={showStudyQModal}
         />
         
         {/* To Clipboard Button - Hidden */}
@@ -4915,29 +4919,7 @@ const BibleApp = () => {
                   Quiz
                 </button>
 
-                {/* Study Questions Button */}
-                <button
-                  onClick={() => {
-                    if (!studyQData) {
-                      const baseUrl = getBaseUrl();
-                      fetch(`${baseUrl}/study_questions.json`)
-                        .then(r => r.json())
-                        .then(data => {
-                          setStudyQData(data);
-                          setStudyQRevealed({});
-                          setShowStudyQModal(true);
-                        })
-                        .catch(err => console.error('Failed to load study questions:', err));
-                    } else {
-                      setStudyQRevealed({});
-                      setShowStudyQModal(true);
-                    }
-                  }}
-                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-amber-500 text-white hover:bg-amber-600 font-semibold"
-                  title="Study discussion questions for current chapter"
-                >
-                  QA
-                </button>
+                {/* Study Questions Button - moved to TextToSpeech after Lower */}
 
                 {/* Chapter Navigation Input */}
                 <input
@@ -5111,6 +5093,19 @@ const BibleApp = () => {
               onShowVerseGrid={() => setShowVerseGrid(true)}
               chineseBibleData={chineseBibleData}
               lastGridVerse={lastGridVerse}
+              showStudyQModal={showStudyQModal}
+              onQA={() => {
+                if (!studyQData) {
+                  const baseUrl = getBaseUrl();
+                  fetch(`${baseUrl}/study_questions.json`)
+                    .then(r => r.json())
+                    .then(data => { setStudyQData(data); setStudyQRevealed({}); setShowStudyQModal(true); })
+                    .catch(err => console.error('Failed to load study questions:', err));
+                } else {
+                  setStudyQRevealed({});
+                  setShowStudyQModal(prev => !prev);
+                }
+              }}
               onNavigate={(book, chapter) => {
                 if (book && bibleData) {
                   const bookObj = bibleData.find(b => b.abbrev === book);
@@ -5733,7 +5728,64 @@ const BibleApp = () => {
                 }}
                 style={{ cursor: 'default' }}
               >
-                {selectedBook && selectedChapter > 0 && (
+                {showStudyQModal && studyQData && (() => {
+                  const bookName = selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : '';
+                  const bookQuestions = selectedBook && studyQData[selectedBook.abbrev];
+                  const chapterQuestions = bookQuestions && bookQuestions[String(selectedChapter)];
+                  // Build table of contents from all available books/chapters
+                  const toc = Object.entries(studyQData).map(([abbrev, chapters]) => ({
+                    abbrev,
+                    chapters: Object.keys(chapters).map(Number).sort((a, b) => a - b)
+                  }));
+                  return (
+                    <div className={`${showPane2Only ? 'max-w-[70ch] mx-auto' : ''} pb-8`}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333' }}>
+                          {chapterQuestions ? `${bookName} ${selectedChapter} — Study Questions` : 'Study Questions'}
+                        </h3>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => setStudyQFontSize(prev => Math.max(10, prev - 2))} style={{ width: 28, height: 28, fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}>−</button>
+                          <button onClick={() => setStudyQFontSize(prev => Math.min(28, prev + 2))} style={{ width: 28, height: 28, fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}>+</button>
+                          <button onClick={() => setShowStudyQModal(false)} style={{ width: 28, height: 28, fontSize: 14, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#555' : '#d0d0d0', color: isDarkMode ? '#e0e0e0' : '#333' }}>✕</button>
+                        </div>
+                      </div>
+                      {/* Table of contents */}
+                      <div style={{ marginBottom: 16, fontSize: studyQFontSize - 2, color: isDarkMode ? '#aaa' : '#666' }}>
+                        <strong style={{ color: isDarkMode ? '#f59e0b' : '#b45309' }}>Available: </strong>
+                        {toc.map(({ abbrev, chapters }) => (
+                          <span key={abbrev} style={{ marginRight: 8 }}>{abbrev.toUpperCase()} ch {chapters.join(', ')}</span>
+                        ))}
+                      </div>
+                      {chapterQuestions ? (
+                        chapterQuestions.map((section, si) => (
+                          <div key={si} style={{ marginBottom: si < chapterQuestions.length - 1 ? 16 : 0 }}>
+                            {chapterQuestions.length > 1 && (
+                              <div style={{ fontSize: studyQFontSize - 2, fontWeight: 600, color: isDarkMode ? '#f59e0b' : '#b45309', marginBottom: 8, paddingBottom: 4, borderBottom: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}` }}>
+                                {section.passage}
+                              </div>
+                            )}
+                            {section.questions.map((q, qi) => {
+                              const globalIdx = `${si}-${qi}`;
+                              return (
+                                <div key={qi} onClick={() => setStudyQRevealed(prev => ({ ...prev, [globalIdx]: !prev[globalIdx] }))}
+                                  style={{ margin: '0 0 6px', fontSize: studyQFontSize, lineHeight: 1.6, padding: '6px 10px', borderRadius: 8, cursor: 'pointer', background: studyQRevealed[globalIdx] ? (isDarkMode ? '#3a2e1a' : '#fef3c7') : 'transparent', transition: 'background 0.15s', display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                                  <span style={{ fontWeight: 700, color: isDarkMode ? '#f59e0b' : '#b45309', fontSize: studyQFontSize - 2, minWidth: 20, flexShrink: 0 }}>{qi + 1}</span>
+                                  <span style={{ color: isDarkMode ? '#d0d0d0' : '#333' }}>{q}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))
+                      ) : (
+                        <p style={{ color: isDarkMode ? '#aaa' : '#666', textAlign: 'center', fontSize: studyQFontSize }}>
+                          No study questions for {bookName} {selectedChapter}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {!showStudyQModal && selectedBook && selectedChapter > 0 && (
                 <div className={showPane2Only ? 'max-w-[70ch] mx-auto' : ''}>
                   {/* Read and Repeat buttons - Hidden */}
                   <div className="hidden mb-4 flex gap-2">
@@ -6020,6 +6072,7 @@ const BibleApp = () => {
                   </div>
                 </div>
               )}
+                )}
             </div>
           </div>
         )}
@@ -6707,108 +6760,7 @@ const BibleApp = () => {
         );
       })()}
 
-      {/* Study Questions Modal */}
-      {showStudyQModal && selectedBook && (() => {
-        const bookName = selectedBook.book || getBookName(selectedBook.abbrev);
-        const bookQuestions = studyQData && studyQData[selectedBook.abbrev];
-        const chapterQuestions = bookQuestions && bookQuestions[String(selectedChapter)];
-
-        if (!chapterQuestions || chapterQuestions.length === 0) return (
-          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-            onClick={(e) => { if (e.target === e.currentTarget) setShowStudyQModal(false); }}>
-            <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 600, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-              <p style={{ color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>No study questions for {bookName} {selectedChapter}</p>
-              <p style={{ color: isDarkMode ? '#999' : '#666', textAlign: 'center', fontSize: 13, marginTop: 8 }}>
-                Questions available for: {studyQData ? Object.keys(studyQData).map(abbrev => {
-                  const chs = Object.keys(studyQData[abbrev]).sort((a, b) => Number(a) - Number(b));
-                  return `${abbrev.toUpperCase()} (ch ${chs.join(', ')})`;
-                }).join('; ') : 'loading...'}
-              </p>
-              <button onClick={() => setShowStudyQModal(false)} style={{ marginTop: 12, width: '100%', padding: 10, fontSize: 14, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}>Close</button>
-            </div>
-          </div>
-        );
-
-        // Flatten all questions with section info
-        const allQuestions = [];
-        chapterQuestions.forEach((section) => {
-          section.questions.forEach((q, qi) => {
-            allQuestions.push({ question: q, passage: section.passage, index: allQuestions.length });
-          });
-        });
-
-        return (
-          <div
-            style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-            onClick={(e) => { if (e.target === e.currentTarget) setShowStudyQModal(false); }}
-          >
-            <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 700, height: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-              {/* Header with font controls */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 12px', flexShrink: 0 }}>
-                <button
-                  onClick={() => setStudyQFontSize(prev => Math.max(10, prev - 2))}
-                  style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
-                  title="Decrease font size"
-                >−</button>
-                <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
-                  {bookName} {selectedChapter} — Study Questions
-                </h3>
-                <button
-                  onClick={() => setStudyQFontSize(prev => Math.min(28, prev + 2))}
-                  style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
-                  title="Increase font size"
-                >+</button>
-              </div>
-
-              {/* Questions list */}
-              <div style={{ flex: 1, overflowY: 'auto', border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, padding: 12, background: isDarkMode ? '#1e1e1e' : '#fafafa' }}>
-                {chapterQuestions.map((section, si) => (
-                  <div key={si} style={{ marginBottom: si < chapterQuestions.length - 1 ? 16 : 0 }}>
-                    {chapterQuestions.length > 1 && (
-                      <div style={{ fontSize: studyQFontSize - 2, fontWeight: 600, color: isDarkMode ? '#f59e0b' : '#b45309', marginBottom: 8, paddingBottom: 4, borderBottom: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}` }}>
-                        {section.passage}
-                      </div>
-                    )}
-                    {section.questions.map((q, qi) => {
-                      const globalIdx = `${si}-${qi}`;
-                      return (
-                        <div
-                          key={qi}
-                          onClick={() => setStudyQRevealed(prev => ({ ...prev, [globalIdx]: !prev[globalIdx] }))}
-                          style={{
-                            margin: '0 0 6px',
-                            fontSize: studyQFontSize,
-                            lineHeight: 1.6,
-                            padding: '6px 10px',
-                            borderRadius: 8,
-                            cursor: 'pointer',
-                            background: studyQRevealed[globalIdx] ? (isDarkMode ? '#3a2e1a' : '#fef3c7') : 'transparent',
-                            transition: 'background 0.15s',
-                            display: 'flex',
-                            alignItems: 'baseline',
-                            gap: 8,
-                          }}
-                        >
-                          <span style={{ fontWeight: 700, color: isDarkMode ? '#f59e0b' : '#b45309', fontSize: studyQFontSize - 2, minWidth: 20, flexShrink: 0 }}>{qi + 1}</span>
-                          <span style={{ color: isDarkMode ? '#d0d0d0' : '#333' }}>{q}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-
-              {/* Close button */}
-              <button
-                onClick={() => setShowStudyQModal(false)}
-                style={{ marginTop: 12, width: '100%', padding: 10, fontSize: 14, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Study Questions - now rendered inline in pane 2 (see above) */}
 
       {/* Book Search Modal */}
       {showSearchModal && (() => {

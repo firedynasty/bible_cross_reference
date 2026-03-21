@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { ChevronDown, ChevronRight, Play, SkipForward } from 'lucide-react';
 
-const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse, onNextChapter }, ref) => {
+const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse, onNextChapter, onQA, showStudyQModal }, ref) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -1086,6 +1086,15 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         title="Lower: copies from char 20 onward of last selected verse"
       >
         Lower
+      </button>
+
+      {/* QA button - opens study questions in pane 2 */}
+      <button
+        onClick={() => onQA && onQA()}
+        className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showStudyQModal ? 'bg-amber-600 text-white' : 'bg-amber-500 text-white hover:bg-amber-600'}`}
+        title="Study discussion questions for current chapter"
+      >
+        QA
       </button>
 
       {/* Part-by-part reading button - hidden, functionality moved to grid clicks */}
