@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { ChevronDown, ChevronRight, Play, SkipForward } from 'lucide-react';
 
-const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse, onNextChapter, onQA, showStudyQModal }, ref) => {
+const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse, onNextChapter, onQA, showStudyQModal, onQuiz, showQuizModal }, ref) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -1095,6 +1095,15 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         title="Study discussion questions for current chapter"
       >
         QA
+      </button>
+
+      {/* Fill-in-the-Blank Quiz Button */}
+      <button
+        onClick={() => onQuiz && onQuiz()}
+        className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showQuizModal ? 'bg-rose-600 text-white' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
+        title="Fill-in-the-blank quiz for current chapter"
+      >
+        Quiz
       </button>
 
       {/* Part-by-part reading button - hidden, functionality moved to grid clicks */}

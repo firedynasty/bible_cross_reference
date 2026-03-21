@@ -445,7 +445,9 @@ const NavigationPlaceholder = ({
   onGridReadModeToggle,
   onNextChapter,
   onQA,
-  showStudyQModal
+  showStudyQModal,
+  onQuiz,
+  showQuizModal
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -742,6 +744,8 @@ const NavigationPlaceholder = ({
           onNextChapter={() => onNextChapter && book && chapter < book.chapters.length && onNextChapter(chapter + 1, true)}
           onQA={onQA}
           showStudyQModal={showStudyQModal}
+          onQuiz={onQuiz}
+          showQuizModal={showQuizModal}
         />
         
         {/* To Clipboard Button - Hidden */}
@@ -4895,29 +4899,7 @@ const BibleApp = () => {
                   Srch
                 </button>
 
-                {/* Fill-in-the-Blank Quiz Button */}
-                <button
-                  onClick={() => {
-                    if (!fitbData) {
-                      const baseUrl = getBaseUrl();
-                      fetch(`${baseUrl}/en_kjv_fitb.json`)
-                        .then(r => r.json())
-                        .then(data => {
-                          setFitbData(data);
-                          setFitbRevealed({});
-                          setShowQuizModal(true);
-                        })
-                        .catch(err => console.error('Failed to load FITB data:', err));
-                    } else {
-                      setFitbRevealed({});
-                      setShowQuizModal(true);
-                    }
-                  }}
-                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-rose-500 text-white hover:bg-rose-600 font-semibold"
-                  title="Fill-in-the-blank quiz for current chapter"
-                >
-                  Quiz
-                </button>
+                {/* Fill-in-the-Blank Quiz Button - moved to TextToSpeech after QA */}
 
                 {/* Study Questions Button - moved to TextToSpeech after Lower */}
 
@@ -5094,6 +5076,23 @@ const BibleApp = () => {
               chineseBibleData={chineseBibleData}
               lastGridVerse={lastGridVerse}
               showStudyQModal={showStudyQModal}
+              showQuizModal={showQuizModal}
+              onQuiz={() => {
+                if (!fitbData) {
+                  const baseUrl = getBaseUrl();
+                  fetch(`${baseUrl}/en_kjv_fitb.json`)
+                    .then(r => r.json())
+                    .then(data => {
+                      setFitbData(data);
+                      setFitbRevealed({});
+                      setShowQuizModal(true);
+                    })
+                    .catch(err => console.error('Failed to load FITB data:', err));
+                } else {
+                  setFitbRevealed({});
+                  setShowQuizModal(true);
+                }
+              }}
               onQA={() => {
                 if (!studyQData) {
                   const baseUrl = getBaseUrl();
@@ -6701,52 +6700,69 @@ const BibleApp = () => {
                 >+</button>
               </div>
 
-              {/* Top: Blanked verses */}
+              {/* Blanked verses - click blanks to reveal answers */}
               <div style={{ flex: 1, overflowY: 'auto', border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, padding: 12, marginBottom: 12, background: isDarkMode ? '#1e1e1e' : '#fafafa' }}>
-                {verses.map((v, i) => (
-                  <p key={i} style={{ margin: '0 0 8px', fontSize: quizFontSize, lineHeight: 1.6, color: isDarkMode ? '#d0d0d0' : '#333' }}>
-                    <span style={{ fontWeight: 700, color: isDarkMode ? '#f9a8d4' : '#be185d', marginRight: 6, fontSize: quizFontSize - 2 }}>{i + 1}</span>
-                    {v.split(/(________)/g).map((part, j) =>
-                      part === '________'
-                        ? <span key={j} style={{ display: 'inline-block', borderBottom: `2px solid ${isDarkMode ? '#f9a8d4' : '#be185d'}`, minWidth: 60, textAlign: 'center', margin: '0 2px', color: 'transparent', userSelect: 'none' }}>________</span>
-                        : <span key={j}>{part}</span>
-                    )}
-                  </p>
-                ))}
-              </div>
-
-              {/* Bottom: Answers */}
-              <div style={{ flex: 1, overflowY: 'auto', border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, padding: 12, background: isDarkMode ? '#1a2e1a' : '#f0fdf4' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexShrink: 0 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: isDarkMode ? '#86efac' : '#166534' }}>Answer Key</span>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
                   <button
                     onClick={() => {
-                      const allRevealed = Object.keys(fitbRevealed).length === answers.length && Object.values(fitbRevealed).every(v => v);
+                      const totalBlanks = verses.reduce((count, v) => count + (v.match(/________/g) || []).length, 0);
+                      const allRevealed = Object.keys(fitbRevealed).length === totalBlanks && Object.values(fitbRevealed).every(v => v);
                       if (allRevealed) {
                         setFitbRevealed({});
                       } else {
                         const all = {};
-                        answers.forEach((_, i) => { all[i] = true; });
+                        let blankIdx = 0;
+                        verses.forEach((v) => {
+                          const blanks = v.match(/________/g) || [];
+                          blanks.forEach(() => { all[blankIdx] = true; blankIdx++; });
+                        });
                         setFitbRevealed(all);
                       }
                     }}
                     style={{ fontSize: 12, padding: '3px 10px', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, background: isDarkMode ? '#166534' : '#bbf7d0', color: isDarkMode ? '#bbf7d0' : '#166534' }}
                   >
-                    {Object.keys(fitbRevealed).length === answers.length && Object.values(fitbRevealed).every(v => v) ? 'Hide All' : 'Reveal All'}
+                    {(() => { const totalBlanks = verses.reduce((count, v) => count + (v.match(/________/g) || []).length, 0); return Object.keys(fitbRevealed).length === totalBlanks && Object.values(fitbRevealed).every(v => v) ? 'Hide All' : 'Reveal All'; })()}
                   </button>
                 </div>
-                {answers.map((ans, i) => (
-                  <div
-                    key={i}
-                    onClick={() => setFitbRevealed(prev => ({ ...prev, [i]: !prev[i] }))}
-                    style={{ margin: '0 0 4px', fontSize: quizFontSize, padding: '4px 8px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'baseline', gap: 6, background: fitbRevealed[i] ? (isDarkMode ? '#1a3a1a' : '#dcfce7') : 'transparent', transition: 'background 0.15s' }}
-                  >
-                    <span style={{ fontWeight: 700, color: isDarkMode ? '#f9a8d4' : '#be185d', fontSize: quizFontSize - 2, minWidth: 20 }}>{i + 1}</span>
-                    <span style={{ color: fitbRevealed[i] ? (isDarkMode ? '#86efac' : '#166534') : 'transparent', fontWeight: 600, userSelect: fitbRevealed[i] ? 'auto' : 'none', transition: 'color 0.2s' }}>
-                      {ans.length > 0 ? ans.join(', ') : '(no blanks)'}
-                    </span>
-                  </div>
-                ))}
+                {(() => {
+                  let globalBlankIdx = 0;
+                  return verses.map((v, i) => (
+                    <p key={i} style={{ margin: '0 0 8px', fontSize: quizFontSize, lineHeight: 1.6, color: isDarkMode ? '#d0d0d0' : '#333' }}>
+                      <span style={{ fontWeight: 700, color: isDarkMode ? '#f9a8d4' : '#be185d', marginRight: 6, fontSize: quizFontSize - 2 }}>{i + 1}</span>
+                      {v.split(/(________)/g).map((part, j) => {
+                        if (part === '________') {
+                          const bIdx = globalBlankIdx++;
+                          const isRevealed = fitbRevealed[bIdx];
+                          const answerWord = answers.flat()[bIdx] || '';
+                          return (
+                            <span
+                              key={j}
+                              onClick={() => setFitbRevealed(prev => ({ ...prev, [bIdx]: !prev[bIdx] }))}
+                              style={{
+                                display: 'inline-block',
+                                borderBottom: `2px solid ${isDarkMode ? '#f9a8d4' : '#be185d'}`,
+                                minWidth: 60,
+                                textAlign: 'center',
+                                margin: '0 2px',
+                                padding: '0 4px',
+                                cursor: 'pointer',
+                                color: isRevealed ? (isDarkMode ? '#86efac' : '#166534') : 'transparent',
+                                fontWeight: isRevealed ? 600 : 400,
+                                userSelect: isRevealed ? 'auto' : 'none',
+                                transition: 'color 0.2s',
+                                background: isRevealed ? (isDarkMode ? 'rgba(134,239,172,0.1)' : 'rgba(22,101,52,0.05)') : 'transparent',
+                                borderRadius: 3,
+                              }}
+                            >
+                              {answerWord || '________'}
+                            </span>
+                          );
+                        }
+                        return <span key={j}>{part}</span>;
+                      })}
+                    </p>
+                  ));
+                })()}
               </div>
 
               <button
