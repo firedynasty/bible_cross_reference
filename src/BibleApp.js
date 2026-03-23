@@ -3250,7 +3250,7 @@ const BibleApp = () => {
   const handlePaneClick = useCallback((event, pane) => {
     if (!dualPanePD) return;
     // Block page-down for 500ms after a chapter advance
-    if (Date.now() - pane2ChapterChangedAt.current < 500) return;
+    if (Date.now() - pane2ChapterChangedAt.current < 2000) return;
     if (event.target.tagName === 'A' || event.target.tagName === 'BUTTON' || event.target.closest('button') || event.target.closest('a') || event.target.closest('select')) return;
     const container = pane === 'left' ? chapterContentRef.current : kjvContentRef.current;
     if (!container) return;
