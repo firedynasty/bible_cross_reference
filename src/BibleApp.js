@@ -3225,6 +3225,26 @@ const BibleApp = () => {
     }
   }, []);
 
+  // Centralized Home function to reset all scroll positions and state
+  const handleHomeReset = useCallback(() => {
+    // Reset scroll positions for both panes
+    if (chapterContentRef.current) {
+      chapterContentRef.current.scrollTop = 0;
+    }
+    if (kjvContentRef.current) {
+      kjvContentRef.current.scrollTop = 0;
+    }
+
+    // Reset mobile scroll position state and localStorage
+    if (isMobileView) {
+      localStorage.setItem('mobileScrollPosition', '0');
+      setMobileScrollPosition(0);
+    }
+
+    // Reset manual scrolling flag
+    isManuallyScrolling.current = false;
+  }, [isMobileView, setMobileScrollPosition]);
+
   const handlePaneClick = useCallback((event, pane) => {
     if (!dualPanePD) return;
     if (event.target.tagName === 'A' || event.target.tagName === 'BUTTON' || event.target.closest('button') || event.target.closest('a') || event.target.closest('select')) return;
@@ -3259,26 +3279,6 @@ const BibleApp = () => {
     if (pane === 'right') pane2BottomClickCount.current = 0;
     container.scrollTop = Math.min(maxScroll, container.scrollTop + pageHeight);
   }, [dualPanePD, pane2Book, pane2Chapter, selectedBook, selectedChapter, handleHomeReset]);
-
-  // Centralized Home function to reset all scroll positions and state
-  const handleHomeReset = useCallback(() => {
-    // Reset scroll positions for both panes
-    if (chapterContentRef.current) {
-      chapterContentRef.current.scrollTop = 0;
-    }
-    if (kjvContentRef.current) {
-      kjvContentRef.current.scrollTop = 0;
-    }
-    
-    // Reset mobile scroll position state and localStorage
-    if (isMobileView) {
-      localStorage.setItem('mobileScrollPosition', '0');
-      setMobileScrollPosition(0);
-    }
-    
-    // Reset manual scrolling flag
-    isManuallyScrolling.current = false;
-  }, [isMobileView, setMobileScrollPosition]);
 
   // Load Bible data and cross-references on component mount
   useEffect(() => {
