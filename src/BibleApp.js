@@ -4648,6 +4648,16 @@ const BibleApp = () => {
                   Srch
                 </button>
 
+                <a
+                  href="https://search-niv.netlify.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-500 text-white hover:bg-blue-600 font-semibold inline-block"
+                  title="NLT Search"
+                >
+                  NLT
+                </a>
+
                 {/* Fill-in-the-Blank Quiz Button - moved to TextToSpeech after QA */}
 
                 {/* Study Questions Button - moved to TextToSpeech after Lower */}
