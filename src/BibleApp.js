@@ -680,7 +680,7 @@ const NavigationPlaceholder = ({
             }`}
             title={dualPanePD ? "Disable click-to-page-down" : "Click either pane to page down"}
           >
-            {dualPanePD ? '⇅ Dual PD On' : '⇅ Dual PD'}
+            {dualPanePD ? '⇅ Dual PD On' : '⇅ Dual PD Off'}
           </button>
         )}
 
