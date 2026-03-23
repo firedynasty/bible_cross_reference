@@ -1283,6 +1283,8 @@ const BibleApp = () => {
   const [dualPanePD, setDualPanePD] = useState(false);
   // Count clicks at bottom of pane 2 before auto-advancing chapter
   const pane2BottomClickCount = useRef(0);
+  // Timestamp of last chapter advance — blocks page-down for 500ms after change
+  const pane2ChapterChangedAt = useRef(0);
 
   // Grid TTS read mode: 'delimit' (part-by-part click) or 'undelimit' (auto-read all parts with pauses)
   const [gridReadMode, setGridReadMode] = useState(() => localStorage.getItem('bibleAppGridReadMode') || 'delimit');
@@ -3247,6 +3249,8 @@ const BibleApp = () => {
 
   const handlePaneClick = useCallback((event, pane) => {
     if (!dualPanePD) return;
+    // Block page-down for 500ms after a chapter advance
+    if (Date.now() - pane2ChapterChangedAt.current < 500) return;
     if (event.target.tagName === 'A' || event.target.tagName === 'BUTTON' || event.target.closest('button') || event.target.closest('a') || event.target.closest('select')) return;
     const container = pane === 'left' ? chapterContentRef.current : kjvContentRef.current;
     if (!container) return;
@@ -3263,6 +3267,7 @@ const BibleApp = () => {
         const p2Chapter = pane2Chapter || selectedChapter;
         if (p2Book && p2Chapter < p2Book.chapters.length) {
           const nextChapter = p2Chapter + 1;
+          pane2ChapterChangedAt.current = Date.now();
           setSelectedBook(p2Book);
           setSelectedChapter(nextChapter);
           setPane2Book(null);
