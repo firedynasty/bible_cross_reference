@@ -438,6 +438,8 @@ const NavigationPlaceholder = ({
   onViewModeToggle,
   showPane2Only,
   onPane2OnlyToggle,
+  dualPanePD,
+  onDualPanePDToggle,
   onShowVerseGrid,
   chineseBibleData,
   lastGridVerse,
@@ -664,6 +666,21 @@ const NavigationPlaceholder = ({
             title={showPane2Only ? "Switch back to dual pane view" : "Hide pane 1, show only pane 2"}
           >
             {showPane2Only ? '⇅ Pane 2 Only PD' : '⇅ Dual Pane'}
+          </button>
+        )}
+
+        {/* Dual Pane PD - click either pane to page down */}
+        {viewMode === 'side-by-side' && !showPane2Only && (
+          <button
+            onClick={() => onDualPanePDToggle && onDualPanePDToggle()}
+            className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
+              dualPanePD
+                ? 'bg-orange-200 text-orange-800 hover:bg-orange-300'
+                : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+            }`}
+            title={dualPanePD ? "Disable click-to-page-down" : "Click either pane to page down"}
+          >
+            {dualPanePD ? '⇅ Dual PD On' : '⇅ Dual PD'}
           </button>
         )}
 
@@ -1132,7 +1149,17 @@ const BibleApp = () => {
   const [pendingBookSelection, setPendingBookSelection] = useState(null);
   const pendingBookRef = useRef(null);
   const [crossReferences, setCrossReferences] = useState({});
-  
+
+  // Independent pane 2 book/chapter (for cross-ref navigation)
+  const [pane2Book, setPane2Book] = useState(null);
+  const [pane2Chapter, setPane2Chapter] = useState(null);
+
+  // Reset pane 2 when a new book is selected (so pane 2 follows pane 1 on book changes)
+  useEffect(() => {
+    setPane2Book(null);
+    setPane2Chapter(null);
+  }, [selectedBook]);
+
   // Debug effect to track pendingBookSelection changes
   useEffect(() => {
     console.log('pendingBookSelection state changed to:', pendingBookSelection?.abbrev);
@@ -1146,9 +1173,7 @@ const BibleApp = () => {
   const kjvContentRef = useRef(null);
   const sidebarScrollRef = useRef(null);
   const isManuallyScrolling = useRef(false);
-  const scrollSyncInitialized = useRef(false);
   const lastPrimaryScrollPos = useRef(0);
-  const lastKjvScrollPos = useRef(0);
   const resetScrollTimerRef = useRef(null);
   const swipeTouchStartX = useRef(null);
   const swipeTouchStartY = useRef(null);
@@ -1241,7 +1266,6 @@ const BibleApp = () => {
   const [rightPaneBibleData, setRightPaneBibleData] = useState(null);
   
   // Add scroll sync mode state
-  const [scrollSyncMode, setScrollSyncMode] = useState('exact'); // 'exact', 'faster', or 'slower'
   
   // Add sticky pane control (which pane controls the other)
   const [stickyPane, setStickyPane] = useState('kjv'); // 'primary' or 'kjv'
@@ -1255,6 +1279,10 @@ const BibleApp = () => {
 
   // Pane 2 only mode - hides pane 1, shows only pane 2 at full width
   const [showPane2Only, setShowPane2Only] = useState(false);
+  // Dual pane page-down mode - clicking either pane scrolls it down
+  const [dualPanePD, setDualPanePD] = useState(false);
+  // Count clicks at bottom of pane 2 before auto-advancing chapter
+  const pane2BottomClickCount = useRef(0);
 
   // Grid TTS read mode: 'delimit' (part-by-part click) or 'undelimit' (auto-read all parts with pauses)
   const [gridReadMode, setGridReadMode] = useState(() => localStorage.getItem('bibleAppGridReadMode') || 'delimit');
@@ -1479,7 +1507,6 @@ const BibleApp = () => {
       if (chapterContentRef.current) chapterContentRef.current.scrollTop = 0;
       if (kjvContentRef.current) kjvContentRef.current.scrollTop = 0;
       lastPrimaryScrollPos.current = 0;
-      scrollSyncInitialized.current = false;
     }
   }, [bibleData, parseSingleBibleRef]);
 
@@ -1506,7 +1533,6 @@ const BibleApp = () => {
       if (chapterContentRef.current) chapterContentRef.current.scrollTop = 0;
       if (kjvContentRef.current) kjvContentRef.current.scrollTop = 0;
       lastPrimaryScrollPos.current = 0;
-      scrollSyncInitialized.current = false;
 
       // Set highlighted verses
       setHighlightedVerses(verses);
@@ -3104,7 +3130,6 @@ const BibleApp = () => {
             chapter: primaryReading.chapter
           },
           isViewingCrossRef,
-          scrollSyncMode,
           stickyPane,
           isDarkMode,
           mobileScrollPosition: isMobileView ? chapterContentRef.current?.scrollTop || 0 : 0
@@ -3114,7 +3139,7 @@ const BibleApp = () => {
         console.warn("Error saving state to localStorage:", e);
       }
     }
-  }, [selectedBook, selectedChapter, selectedTranslation, rightPaneTranslation, primaryReading, isViewingCrossRef, scrollSyncMode, stickyPane, isDarkMode, isMobileView]);
+  }, [selectedBook, selectedChapter, selectedTranslation, rightPaneTranslation, primaryReading, isViewingCrossRef, stickyPane, isDarkMode, isMobileView]);
 
   // Initialize Firebase database keys if they don't exist
   useEffect(() => {
@@ -3150,152 +3175,6 @@ const BibleApp = () => {
     initializeFirebaseKeys();
   }, []);
 
-  // Helper function to setup scroll synchronization based on relative speeds and sticky pane
-  const setupScrollSync = () => {
-    const primaryPane = chapterContentRef.current;
-    const kjvPane = kjvContentRef.current;
-    
-    // If either pane is missing, return a no-op cleanup function
-    if (!primaryPane || !kjvPane) {
-      return () => {}; // Return an empty function instead of false
-    }
-    
-    // We're using the component-wide lastKjvScrollPos ref
-    
-    // Handler for when primary pane scrolls - controls KJV
-    const handlePrimaryScroll = () => {
-      if (isManuallyScrolling.current) return;
-      
-      // Calculate the amount scrolled
-      const currentScrollPos = primaryPane.scrollTop;
-      const scrollDelta = currentScrollPos - lastPrimaryScrollPos.current;
-      
-      // Update the last position for next time
-      lastPrimaryScrollPos.current = currentScrollPos;
-      
-      // If there's no change or just initialization, don't adjust KJV pane
-      if (scrollDelta === 0) return;
-      
-      // Apply scroll sync based on selected mode - different scroll speeds
-      let adjustedDelta = scrollDelta;
-      
-      switch (scrollSyncMode) {
-        case 'faster':
-          // Make KJV pane scroll faster (1.5x speed)
-          adjustedDelta = scrollDelta * 1.5;
-          break;
-        case 'slower':
-          // Make KJV pane scroll slower (0.5x speed)
-          // Use a smaller multiplier to make it clearly slower
-          adjustedDelta = scrollDelta * 0.5;
-          break;
-        case 'exact':
-        default:
-          // Keep the same scroll delta (1x speed)
-          adjustedDelta = scrollDelta;
-          break;
-      }
-      
-      isManuallyScrolling.current = true;
-      
-      // Apply the adjusted delta to the KJV pane
-      kjvPane.scrollTop = Math.max(0, Math.min(
-        kjvPane.scrollHeight - kjvPane.clientHeight,
-        kjvPane.scrollTop + adjustedDelta
-      ));
-      
-      // Update KJV last position after adjustment
-      lastKjvScrollPos.current = kjvPane.scrollTop;
-      
-      // Reset after a short delay to prevent infinite scroll loops
-      setTimeout(() => {
-        isManuallyScrolling.current = false;
-      }, 50);
-    };
-    
-    // Handler for when KJV pane scrolls - controls primary pane
-    const handleKjvScroll = () => {
-      if (isManuallyScrolling.current) return;
-      
-      // Calculate the amount scrolled
-      const currentScrollPos = kjvPane.scrollTop;
-      const scrollDelta = currentScrollPos - lastKjvScrollPos.current;
-      
-      // Update the last position for next time
-      lastKjvScrollPos.current = currentScrollPos;
-      
-      // If there's no change or just initialization, don't adjust primary pane
-      if (scrollDelta === 0) return;
-      
-      // Apply scroll sync based on selected mode but in reverse
-      let adjustedDelta = scrollDelta;
-      
-      switch (scrollSyncMode) {
-        case 'faster':
-          // If KJV is faster, primary needs to be slower (reciprocal)
-          adjustedDelta = scrollDelta / 1.5;
-          break;
-        case 'slower':
-          // If KJV is slower, primary needs to be faster (reciprocal)
-          adjustedDelta = scrollDelta / 0.5; // Or scrollDelta * 2
-          break;
-        case 'exact':
-        default:
-          // Keep the same scroll delta (1x speed)
-          adjustedDelta = scrollDelta;
-          break;
-      }
-      
-      isManuallyScrolling.current = true;
-      
-      // Apply the adjusted delta to the primary pane
-      primaryPane.scrollTop = Math.max(0, Math.min(
-        primaryPane.scrollHeight - primaryPane.clientHeight,
-        primaryPane.scrollTop + adjustedDelta
-      ));
-      
-      // Update primary last position after adjustment
-      lastPrimaryScrollPos.current = primaryPane.scrollTop;
-      
-      // Reset after a short delay to prevent infinite scroll loops
-      setTimeout(() => {
-        isManuallyScrolling.current = false;
-      }, 50);
-    };
-    
-    // Remove any existing event listeners first
-    primaryPane.removeEventListener('scroll', handlePrimaryScroll);
-    kjvPane.removeEventListener('scroll', handleKjvScroll);
-    
-    // Add appropriate event listener based on which pane is sticky
-    if (stickyPane === 'primary') {
-      // Primary pane controls KJV
-      primaryPane.addEventListener('scroll', handlePrimaryScroll);
-    } else if (stickyPane === 'kjv') {
-      // KJV pane controls primary
-      kjvPane.addEventListener('scroll', handleKjvScroll);
-    }
-    
-    // Return a cleanup function
-    return () => {
-      // Check if panes still exist before attempting to remove listeners
-      if (primaryPane) {
-        try {
-          primaryPane.removeEventListener('scroll', handlePrimaryScroll);
-        } catch (e) {
-          console.log("Cleanup error (can be ignored):", e.message);
-        }
-      }
-      
-      if (kjvPane) {
-        try {
-          kjvPane.removeEventListener('scroll', handleKjvScroll);
-        } catch (e) {
-          console.log("Cleanup error (can be ignored):", e.message);
-        }
-      }
-    };
-  };
 
   // Touch scroll functions
   const handleTouchPageDown = useCallback((scrollAmount = 0.9) => {
@@ -3347,9 +3226,39 @@ const BibleApp = () => {
   }, []);
 
   const handlePaneClick = useCallback((event, pane) => {
-    // Click-to-page-down disabled
-    return;
-  }, []);
+    if (!dualPanePD) return;
+    if (event.target.tagName === 'A' || event.target.tagName === 'BUTTON' || event.target.closest('button') || event.target.closest('a') || event.target.closest('select')) return;
+    const container = pane === 'left' ? chapterContentRef.current : kjvContentRef.current;
+    if (!container) return;
+    const pageHeight = container.clientHeight * 0.9;
+    const maxScroll = container.scrollHeight - container.clientHeight;
+    const atBottom = container.scrollTop >= maxScroll - 5;
+
+    if (pane === 'right' && atBottom) {
+      pane2BottomClickCount.current += 1;
+      if (pane2BottomClickCount.current >= 3) {
+        pane2BottomClickCount.current = 0;
+        // Advance both panes to pane 2's next chapter
+        const p2Book = pane2Book || selectedBook;
+        const p2Chapter = pane2Chapter || selectedChapter;
+        if (p2Book && p2Chapter < p2Book.chapters.length) {
+          const nextChapter = p2Chapter + 1;
+          setSelectedBook(p2Book);
+          setSelectedChapter(nextChapter);
+          setPane2Book(null);
+          setPane2Chapter(null);
+          setPrimaryReading({ book: p2Book, chapter: nextChapter });
+          setIsViewingCrossRef(false);
+          setTimeout(() => { handleHomeReset(); }, 100);
+        }
+      }
+      return;
+    }
+
+    // Not at bottom (or left pane) — reset counter and page down
+    if (pane === 'right') pane2BottomClickCount.current = 0;
+    container.scrollTop = Math.min(maxScroll, container.scrollTop + pageHeight);
+  }, [dualPanePD, pane2Book, pane2Chapter, selectedBook, selectedChapter, handleHomeReset]);
 
   // Centralized Home function to reset all scroll positions and state
   const handleHomeReset = useCallback(() => {
@@ -3366,11 +3275,6 @@ const BibleApp = () => {
       localStorage.setItem('mobileScrollPosition', '0');
       setMobileScrollPosition(0);
     }
-    
-    // Reset scroll sync tracking variables
-    lastPrimaryScrollPos.current = 0;
-    lastKjvScrollPos.current = 0;
-    scrollSyncInitialized.current = false;
     
     // Reset manual scrolling flag
     isManuallyScrolling.current = false;
@@ -3485,21 +3389,13 @@ const BibleApp = () => {
         let savedBook = null;
         let savedChapter = 1;
         let savedTranslation = selectedTranslation;
-        let savedScrollSyncMode = scrollSyncMode;
-        
         // Try to load saved state from localStorage
         try {
           const savedState = localStorage.getItem('bibleReaderState');
           if (savedState) {
             const parsedState = JSON.parse(savedState);
             savedTranslation = parsedState.translation || selectedTranslation;
-            
-            // Restore scroll sync mode if available
-            if (parsedState.scrollSyncMode) {
-              savedScrollSyncMode = parsedState.scrollSyncMode;
-              setScrollSyncMode(savedScrollSyncMode);
-            }
-            
+
             // Always use KJV as the sticky pane
             setStickyPane('kjv');
             
@@ -3583,8 +3479,7 @@ const BibleApp = () => {
         setLoading(false);
         
         // Reset the scroll sync initialized flag
-        scrollSyncInitialized.current = false;
-        
+          
         // In mobile view, restore the scroll position from our dedicated localStorage item
         // But only restore scroll if we're not just changing chapters with Next Chapter button
         if (isMobileView && chapterContentRef?.current) {
@@ -3647,129 +3542,10 @@ const BibleApp = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTranslation, rightPaneTranslation]);
   
-  // Setup scroll synchronization when content, mode, or sticky pane changes
-  useEffect(() => {
-    if (!loading && selectedBook) {
-      // Ensure last scroll positions are reset
-      lastPrimaryScrollPos.current = chapterContentRef.current?.scrollTop || 0;
-      lastKjvScrollPos.current = kjvContentRef.current?.scrollTop || 0;
-      
-      // Setup the scroll sync - the returned cleanup function might be undefined
-      const cleanup = setupScrollSync();
-      
-      // Return a valid cleanup function that safely handles undefined
-      return () => {
-        if (typeof cleanup === 'function') {
-          cleanup();
-        }
-      };
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBook, selectedChapter, selectedTranslation, scrollSyncMode, stickyPane, loading]);
-  
-  // Additional effect to ensure scroll sync is initialized after everything is loaded and rendered
-  useEffect(() => {
-    // Only run this once after loading is complete
-    if (!loading && !scrollSyncInitialized.current) {
-      // Use a short delay to ensure everything is properly rendered
-      const timer = setTimeout(() => {
-        // Reset last scroll positions to current
-        if (chapterContentRef.current) {
-          lastPrimaryScrollPos.current = chapterContentRef.current.scrollTop;
-        }
-        if (kjvContentRef.current) {
-          lastKjvScrollPos.current = kjvContentRef.current.scrollTop;
-        }
-        
-        const cleanup = setupScrollSync();
-        scrollSyncInitialized.current = true;
-        console.log("Scroll sync initialized");
-        
-        // Store the cleanup function to be called when the component unmounts
-        return () => {
-          if (typeof cleanup === 'function') {
-            cleanup();
-          }
-        };
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading]);
 
-  // Handle scroll sync mode change
-  const handleScrollSyncModeChange = (mode) => {
-    setScrollSyncMode(mode);
-    // Force re-initialization of scroll sync
-    scrollSyncInitialized.current = false;
-    
-    // Reset the last scroll positions to prevent jumps when changing modes
-    if (chapterContentRef.current) {
-      lastPrimaryScrollPos.current = chapterContentRef.current.scrollTop;
-    }
-    
-    if (kjvContentRef.current) {
-      lastKjvScrollPos.current = kjvContentRef.current.scrollTop;  
-    }
-    
-    // Store any previous cleanup function
-    let cleanupFunction;
-    
-    // Re-initialize immediately
-    try {
-      cleanupFunction = setupScrollSync();
-    } catch (e) {
-      console.log("Error setting up scroll sync:", e);
-    }
-    
-    // Return cleanup function for component unmount
-    return () => {
-      if (typeof cleanupFunction === 'function') {
-        try {
-          cleanupFunction();
-        } catch (e) {
-          console.log("Cleanup error in mode change (can be ignored):", e.message);
-        }
-      }
-    };
-  };
-  
   // Handle sticky pane change
   const handleStickyPaneChange = (paneType) => {
     setStickyPane(paneType);
-    // Force re-initialization of scroll sync
-    scrollSyncInitialized.current = false;
-    
-    // Reset the last scroll positions to prevent jumps when changing sticky pane
-    if (chapterContentRef.current) {
-      lastPrimaryScrollPos.current = chapterContentRef.current.scrollTop;
-    }
-    
-    if (kjvContentRef.current) {
-      lastKjvScrollPos.current = kjvContentRef.current.scrollTop;
-    }
-    
-    // Store any previous cleanup function
-    let cleanupFunction;
-    
-    // Re-initialize immediately
-    try {
-      cleanupFunction = setupScrollSync();
-    } catch (e) {
-      console.log("Error setting up scroll sync:", e);
-    }
-    
-    // Return cleanup function for component unmount
-    return () => {
-      if (typeof cleanupFunction === 'function') {
-        try {
-          cleanupFunction();
-        } catch (e) {
-          console.log("Cleanup error in sticky pane change (can be ignored):", e.message);
-        }
-      }
-    };
   };
   
   // Handle MP3 audio button click
@@ -3944,7 +3720,6 @@ const BibleApp = () => {
       
       // Reset scroll sync state
       lastPrimaryScrollPos.current = 0;
-      scrollSyncInitialized.current = false;
     }
   };
 
@@ -3962,7 +3737,7 @@ const BibleApp = () => {
 
     // No need to reset auto-scroll timer here - will be handled in NavigationPlaceholder component
 
-    
+
     // Update primary reading
     if (selectedBook) {
       setPrimaryReading({
@@ -3971,7 +3746,11 @@ const BibleApp = () => {
       });
       setIsViewingCrossRef(false);
     }
-    
+
+    // Always sync pane 2 to match pane 1 on chapter navigation
+    setPane2Book(null);
+    setPane2Chapter(null);
+
     // Scroll both panels to top when chapter changes
     if (chapterContentRef.current) {
       chapterContentRef.current.scrollTop = 0;
@@ -3984,9 +3763,6 @@ const BibleApp = () => {
     localStorage.removeItem('mobileScrollPosition');
     setMobileScrollPosition(0);
     
-    // Reset scroll sync state
-    lastPrimaryScrollPos.current = 0;
-    scrollSyncInitialized.current = false;
   };
 
   // Direct book navigation functions for key '1' and '2'
@@ -4173,53 +3949,38 @@ const BibleApp = () => {
     // The actual translation change will happen when the user clicks the "Apply" button
   };
 
-  // Handle click on a verse to navigate to a cross-reference
+  // Handle click on a cross-reference — navigate pane 2 only
   const handleCrossRefNavigate = (ref) => {
-    // Find the book in the Bible data
-    const book = bibleData.find(b => b.abbrev === ref.book);
+    // Find the book in the right pane Bible data
+    const book = (rightPaneBibleData || bibleData || []).find(b => b.abbrev === ref.book);
     if (book) {
-      setSelectedBook(book);
-      setSelectedChapter(ref.chapter);
-      
-      // Mark that we're viewing a cross-reference (not primary reading)
+      // Update pane 2 independently
+      setPane2Book(book);
+      setPane2Chapter(ref.chapter);
+
+      // Mark that we're viewing a cross-reference
       setIsViewingCrossRef(true);
-      
-      // Hide the cross-reference popup
-      setShowCrossRef(null);
-      
-      // Add a slight delay before scrolling to the verse in both panels
-      setTimeout(() => {
-        // Scroll to verse in primary panel
-        const verseElement = document.getElementById(`verse-${ref.verse}`);
-        if (verseElement && chapterContentRef.current) {
-          verseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          
-          // Highlight the verse temporarily
-          verseElement.classList.add('bg-yellow-100');
-          setTimeout(() => {
-            verseElement.classList.remove('bg-yellow-100');
-          }, 3000); // Remove highlight after 3 seconds
+
+      // Scroll pane 2 to the referenced verse — disable scroll sync to prevent pane 1 from moving
+      const scrollToVerse = (verseNum, attempts = 0) => {
+        const el = document.getElementById(`right-pane-verse-${verseNum}`);
+        const pane = kjvContentRef.current;
+        if (el && pane) {
+          // Disable scroll sync for the duration of this scroll
+          isManuallyScrolling.current = true;
+          const elRect = el.getBoundingClientRect();
+          const paneRect = pane.getBoundingClientRect();
+          const offset = elRect.top - paneRect.top + pane.scrollTop - pane.clientHeight / 3;
+          pane.scrollTo({ top: offset, behavior: 'smooth' });
+          el.classList.add('bg-yellow-100');
+          setTimeout(() => el.classList.remove('bg-yellow-100'), 3000);
+          // Re-enable scroll sync after smooth scroll completes (~600ms)
+          setTimeout(() => { isManuallyScrolling.current = false; }, 800);
+        } else if (attempts < 5) {
+          setTimeout(() => scrollToVerse(verseNum, attempts + 1), 150);
         }
-        
-        // Scroll to verse in KJV panel
-        const kjvVerseElement = document.getElementById(`kjv-verse-${ref.verse}`);
-        if (kjvVerseElement && kjvContentRef.current) {
-          kjvVerseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          
-          // Highlight the verse temporarily in KJV panel
-          kjvVerseElement.classList.add('bg-yellow-100');
-          setTimeout(() => {
-            kjvVerseElement.classList.remove('bg-yellow-100');
-          }, 3000); // Remove highlight after 3 seconds
-        }
-        
-        // Reset scroll sync state
-        if (chapterContentRef.current) {
-          lastPrimaryScrollPos.current = chapterContentRef.current.scrollTop;
-        }
-      }, 300);
-      
-      scrollSyncInitialized.current = false;
+      };
+      setTimeout(() => scrollToVerse(ref.verse), 300);
     }
   };
 
@@ -4269,7 +4030,6 @@ const BibleApp = () => {
                   chapter: positionData.chapter || 1
                 },
                 isViewingCrossRef: false,
-                scrollSyncMode,
                 stickyPane
               };
               localStorage.setItem('bibleReaderState', JSON.stringify(stateToSave));
@@ -4287,8 +4047,7 @@ const BibleApp = () => {
             
             // Reset scroll sync state
             lastPrimaryScrollPos.current = 0;
-            scrollSyncInitialized.current = false;
-            
+                  
             // Log success message instead of showing alert
             console.log(`Position loaded: ${getBookName(positionData.bookAbbrev)} ${positionData.chapter || 1}`);
           } else {
@@ -4622,21 +4381,6 @@ const BibleApp = () => {
     return abbrevMap[hebrewAbbrev] || hebrewAbbrev;
   };
   
-  // Manually initialize scroll sync if not done yet
-  if (!scrollSyncInitialized.current && !loading && chapterContentRef.current && kjvContentRef.current) {
-    // Use a small timeout to ensure the DOM is fully rendered
-    setTimeout(() => {
-      // Check refs again as they might have changed during timeout
-      if (chapterContentRef.current && kjvContentRef.current) {
-        // Initialize the last scroll position
-        lastPrimaryScrollPos.current = chapterContentRef.current.scrollTop;
-
-        setupScrollSync();
-        scrollSyncInitialized.current = true;
-        console.log("Scroll sync initialized");
-      }
-    }, 100);
-  }
 
   // Main render
   return (
@@ -5023,6 +4767,8 @@ const BibleApp = () => {
               onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : viewMode === 'interleaved' ? 'interleaved-pd' : 'side-by-side')}
               showPane2Only={showPane2Only}
               onPane2OnlyToggle={() => setShowPane2Only(!showPane2Only)}
+              dualPanePD={dualPanePD}
+              onDualPanePDToggle={() => setDualPanePD(prev => !prev)}
               gridReadMode={gridReadMode}
               onGridReadModeToggle={() => setGridReadMode(prev => prev === 'delimit' ? 'undelimit' : 'delimit')}
               onShowVerseGrid={() => setShowVerseGrid(true)}
@@ -5037,8 +4783,6 @@ const BibleApp = () => {
               book={primaryReading.book}
               chapter={primaryReading.chapter}
               getBookName={getBookName}
-              syncMode={scrollSyncMode}
-              onSyncModeChange={handleScrollSyncModeChange}
               stickyPane={stickyPane}
               onStickyPaneChange={handleStickyPaneChange}
               onAudioClick={handleAudioButtonClick}
@@ -5070,6 +4814,8 @@ const BibleApp = () => {
               onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : viewMode === 'interleaved' ? 'interleaved-pd' : 'side-by-side')}
               showPane2Only={showPane2Only}
               onPane2OnlyToggle={() => setShowPane2Only(!showPane2Only)}
+              dualPanePD={dualPanePD}
+              onDualPanePDToggle={() => setDualPanePD(prev => !prev)}
               gridReadMode={gridReadMode}
               onGridReadModeToggle={() => setGridReadMode(prev => prev === 'delimit' ? 'undelimit' : 'delimit')}
               onShowVerseGrid={() => setShowVerseGrid(true)}
@@ -5121,8 +4867,7 @@ const BibleApp = () => {
                     }
                     // Reset scroll sync initialization flag
                     lastPrimaryScrollPos.current = 0;
-                    scrollSyncInitialized.current = false;
-                  }
+                                }
                 }
               }}
             />
@@ -5140,8 +4885,7 @@ const BibleApp = () => {
                     }
                     // Reset scroll sync initialization flag
                     lastPrimaryScrollPos.current = 0;
-                    scrollSyncInitialized.current = false;
-                  }
+                                }
                 }}
                 className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-xs"
               >
@@ -5223,16 +4967,24 @@ const BibleApp = () => {
                       // Get verses from both translations
                       const primaryVerses = selectedBook.chapters[selectedChapter - 1];
 
-                      // Get right pane verses
+                      // Get right pane verses — use independent pane2 state if set
                       let rightPaneVerses = [];
-                      if (rightPaneBibleData && selectedBook) {
-                        let bookAbbrev = selectedBook.abbrev;
-                        if (selectedTranslation.includes('he_heb')) {
-                          bookAbbrev = getKjvBookAbbrev(bookAbbrev);
+                      const effectivePane2Chapter = pane2Chapter || selectedChapter;
+                      if (rightPaneBibleData) {
+                        let bookAbbrev;
+                        if (pane2Book) {
+                          bookAbbrev = pane2Book.abbrev;
+                        } else if (selectedBook) {
+                          bookAbbrev = selectedBook.abbrev;
+                          if (selectedTranslation.includes('he_heb')) {
+                            bookAbbrev = getKjvBookAbbrev(bookAbbrev);
+                          }
                         }
-                        const rightPaneBook = rightPaneBibleData.find(b => b.abbrev === bookAbbrev);
-                        if (rightPaneBook && rightPaneBook.chapters[selectedChapter - 1]) {
-                          rightPaneVerses = rightPaneBook.chapters[selectedChapter - 1];
+                        if (bookAbbrev) {
+                          const rightPaneBook = rightPaneBibleData.find(b => b.abbrev === bookAbbrev);
+                          if (rightPaneBook && rightPaneBook.chapters[effectivePane2Chapter - 1]) {
+                            rightPaneVerses = rightPaneBook.chapters[effectivePane2Chapter - 1];
+                          }
                         }
                       }
 
@@ -5265,11 +5017,14 @@ const BibleApp = () => {
 
                           // Add right pane translation verse
                           if (rightPaneVerses[i]) {
+                            const pane2Label = pane2Book
+                              ? `${getTranslationShortName(rightPaneTranslation)} - ${getBookName(pane2Book.abbrev)} ${effectivePane2Chapter}`
+                              : getTranslationShortName(rightPaneTranslation);
                             interleavedVerses.push({
                               type: 'secondary',
                               verseNumber,
                               text: rightPaneVerses[i],
-                              translation: getTranslationShortName(rightPaneTranslation)
+                              translation: pane2Label
                             });
                           }
                         }
@@ -5301,44 +5056,27 @@ const BibleApp = () => {
                               <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                 ({item.translation})
                               </span>
-                              {hasReference && (
-                                <button
-                                  onClick={() => setShowCrossRef(showCrossRef === refKey ? null : refKey)}
-                                  className="ml-3 text-blue-500 hover:text-blue-700 focus:outline-none"
-                                  title="Show cross-references"
-                                >
-                                  <Link className="h-6 w-6" />
-                                </button>
-                              )}
                             </p>
 
-                            {/* Cross-reference popup */}
-                            {hasReference && showCrossRef === refKey && (
-                              <div className={`mt-4 p-5 rounded-md shadow-sm ${
-                                isDarkMode
-                                  ? 'bg-blue-900 border border-blue-700'
-                                  : 'bg-blue-50 border border-blue-200'
+                            {/* Cross-references — always visible for primary pane */}
+                            {hasReference && (
+                              <div className={`mt-2 pl-8 ${
+                                isDarkMode ? 'text-gray-400' : 'text-gray-500'
                               }`}>
-                                <h4 className="font-medium mb-4 text-lg">Cross References:</h4>
-                                <ul className="space-y-4">
-                                  {crossReferences[refKey].map((ref, i) => (
-                                    <li key={i} className="text-xl">
-                                      <button
-                                        onClick={() => handleCrossRefNavigate(ref)}
-                                        className={`font-medium ${
-                                          isDarkMode
-                                            ? 'text-blue-300 hover:text-blue-200'
-                                            : 'text-blue-600 hover:text-blue-800'
-                                        }`}
-                                      >
-                                        {getBookName(ref.book)} {ref.chapter}:{ref.verse}
-                                      </button>
-                                      <p className={`mt-2 ${
-                                        isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                                      }`}>{renderWithGlosses(ref.text, showGlosses)}</p>
-                                    </li>
-                                  ))}
-                                </ul>
+                                <span className="text-xs font-medium mr-1">Refs:</span>
+                                {crossReferences[refKey].map((ref, i) => (
+                                  <button
+                                    key={i}
+                                    onClick={() => handleCrossRefNavigate(ref)}
+                                    className={`text-xs mr-2 ${
+                                      isDarkMode
+                                        ? 'text-blue-300 hover:text-blue-200'
+                                        : 'text-blue-600 hover:text-blue-800'
+                                    }`}
+                                  >
+                                    {getBookName(ref.book)} {ref.chapter}:{ref.verse}{i < crossReferences[refKey].length - 1 ? ',' : ''}
+                                  </button>
+                                ))}
                               </div>
                             )}
                           </div>
@@ -5574,44 +5312,25 @@ const BibleApp = () => {
                           <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
                           <span className="flex-1">{renderWithGlosses(verse, showGlosses)}</span>
                           
-                          {hasReference && (
-                            <button
-                              onClick={() => setShowCrossRef(showCrossRef === refKey ? null : refKey)}
-                              className="ml-3 text-blue-500 hover:text-blue-700 focus:outline-none"
-                              title="Show cross-references"
-                            >
-                              <Link className="h-6 w-6" />
-                            </button>
-                          )}
                         </p>
-                        
-                        {/* Cross-reference popup */}
-                        {showCrossRef === refKey && (
-                          <div className={`mt-4 p-5 rounded-md shadow-sm ${
-                            isDarkMode 
-                              ? 'bg-blue-900 border border-blue-700' 
-                              : 'bg-blue-50 border border-blue-200'
-                          }`}>
-                            <h4 className="font-medium mb-4 text-lg">Cross References:</h4>
-                            <ul className="space-y-4">
-                              {crossReferences[refKey].map((ref, i) => (
-                                <li key={i} className="text-xl">
-                                  <button 
-                                    onClick={() => handleCrossRefNavigate(ref)}
-                                    className={`font-medium ${
-                                      isDarkMode 
-                                        ? 'text-blue-300 hover:text-blue-200' 
-                                        : 'text-blue-600 hover:text-blue-800'
-                                    }`}
-                                  >
-                                    {getBookName(ref.book)} {ref.chapter}:{ref.verse}
-                                  </button>
-                                  <p className={`mt-2 ${
-                                    isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                                  }`}>{renderWithGlosses(ref.text, showGlosses)}</p>
-                                </li>
-                              ))}
-                            </ul>
+
+                        {/* Cross-references — always visible */}
+                        {hasReference && (
+                          <div className={`mt-2 pl-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <span className="text-xs font-medium mr-1">Refs:</span>
+                            {crossReferences[refKey].map((ref, i) => (
+                              <button
+                                key={i}
+                                onClick={() => handleCrossRefNavigate(ref)}
+                                className={`text-xs mr-2 ${
+                                  isDarkMode
+                                    ? 'text-blue-300 hover:text-blue-200'
+                                    : 'text-blue-600 hover:text-blue-800'
+                                }`}
+                              >
+                                {getBookName(ref.book)} {ref.chapter}:{ref.verse}{i < crossReferences[refKey].length - 1 ? ',' : ''}
+                              </button>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -5908,7 +5627,7 @@ const BibleApp = () => {
                         Show Pane 1
                       </button>
                     )}
-                    {selectedBook.book || getBookName(selectedBook.abbrev)} {selectedChapter} <span className="text-gray-500 ml-2">({getTranslationShortName(rightPaneTranslation)})</span>
+                    {pane2Book ? getBookName(pane2Book.abbrev) : (selectedBook.book || getBookName(selectedBook.abbrev))} {pane2Chapter || selectedChapter} <span className="text-gray-500 ml-2">({getTranslationShortName(rightPaneTranslation)})</span>
                     <span className="ml-3 px-2 py-1 rounded text-xs bg-blue-50 text-blue-800">
                       Exact Sync
                     </span>
@@ -5923,22 +5642,23 @@ const BibleApp = () => {
                     {/* Modified to handle right pane translation */}
                     {rightPaneBibleData && selectedBook && (
                       (() => {
-                        // For Hebrew translations, use the mapping
-                        let bookAbbrev = selectedBook.abbrev;
-                        if (selectedTranslation.includes('he_heb')) {
+                        // Use pane2Book/pane2Chapter if set (cross-ref navigation), else follow pane 1
+                        let bookAbbrev = pane2Book ? pane2Book.abbrev : selectedBook.abbrev;
+                        if (!pane2Book && selectedTranslation.includes('he_heb')) {
                           bookAbbrev = getKjvBookAbbrev(bookAbbrev);
                         }
-                        
+                        const effectiveChapter = pane2Chapter || selectedChapter;
+
                         const rightPaneBook = rightPaneBibleData.find(b => b.abbrev === bookAbbrev);
-                        if (rightPaneBook && rightPaneBook.chapters[selectedChapter - 1]) {
-                          return rightPaneBook.chapters[selectedChapter - 1]
+                        if (rightPaneBook && rightPaneBook.chapters[effectiveChapter - 1]) {
+                          return rightPaneBook.chapters[effectiveChapter - 1]
                             .map((verse, originalIndex) => ({ verse, verseNumber: originalIndex + 1 }))
                             .filter(({ verseNumber }) => {
                               // If filtering is disabled, show all verses
                               if (!showFilteredVersesOnly || !verseFilterData) return true;
 
                               // Check if we have filter data for current chapter
-                              const currentChapterFilter = verseFilterData.chapters[selectedChapter];
+                              const currentChapterFilter = verseFilterData.chapters[effectiveChapter];
 
                               // If no filter data for this chapter, show all verses
                               if (!currentChapterFilter) return true;
@@ -6007,25 +5727,31 @@ const BibleApp = () => {
                       Home (esc)
                     </button>
 
-                    {selectedBook && selectedChapter < selectedBook.chapters.length && (
-                      <button
-                        onClick={() => {
-                          // Clear mobile scroll position immediately to prevent restoration
-                          localStorage.removeItem('mobileScrollPosition');
-                          setMobileScrollPosition(0);
-                          
-                          handleChapterSelect(selectedChapter + 1, true);
-                          
-                          // Reset all scroll state after content loads
-                          setTimeout(() => {
-                            handleHomeReset();
-                          }, 100);
-                        }}
-                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
-                      >
-                        Next Chapter (m,;e) &gt;
-                      </button>
-                    )}
+                    {(() => {
+                      const p2Book = pane2Book || selectedBook;
+                      const p2Chapter = pane2Chapter || selectedChapter;
+                      if (!p2Book || p2Chapter >= p2Book.chapters.length) return null;
+                      return (
+                        <button
+                          onClick={() => {
+                            const nextChapter = p2Chapter + 1;
+                            localStorage.removeItem('mobileScrollPosition');
+                            setMobileScrollPosition(0);
+                            // Sync both panes to pane 2's next chapter
+                            setSelectedBook(p2Book);
+                            setSelectedChapter(nextChapter);
+                            setPane2Book(null);
+                            setPane2Chapter(null);
+                            setPrimaryReading({ book: p2Book, chapter: nextChapter });
+                            setIsViewingCrossRef(false);
+                            setTimeout(() => { handleHomeReset(); }, 100);
+                          }}
+                          className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
+                        >
+                          Next Chapter (m,;e) &gt;
+                        </button>
+                      );
+                    })()}
 
                     {/* Next Book button - appears when at last chapter but not at last book */}
                     {selectedBook && selectedChapter === selectedBook.chapters.length && bibleData && (() => {
