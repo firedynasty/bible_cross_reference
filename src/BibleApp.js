@@ -1378,6 +1378,7 @@ const BibleApp = () => {
   // State for Text Paste (in Go to Reference modal)
   const [textPasteContent, setTextPasteContent] = useState('');
   const [textParsedRefs, setTextParsedRefs] = useState([]);
+  const [refNotes, setRefNotes] = useState(() => localStorage.getItem('bibleRefNotes') || '');
 
   // State for Book Search Modal
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -6348,8 +6349,8 @@ const BibleApp = () => {
 
             {/* Text Paste Area */}
             <div style={{ marginTop: 16, borderTop: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, paddingTop: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>Paste text with verse references</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>Paste sermon notes / commentary</span>
                 {textPasteContent && (
                   <button
                     onClick={() => { setTextPasteContent(''); setTextParsedRefs([]); }}
@@ -6358,6 +6359,9 @@ const BibleApp = () => {
                     Clear
                   </button>
                 )}
+              </div>
+              <div style={{ fontSize: 11, color: isDarkMode ? '#666' : '#aaa', marginBottom: 6, fontStyle: 'italic', lineHeight: 1.4 }}>
+                Quoted refs like <span style={{ color: isDarkMode ? '#93c5fd' : '#3b82f6' }}>"Eph 5:25"</span> are extracted as clickable links
               </div>
               <textarea
                 value={textPasteContent}
@@ -6399,6 +6403,36 @@ const BibleApp = () => {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Personal Notes Area */}
+            <div style={{ marginTop: 16, borderTop: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, paddingTop: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>Notes</span>
+                {refNotes && (
+                  <button
+                    onClick={() => { setRefNotes(''); localStorage.removeItem('bibleRefNotes'); }}
+                    style={{ fontSize: 11, color: isDarkMode ? '#f87171' : '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 6px' }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <textarea
+                value={refNotes}
+                onChange={(e) => {
+                  setRefNotes(e.target.value);
+                  localStorage.setItem('bibleRefNotes', e.target.value);
+                }}
+                placeholder="Your study notes, thoughts, observations..."
+                style={{
+                  width: '100%', minHeight: 100, padding: 10, fontSize: 13,
+                  border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
+                  borderRadius: 8, background: isDarkMode ? '#1e1e2e' : '#fafbff',
+                  color: isDarkMode ? '#e0e0e0' : '#333',
+                  boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6
+                }}
+              />
             </div>
           </div>
         </div>
