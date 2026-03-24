@@ -1397,7 +1397,8 @@ const BibleApp = () => {
 
   // State for Strong's concordance
   const [strongsIndex, setStrongsIndex] = useState(null);
-  const [strongsConcordance, setStrongsConcordance] = useState(null); // { number: 'H430', refs: [...] }
+  const [strongsDictionary, setStrongsDictionary] = useState(null);
+  const [strongsConcordance, setStrongsConcordance] = useState(null); // { number: 'H430', refs: [...], def: {...} }
 
   // State for Study Questions Modal
   const [showStudyQModal, setShowStudyQModal] = useState(false);
@@ -4007,25 +4008,27 @@ const BibleApp = () => {
     }
   };
 
-  // Handle clicking a Strong's number — load index if needed, show concordance in pane 2
+  // Handle clicking a Strong's number — load index + dictionary if needed, show concordance in pane 2
   const handleStrongsClick = useCallback(async (strongsNum) => {
+    const baseUrl = getBaseUrl();
     let idx = strongsIndex;
-    if (!idx) {
-      try {
-        const baseUrl = getBaseUrl();
-        const resp = await fetch(`${baseUrl}/strongsIndex.json`);
-        idx = await resp.json();
-        setStrongsIndex(idx);
-      } catch (err) {
-        console.error('Failed to load Strong\'s index:', err);
-        return;
-      }
-    }
+    let dict = strongsDictionary;
+
+    const [idxResult, dictResult] = await Promise.all([
+      idx ? Promise.resolve(idx) : fetch(`${baseUrl}/strongsIndex.json`).then(r => r.json()).catch(() => null),
+      dict ? Promise.resolve(dict) : fetch(`${baseUrl}/strongsDictionary.json`).then(r => r.json()).catch(() => null),
+    ]);
+
+    if (!idx && idxResult) { idx = idxResult; setStrongsIndex(idxResult); }
+    if (!dict && dictResult) { dict = dictResult; setStrongsDictionary(dictResult); }
+
+    if (!idx) return;
     const refs = idx[strongsNum];
     if (refs && refs.length > 0) {
-      setStrongsConcordance({ number: strongsNum, refs });
+      const def = dict ? dict[strongsNum] : null;
+      setStrongsConcordance({ number: strongsNum, refs, def });
     }
-  }, [strongsIndex]);
+  }, [strongsIndex, strongsDictionary]);
 
   // Render verse text with clickable Strong's numbers
   const renderWithStrongs = useCallback((text, showGlosses) => {
@@ -5743,9 +5746,17 @@ const BibleApp = () => {
                     {/* Strong's Concordance View */}
                     {strongsConcordance && (
                       <div className="p-4">
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center justify-between mb-2">
                           <h3 className={`text-lg font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>
-                            {strongsConcordance.number} — {strongsConcordance.refs.length} occurrences
+                            {strongsConcordance.number}
+                            {strongsConcordance.def && (
+                              <span className={`ml-2 font-normal ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                {strongsConcordance.def.word}
+                                {strongsConcordance.def.translit && (
+                                  <span className="italic ml-1 text-sm">({strongsConcordance.def.translit})</span>
+                                )}
+                              </span>
+                            )}
                           </h3>
                           <button
                             onClick={() => setStrongsConcordance(null)}
@@ -5753,6 +5764,21 @@ const BibleApp = () => {
                           >
                             Close
                           </button>
+                        </div>
+                        {strongsConcordance.def && (strongsConcordance.def.strongs_def || strongsConcordance.def.kjv_def) && (
+                          <div className={`mb-3 p-2 rounded text-sm ${isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-purple-50 text-gray-700'}`}>
+                            {strongsConcordance.def.strongs_def && (
+                              <div className="mb-1">{strongsConcordance.def.strongs_def}</div>
+                            )}
+                            {strongsConcordance.def.kjv_def && (
+                              <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                <span className="font-semibold">KJV: </span>{strongsConcordance.def.kjv_def}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <div className={`mb-2 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {strongsConcordance.refs.length} occurrences
                         </div>
                         <div className="space-y-1" style={{ fontSize: `${fontScale * 0.95}rem` }}>
                           {strongsConcordance.refs.map((ref, i) => (
