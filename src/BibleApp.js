@@ -3147,7 +3147,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, showDropboxModal]);
+  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, showDropboxModal, showBucketsModal]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
