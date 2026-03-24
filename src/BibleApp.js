@@ -6861,6 +6861,7 @@ const BibleApp = () => {
                     Progress: {bucketSlider === 0 ? 'Hidden' : `${Math.floor(bucketSlider / 2)}${bucketSlider % 2 === 1 ? '.5' : ''} / ${currentBucket.length} lines`}
                   </label>
                   <input
+                    key={clampedBucketIndex}
                     type="range"
                     min="0"
                     max={maxHalfLines}
@@ -6868,6 +6869,7 @@ const BibleApp = () => {
                     value={bucketSlider}
                     onChange={(e) => setBucketSlider(parseInt(e.target.value))}
                     style={{ width: '100%', cursor: 'pointer' }}
+                    autoFocus
                   />
                 </div>
               </div>
