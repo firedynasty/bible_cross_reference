@@ -6479,7 +6479,13 @@ const BibleApp = () => {
                           return (
                             <span
                               key={j}
-                              onClick={() => setFitbRevealed(prev => ({ ...prev, [bIdx]: !prev[bIdx] }))}
+                              onClick={() => {
+                                setFitbRevealed(prev => {
+                                  if (prev[bIdx]) return { ...prev, [bIdx]: false };
+                                  setTimeout(() => setFitbRevealed(p => ({ ...p, [bIdx]: false })), 1500);
+                                  return { ...prev, [bIdx]: true };
+                                });
+                              }}
                               style={{
                                 display: 'inline-block',
                                 borderBottom: `2px solid ${isDarkMode ? '#f9a8d4' : '#be185d'}`,
