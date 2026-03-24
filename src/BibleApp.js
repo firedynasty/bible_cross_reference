@@ -3995,8 +3995,8 @@ const BibleApp = () => {
           const paneRect = pane.getBoundingClientRect();
           const offset = elRect.top - paneRect.top + pane.scrollTop - pane.clientHeight / 3;
           pane.scrollTo({ top: offset, behavior: 'smooth' });
-          el.style.backgroundColor = isDarkMode ? '#78350f' : '#fef9c3';
-          el.style.color = isDarkMode ? '#fde68a' : '';
+          el.style.backgroundColor = isDarkMode ? '#b45309' : '#fef9c3';
+          el.style.color = isDarkMode ? '#fffbeb' : '';
           setTimeout(() => { el.style.backgroundColor = ''; el.style.color = ''; }, 3000);
           // Re-enable scroll sync after smooth scroll completes (~600ms)
           setTimeout(() => { isManuallyScrolling.current = false; }, 800);
