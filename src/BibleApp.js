@@ -5077,13 +5077,13 @@ const BibleApp = () => {
                             {hasReference && (
                               <div className={`mt-2 pl-8 ${
                                 isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                              }`}>
-                                <span className="text-xs font-medium mr-1">Refs:</span>
+                              }`} style={{ fontSize: `${fontScale * 0.85}rem` }}>
+                                <span className="font-medium mr-1">Refs:</span>
                                 {crossReferences[refKey].map((ref, i) => (
                                   <button
                                     key={i}
                                     onClick={() => handleCrossRefNavigate(ref)}
-                                    className={`text-xs mr-2 ${
+                                    className={`mr-2 ${
                                       isDarkMode
                                         ? 'text-blue-300 hover:text-blue-200'
                                         : 'text-blue-600 hover:text-blue-800'
@@ -5331,13 +5331,13 @@ const BibleApp = () => {
 
                         {/* Cross-references — always visible */}
                         {hasReference && (
-                          <div className={`mt-2 pl-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            <span className="text-xs font-medium mr-1">Refs:</span>
+                          <div className={`mt-2 pl-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} style={{ fontSize: `${fontScale * 0.85}rem` }}>
+                            <span className="font-medium mr-1">Refs:</span>
                             {crossReferences[refKey].map((ref, i) => (
                               <button
                                 key={i}
                                 onClick={() => handleCrossRefNavigate(ref)}
-                                className={`text-xs mr-2 ${
+                                className={`mr-2 ${
                                   isDarkMode
                                     ? 'text-blue-300 hover:text-blue-200'
                                     : 'text-blue-600 hover:text-blue-800'
