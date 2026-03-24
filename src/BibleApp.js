@@ -449,7 +449,9 @@ const NavigationPlaceholder = ({
   onQA,
   showStudyQModal,
   onQuiz,
-  showQuizModal
+  showQuizModal,
+  onBuckets,
+  showBucketsModal
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -763,6 +765,8 @@ const NavigationPlaceholder = ({
           showStudyQModal={showStudyQModal}
           onQuiz={onQuiz}
           showQuizModal={showQuizModal}
+          onBuckets={onBuckets}
+          showBucketsModal={showBucketsModal}
         />
         
         {/* To Clipboard Button - Hidden */}
@@ -1383,6 +1387,12 @@ const BibleApp = () => {
   const [fitbData, setFitbData] = useState(null);
   const [fitbRevealed, setFitbRevealed] = useState({});
   const [quizFontSize, setQuizFontSize] = useState(14);
+
+  // State for Buckets Modal
+  const [showBucketsModal, setShowBucketsModal] = useState(false);
+  const [bucketIndex, setBucketIndex] = useState(0);
+  const [bucketSlider, setBucketSlider] = useState(1);
+  const [bucketFontSize, setBucketFontSize] = useState(14);
 
   // State for Study Questions Modal
   const [showStudyQModal, setShowStudyQModal] = useState(false);
@@ -3032,6 +3042,8 @@ const BibleApp = () => {
           setShowStudyQModal(false);
         } else if (showQuizModal) {
           setShowQuizModal(false);
+        } else if (showBucketsModal) {
+          setShowBucketsModal(false);
         } else if (showSearchModal) {
           setShowSearchModal(false);
         } else if (showCollectionModal) {
@@ -4855,6 +4867,12 @@ const BibleApp = () => {
                   setShowQuizModal(true);
                 }
               }}
+              showBucketsModal={showBucketsModal}
+              onBuckets={() => {
+                setBucketIndex(0);
+                setBucketSlider(1);
+                setShowBucketsModal(true);
+              }}
               onQA={() => {
                 if (!studyQData) {
                   const baseUrl = getBaseUrl();
@@ -5080,19 +5098,22 @@ const BibleApp = () => {
                                 isDarkMode ? 'text-gray-400' : 'text-gray-500'
                               }`} style={{ fontSize: `${fontScale * 0.85}rem` }}>
                                 <span className="font-medium mr-1">Refs:</span>
-                                {crossReferences[refKey].map((ref, i) => (
+                                {crossReferences[refKey].map((ref, i) => {
+                                  const isPsalm = ref.book === 'ps';
+                                  return (
                                   <button
                                     key={i}
                                     onClick={() => handleCrossRefNavigate(ref)}
                                     className={`mr-2 ${
-                                      isDarkMode
-                                        ? 'text-blue-300 hover:text-blue-200'
-                                        : 'text-blue-600 hover:text-blue-800'
+                                      isPsalm
+                                        ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
+                                        : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
                                     }`}
                                   >
                                     {getBookName(ref.book)} {ref.chapter}:{ref.verse}{i < crossReferences[refKey].length - 1 ? ',' : ''}
                                   </button>
-                                ))}
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
@@ -5334,19 +5355,22 @@ const BibleApp = () => {
                         {hasReference && (
                           <div className={`mt-2 pl-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} style={{ fontSize: `${fontScale * 0.85}rem` }}>
                             <span className="font-medium mr-1">Refs:</span>
-                            {crossReferences[refKey].map((ref, i) => (
+                            {crossReferences[refKey].map((ref, i) => {
+                              const isPsalm = ref.book === 'ps';
+                              return (
                               <button
                                 key={i}
                                 onClick={() => handleCrossRefNavigate(ref)}
                                 className={`mr-2 ${
-                                  isDarkMode
-                                    ? 'text-blue-300 hover:text-blue-200'
-                                    : 'text-blue-600 hover:text-blue-800'
+                                  isPsalm
+                                    ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
+                                    : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
                                 }`}
                               >
                                 {getBookName(ref.book)} {ref.chapter}:{ref.verse}{i < crossReferences[refKey].length - 1 ? ',' : ''}
                               </button>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </div>
@@ -6516,6 +6540,139 @@ const BibleApp = () => {
               <button
                 onClick={() => setShowQuizModal(false)}
                 style={{ marginTop: 12, width: '100%', padding: 10, fontSize: 14, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Buckets Modal */}
+      {showBucketsModal && (() => {
+        const LINES_PER_BUCKET = 4;
+        // Get pane 2 verses
+        const p2Book = pane2Book || selectedBook;
+        const p2Chapter = pane2Chapter || selectedChapter;
+        const p2BookName = p2Book ? (p2Book.book || getBookName(p2Book.abbrev)) : '';
+        let p2Verses = [];
+        if (rightPaneBibleData && p2Book) {
+          const rpBook = rightPaneBibleData.find(b => b.abbrev === p2Book.abbrev);
+          if (rpBook && rpBook.chapters[p2Chapter - 1]) {
+            p2Verses = rpBook.chapters[p2Chapter - 1];
+          }
+        }
+        if (!p2Verses.length && bibleData && p2Book) {
+          const bk = bibleData.find(b => b.abbrev === p2Book.abbrev);
+          if (bk && bk.chapters[p2Chapter - 1]) {
+            p2Verses = bk.chapters[p2Chapter - 1];
+          }
+        }
+        // Build buckets
+        const buckets = [];
+        for (let i = 0; i < p2Verses.length; i += LINES_PER_BUCKET) {
+          buckets.push(p2Verses.slice(i, i + LINES_PER_BUCKET));
+        }
+        const currentBucket = buckets[bucketIndex] || [];
+        const maxHalfLines = currentBucket.length * 2;
+
+        const splitLineInHalf = (text) => {
+          const mid = Math.ceil(text.length / 2);
+          let splitPoint = mid;
+          for (let i = mid; i < text.length && i < mid + 20; i++) {
+            if (text[i] === ' ') { splitPoint = i; break; }
+          }
+          return [text.substring(0, splitPoint).trim(), text.substring(splitPoint).trim()];
+        };
+
+        // Build display
+        let halfLinesShown = 0;
+        const displayLines = [];
+        for (let i = 0; i < currentBucket.length && halfLinesShown < bucketSlider; i++) {
+          const verse = currentBucket[i];
+          const verseNum = bucketIndex * LINES_PER_BUCKET + i + 1;
+          const text = typeof verse === 'string' ? verse : (verse.text || verse.verse || String(verse));
+          const [firstHalf, secondHalf] = splitLineInHalf(text);
+          const parts = [];
+          if (halfLinesShown < bucketSlider) {
+            parts.push(firstHalf);
+            halfLinesShown++;
+          }
+          if (halfLinesShown < bucketSlider && secondHalf) {
+            parts.push(' ' + secondHalf);
+            halfLinesShown++;
+          }
+          displayLines.push({ verseNum, text: parts.join('') });
+        }
+
+        return (
+          <div
+            style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowBucketsModal(false); }}
+          >
+            <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 700, height: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              {/* Header with font controls */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 12px', flexShrink: 0 }}>
+                <button
+                  onClick={() => setBucketFontSize(prev => Math.max(10, prev - 2))}
+                  style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                  title="Decrease font size"
+                >−</button>
+                <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
+                  {p2BookName} {p2Chapter} — Buckets
+                </h3>
+                <button
+                  onClick={() => setBucketFontSize(prev => Math.min(28, prev + 2))}
+                  style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                  title="Increase font size"
+                >+</button>
+              </div>
+
+              {/* Bucket selector */}
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexShrink: 0 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: 4, color: isDarkMode ? '#aaa' : '#666', fontWeight: 600, fontSize: 12 }}>Bucket:</label>
+                  <select
+                    value={bucketIndex}
+                    onChange={(e) => { setBucketIndex(parseInt(e.target.value)); setBucketSlider(1); }}
+                    style={{ width: '100%', padding: 8, border: `2px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14, background: isDarkMode ? '#1e1e1e' : 'white', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer' }}
+                  >
+                    {buckets.map((bucket, idx) => {
+                      const firstV = idx * LINES_PER_BUCKET + 1;
+                      const lastV = idx * LINES_PER_BUCKET + bucket.length;
+                      return <option key={idx} value={idx}>Bucket {idx + 1}: Verses {firstV}–{lastV}</option>;
+                    })}
+                  </select>
+                </div>
+                <div style={{ flex: 2 }}>
+                  <label style={{ display: 'block', marginBottom: 4, color: isDarkMode ? '#aaa' : '#666', fontWeight: 600, fontSize: 12 }}>
+                    Progress: {bucketSlider === 0 ? 'Hidden' : `${Math.floor(bucketSlider / 2)}${bucketSlider % 2 === 1 ? '.5' : ''} / ${currentBucket.length} lines`}
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max={maxHalfLines}
+                    step="1"
+                    value={bucketSlider}
+                    onChange={(e) => setBucketSlider(parseInt(e.target.value))}
+                    style={{ width: '100%', cursor: 'pointer' }}
+                  />
+                </div>
+              </div>
+
+              {/* Content display */}
+              <div style={{ flex: 1, overflowY: 'auto', border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, padding: 12, marginBottom: 12, background: isDarkMode ? '#1e1e1e' : '#fafafa' }}>
+                {displayLines.map((line, i) => (
+                  <p key={i} style={{ margin: '0 0 8px', fontSize: bucketFontSize, lineHeight: 1.8, color: isDarkMode ? '#d0d0d0' : '#333' }}>
+                    <span style={{ display: 'inline-block', color: isDarkMode ? '#a78bfa' : '#667eea', fontWeight: 600, marginRight: 8 }}>{line.verseNum}</span>
+                    {line.text}
+                  </p>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setShowBucketsModal(false)}
+                style={{ width: '100%', padding: 10, fontSize: 14, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}
               >
                 Close
               </button>
