@@ -1157,6 +1157,7 @@ const BibleApp = () => {
   // Independent pane 2 book/chapter (for cross-ref navigation)
   const [pane2Book, setPane2Book] = useState(null);
   const [pane2Chapter, setPane2Chapter] = useState(null);
+  const [pane2History, setPane2History] = useState([]); // back-navigation stack
 
   // Reset pane 2 when a new book is selected (so pane 2 follows pane 1 on book changes)
   useEffect(() => {
@@ -3773,6 +3774,7 @@ const BibleApp = () => {
     // Always sync pane 2 to match pane 1 on chapter navigation
     setPane2Book(null);
     setPane2Chapter(null);
+    setPane2History([]);
 
     // Scroll both panels to top when chapter changes
     if (chapterContentRef.current) {
@@ -3977,6 +3979,8 @@ const BibleApp = () => {
     // Find the book in the right pane Bible data
     const book = (rightPaneBibleData || bibleData || []).find(b => b.abbrev === ref.book);
     if (book) {
+      // Push current pane 2 state (including any open concordance) to history before navigating
+      setPane2History(h => [...h, { book: pane2Book, chapter: pane2Chapter, concordance: strongsConcordance }]);
       // Update pane 2 independently
       setPane2Book(book);
       setPane2Chapter(ref.chapter);
@@ -4970,6 +4974,23 @@ const BibleApp = () => {
               }}
             />
             
+            {/* ← Back button for pane 2 history navigation */}
+            {pane2History.length > 0 && (
+              <button
+                onClick={() => {
+                  const prev = pane2History[pane2History.length - 1];
+                  setPane2History(h => h.slice(0, -1));
+                  setPane2Book(prev.book);
+                  setPane2Chapter(prev.chapter);
+                  setStrongsConcordance(prev.concordance || null);
+                  if (prev.book) setIsViewingCrossRef(true);
+                }}
+                className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors text-xs"
+              >
+                ← Back
+              </button>
+            )}
+
             {/* Return to Primary Reading button (only when viewing cross-reference) */}
             {isViewingCrossRef && (
               <button
@@ -4978,18 +4999,18 @@ const BibleApp = () => {
                     setSelectedBook(primaryReading.book);
                     setSelectedChapter(primaryReading.chapter);
                     setIsViewingCrossRef(false);
+                    setPane2History([]);
+                    setStrongsConcordance(null);
                     if (chapterContentRef.current) {
                       chapterContentRef.current.scrollTop = 0;
                     }
-                    // Reset scroll sync initialization flag
                     lastPrimaryScrollPos.current = 0;
-                                }
+                  }
                 }}
                 className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-xs"
               >
                 Return
               </button>
-
             )}
           </div>
         </div>
@@ -5787,6 +5808,8 @@ const BibleApp = () => {
                               onClick={() => {
                                 const book = (rightPaneBibleData || bibleData || []).find(b => b.abbrev === ref.b);
                                 if (book) {
+                                  // Save current state (including concordance) so Back can restore it
+                                  setPane2History(h => [...h, { book: pane2Book, chapter: pane2Chapter, concordance: strongsConcordance }]);
                                   setPane2Book(book);
                                   setPane2Chapter(ref.c);
                                   setStrongsConcordance(null);
