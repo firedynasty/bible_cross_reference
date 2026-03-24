@@ -1310,6 +1310,7 @@ const BibleApp = () => {
     { id: 'zh_cuv_no_space.json', name: 'Chinese - CUV (No Space)' },
     { id: 'es_rvr.json', name: 'Spanish - Reina Valera Revisada (RVR)' },
     { id: 'he_heb_nikkud.json', name: 'Hebrew - With Nikkud (Vowel Points)' },
+    { id: 'he_heb_strong.json', name: 'Hebrew - With Strong\'s Numbers' },
     { id: 'fr_apee.json', name: 'French - APEE' },
   ], []);
   
@@ -1393,6 +1394,10 @@ const BibleApp = () => {
   const [bucketIndex, setBucketIndex] = useState(0);
   const [bucketSlider, setBucketSlider] = useState(1);
   const [bucketFontSize, setBucketFontSize] = useState(14);
+
+  // State for Strong's concordance
+  const [strongsIndex, setStrongsIndex] = useState(null);
+  const [strongsConcordance, setStrongsConcordance] = useState(null); // { number: 'H430', refs: [...] }
 
   // State for Study Questions Modal
   const [showStudyQModal, setShowStudyQModal] = useState(false);
@@ -4002,6 +4007,62 @@ const BibleApp = () => {
     }
   };
 
+  // Handle clicking a Strong's number — load index if needed, show concordance in pane 2
+  const handleStrongsClick = useCallback(async (strongsNum) => {
+    let idx = strongsIndex;
+    if (!idx) {
+      try {
+        const baseUrl = getBaseUrl();
+        const resp = await fetch(`${baseUrl}/strongsIndex.json`);
+        idx = await resp.json();
+        setStrongsIndex(idx);
+      } catch (err) {
+        console.error('Failed to load Strong\'s index:', err);
+        return;
+      }
+    }
+    const refs = idx[strongsNum];
+    if (refs && refs.length > 0) {
+      setStrongsConcordance({ number: strongsNum, refs });
+    }
+  }, [strongsIndex]);
+
+  // Render verse text with clickable Strong's numbers
+  const renderWithStrongs = useCallback((text, showGlosses) => {
+    if (!text) return text;
+    // Match patterns like (H430) or (Hb/H7225) or (Hc/Hd/H776)
+    const regex = /\(([^)]*?(H\d+))\)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        const before = text.substring(lastIndex, match.index);
+        parts.push(before);
+      }
+      const fullMatch = match[0]; // e.g. (Hc/H853)
+      const strongsNum = match[2]; // e.g. H853
+      if (showGlosses) {
+        parts.push(
+          <button
+            key={match.index}
+            onClick={(e) => { e.stopPropagation(); handleStrongsClick(strongsNum); }}
+            className="text-purple-500 hover:text-purple-700 hover:underline"
+            style={{ fontSize: '0.75em', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+            title={`Look up ${strongsNum}`}
+          >
+            ({match[1]})
+          </button>
+        );
+      }
+      lastIndex = regex.lastIndex;
+    }
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+    return parts.length > 0 ? parts : text;
+  }, [handleStrongsClick]);
+
   // Handle selecting a position from Firebase
   const handleFirebasePositionSelect = async (key) => {
     if (!key) {
@@ -5086,7 +5147,7 @@ const BibleApp = () => {
                               <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                                 {item.verseNumber}
                               </span>
-                              <span className="flex-1">{renderWithGlosses(item.text, showGlosses)}</span>
+                              <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' && item.type === 'primary' ? renderWithStrongs(item.text, showGlosses) : renderWithGlosses(item.text, showGlosses)}</span>
                               <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                 ({item.translation})
                               </span>
@@ -5347,7 +5408,7 @@ const BibleApp = () => {
                       >
                         <p className="flex">
                           <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
-                          <span className="flex-1">{renderWithGlosses(verse, showGlosses)}</span>
+                          <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(verse, showGlosses)}</span>
                           
                         </p>
 
@@ -5679,8 +5740,63 @@ const BibleApp = () => {
                     </div>
                   </h2>
                   <div className="space-y-5">
+                    {/* Strong's Concordance View */}
+                    {strongsConcordance && (
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className={`text-lg font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>
+                            {strongsConcordance.number} — {strongsConcordance.refs.length} occurrences
+                          </h3>
+                          <button
+                            onClick={() => setStrongsConcordance(null)}
+                            className={`px-3 py-1 rounded text-sm font-semibold ${isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                          >
+                            Close
+                          </button>
+                        </div>
+                        <div className="space-y-1" style={{ fontSize: `${fontScale * 0.95}rem` }}>
+                          {strongsConcordance.refs.map((ref, i) => (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                const book = (rightPaneBibleData || bibleData || []).find(b => b.abbrev === ref.b);
+                                if (book) {
+                                  setPane2Book(book);
+                                  setPane2Chapter(ref.c);
+                                  setStrongsConcordance(null);
+                                  setIsViewingCrossRef(true);
+                                  setTimeout(() => {
+                                    const el = document.getElementById(`right-pane-verse-${ref.v}`);
+                                    const pane = kjvContentRef.current;
+                                    if (el && pane) {
+                                      isManuallyScrolling.current = true;
+                                      const elRect = el.getBoundingClientRect();
+                                      const paneRect = pane.getBoundingClientRect();
+                                      const offset = elRect.top - paneRect.top + pane.scrollTop - pane.clientHeight / 3;
+                                      pane.scrollTo({ top: offset, behavior: 'smooth' });
+                                      el.style.backgroundColor = isDarkMode ? '#78350f' : '#fef9c3';
+                                      el.style.color = isDarkMode ? '#fde68a' : '';
+                                      setTimeout(() => { el.style.backgroundColor = ''; el.style.color = ''; }, 3000);
+                                      setTimeout(() => { isManuallyScrolling.current = false; }, 800);
+                                    }
+                                  }, 300);
+                                }
+                              }}
+                              className={`block w-full text-left px-3 py-1.5 rounded transition-colors ${
+                                isDarkMode
+                                  ? 'text-blue-300 hover:bg-gray-800'
+                                  : 'text-blue-600 hover:bg-blue-50'
+                              }`}
+                            >
+                              {getBookName(ref.b)} {ref.c}:{ref.v}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Modified to handle right pane translation */}
-                    {rightPaneBibleData && selectedBook && (
+                    {!strongsConcordance && rightPaneBibleData && selectedBook && (
                       (() => {
                         // Use pane2Book/pane2Chapter if set (cross-ref navigation), else follow pane 1
                         let bookAbbrev = pane2Book ? pane2Book.abbrev : selectedBook.abbrev;
@@ -5716,7 +5832,7 @@ const BibleApp = () => {
                               >
                                 <p className="flex">
                                   <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
-                                  <span className="flex-1">{renderWithGlosses(verse, showGlosses)}</span>
+                                  <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(verse, showGlosses)}</span>
                                 </p>
                               </div>
                             );
