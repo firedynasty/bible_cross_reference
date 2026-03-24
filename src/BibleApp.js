@@ -2411,6 +2411,17 @@ const BibleApp = () => {
     const isManuallyScrollingRef = isManuallyScrolling;
 
     const handleKeyDown = (e) => {
+      // Buckets modal: spacebar = next bucket, shift+space = previous bucket
+      if (showBucketsModal && e.key === ' ') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          setBucketIndex(prev => Math.max(0, prev - 1));
+        } else {
+          setBucketIndex(prev => prev + 1);
+        }
+        setBucketSlider(1);
+        return;
+      }
       // Prevent keycode handling when user is typing in input fields or select dropdowns
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
         return;
@@ -6772,7 +6783,9 @@ const BibleApp = () => {
         for (let i = 0; i < p2Verses.length; i += LINES_PER_BUCKET) {
           buckets.push(p2Verses.slice(i, i + LINES_PER_BUCKET));
         }
-        const currentBucket = buckets[bucketIndex] || [];
+        const clampedBucketIndex = Math.min(bucketIndex, buckets.length - 1);
+        if (clampedBucketIndex !== bucketIndex) setBucketIndex(clampedBucketIndex);
+        const currentBucket = buckets[clampedBucketIndex] || [];
         const maxHalfLines = currentBucket.length * 2;
 
         const splitLineInHalf = (text) => {
@@ -6789,7 +6802,7 @@ const BibleApp = () => {
         const displayLines = [];
         for (let i = 0; i < currentBucket.length && halfLinesShown < bucketSlider; i++) {
           const verse = currentBucket[i];
-          const verseNum = bucketIndex * LINES_PER_BUCKET + i + 1;
+          const verseNum = clampedBucketIndex * LINES_PER_BUCKET + i + 1;
           const text = typeof verse === 'string' ? verse : (verse.text || verse.verse || String(verse));
           const [firstHalf, secondHalf] = splitLineInHalf(text);
           const parts = [];
@@ -6857,6 +6870,10 @@ const BibleApp = () => {
                     style={{ width: '100%', cursor: 'pointer' }}
                   />
                 </div>
+              </div>
+
+              <div style={{ marginBottom: 8, fontSize: 11, color: isDarkMode ? '#888' : '#999', textAlign: 'center' }}>
+                Space = next bucket &nbsp;|&nbsp; Shift+Space = previous bucket
               </div>
 
               {/* Content display */}
