@@ -1,0 +1,101 @@
+======================================================================
+TOGGLE BUTTONS DOCUMENTATION — BibleApp Header Bar
+======================================================================
+
+This document describes the toggle buttons in the BibleApp header bar
+and the states they cycle through.
+
+
+----------------------------------------------------------------------
+1. VIEW MODE TOGGLE (line 635–648 in BibleApp.js)
+----------------------------------------------------------------------
+
+Cycles through 3 view modes on each click:
+
+  Side-by-Side  →  Interleaved  →  Interleaved PD  →  (back to Side-by-Side)
+
+State              | Label              | Color Scheme                  | Title / Tooltip
+-------------------|--------------------|-------------------------------|--------------------------------
+side-by-side       | ⇔ Side-by-Side     | bg-blue-100 text-blue-700     | "Switch to interleaved view"
+interleaved        | ⇅ Interleaved      | bg-green-100 text-green-700   | "Switch to interleaved PD view"
+interleaved-pd     | ⇅ Interleaved PD   | bg-orange-100 text-orange-700 | "Switch to side-by-side view"
+
+Behavior:
+  - side-by-side:     Two panes rendered left/right (pane 1 and pane 2)
+  - interleaved:      Verses from both translations shown interleaved in a single column
+  - interleaved-pd:   Interleaved view with paragraph/discourse formatting
+
+Persisted in localStorage key: 'bibleAppViewMode'
+
+
+----------------------------------------------------------------------
+2. PANE 2 ONLY TOGGLE (line 650–663 in BibleApp.js)
+   *** This is the button from the user's question ***
+----------------------------------------------------------------------
+
+Only visible when viewMode === 'side-by-side'.
+Toggles between 2 states on each click:
+
+  Dual Pane  ⇄  Pane 2 Only
+
+State              | Label              | Color Scheme                    | Title / Tooltip
+-------------------|--------------------|-------------------------------- |-----------------------------------
+showPane2Only=false| ⇅ Dual Pane        | bg-green-100 text-green-700     | "Hide pane 1, show only pane 2"
+showPane2Only=true | ⇅ Pane 2 Only      | bg-green-200 text-green-800     | "Switch back to dual pane view"
+
+Behavior:
+  - Dual Pane (default):  Both pane 1 (left) and pane 2 (right) are visible
+                          side by side, each taking 50% width.
+  - Pane 2 Only:          Pane 1 is hidden (className 'hidden').
+                          Pane 2 expands to full width ('w-full').
+                          The left border on pane 2 is removed.
+                          Content gets a max-width of 70ch centered
+                          (max-w-[70ch] mx-auto) for comfortable reading.
+
+State variable: showPane2Only (boolean, default false)
+Handler: onPane2OnlyToggle → setShowPane2Only(!showPane2Only)
+Not persisted in localStorage (resets to dual pane on page reload).
+
+
+----------------------------------------------------------------------
+3. GRID TTS READ MODE TOGGLE (line 665–676 in BibleApp.js)
+----------------------------------------------------------------------
+
+Toggles between 2 text-to-speech reading modes:
+
+State              | Label   | Color Scheme                     | Title / Tooltip
+-------------------|---------|----------------------------------|--------------------------------------------
+'undelimit'        | Auto    | bg-purple-100 text-purple-700    | "Auto-read: reads full verse with pauses"
+(other)            | Parts   | bg-gray-100 text-gray-600        | "Part-by-part: click to advance each segment"
+
+
+----------------------------------------------------------------------
+4. FILTERED VERSES TOGGLE (line 620–632 in BibleApp.js)
+----------------------------------------------------------------------
+
+Only visible when verseFilterData is loaded.
+Toggles showing all verses vs only filtered verses.
+
+State                       | Label  | Color Scheme
+----------------------------|--------|-------------------------------
+showFilteredVersesOnly=true | 👁️     | bg-orange-200
+showFilteredVersesOnly=false| 👁️‍🗨️    | bg-gray-200
+
+
+----------------------------------------------------------------------
+5. TOUCH SCROLL MODE BUTTON (line 678–692 in BibleApp.js)
+----------------------------------------------------------------------
+
+Currently hidden (className includes 'hidden').
+Cycles through available touch scroll modes.
+Displays current mode label with a dropdown chevron icon.
+
+
+======================================================================
+SUMMARY OF BUTTON ORDER IN HEADER (left to right)
+======================================================================
+
+  [Filtered Verses Toggle]  →  [View Mode Toggle]  →  [Pane 2 Only Toggle]  →  [Grid Read Mode]  →  [Touch Scroll (hidden)]
+
+Note: Pane 2 Only Toggle is conditionally rendered — it only appears
+when the view mode is set to "side-by-side".

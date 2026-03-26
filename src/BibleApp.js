@@ -1402,6 +1402,11 @@ const BibleApp = () => {
   const [strongsDictionary, setStrongsDictionary] = useState(null);
   const [strongsConcordance, setStrongsConcordance] = useState(null); // { number: 'H430', refs: [...], def: {...} }
 
+  // State for Book Prompts (from prompts.json)
+  const [promptsData, setPromptsData] = useState(null);
+  const [showPromptPickerModal, setShowPromptPickerModal] = useState(false);
+  const [promptPickerOptions, setPromptPickerOptions] = useState([]);
+
   // State for Study Questions Modal
   const [showStudyQModal, setShowStudyQModal] = useState(false);
   const [studyQData, setStudyQData] = useState(null);
@@ -1678,6 +1683,23 @@ const BibleApp = () => {
   // State to track scroll position for mobile view during translation changes
   // eslint-disable-next-line no-unused-vars
   const [mobileScrollPosition, setMobileScrollPosition] = useState(0);
+
+  // Load book prompts JSON on startup
+  useEffect(() => {
+    const loadPrompts = async () => {
+      try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}/prompts.json`);
+        if (response.ok) {
+          const data = await response.json();
+          setPromptsData(data);
+        }
+      } catch (error) {
+        console.log('No prompts.json found');
+      }
+    };
+    loadPrompts();
+  }, []);
 
   // Load verse filters JSON on startup
   useEffect(() => {
@@ -1980,6 +2002,49 @@ const BibleApp = () => {
     
     return bookNames[abbrev] || abbrev;
   };
+
+  // Abbreviation to full book name mapping (for prompt matching)
+  const abbrevToBookName = {
+    'gn': 'Genesis', 'ex': 'Exodus', 'lv': 'Leviticus', 'nm': 'Numbers', 'dt': 'Deuteronomy',
+    'js': 'Joshua', 'jud': 'Judges', 'rt': 'Ruth', '1sm': '1 Samuel', '2sm': '2 Samuel',
+    '1kgs': '1 Kings', '2kgs': '2 Kings', '1ch': '1 Chronicles', '2ch': '2 Chronicles',
+    'ezr': 'Ezra', 'ne': 'Nehemiah', 'et': 'Esther', 'job': 'Job', 'ps': 'Psalms',
+    'prv': 'Proverbs', 'ec': 'Ecclesiastes', 'so': 'Song of Solomon', 'is': 'Isaiah',
+    'jr': 'Jeremiah', 'lm': 'Lamentations', 'ez': 'Ezekiel', 'dn': 'Daniel',
+    'ho': 'Hosea', 'jl': 'Joel', 'am': 'Amos', 'ob': 'Obadiah', 'jn': 'Jonah',
+    'mi': 'Micah', 'na': 'Nahum', 'hk': 'Habakkuk', 'zp': 'Zephaniah', 'hg': 'Haggai',
+    'zc': 'Zechariah', 'ml': 'Malachi', 'mt': 'Matthew', 'mk': 'Mark', 'lk': 'Luke',
+    'jo': 'John', 'act': 'Acts', 'rm': 'Romans', '1co': '1 Corinthians', '2co': '2 Corinthians',
+    'gl': 'Galatians', 'eph': 'Ephesians', 'ph': 'Philippians', 'cl': 'Colossians',
+    '1ts': '1 Thessalonians', '2ts': '2 Thessalonians', '1tm': '1 Timothy', '2tm': '2 Timothy',
+    'tt': 'Titus', 'phm': 'Philemon', 'hb': 'Hebrews', 'jm': 'James', '1pe': '1 Peter',
+    '2pe': '2 Peter', '1jo': '1 John', '2jo': '2 John', '3jo': '3 John', 'jd': 'Jude',
+    're': 'Revelation', 'ge': 'Genesis'
+  };
+
+  // Handle Prompt button click - auto-detect book, copy or show picker
+  const handlePromptButtonClick = useCallback(() => {
+    if (!promptsData || !selectedBook) return;
+    const bookName = abbrevToBookName[selectedBook.abbrev] || selectedBook.abbrev;
+    console.log('Prompt button: abbrev=', selectedBook.abbrev, 'bookName=', bookName);
+    // Find all matching keys (exact match or starts with book name)
+    const matches = Object.keys(promptsData).filter(
+      key => key === bookName || key.startsWith(bookName + ' ')
+    );
+    if (matches.length === 0) {
+      // No prompt for this book - show all available books in picker
+      setPromptPickerOptions(Object.keys(promptsData));
+      setShowPromptPickerModal(true);
+    } else if (matches.length === 1) {
+      navigator.clipboard.writeText(promptsData[matches[0]])
+        .then(() => alert(`Copied ${bookName} prompt to clipboard`))
+        .catch(err => alert('Failed to copy: ' + err));
+    } else {
+      // Multiple parts - show picker modal
+      setPromptPickerOptions(matches);
+      setShowPromptPickerModal(true);
+    }
+  }, [promptsData, selectedBook]);
 
   // Helper: speak all parts sequentially with 1.5s pauses (for undelimit mode)
   const speakAllParts = (parts, langCode, rate, speechIdRef, setSpeakingState, verseNumber) => {
@@ -4732,6 +4797,17 @@ const BibleApp = () => {
                   DB
                 </button>}
 
+                {/* Book Prompt to Clipboard Button */}
+                {promptsData && (
+                  <button
+                    onClick={handlePromptButtonClick}
+                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-amber-500 text-white hover:bg-amber-600 font-semibold"
+                    title="Copy book prompt/commentary to clipboard"
+                  >
+                    Prompt
+                  </button>
+                )}
+
                 {/* Book Search Button */}
                 <button
                   onClick={() => { setShowSearchModal(true); setSearchKeyword(''); setSearchResults([]); }}
@@ -6823,21 +6899,35 @@ const BibleApp = () => {
             onClick={(e) => { if (e.target === e.currentTarget) setShowBucketsModal(false); }}
           >
             <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 700, height: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-              {/* Header with font controls */}
+              {/* Header with slider nav and font controls */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 12px', flexShrink: 0 }}>
-                <button
-                  onClick={() => setBucketFontSize(prev => Math.max(10, prev - 2))}
-                  style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
-                  title="Decrease font size"
-                >−</button>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button
+                    onClick={() => setBucketSlider(prev => Math.max(0, prev - 1))}
+                    style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                    title="Reveal less"
+                  >◀</button>
+                  <button
+                    onClick={() => setBucketSlider(prev => Math.min(maxHalfLines, prev + 1))}
+                    style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                    title="Reveal more"
+                  >▶</button>
+                </div>
                 <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
                   {p2BookName} {p2Chapter} — Buckets
                 </h3>
-                <button
-                  onClick={() => setBucketFontSize(prev => Math.min(28, prev + 2))}
-                  style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
-                  title="Increase font size"
-                >+</button>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button
+                    onClick={() => setBucketFontSize(prev => Math.max(10, prev - 2))}
+                    style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                    title="Decrease font size"
+                  >−</button>
+                  <button
+                    onClick={() => setBucketFontSize(prev => Math.min(28, prev + 2))}
+                    style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                    title="Increase font size"
+                  >+</button>
+                </div>
               </div>
 
               {/* Bucket selector */}
@@ -6900,6 +6990,48 @@ const BibleApp = () => {
       })()}
 
       {/* Study Questions - now rendered inline in pane 2 (see above) */}
+
+      {/* Prompt Picker Modal (for multi-part books or when no prompt for current book) */}
+      {showPromptPickerModal && (() => {
+        const bookName = selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : '';
+        const isAllBooks = promptPickerOptions.length === Object.keys(promptsData || {}).length;
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 max-h-[80vh] flex flex-col">
+              <h3 className="text-lg font-bold mb-1">
+                {isAllBooks ? 'No prompt for ' + bookName : 'Select Part'}
+              </h3>
+              {isAllBooks && (
+                <p className="text-sm text-gray-500 mb-3">Available prompts:</p>
+              )}
+              <div className="flex flex-col gap-2 overflow-y-auto">
+                {promptPickerOptions.map(key => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      navigator.clipboard.writeText(promptsData[key])
+                        .then(() => {
+                          alert(`Copied "${key}" prompt to clipboard`);
+                          setShowPromptPickerModal(false);
+                        })
+                        .catch(err => alert('Failed to copy: ' + err));
+                    }}
+                    className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-semibold text-sm text-left"
+                  >
+                    {key}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowPromptPickerModal(false)}
+                className="mt-4 w-full px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Book Search Modal */}
       {showSearchModal && (() => {
