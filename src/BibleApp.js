@@ -5105,20 +5105,18 @@ const BibleApp = () => {
               }}
             />
             
-            {/* ← Back button for pane 2 history navigation */}
-            {pane2History.length > 0 && (
+            {/* ← Match button: sync pane 2 to pane 1's book/chapter */}
+            {selectedBook && (
               <button
                 onClick={() => {
-                  const prev = pane2History[pane2History.length - 1];
-                  setPane2History(h => h.slice(0, -1));
-                  setPane2Book(prev.book);
-                  setPane2Chapter(prev.chapter);
-                  setStrongsConcordance(prev.concordance || null);
-                  if (prev.book) setIsViewingCrossRef(true);
+                  setPane2Book(selectedBook);
+                  setPane2Chapter(selectedChapter);
+                  setStrongsConcordance(null);
+                  setIsViewingCrossRef(true);
                 }}
                 className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors text-xs"
               >
-                ← Back
+                ← Match
               </button>
             )}
 
