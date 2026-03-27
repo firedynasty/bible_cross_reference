@@ -1534,9 +1534,8 @@ const BibleApp = () => {
       lastPrimaryScrollPos.current = 0;
 
       // Auto-add to ref history
-      const key = `${parsed.abbrev}_${parsed.chapter}`;
       setRefHistory(prev => {
-        if (prev.length > 0 && `${prev[prev.length - 1].parsed.abbrev}_${prev[prev.length - 1].parsed.chapter}` === key) return prev;
+        if (prev.length > 0 && prev[prev.length - 1].parsed.abbrev === parsed.abbrev) return prev;
         const label = `${getBookName(parsed.abbrev)} ${parsed.chapter}`;
         return [...prev, { raw: label, parsed: { abbrev: parsed.abbrev, chapter: parsed.chapter } }];
       });
@@ -1568,9 +1567,8 @@ const BibleApp = () => {
       lastPrimaryScrollPos.current = 0;
 
       // Auto-add to ref history
-      const key = `${parsed.abbrev}_${parsed.chapter}`;
       setRefHistory(prev => {
-        if (prev.length > 0 && `${prev[prev.length - 1].parsed.abbrev}_${prev[prev.length - 1].parsed.chapter}` === key) return prev;
+        if (prev.length > 0 && prev[prev.length - 1].parsed.abbrev === parsed.abbrev) return prev;
         const label = `${getBookName(parsed.abbrev)} ${parsed.chapter}`;
         return [...prev, { raw: label, parsed: { abbrev: parsed.abbrev, chapter: parsed.chapter } }];
       });
@@ -3834,9 +3832,8 @@ const BibleApp = () => {
       setIsViewingCrossRef(false);
 
       // Auto-add to ref history
-      const key = `${abbrev}_1`;
       setRefHistory(prev => {
-        if (prev.length > 0 && `${prev[prev.length - 1].parsed.abbrev}_${prev[prev.length - 1].parsed.chapter}` === key) return prev;
+        if (prev.length > 0 && prev[prev.length - 1].parsed.abbrev === abbrev) return prev;
         const label = `${getBookName(abbrev)} 1`;
         return [...prev, { raw: label, parsed: { abbrev, chapter: 1 } }];
       });
@@ -3878,11 +3875,10 @@ const BibleApp = () => {
       setIsViewingCrossRef(false);
     }
 
-    // Auto-add to ref history
+    // Auto-add to ref history (only when book changes)
     if (selectedBook) {
-      const key = `${selectedBook.abbrev}_${chapterNum}`;
       setRefHistory(prev => {
-        if (prev.length > 0 && `${prev[prev.length - 1].parsed.abbrev}_${prev[prev.length - 1].parsed.chapter}` === key) return prev;
+        if (prev.length > 0 && prev[prev.length - 1].parsed.abbrev === selectedBook.abbrev) return prev;
         const label = `${getBookName(selectedBook.abbrev)} ${chapterNum}`;
         return [...prev, { raw: label, parsed: { abbrev: selectedBook.abbrev, chapter: chapterNum } }];
       });
@@ -4106,9 +4102,8 @@ const BibleApp = () => {
       setIsViewingCrossRef(true);
 
       // Auto-add to ref history
-      const key = `${ref.book}_${ref.chapter}`;
       setRefHistory(prev => {
-        if (prev.length > 0 && `${prev[prev.length - 1].parsed.abbrev}_${prev[prev.length - 1].parsed.chapter}` === key) return prev;
+        if (prev.length > 0 && prev[prev.length - 1].parsed.abbrev === ref.book) return prev;
         const label = `${getBookName(ref.book)} ${ref.chapter}`;
         return [...prev, { raw: label, parsed: { abbrev: ref.book, chapter: ref.chapter } }];
       });
