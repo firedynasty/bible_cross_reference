@@ -1364,7 +1364,7 @@ const BibleApp = () => {
   const [highlightedVerses, setHighlightedVerses] = useState([]);
   const [lastCollectionClick, setLastCollectionClick] = useState({ collection: null, ref: null });
   const [refPromptValue, setRefPromptValue] = useState('');
-  const [refHistory, setRefHistory] = useState([]); // Session list of saved refs from Ref modal
+  const [refHistory, setRefHistory] = useState([]);
 
   // State for Dropbox integration
   const [dropboxAccessToken, setDropboxAccessToken] = useState(null);
@@ -1532,6 +1532,14 @@ const BibleApp = () => {
       if (chapterContentRef.current) chapterContentRef.current.scrollTop = 0;
       if (kjvContentRef.current) kjvContentRef.current.scrollTop = 0;
       lastPrimaryScrollPos.current = 0;
+
+      // Auto-add to ref history
+      const key = `${parsed.abbrev}_${parsed.chapter}`;
+      setRefHistory(prev => {
+        if (prev.length > 0 && `${prev[prev.length - 1].parsed.abbrev}_${prev[prev.length - 1].parsed.chapter}` === key) return prev;
+        const label = `${getBookName(parsed.abbrev)} ${parsed.chapter}`;
+        return [...prev, { raw: label, parsed: { abbrev: parsed.abbrev, chapter: parsed.chapter } }];
+      });
     }
   }, [bibleData, parseSingleBibleRef]);
 
@@ -1558,6 +1566,14 @@ const BibleApp = () => {
       if (chapterContentRef.current) chapterContentRef.current.scrollTop = 0;
       if (kjvContentRef.current) kjvContentRef.current.scrollTop = 0;
       lastPrimaryScrollPos.current = 0;
+
+      // Auto-add to ref history
+      const key = `${parsed.abbrev}_${parsed.chapter}`;
+      setRefHistory(prev => {
+        if (prev.length > 0 && `${prev[prev.length - 1].parsed.abbrev}_${prev[prev.length - 1].parsed.chapter}` === key) return prev;
+        const label = `${getBookName(parsed.abbrev)} ${parsed.chapter}`;
+        return [...prev, { raw: label, parsed: { abbrev: parsed.abbrev, chapter: parsed.chapter } }];
+      });
 
       // Set highlighted verses
       setHighlightedVerses(verses);
@@ -3563,6 +3579,9 @@ const BibleApp = () => {
           console.log("✓ Using saved state - setting book:", savedBook.abbrev, "chapter:", savedChapter);
           setSelectedBook(savedBook);
           setSelectedChapter(savedChapter);
+          // Seed ref history with the restored book/chapter
+          const label = `${getBookName(savedBook.abbrev)} ${savedChapter}`;
+          setRefHistory([{ raw: label, parsed: { abbrev: savedBook.abbrev, chapter: savedChapter } }]);
         } else if (bibleData && bibleData.length > 0) {
           console.log("✓ Using default state - setting book:", bibleData[0].abbrev, "chapter: 1");
           setSelectedBook(bibleData[0]);
@@ -3570,6 +3589,9 @@ const BibleApp = () => {
             book: bibleData[0],
             chapter: 1
           });
+          // Seed ref history with default book
+          const label = `${getBookName(bibleData[0].abbrev)} 1`;
+          setRefHistory([{ raw: label, parsed: { abbrev: bibleData[0].abbrev, chapter: 1 } }]);
         } else {
           console.log("❌ No state to set - no savedBook and no bibleData");
         }
@@ -3810,7 +3832,15 @@ const BibleApp = () => {
         chapter: 1
       });
       setIsViewingCrossRef(false);
-      
+
+      // Auto-add to ref history
+      const key = `${abbrev}_1`;
+      setRefHistory(prev => {
+        if (prev.length > 0 && `${prev[prev.length - 1].parsed.abbrev}_${prev[prev.length - 1].parsed.chapter}` === key) return prev;
+        const label = `${getBookName(abbrev)} 1`;
+        return [...prev, { raw: label, parsed: { abbrev, chapter: 1 } }];
+      });
+
       // Scroll both panels to top when book changes
       if (chapterContentRef.current) {
         chapterContentRef.current.scrollTop = 0;
@@ -3818,7 +3848,7 @@ const BibleApp = () => {
       if (kjvContentRef.current) {
         kjvContentRef.current.scrollTop = 0;
       }
-      
+
       // Reset scroll sync state
       lastPrimaryScrollPos.current = 0;
     }
@@ -3846,6 +3876,16 @@ const BibleApp = () => {
         chapter: chapterNum
       });
       setIsViewingCrossRef(false);
+    }
+
+    // Auto-add to ref history
+    if (selectedBook) {
+      const key = `${selectedBook.abbrev}_${chapterNum}`;
+      setRefHistory(prev => {
+        if (prev.length > 0 && `${prev[prev.length - 1].parsed.abbrev}_${prev[prev.length - 1].parsed.chapter}` === key) return prev;
+        const label = `${getBookName(selectedBook.abbrev)} ${chapterNum}`;
+        return [...prev, { raw: label, parsed: { abbrev: selectedBook.abbrev, chapter: chapterNum } }];
+      });
     }
 
     // Always sync pane 2 to match pane 1 on chapter navigation
@@ -4064,6 +4104,14 @@ const BibleApp = () => {
 
       // Mark that we're viewing a cross-reference
       setIsViewingCrossRef(true);
+
+      // Auto-add to ref history
+      const key = `${ref.book}_${ref.chapter}`;
+      setRefHistory(prev => {
+        if (prev.length > 0 && `${prev[prev.length - 1].parsed.abbrev}_${prev[prev.length - 1].parsed.chapter}` === key) return prev;
+        const label = `${getBookName(ref.book)} ${ref.chapter}`;
+        return [...prev, { raw: label, parsed: { abbrev: ref.book, chapter: ref.chapter } }];
+      });
 
       // Scroll pane 2 to the referenced verse — disable scroll sync to prevent pane 1 from moving
       const scrollToVerse = (verseNum, attempts = 0) => {
@@ -6368,7 +6416,7 @@ const BibleApp = () => {
             {refHistory.length > 0 && (
               <div style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>Saved</span>
+                  <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>History</span>
                   <button
                     onClick={() => setRefHistory([])}
                     style={{ fontSize: 11, color: isDarkMode ? '#f87171' : '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 6px' }}
