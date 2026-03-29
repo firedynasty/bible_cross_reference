@@ -5314,6 +5314,7 @@ const BibleApp = () => {
                                 <span className="font-medium mr-1">Refs:</span>
                                 {crossReferences[refKey].map((ref, i) => {
                                   const isPsalm = ref.book === 'ps';
+                                  const isNT = ['mt','mk','lk','jo','act','rm','1co','2co','gl','eph','ph','cl','1ts','2ts','1tm','2tm','tt','phm','hb','jm','1pe','2pe','1jo','2jo','3jo','jd','re'].includes(ref.book);
                                   return (
                                   <button
                                     key={i}
@@ -5321,7 +5322,9 @@ const BibleApp = () => {
                                     className={`mr-2 ${
                                       isPsalm
                                         ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
-                                        : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
+                                        : isNT
+                                          ? (isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-800')
+                                          : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
                                     }`}
                                   >
                                     {getBookName(ref.book)} {ref.chapter}:{ref.verse}{i < crossReferences[refKey].length - 1 ? ',' : ''}
@@ -5571,6 +5574,7 @@ const BibleApp = () => {
                             <span className="font-medium mr-1">Refs:</span>
                             {crossReferences[refKey].map((ref, i) => {
                               const isPsalm = ref.book === 'ps';
+                              const isNT = ['mt','mk','lk','jo','act','rm','1co','2co','gl','eph','ph','cl','1ts','2ts','1tm','2tm','tt','phm','hb','jm','1pe','2pe','1jo','2jo','3jo','jd','re'].includes(ref.book);
                               return (
                               <button
                                 key={i}
@@ -5578,7 +5582,9 @@ const BibleApp = () => {
                                 className={`mr-2 ${
                                   isPsalm
                                     ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
-                                    : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
+                                    : isNT
+                                      ? (isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-800')
+                                      : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
                                 }`}
                               >
                                 {getBookName(ref.book)} {ref.chapter}:{ref.verse}{i < crossReferences[refKey].length - 1 ? ',' : ''}
