@@ -5313,14 +5313,14 @@ const BibleApp = () => {
                               }`} style={{ fontSize: `${fontScale * 0.85}rem` }}>
                                 <span className="font-medium mr-1">Refs:</span>
                                 {crossReferences[refKey].map((ref, i) => {
-                                  const isPsalm = ref.book === 'ps';
-                                  const isNT = ['mt','mk','lk','jo','act','rm','1co','2co','gl','eph','ph','cl','1ts','2ts','1tm','2tm','tt','phm','hb','jm','1pe','2pe','1jo','2jo','3jo','jd','re'].includes(ref.book);
+                                  const isOrange = ['ps','rm','hb','lk'].includes(ref.book);
+                                  const isNT = ['mt','mk','jo','act','1co','2co','gl','eph','ph','cl','1ts','2ts','1tm','2tm','tt','phm','jm','1pe','2pe','1jo','2jo','3jo','jd','re'].includes(ref.book);
                                   return (
                                   <button
                                     key={i}
                                     onClick={() => handleCrossRefNavigate(ref)}
                                     className={`mr-2 ${
-                                      isPsalm
+                                      isOrange
                                         ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
                                         : isNT
                                           ? (isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-800')
@@ -5573,14 +5573,14 @@ const BibleApp = () => {
                           <div className={`mt-2 pl-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} style={{ fontSize: `${fontScale * 0.85}rem` }}>
                             <span className="font-medium mr-1">Refs:</span>
                             {crossReferences[refKey].map((ref, i) => {
-                              const isPsalm = ref.book === 'ps';
-                              const isNT = ['mt','mk','lk','jo','act','rm','1co','2co','gl','eph','ph','cl','1ts','2ts','1tm','2tm','tt','phm','hb','jm','1pe','2pe','1jo','2jo','3jo','jd','re'].includes(ref.book);
+                              const isOrange = ['ps','rm','hb','lk'].includes(ref.book);
+                              const isNT = ['mt','mk','jo','act','1co','2co','gl','eph','ph','cl','1ts','2ts','1tm','2tm','tt','phm','jm','1pe','2pe','1jo','2jo','3jo','jd','re'].includes(ref.book);
                               return (
                               <button
                                 key={i}
                                 onClick={() => handleCrossRefNavigate(ref)}
                                 className={`mr-2 ${
-                                  isPsalm
+                                  isOrange
                                     ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
                                     : isNT
                                       ? (isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-800')
