@@ -6979,19 +6979,33 @@ const BibleApp = () => {
 
               {/* Bucket selector */}
               <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexShrink: 0 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: 4, color: isDarkMode ? '#aaa' : '#666', fontWeight: 600, fontSize: 12 }}>Bucket:</label>
-                  <select
-                    value={bucketIndex}
-                    onChange={(e) => { setBucketIndex(parseInt(e.target.value)); setBucketSlider(1); }}
-                    style={{ width: '100%', padding: 8, border: `2px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14, background: isDarkMode ? '#1e1e1e' : 'white', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer' }}
-                  >
-                    {buckets.map((bucket, idx) => {
-                      const firstV = idx * LINES_PER_BUCKET + 1;
-                      const lastV = idx * LINES_PER_BUCKET + bucket.length;
-                      return <option key={idx} value={idx}>Bucket {idx + 1}: Verses {firstV}–{lastV}</option>;
-                    })}
-                  </select>
+                <div style={{ flex: 1, display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: 4, color: isDarkMode ? '#aaa' : '#666', fontWeight: 600, fontSize: 12 }}>Bucket:</label>
+                    <select
+                      value={bucketIndex}
+                      onChange={(e) => { setBucketIndex(parseInt(e.target.value)); setBucketSlider(1); }}
+                      style={{ width: '100%', padding: 8, border: `2px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14, background: isDarkMode ? '#1e1e1e' : 'white', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer' }}
+                    >
+                      {buckets.map((bucket, idx) => {
+                        const firstV = idx * LINES_PER_BUCKET + 1;
+                        const lastV = idx * LINES_PER_BUCKET + bucket.length;
+                        return <option key={idx} value={idx}>Bucket {idx + 1}: Verses {firstV}–{lastV}</option>;
+                      })}
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const lines = currentBucket.map((verse, i) => {
+                        const verseNum = clampedBucketIndex * LINES_PER_BUCKET + i + 1;
+                        const text = typeof verse === 'string' ? verse : (verse.text || verse.verse || String(verse));
+                        return `${verseNum} ${text}`;
+                      });
+                      navigator.clipboard.writeText(`${p2BookName} ${p2Chapter}\n${lines.join('\n')}`);
+                    }}
+                    style={{ height: 38, padding: '0 10px', fontSize: 16, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', whiteSpace: 'nowrap' }}
+                    title="Copy bucket verses to clipboard"
+                  >📋</button>
                 </div>
                 <div style={{ flex: 2 }}>
                   <label style={{ display: 'block', marginBottom: 4, color: isDarkMode ? '#aaa' : '#666', fontWeight: 600, fontSize: 12 }}>
