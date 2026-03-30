@@ -7001,7 +7001,7 @@ const BibleApp = () => {
                         const text = typeof verse === 'string' ? verse : (verse.text || verse.verse || String(verse));
                         return `${verseNum} ${text}`;
                       });
-                      navigator.clipboard.writeText(`${p2BookName} ${p2Chapter}\n${lines.join('\n')}`);
+                      navigator.clipboard.writeText(lines.join('\n'));
                     }}
                     style={{ height: 38, padding: '0 10px', fontSize: 16, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', whiteSpace: 'nowrap' }}
                     title="Copy bucket verses to clipboard"
