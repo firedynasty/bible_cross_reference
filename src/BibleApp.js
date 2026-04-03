@@ -1413,6 +1413,10 @@ const BibleApp = () => {
   const [studyQFontSize, setStudyQFontSize] = useState(14);
   const [studyQRevealed, setStudyQRevealed] = useState({});
 
+  // State for Psalm Hymns Modal
+  const [psalmHymnsData, setPsalmHymnsData] = useState(null);
+  const [showHymnModal, setShowHymnModal] = useState(false);
+
   // Language sidebar cycle state: null | 'cant' | 'chin' | 'heb' | 'span' | 'fr'
   const [sidebarLang, setSidebarLang] = useState(null);
 
@@ -1713,6 +1717,23 @@ const BibleApp = () => {
       }
     };
     loadPrompts();
+  }, []);
+
+  // Load psalm hymns JSON on startup
+  useEffect(() => {
+    const loadPsalmHymns = async () => {
+      try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}/psalm_hymns.json`);
+        if (response.ok) {
+          const data = await response.json();
+          setPsalmHymnsData(data);
+        }
+      } catch (error) {
+        console.log('No psalm_hymns.json found');
+      }
+    };
+    loadPsalmHymns();
   }, []);
 
   // Load verse filters JSON on startup
@@ -4840,6 +4861,17 @@ const BibleApp = () => {
                   DB
                 </button>}
 
+                {/* Hymn Recommendations Button (Psalms only) */}
+                {psalmHymnsData && selectedBook && selectedBook.abbrev === 'ps' && (
+                  <button
+                    onClick={() => setShowHymnModal(true)}
+                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-rose-500 text-white hover:bg-rose-600 font-semibold"
+                    title="Recommended hymns for this Psalm"
+                  >
+                    Hymn
+                  </button>
+                )}
+
                 {/* Book Prompt to Clipboard Button */}
                 {promptsData && (
                   <button
@@ -7088,6 +7120,74 @@ const BibleApp = () => {
                 className="mt-4 w-full px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-sm"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Psalm Hymn Recommendations Modal */}
+      {showHymnModal && psalmHymnsData && (() => {
+        const chapterKey = String(selectedChapter);
+        const hymns = psalmHymnsData[chapterKey] || [];
+        return (
+          <div
+            style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowHymnModal(false); }}
+          >
+            <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <h3 style={{ margin: '0 0 4px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
+                Recommended Hymns for Psalm {selectedChapter}
+              </h3>
+              <p style={{ margin: '0 0 16px', fontSize: '0.8em', color: isDarkMode ? '#999' : '#888', textAlign: 'center' }}>
+                From the 1955 Hymnary
+              </p>
+              <div style={{ overflowY: 'auto', flex: 1 }}>
+                {hymns.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: isDarkMode ? '#999' : '#666', padding: 20 }}>
+                    No hymn recommendations found for this Psalm.
+                  </p>
+                ) : (
+                  hymns.map((h, idx) => (
+                    <div key={idx} style={{
+                      padding: '12px 14px',
+                      marginBottom: 10,
+                      borderRadius: 10,
+                      background: isDarkMode ? '#383838' : '#fef2f2',
+                      border: isDarkMode ? '1px solid #555' : '1px solid #fecaca'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontWeight: 'bold', color: isDarkMode ? '#f9a8a8' : '#be123c', fontSize: '0.95em' }}>
+                          {h.hymn_number}
+                        </span>
+                        <a
+                          href={`https://www.google.com/search?q=${encodeURIComponent(h.first_line + ' hymn')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: '0.78em', color: isDarkMode ? '#93c5fd' : '#2563eb', textDecoration: 'underline', cursor: 'pointer' }}
+                        >
+                          Search
+                        </a>
+                      </div>
+                      <div style={{ fontSize: '0.95em', color: isDarkMode ? '#e0e0e0' : '#333', marginBottom: 6, fontStyle: 'italic' }}>
+                        "{h.first_line}"
+                      </div>
+                      <div style={{ fontSize: '0.82em', color: isDarkMode ? '#bbb' : '#666', lineHeight: 1.4 }}>
+                        {h.reason}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <button
+                onClick={() => setShowHymnModal(false)}
+                style={{
+                  marginTop: 16, width: '100%', padding: '10px 0', borderRadius: 10,
+                  background: isDarkMode ? '#555' : '#e5e7eb', border: 'none', cursor: 'pointer',
+                  fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : '#333'
+                }}
+              >
+                Close
               </button>
             </div>
           </div>
