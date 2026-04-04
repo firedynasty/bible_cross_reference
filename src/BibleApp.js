@@ -7168,6 +7168,14 @@ const BibleApp = () => {
                         >
                           Search
                         </a>
+                        <a
+                          href={`https://search-niv.netlify.app/?q=${encodeURIComponent(h.first_line)}&v=hymns`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: '0.78em', color: isDarkMode ? '#86efac' : '#15803d', textDecoration: 'underline', cursor: 'pointer' }}
+                        >
+                          Similar
+                        </a>
                       </div>
                       <div style={{ fontSize: '0.95em', color: isDarkMode ? '#e0e0e0' : '#333', marginBottom: 6, fontStyle: 'italic' }}>
                         "{h.first_line}"
