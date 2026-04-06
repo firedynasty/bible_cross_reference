@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { ChevronDown, ChevronRight, Play, SkipForward } from 'lucide-react';
 
-const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse, onNextChapter, onQA, showStudyQModal, onQuiz, showQuizModal, onBuckets, showBucketsModal }, ref) => {
+const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse, onNextChapter, onQA, showStudyQModal, onQuiz, showQuizModal, onBuckets, showBucketsModal, onCursive, showCursiveModal, onBreathe, showBreatheModal }, ref) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -1113,6 +1113,24 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         title="Bucket viewer for pane 2 chapter"
       >
         Buckets
+      </button>
+
+      {/* Cursive Writing Button */}
+      <button
+        onClick={() => onCursive && onCursive()}
+        className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showCursiveModal ? 'bg-amber-700 text-white' : 'bg-amber-600 text-white hover:bg-amber-700'}`}
+        title="Cursive writing animation for verses"
+      >
+        Cursive
+      </button>
+
+      {/* Breathe Button */}
+      <button
+        onClick={() => onBreathe && onBreathe()}
+        className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showBreatheModal ? 'bg-slate-700 text-white' : 'bg-slate-600 text-white hover:bg-slate-700'}`}
+        title="Breathing exercise timer"
+      >
+        Breathe
       </button>
 
       {/* Part-by-part reading button - hidden, functionality moved to grid clicks */}
