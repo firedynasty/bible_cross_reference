@@ -3095,6 +3095,7 @@ const BibleApp = () => {
       }
       // Enter key - read the currently selected verse
       else if (e.key === 'Enter') {
+        if (showQuiz2Modal) return;
         // Dispatch custom event to read current verse
         const event = new CustomEvent('readCurrentVerse');
         window.dispatchEvent(event);
