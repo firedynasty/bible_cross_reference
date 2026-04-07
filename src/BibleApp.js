@@ -5161,7 +5161,7 @@ const BibleApp = () => {
                 }
               }}
               showQuiz2Modal={showQuiz2Modal}
-              onQuiz2={() => { setQuiz2BucketIndex(0); setQuiz2Input(''); setQuiz2Results(null); setShowQuiz2Modal(true); }}
+              onQuiz2={() => { window.speechSynthesis && window.speechSynthesis.cancel(); setQuiz2BucketIndex(0); setQuiz2Input(''); setQuiz2Results(null); setShowQuiz2Modal(true); }}
               showBucketsModal={showBucketsModal}
               onBuckets={() => {
                 setBucketIndex(0);
@@ -7510,7 +7510,8 @@ const BibleApp = () => {
               />
 
               <button
-                onClick={handleGrade}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); window.speechSynthesis && window.speechSynthesis.cancel(); handleGrade(); }}
                 style={{ padding: '8px 20px', background: '#be185d', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-start', marginBottom: 14 }}
               >
                 Grade
