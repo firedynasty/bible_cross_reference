@@ -1419,6 +1419,7 @@ const BibleApp = () => {
   const [quiz2BucketIndex, setQuiz2BucketIndex] = useState(0);
   const [quiz2Input, setQuiz2Input] = useState('');
   const [quiz2Results, setQuiz2Results] = useState(null);
+  const [nltPsalmsData, setNltPsalmsData] = useState(null);
 
   // State for Breathe Modal
   const [showBreatheModal, setShowBreatheModal] = useState(false);
@@ -4955,15 +4956,22 @@ const BibleApp = () => {
                   Srch
                 </button>
 
-                <a
-                  href="https://search-niv.netlify.app/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-500 text-white hover:bg-blue-600 font-semibold inline-block"
-                  title="NLT Search"
+                <button
+                  onClick={() => {
+                    if (nltPsalmsData) {
+                      setNltPsalmsData(null);
+                    } else {
+                      fetch('/en_nlt_psalms.json')
+                        .then(r => r.json())
+                        .then(data => setNltPsalmsData(data))
+                        .catch(e => console.warn('Failed to load NLT Psalms:', e));
+                    }
+                  }}
+                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold inline-block ${nltPsalmsData ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+                  title={nltPsalmsData ? "NLT Psalms active — click to disable" : "Load NLT for Psalms in pane 2"}
                 >
-                  NLT
-                </a>
+                  NLT{nltPsalmsData ? '✓' : ''}
+                </button>
 
                 {/* Fill-in-the-Blank Quiz Button - moved to TextToSpeech after QA */}
 
@@ -5322,7 +5330,15 @@ const BibleApp = () => {
                       // Get right pane verses — use independent pane2 state if set
                       let rightPaneVerses = [];
                       const effectivePane2Chapter = pane2Chapter || selectedChapter;
-                      if (rightPaneBibleData) {
+                      const effectivePane2Abbrev = pane2Book ? pane2Book.abbrev : selectedBook?.abbrev;
+                      // Use NLT Psalms if active and on Psalms
+                      if (nltPsalmsData && effectivePane2Abbrev === 'ps') {
+                        const nltBook = nltPsalmsData.find(b => b.abbrev === 'ps');
+                        if (nltBook && nltBook.chapters[effectivePane2Chapter - 1]) {
+                          rightPaneVerses = nltBook.chapters[effectivePane2Chapter - 1];
+                        }
+                      }
+                      if (!rightPaneVerses.length && rightPaneBibleData) {
                         let bookAbbrev;
                         if (pane2Book) {
                           bookAbbrev = pane2Book.abbrev;
@@ -5991,7 +6007,7 @@ const BibleApp = () => {
                         Show Pane 1
                       </button>
                     )}
-                    {pane2Book ? getBookName(pane2Book.abbrev) : (selectedBook.book || getBookName(selectedBook.abbrev))} {pane2Chapter || selectedChapter} <span className="text-gray-500 ml-2">({getTranslationShortName(rightPaneTranslation)})</span>
+                    {pane2Book ? getBookName(pane2Book.abbrev) : (selectedBook.book || getBookName(selectedBook.abbrev))} {pane2Chapter || selectedChapter} <span className="text-gray-500 ml-2">({nltPsalmsData && (pane2Book ? pane2Book.abbrev : selectedBook?.abbrev) === 'ps' ? 'NLT' : getTranslationShortName(rightPaneTranslation)})</span>
                     <span className="ml-3 px-2 py-1 rounded text-xs bg-blue-50 text-blue-800">
                       Exact Sync
                     </span>
@@ -6084,7 +6100,7 @@ const BibleApp = () => {
                     )}
 
                     {/* Modified to handle right pane translation */}
-                    {!strongsConcordance && rightPaneBibleData && selectedBook && (
+                    {!strongsConcordance && (rightPaneBibleData || nltPsalmsData) && selectedBook && (
                       (() => {
                         // Use pane2Book/pane2Chapter if set (cross-ref navigation), else follow pane 1
                         let bookAbbrev = pane2Book ? pane2Book.abbrev : selectedBook.abbrev;
@@ -6093,9 +6109,22 @@ const BibleApp = () => {
                         }
                         const effectiveChapter = pane2Chapter || selectedChapter;
 
-                        const rightPaneBook = rightPaneBibleData.find(b => b.abbrev === bookAbbrev);
-                        if (rightPaneBook && rightPaneBook.chapters[effectiveChapter - 1]) {
-                          return rightPaneBook.chapters[effectiveChapter - 1]
+                        // Use NLT Psalms if active and on Psalms
+                        let resolvedVerses = null;
+                        if (nltPsalmsData && bookAbbrev === 'ps') {
+                          const nltBook = nltPsalmsData.find(b => b.abbrev === 'ps');
+                          if (nltBook && nltBook.chapters[effectiveChapter - 1]) {
+                            resolvedVerses = nltBook.chapters[effectiveChapter - 1];
+                          }
+                        }
+                        if (!resolvedVerses) {
+                          const rightPaneBook = rightPaneBibleData && rightPaneBibleData.find(b => b.abbrev === bookAbbrev);
+                          if (rightPaneBook && rightPaneBook.chapters[effectiveChapter - 1]) {
+                            resolvedVerses = rightPaneBook.chapters[effectiveChapter - 1];
+                          }
+                        }
+                        if (resolvedVerses) {
+                          return resolvedVerses
                             .map((verse, originalIndex) => ({ verse, verseNumber: originalIndex + 1 }))
                             .filter(({ verseNumber }) => {
                               // If filtering is disabled, show all verses
@@ -6993,7 +7022,11 @@ const BibleApp = () => {
         const p2Chapter = pane2Chapter || selectedChapter;
         const p2BookName = p2Book ? (p2Book.book || getBookName(p2Book.abbrev)) : '';
         let p2Verses = [];
-        if (rightPaneBibleData && p2Book) {
+        if (nltPsalmsData && p2Book && p2Book.abbrev === 'ps') {
+          const nltBook = nltPsalmsData.find(b => b.abbrev === 'ps');
+          if (nltBook && nltBook.chapters[p2Chapter - 1]) p2Verses = nltBook.chapters[p2Chapter - 1];
+        }
+        if (!p2Verses.length && rightPaneBibleData && p2Book) {
           const rpBook = rightPaneBibleData.find(b => b.abbrev === p2Book.abbrev);
           if (rpBook && rpBook.chapters[p2Chapter - 1]) {
             p2Verses = rpBook.chapters[p2Chapter - 1];
@@ -7161,7 +7194,11 @@ const BibleApp = () => {
         const p2Chapter = pane2Chapter || selectedChapter;
         const p2BookName = p2Book ? (p2Book.book || getBookName(p2Book.abbrev)) : '';
         let p2Verses = [];
-        if (rightPaneBibleData && p2Book) {
+        if (nltPsalmsData && p2Book && p2Book.abbrev === 'ps') {
+          const nltBook = nltPsalmsData.find(b => b.abbrev === 'ps');
+          if (nltBook && nltBook.chapters[p2Chapter - 1]) p2Verses = nltBook.chapters[p2Chapter - 1];
+        }
+        if (!p2Verses.length && rightPaneBibleData && p2Book) {
           const rpBook = rightPaneBibleData.find(b => b.abbrev === p2Book.abbrev);
           if (rpBook && rpBook.chapters[p2Chapter - 1]) {
             p2Verses = rpBook.chapters[p2Chapter - 1];
@@ -7374,8 +7411,24 @@ const BibleApp = () => {
         const q2Book = pane2Book || selectedBook;
         const q2Chapter = pane2Chapter || selectedChapter;
         const q2BookName = q2Book ? (q2Book.book || getBookName(q2Book.abbrev)) : '';
+        const isPsalms = q2Book && q2Book.abbrev === 'ps';
+
+        // Auto-load NLT Psalms data on first use
+        if (isPsalms && !nltPsalmsData) {
+          const baseUrl = window.location.hostname === 'localhost' ? '' : '';
+          fetch(`${baseUrl}/en_nlt_psalms.json`)
+            .then(r => r.json())
+            .then(data => setNltPsalmsData(data))
+            .catch(e => console.warn('Failed to load NLT Psalms:', e));
+        }
+
         let q2Verses = [];
-        if (rightPaneBibleData && q2Book) {
+        // Use NLT for Psalms if available
+        if (isPsalms && nltPsalmsData) {
+          const nltBook = nltPsalmsData.find(b => b.abbrev === 'ps');
+          if (nltBook && nltBook.chapters[q2Chapter - 1]) q2Verses = nltBook.chapters[q2Chapter - 1];
+        }
+        if (!q2Verses.length && rightPaneBibleData && q2Book) {
           const rpBook = rightPaneBibleData.find(b => b.abbrev === q2Book.abbrev);
           if (rpBook && rpBook.chapters[q2Chapter - 1]) q2Verses = rpBook.chapters[q2Chapter - 1];
         }
@@ -7416,7 +7469,7 @@ const BibleApp = () => {
             else if (dp[ii-1][jj] > dp[ii][jj-1]) ii--;
             else jj--;
           }
-          return { pct, missed: origWords.filter((_, idx) => !matchedSet.has(idx)) };
+          return { pct, missed: origWords.filter((_, idx) => !matchedSet.has(idx)), matchedSet, origWords };
         };
 
         const handleGrade = () => {
@@ -7432,15 +7485,15 @@ const BibleApp = () => {
           if (numbered.length > 0) {
             for (const { num, text } of numbered) {
               const entry = verseEntries.find(v => v.num === num);
-              if (entry) { const { pct, missed } = gradeAttempt(entry.text, text); grades.push({ verseNum: num, pct, missed, verseText: entry.text }); }
+              if (entry) { const { pct, missed, matchedSet, origWords } = gradeAttempt(entry.text, text); grades.push({ verseNum: num, pct, missed, matchedSet, origWords, verseText: entry.text }); }
             }
             const gradedNums = new Set(grades.map(g => g.verseNum));
             for (const text of unnumbered) {
               let best = null;
               for (const entry of verseEntries) {
                 if (gradedNums.has(entry.num)) continue;
-                const { pct, missed } = gradeAttempt(entry.text, text);
-                if (!best || pct > best.pct) best = { verseNum: entry.num, pct, missed, verseText: entry.text };
+                const { pct, missed, matchedSet, origWords } = gradeAttempt(entry.text, text);
+                if (!best || pct > best.pct) best = { verseNum: entry.num, pct, missed, matchedSet, origWords, verseText: entry.text };
               }
               if (best && best.pct >= 20) { grades.push(best); gradedNums.add(best.verseNum); }
             }
@@ -7450,8 +7503,8 @@ const BibleApp = () => {
               let best = null;
               for (const entry of verseEntries) {
                 if (used.has(entry.num)) continue;
-                const { pct, missed } = gradeAttempt(entry.text, text);
-                if (!best || pct > best.pct) best = { verseNum: entry.num, pct, missed, verseText: entry.text };
+                const { pct, missed, matchedSet, origWords } = gradeAttempt(entry.text, text);
+                if (!best || pct > best.pct) best = { verseNum: entry.num, pct, missed, matchedSet, origWords, verseText: entry.text };
               }
               if (best && best.pct >= 20) { grades.push(best); used.add(best.verseNum); }
             }
@@ -7479,7 +7532,7 @@ const BibleApp = () => {
               <button onClick={() => setShowQuiz2Modal(false)} style={{ position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', fontSize: 28, color: isDarkMode ? '#ccc' : '#555', cursor: 'pointer', lineHeight: 1 }}>&times;</button>
 
               <h2 style={{ margin: '0 0 4px', fontSize: '1.2rem', fontWeight: 700, color: isDarkMode ? '#f0f0f0' : '#1a1a1a' }}>
-                Recite — {q2BookName} {q2Chapter}
+                Recite — {q2BookName} {q2Chapter}{isPsalms && nltPsalmsData ? ' (NLT)' : ''}
               </h2>
               <p style={{ margin: '0 0 14px', fontSize: '0.8rem', color: isDarkMode ? '#aaa' : '#777' }}>
                 Type verses from memory. One verse per line. Optionally prefix with verse number (e.g. <em>3 For God so loved...</em>).
@@ -7525,18 +7578,22 @@ const BibleApp = () => {
                     <span style={{ fontWeight: 700, fontSize: '0.95rem', color: isDarkMode ? '#e0e0e0' : '#333' }}>Overall</span>
                     <span style={{ fontWeight: 700, fontSize: '1.1rem', color: gradeColor(quiz2Results.overall) }}>{quiz2Results.overall.toFixed(0)}%</span>
                   </div>
-                  {quiz2Results.grades.map(({ verseNum, pct, missed, verseText, skipped }) => (
+                  {quiz2Results.grades.map(({ verseNum, pct, missed, matchedSet, origWords, verseText, skipped }) => (
                     <div key={verseNum} style={{ marginBottom: 10, padding: '10px 12px', border: `1px solid ${isDarkMode ? '#3a3a3a' : '#e5e7eb'}`, borderRadius: 8, background: isDarkMode ? '#252525' : '#fff' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                         <span style={{ fontWeight: 600, color: isDarkMode ? '#ccc' : '#555', fontSize: '0.85rem' }}>Verse {verseNum}</span>
                         <span style={{ fontWeight: 700, color: gradeColor(pct), fontSize: '0.9rem' }}>{skipped ? 'Skipped' : `${pct.toFixed(0)}% — ${gradeLabel(pct)}`}</span>
                       </div>
-                      {missed.length > 0 && (
-                        <div style={{ fontSize: '0.8rem', color: isDarkMode ? '#f87171' : '#dc2626', marginBottom: 4 }}>
-                          Missed: {missed.join(', ')}
+                      {origWords && origWords.length > 0 && (
+                        <div style={{ fontSize: '0.82rem', lineHeight: 1.6 }}>
+                          {origWords.map((word, wi) => (
+                            <span key={wi} style={{ color: matchedSet && matchedSet.has(wi) ? '#16a34a' : (isDarkMode ? '#9ca3af' : '#6b7280') }}>
+                              {word}{wi < origWords.length - 1 ? ' ' : ''}
+                            </span>
+                          ))}
                         </div>
                       )}
-                      {pct < 100 && (
+                      {skipped && (
                         <div style={{ fontSize: '0.82rem', color: isDarkMode ? '#9ca3af' : '#6b7280', fontStyle: 'italic' }}>
                           {verseText}
                         </div>
