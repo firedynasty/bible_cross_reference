@@ -450,6 +450,8 @@ const NavigationPlaceholder = ({
   showStudyQModal,
   onQuiz,
   showQuizModal,
+  onQuiz2,
+  showQuiz2Modal,
   onBuckets,
   showBucketsModal,
   onCursive,
@@ -769,6 +771,8 @@ const NavigationPlaceholder = ({
           showStudyQModal={showStudyQModal}
           onQuiz={onQuiz}
           showQuizModal={showQuizModal}
+          onQuiz2={onQuiz2}
+          showQuiz2Modal={showQuiz2Modal}
           onBuckets={onBuckets}
           showBucketsModal={showBucketsModal}
           onCursive={onCursive}
@@ -1411,6 +1415,10 @@ const BibleApp = () => {
   const [cursiveSpeed, setCursiveSpeed] = useState(() => parseInt(localStorage.getItem('cursive-speed') ?? '3'));
   const [cursiveSize, setCursiveSize] = useState(() => parseInt(localStorage.getItem('cursive-size') ?? '52'));
   const [cursiveScrollLevel, setCursiveScrollLevel] = useState(() => parseInt(localStorage.getItem('cursive-scroll') ?? '0'));
+  const [showQuiz2Modal, setShowQuiz2Modal] = useState(false);
+  const [quiz2BucketIndex, setQuiz2BucketIndex] = useState(0);
+  const [quiz2Input, setQuiz2Input] = useState('');
+  const [quiz2Results, setQuiz2Results] = useState(null);
 
   // State for Breathe Modal
   const [showBreatheModal, setShowBreatheModal] = useState(false);
@@ -5139,7 +5147,7 @@ const BibleApp = () => {
               onQuiz={() => {
                 if (!fitbData) {
                   const baseUrl = getBaseUrl();
-                  fetch(`${baseUrl}/en_kjv_fitb.json`)
+                  fetch(`${baseUrl}/en_web_fitb.json`)
                     .then(r => r.json())
                     .then(data => {
                       setFitbData(data);
@@ -5152,6 +5160,8 @@ const BibleApp = () => {
                   setShowQuizModal(true);
                 }
               }}
+              showQuiz2Modal={showQuiz2Modal}
+              onQuiz2={() => { setQuiz2BucketIndex(0); setQuiz2Input(''); setQuiz2Results(null); setShowQuiz2Modal(true); }}
               showBucketsModal={showBucketsModal}
               onBuckets={() => {
                 setBucketIndex(0);
@@ -7352,6 +7362,187 @@ const BibleApp = () => {
               <div style={{ marginTop: 8, fontSize: 11, color: '#c8956c', textAlign: 'center' }}>
                 Space = next bucket &nbsp;|&nbsp; Shift+Space = previous
               </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Recite Quiz Modal */}
+      {showQuiz2Modal && (() => {
+        const LINES_PER_BUCKET = 4;
+        const q2Book = pane2Book || selectedBook;
+        const q2Chapter = pane2Chapter || selectedChapter;
+        const q2BookName = q2Book ? (q2Book.book || getBookName(q2Book.abbrev)) : '';
+        let q2Verses = [];
+        if (rightPaneBibleData && q2Book) {
+          const rpBook = rightPaneBibleData.find(b => b.abbrev === q2Book.abbrev);
+          if (rpBook && rpBook.chapters[q2Chapter - 1]) q2Verses = rpBook.chapters[q2Chapter - 1];
+        }
+        if (!q2Verses.length && bibleData && q2Book) {
+          const bk = bibleData.find(b => b.abbrev === q2Book.abbrev);
+          if (bk && bk.chapters[q2Chapter - 1]) q2Verses = bk.chapters[q2Chapter - 1];
+        }
+
+        const buckets = [];
+        for (let i = 0; i < q2Verses.length; i += LINES_PER_BUCKET)
+          buckets.push(q2Verses.slice(i, i + LINES_PER_BUCKET));
+
+        const clampedIdx = Math.min(quiz2BucketIndex, Math.max(0, buckets.length - 1));
+        if (clampedIdx !== quiz2BucketIndex) setQuiz2BucketIndex(clampedIdx);
+        const currentBucket = buckets[clampedIdx] || [];
+
+        const verseEntries = currentBucket.map((verse, i) => ({
+          num: clampedIdx * LINES_PER_BUCKET + i + 1,
+          text: typeof verse === 'string' ? verse : (verse.text || verse.verse || String(verse))
+        }));
+
+        // LCS grading
+        const normalizeWords = (text) => text.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
+        const gradeAttempt = (original, attempt) => {
+          const origWords = normalizeWords(original);
+          const attemptWords = normalizeWords(attempt);
+          if (!origWords.length) return { pct: 100, missed: [] };
+          const m = origWords.length, n = attemptWords.length;
+          const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+          for (let ii = 1; ii <= m; ii++)
+            for (let jj = 1; jj <= n; jj++)
+              dp[ii][jj] = origWords[ii-1] === attemptWords[jj-1] ? dp[ii-1][jj-1]+1 : Math.max(dp[ii-1][jj], dp[ii][jj-1]);
+          const pct = (dp[m][n] / m) * 100;
+          const matchedSet = new Set();
+          let ii = m, jj = n;
+          while (ii > 0 && jj > 0) {
+            if (origWords[ii-1] === attemptWords[jj-1]) { matchedSet.add(ii-1); ii--; jj--; }
+            else if (dp[ii-1][jj] > dp[ii][jj-1]) ii--;
+            else jj--;
+          }
+          return { pct, missed: origWords.filter((_, idx) => !matchedSet.has(idx)) };
+        };
+
+        const handleGrade = () => {
+          if (!quiz2Input.trim() || !verseEntries.length) return;
+          const lines = quiz2Input.trim().split('\n').filter(l => l.trim());
+          const grades = [];
+          const numbered = [], unnumbered = [];
+          for (const line of lines) {
+            const mm = line.trim().match(/^(\d+)[.\s]\s*(.*)/);
+            if (mm) numbered.push({ num: parseInt(mm[1]), text: mm[2] });
+            else unnumbered.push(line.trim());
+          }
+          if (numbered.length > 0) {
+            for (const { num, text } of numbered) {
+              const entry = verseEntries.find(v => v.num === num);
+              if (entry) { const { pct, missed } = gradeAttempt(entry.text, text); grades.push({ verseNum: num, pct, missed, verseText: entry.text }); }
+            }
+            const gradedNums = new Set(grades.map(g => g.verseNum));
+            for (const text of unnumbered) {
+              let best = null;
+              for (const entry of verseEntries) {
+                if (gradedNums.has(entry.num)) continue;
+                const { pct, missed } = gradeAttempt(entry.text, text);
+                if (!best || pct > best.pct) best = { verseNum: entry.num, pct, missed, verseText: entry.text };
+              }
+              if (best && best.pct >= 20) { grades.push(best); gradedNums.add(best.verseNum); }
+            }
+          } else {
+            const used = new Set();
+            for (const text of lines) {
+              let best = null;
+              for (const entry of verseEntries) {
+                if (used.has(entry.num)) continue;
+                const { pct, missed } = gradeAttempt(entry.text, text);
+                if (!best || pct > best.pct) best = { verseNum: entry.num, pct, missed, verseText: entry.text };
+              }
+              if (best && best.pct >= 20) { grades.push(best); used.add(best.verseNum); }
+            }
+          }
+          const gradedNums = new Set(grades.map(g => g.verseNum));
+          for (const entry of verseEntries)
+            if (!gradedNums.has(entry.num)) grades.push({ verseNum: entry.num, pct: 0, missed: [], verseText: entry.text, skipped: true });
+          grades.sort((a, b) => a.verseNum - b.verseNum);
+          const overall = grades.length ? grades.reduce((s, g) => s + g.pct, 0) / grades.length : 0;
+          setQuiz2Results({ grades, overall });
+        };
+
+        const gradeColor = (pct) => pct === 100 ? '#16a34a' : pct >= 80 ? '#ca8a04' : pct >= 60 ? '#ea580c' : '#dc2626';
+        const gradeLabel = (pct) => pct === 100 ? 'Perfect!' : pct >= 80 ? 'Great!' : pct >= 60 ? 'Good effort' : pct > 0 ? 'Keep practicing' : 'Skipped';
+
+        return (
+          <div
+            style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.55)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowQuiz2Modal(false); }}
+          >
+            <div
+              style={{ background: isDarkMode ? '#1e1e1e' : '#fff', borderRadius: 12, padding: 24, width: '92%', maxWidth: 700, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', position: 'relative' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button onClick={() => setShowQuiz2Modal(false)} style={{ position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', fontSize: 28, color: isDarkMode ? '#ccc' : '#555', cursor: 'pointer', lineHeight: 1 }}>&times;</button>
+
+              <h2 style={{ margin: '0 0 4px', fontSize: '1.2rem', fontWeight: 700, color: isDarkMode ? '#f0f0f0' : '#1a1a1a' }}>
+                Recite — {q2BookName} {q2Chapter}
+              </h2>
+              <p style={{ margin: '0 0 14px', fontSize: '0.8rem', color: isDarkMode ? '#aaa' : '#777' }}>
+                Type verses from memory. One verse per line. Optionally prefix with verse number (e.g. <em>3 For God so loved...</em>).
+              </p>
+
+              {/* Bucket selector */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#aaa' : '#555', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Bucket</label>
+                <select
+                  value={clampedIdx}
+                  onChange={(e) => { setQuiz2BucketIndex(parseInt(e.target.value)); setQuiz2Input(''); setQuiz2Results(null); }}
+                  style={{ width: '100%', padding: 8, border: `2px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14, background: isDarkMode ? '#2a2a2a' : 'white', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer' }}
+                >
+                  {buckets.map((bucket, idx) => {
+                    const firstV = idx * LINES_PER_BUCKET + 1;
+                    const lastV = idx * LINES_PER_BUCKET + bucket.length;
+                    return <option key={idx} value={idx}>Bucket {idx + 1}: Verses {firstV}–{lastV}</option>;
+                  })}
+                </select>
+              </div>
+
+              {/* Input area */}
+              <textarea
+                value={quiz2Input}
+                onChange={(e) => { setQuiz2Input(e.target.value); setQuiz2Results(null); }}
+                placeholder={verseEntries.map(v => `${v.num}. [type verse ${v.num} here]`).join('\n')}
+                rows={Math.max(4, verseEntries.length * 2)}
+                style={{ width: '100%', padding: 10, border: `2px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical', background: isDarkMode ? '#2a2a2a' : '#fafafa', color: isDarkMode ? '#e0e0e0' : '#333', boxSizing: 'border-box', marginBottom: 10 }}
+              />
+
+              <button
+                onClick={handleGrade}
+                style={{ padding: '8px 20px', background: '#be185d', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-start', marginBottom: 14 }}
+              >
+                Grade
+              </button>
+
+              {/* Results */}
+              {quiz2Results && (
+                <div style={{ overflowY: 'auto', flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, padding: '8px 12px', background: isDarkMode ? '#2a2a2a' : '#f3f4f6', borderRadius: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: isDarkMode ? '#e0e0e0' : '#333' }}>Overall</span>
+                    <span style={{ fontWeight: 700, fontSize: '1.1rem', color: gradeColor(quiz2Results.overall) }}>{quiz2Results.overall.toFixed(0)}%</span>
+                  </div>
+                  {quiz2Results.grades.map(({ verseNum, pct, missed, verseText, skipped }) => (
+                    <div key={verseNum} style={{ marginBottom: 10, padding: '10px 12px', border: `1px solid ${isDarkMode ? '#3a3a3a' : '#e5e7eb'}`, borderRadius: 8, background: isDarkMode ? '#252525' : '#fff' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontWeight: 600, color: isDarkMode ? '#ccc' : '#555', fontSize: '0.85rem' }}>Verse {verseNum}</span>
+                        <span style={{ fontWeight: 700, color: gradeColor(pct), fontSize: '0.9rem' }}>{skipped ? 'Skipped' : `${pct.toFixed(0)}% — ${gradeLabel(pct)}`}</span>
+                      </div>
+                      {missed.length > 0 && (
+                        <div style={{ fontSize: '0.8rem', color: isDarkMode ? '#f87171' : '#dc2626', marginBottom: 4 }}>
+                          Missed: {missed.join(', ')}
+                        </div>
+                      )}
+                      {pct < 100 && (
+                        <div style={{ fontSize: '0.82rem', color: isDarkMode ? '#9ca3af' : '#6b7280', fontStyle: 'italic' }}>
+                          {verseText}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         );

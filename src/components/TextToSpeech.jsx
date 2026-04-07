@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { ChevronDown, ChevronRight, Play, SkipForward } from 'lucide-react';
 
-const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse, onNextChapter, onQA, showStudyQModal, onQuiz, showQuizModal, onBuckets, showBucketsModal, onCursive, showCursiveModal, onBreathe, showBreatheModal }, ref) => {
+const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse, onNextChapter, onQA, showStudyQModal, onQuiz, showQuizModal, onQuiz2, showQuiz2Modal, onBuckets, showBucketsModal, onCursive, showCursiveModal, onBreathe, showBreatheModal }, ref) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -1104,6 +1104,15 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         title="Fill-in-the-blank quiz for current chapter"
       >
         Quiz
+      </button>
+
+      {/* Recite Quiz Button */}
+      <button
+        onClick={() => onQuiz2 && onQuiz2()}
+        className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showQuiz2Modal ? 'bg-rose-700 text-white' : 'bg-rose-600 text-white hover:bg-rose-700'}`}
+        title="Recite verses from memory and get graded"
+      >
+        Recite
       </button>
 
       {/* Buckets Button */}
