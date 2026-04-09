@@ -1729,6 +1729,26 @@ const BibleApp = () => {
   // eslint-disable-next-line no-unused-vars
   const [mobileScrollPosition, setMobileScrollPosition] = useState(0);
 
+  // Story Time data
+  const [storytimeData, setStorytimeData] = useState(null);
+
+  // Load Story Time JSON on startup
+  useEffect(() => {
+    const loadStorytime = async () => {
+      try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}/storytime.json`);
+        if (response.ok) {
+          const data = await response.json();
+          setStorytimeData(data);
+        }
+      } catch (error) {
+        console.log('No storytime.json found');
+      }
+    };
+    loadStorytime();
+  }, []);
+
   // Load book prompts JSON on startup
   useEffect(() => {
     const loadPrompts = async () => {
@@ -2107,6 +2127,21 @@ const BibleApp = () => {
       setShowPromptPickerModal(true);
     }
   }, [promptsData, selectedBook]);
+
+  // Handle Story Time button click - copy current chapter's story to clipboard
+  const handleStorytimeButtonClick = useCallback(() => {
+    if (!storytimeData || !selectedBook) return;
+    const bookName = abbrevToBookName[selectedBook.abbrev] || selectedBook.abbrev;
+    const key = `${bookName} ${selectedChapter}`;
+    const story = storytimeData[key];
+    if (story) {
+      navigator.clipboard.writeText(story)
+        .then(() => alert(`Copied Story Time for ${key} to clipboard`))
+        .catch(err => alert('Failed to copy: ' + err));
+    } else {
+      alert(`No Story Time available for ${key}`);
+    }
+  }, [storytimeData, selectedBook, selectedChapter]);
 
   // Helper: speak all parts sequentially with 1.5s pauses (for undelimit mode)
   const speakAllParts = (parts, langCode, rate, speechIdRef, setSpeakingState, verseNumber) => {
@@ -4947,6 +4982,17 @@ const BibleApp = () => {
                   </button>
                 )}
 
+                {/* Story Time Button (Pentateuch only) */}
+                {storytimeData && selectedBook && ['gn', 'ge', 'ex', 'lv', 'nm', 'dt'].includes(selectedBook.abbrev) && (
+                  <button
+                    onClick={handleStorytimeButtonClick}
+                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
+                    title="Copy Story Time narrative for this chapter"
+                  >
+                    Story
+                  </button>
+                )}
+
                 {/* Book Search Button */}
                 <button
                   onClick={() => { setShowSearchModal(true); setSearchKeyword(''); setSearchResults([]); }}
@@ -5433,6 +5479,7 @@ const BibleApp = () => {
                               }`} style={{ fontSize: `${fontScale * 0.85}rem` }}>
                                 <span className="font-medium mr-1">Refs:</span>
                                 {crossReferences[refKey].map((ref, i) => {
+                                  const isPentateuch = ['gn','ge','ex','lv','nm','dt'].includes(ref.book);
                                   const isOrange = ['ps','rm','hb','lk'].includes(ref.book);
                                   const isNT = ['mt','mk','jo','act','1co','2co','gl','eph','ph','cl','1ts','2ts','1tm','2tm','tt','phm','jm','1pe','2pe','1jo','2jo','3jo','jd','re'].includes(ref.book);
                                   return (
@@ -5440,12 +5487,15 @@ const BibleApp = () => {
                                     key={i}
                                     onClick={() => handleCrossRefNavigate(ref)}
                                     className={`mr-2 ${
-                                      isOrange
-                                        ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
-                                        : isNT
-                                          ? (isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-800')
-                                          : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
+                                      isPentateuch
+                                        ? 'hover:opacity-80'
+                                        : isOrange
+                                          ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
+                                          : isNT
+                                            ? (isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-800')
+                                            : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
                                     }`}
+                                    style={isPentateuch ? { color: isDarkMode ? '#FCD34D' : '#92400E' } : undefined}
                                   >
                                     {getBookName(ref.book)} {ref.chapter}:{ref.verse}{i < crossReferences[refKey].length - 1 ? ',' : ''}
                                   </button>
@@ -5693,6 +5743,7 @@ const BibleApp = () => {
                           <div className={`mt-2 pl-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} style={{ fontSize: `${fontScale * 0.85}rem` }}>
                             <span className="font-medium mr-1">Refs:</span>
                             {crossReferences[refKey].map((ref, i) => {
+                              const isPentateuch = ['gn','ge','ex','lv','nm','dt'].includes(ref.book);
                               const isOrange = ['ps','rm','hb','lk'].includes(ref.book);
                               const isNT = ['mt','mk','jo','act','1co','2co','gl','eph','ph','cl','1ts','2ts','1tm','2tm','tt','phm','jm','1pe','2pe','1jo','2jo','3jo','jd','re'].includes(ref.book);
                               return (
@@ -5700,12 +5751,15 @@ const BibleApp = () => {
                                 key={i}
                                 onClick={() => handleCrossRefNavigate(ref)}
                                 className={`mr-2 ${
-                                  isOrange
-                                    ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
-                                    : isNT
-                                      ? (isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-800')
-                                      : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
+                                  isPentateuch
+                                    ? 'hover:opacity-80'
+                                    : isOrange
+                                      ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
+                                      : isNT
+                                        ? (isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-800')
+                                        : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
                                 }`}
+                                style={isPentateuch ? { color: isDarkMode ? '#FCD34D' : '#92400E' } : undefined}
                               >
                                 {getBookName(ref.book)} {ref.chapter}:{ref.verse}{i < crossReferences[refKey].length - 1 ? ',' : ''}
                               </button>
