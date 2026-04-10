@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { Book, Link, ChevronRight, History, BookOpen, Save, Database, Download } from 'lucide-react';
 import TextToSpeech from './components/TextToSpeech';
+import { getStorytimeAudioUrl } from './data/storytimeAudio';
 
 // Import Firebase modules
 import { initializeApp } from 'firebase/app';
@@ -1449,6 +1450,10 @@ const BibleApp = () => {
   const [storytimeContent, setStorytimeContent] = useState('');
   const [storytimeFontSize, setStorytimeFontSize] = useState(0.9);
 
+  // Story Time audio playback (Pentateuch chapter MP3s from Dropbox)
+  const storytimeAudioRef = useRef(null);
+  const [isStorytimeAudioPlaying, setIsStorytimeAudioPlaying] = useState(false);
+
   // Language sidebar cycle state: null | 'cant' | 'chin' | 'heb' | 'span' | 'fr'
   const [sidebarLang, setSidebarLang] = useState(null);
 
@@ -2148,6 +2153,33 @@ const BibleApp = () => {
       alert(`No Story Time available for ${key}`);
     }
   }, [storytimeData, selectedBook, selectedChapter, pane2Book, pane2Chapter]);
+
+  // Toggle play/pause for the Story Time chapter audio
+  const handleStorytimeAudioToggle = useCallback(() => {
+    const activeBook = pane2Book || selectedBook;
+    const activeChapter = pane2Chapter || selectedChapter;
+    if (!activeBook) return;
+    const url = getStorytimeAudioUrl(activeBook.abbrev, activeChapter);
+    if (!url) return;
+    const audio = storytimeAudioRef.current;
+    if (!audio) return;
+    if (audio.src !== url) audio.src = url;
+    if (audio.paused) {
+      audio.play().catch(err => console.warn('Story Time audio play failed:', err));
+    } else {
+      audio.pause();
+    }
+  }, [pane2Book, pane2Chapter, selectedBook, selectedChapter]);
+
+  // Stop audio whenever the active pane 2 book/chapter changes
+  useEffect(() => {
+    const audio = storytimeAudioRef.current;
+    if (audio && !audio.paused) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    setIsStorytimeAudioPlaying(false);
+  }, [pane2Book, pane2Chapter, selectedBook, selectedChapter]);
 
   // Helper: speak all parts sequentially with 1.5s pauses (for undelimit mode)
   const speakAllParts = (parts, langCode, rate, speechIdRef, setSpeakingState, verseNumber) => {
@@ -4999,6 +5031,17 @@ const BibleApp = () => {
                   </button>
                 )}
 
+                {/* Story Time Audio Play/Pause Toggle (Pentateuch only) */}
+                {selectedBook && getStorytimeAudioUrl((pane2Book || selectedBook).abbrev, pane2Chapter || selectedChapter) && (
+                  <button
+                    onClick={handleStorytimeAudioToggle}
+                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
+                    title={isStorytimeAudioPlaying ? 'Pause Story Time audio' : 'Play Story Time audio'}
+                  >
+                    {isStorytimeAudioPlaying ? 'Pause ‖' : 'Play ▶'}
+                  </button>
+                )}
+
                 {/* Book Search Button */}
                 <button
                   onClick={() => { setShowSearchModal(true); setSearchKeyword(''); setSearchResults([]); }}
@@ -7820,6 +7863,16 @@ const BibleApp = () => {
           </div>
         );
       })()}
+
+      {/* Hidden audio element for Story Time chapter playback */}
+      <audio
+        ref={storytimeAudioRef}
+        preload="none"
+        onPlay={() => setIsStorytimeAudioPlaying(true)}
+        onPause={() => setIsStorytimeAudioPlaying(false)}
+        onEnded={() => setIsStorytimeAudioPlaying(false)}
+        style={{ display: 'none' }}
+      />
 
       {/* Story Time Modal */}
       {showStorytimeModal && storytimeContent && (
