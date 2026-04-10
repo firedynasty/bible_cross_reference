@@ -4971,6 +4971,17 @@ const BibleApp = () => {
                   +
                 </button>
 
+                {/* Story Time Audio Play/Pause Toggle (Pentateuch only) */}
+                {selectedBook && getStorytimeAudioUrl((pane2Book || selectedBook).abbrev, pane2Chapter || selectedChapter) && (
+                  <button
+                    onClick={handleStorytimeAudioToggle}
+                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
+                    title={isStorytimeAudioPlaying ? 'Pause Story Time audio' : 'Play Story Time audio'}
+                  >
+                    {isStorytimeAudioPlaying ? 'Pause ‖' : 'Play ▶'}
+                  </button>
+                )}
+
                 {/* Reference Prompt Button */}
                 <button
                   onClick={() => setShowRefPrompt(true)}
@@ -5028,17 +5039,6 @@ const BibleApp = () => {
                     title="Copy Story Time narrative for this chapter"
                   >
                     Story
-                  </button>
-                )}
-
-                {/* Story Time Audio Play/Pause Toggle (Pentateuch only) */}
-                {selectedBook && getStorytimeAudioUrl((pane2Book || selectedBook).abbrev, pane2Chapter || selectedChapter) && (
-                  <button
-                    onClick={handleStorytimeAudioToggle}
-                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
-                    title={isStorytimeAudioPlaying ? 'Pause Story Time audio' : 'Play Story Time audio'}
-                  >
-                    {isStorytimeAudioPlaying ? 'Pause ‖' : 'Play ▶'}
                   </button>
                 )}
 
