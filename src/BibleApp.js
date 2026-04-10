@@ -1444,6 +1444,11 @@ const BibleApp = () => {
   const [psalmHymnsData, setPsalmHymnsData] = useState(null);
   const [showHymnModal, setShowHymnModal] = useState(false);
 
+  // State for Story Time Modal
+  const [showStorytimeModal, setShowStorytimeModal] = useState(false);
+  const [storytimeContent, setStorytimeContent] = useState('');
+  const [storytimeFontSize, setStorytimeFontSize] = useState(0.9);
+
   // Language sidebar cycle state: null | 'cant' | 'chin' | 'heb' | 'span' | 'fr'
   const [sidebarLang, setSidebarLang] = useState(null);
 
@@ -2128,20 +2133,21 @@ const BibleApp = () => {
     }
   }, [promptsData, selectedBook]);
 
-  // Handle Story Time button click - copy current chapter's story to clipboard
+  // Handle Story Time button click - show modal with story content (uses pane 2 book/chapter)
   const handleStorytimeButtonClick = useCallback(() => {
     if (!storytimeData || !selectedBook) return;
-    const bookName = abbrevToBookName[selectedBook.abbrev] || selectedBook.abbrev;
-    const key = `${bookName} ${selectedChapter}`;
+    const activeBook = pane2Book || selectedBook;
+    const activeChapter = pane2Chapter || selectedChapter;
+    const bookName = abbrevToBookName[activeBook.abbrev] || activeBook.abbrev;
+    const key = `${bookName} ${activeChapter}`;
     const story = storytimeData[key];
     if (story) {
-      navigator.clipboard.writeText(story)
-        .then(() => alert(`Copied Story Time for ${key} to clipboard`))
-        .catch(err => alert('Failed to copy: ' + err));
+      setStorytimeContent(story);
+      setShowStorytimeModal(true);
     } else {
       alert(`No Story Time available for ${key}`);
     }
-  }, [storytimeData, selectedBook, selectedChapter]);
+  }, [storytimeData, selectedBook, selectedChapter, pane2Book, pane2Chapter]);
 
   // Helper: speak all parts sequentially with 1.5s pauses (for undelimit mode)
   const speakAllParts = (parts, langCode, rate, speechIdRef, setSpeakingState, verseNumber) => {
@@ -4982,8 +4988,8 @@ const BibleApp = () => {
                   </button>
                 )}
 
-                {/* Story Time Button (Pentateuch only) */}
-                {storytimeData && selectedBook && ['gn', 'ge', 'ex', 'lv', 'nm', 'dt'].includes(selectedBook.abbrev) && (
+                {/* Story Time Button (Pentateuch only, detects pane 2 book) */}
+                {storytimeData && selectedBook && ['gn', 'ge', 'ex', 'lv', 'nm', 'dt'].includes((pane2Book || selectedBook).abbrev) && (
                   <button
                     onClick={handleStorytimeButtonClick}
                     className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
@@ -7814,6 +7820,69 @@ const BibleApp = () => {
           </div>
         );
       })()}
+
+      {/* Story Time Modal */}
+      {showStorytimeModal && storytimeContent && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowStorytimeModal(false); }}
+        >
+          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 600, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+              <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', flex: 1 }}>
+                Story Time — {selectedBook ? (abbrevToBookName[(pane2Book || selectedBook).abbrev] || (pane2Book || selectedBook).abbrev) : ''} {pane2Chapter || selectedChapter}
+              </h3>
+              <button
+                onClick={() => setStorytimeFontSize(s => Math.max(0.6, s - 0.1))}
+                style={{ background: isDarkMode ? '#444' : '#e5e7eb', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '4px 10px', fontWeight: 'bold' }}
+                title="Decrease font size"
+              >
+                A−
+              </button>
+              <button
+                onClick={() => setStorytimeFontSize(s => Math.min(2.0, s + 0.1))}
+                style={{ background: isDarkMode ? '#444' : '#e5e7eb', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '4px 10px', fontWeight: 'bold' }}
+                title="Increase font size"
+              >
+                A+
+              </button>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(storytimeContent)
+                    .then(() => alert('Copied to clipboard'))
+                    .catch(err => alert('Failed to copy: ' + err));
+                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1em', color: isDarkMode ? '#aaa' : '#666', padding: '4px 8px' }}
+                title="Copy to clipboard"
+              >
+                📋
+              </button>
+            </div>
+            <div style={{ overflowY: 'auto', flex: 1, fontSize: `${storytimeFontSize}em`, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : '#333', whiteSpace: 'pre-wrap' }}>
+              {storytimeContent.split('\n').map((line, i) => {
+                if (line.startsWith('# ')) return <h2 key={i} style={{ fontSize: '1.2em', fontWeight: 'bold', margin: '8px 0' }}>{line.slice(2)}</h2>;
+                if (line.startsWith('## ')) return <h3 key={i} style={{ fontSize: '1.05em', fontWeight: 'bold', margin: '12px 0 4px' }}>{line.slice(3)}</h3>;
+                if (line.startsWith('### ')) return <h4 key={i} style={{ fontSize: '0.95em', fontWeight: 'bold', margin: '10px 0 4px' }}>{line.slice(4)}</h4>;
+                if (line.startsWith('---')) return <hr key={i} style={{ border: 'none', borderTop: `1px solid ${isDarkMode ? '#555' : '#ddd'}`, margin: '12px 0' }} />;
+                if (line.trim() === '') return <div key={i} style={{ height: 8 }} />;
+                // Handle **bold** within lines
+                const parts = line.split(/(\*\*[^*]+\*\*)/g);
+                return <p key={i} style={{ margin: '4px 0' }}>{parts.map((part, j) =>
+                  part.startsWith('**') && part.endsWith('**')
+                    ? <strong key={j}>{part.slice(2, -2)}</strong>
+                    : part
+                )}</p>;
+              })}
+            </div>
+            <button
+              onClick={() => setShowStorytimeModal(false)}
+              style={{ marginTop: 16, padding: '8px 16px', background: isDarkMode ? '#555' : '#e5e7eb', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : '#333' }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Psalm Hymn Recommendations Modal */}
       {showHymnModal && psalmHymnsData && (() => {
