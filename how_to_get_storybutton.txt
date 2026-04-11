@@ -1,0 +1,173 @@
+How to get Story Time content into the Story / Play buttons
+=============================================================
+
+The Story button reads narrative text from public/storytime.json.
+The Play button reads MP3 URLs from src/data/storytimeAudio.js.
+
+The full pipeline spans three sibling repos outside this project:
+PDF commentary -> prompts -> narratives -> audio -> this app.
+
+
+SOURCE 0 — Matthew Henry commentary prompts
+-------------------------------------------
+Repo:  /Users/stanleytan/Documents/technical/python/extract_from_pdf_as_individual_files_summarize_then_append
+
+This repo turns Matthew Henry Commentary PDFs into per-chapter
+summarized text files that become the prompt input for the Story
+Time generators in SOURCE 1.
+
+Relevant files:
+  extract_pdf_to_one_txt_file.py    extract raw text from a PDF
+  extract_all_pages_from_pdf.py     per-page extraction variant
+  extract_mhc_summarize.py          summarize MHC text into prompts
+  batch_summarize_mhc.py            batch driver over many books
+
+Output examples:
+  <book>_src/                       split per-chapter source text
+  <book>_mhc_summarized.txt         summarized commentary prompts
+  e.g. job_mhc_summarized.txt, deuteronomy_mhc_summarized.txt
+
+These summarized prompt files get fed into the storytime generators
+in SOURCE 1 to produce the actual Story Time narratives.
+
+
+SOURCE 1 — Story narrative text
+-------------------------------
+Repo:  /Users/stanleytan/Documents/technical/github/netlify_niv_search
+
+Relevant files:
+  storytime_pentateuch.py     generates Pentateuch chapter narratives
+  storytime_additions.py      generates extra books (Ruth, Job, Psalms,
+                              Isaiah, Ezekiel, ...)
+  generate_storytime_json.py  bundles all per-chapter .md files into the
+                              flat storytime.json that the app consumes
+
+Output layout:
+  storytime_output/<book>/<book>_NN.md
+  e.g. storytime_output/ezekiel/ezekiel_01.md
+       storytime_output/psalms/psalms_150.md
+
+Each .md file is one chapter's "Story Time" narrative in markdown.
+
+
+storytime_additions.py — usage
+------------------------------
+Reads commentary .txt files from ./additions_prompts/ and writes
+.md files to ./storytime_output/<book>/<book>_<chapter>.md, plus a
+combined storytime_additions_combined.md.
+
+Prereq:  pip install openai
+Commentary files must be lowercased filenames inside additions_prompts/,
+e.g. isaiah.txt, ruth.txt, job.txt, ezekiel.txt, psalms.txt.
+
+Basic run (all books in the BOOKS dict):
+  python storytime_additions.py --key YOUR_OPENAI_API_KEY
+
+Common variants:
+  # One book only
+  python storytime_additions.py --key sk-... --book Isaiah
+
+  # Resume from a specific chapter
+  python storytime_additions.py --key sk-... --book Job --start 15
+
+  # Different model / output dir / prompts dir
+  python storytime_additions.py --key sk-... --model gpt-4o \
+      --output ./storytime_output --prompts ./additions_prompts
+
+  # Slow down API calls
+  python storytime_additions.py --key sk-... --delay 2
+
+Flags:
+  --key      (required) OpenAI API key
+  --book     Isaiah, Ruth, Job, Ezekiel, Psalms (omit to run all)
+  --start    starting chapter (default 1)
+  --model    default gpt-4o
+  --output   default ./storytime_output
+  --delay    seconds between calls (default 1)
+  --prompts  default ./additions_prompts
+
+How --book maps to a commentary file:
+  At storytime_additions.py:103 the path is built as
+  prompts_dir / f"{book.lower()}.txt", so --book Isaiah loads
+  ./additions_prompts/isaiah.txt. The file is parsed into chapters
+  by matching lines like "Chapter 1", "# Chapter 1:", "## CHAPTER 21:"
+  (storytime_additions.py:73). If the file is missing the script
+  still runs — it just generates chapters without commentary context.
+
+How it knows how many chapters — the hardcoded BOOKS dict
+(storytime_additions.py:29-35):
+
+  BOOKS = {
+      "Isaiah":  66,
+      "Ruth":     4,
+      "Job":     42,
+      "Ezekiel": 48,
+      "Psalms": 150,
+  }
+
+For --book Isaiah it loops range(start, 66 + 1) regardless of what
+the commentary file contains. To add another book, append it to
+this dict with its chapter count.
+
+
+SOURCE 2 — Story narration MP3s
+-------------------------------
+Repo:  /Users/stanleytan/documents/technical/python/textToSpeech
+
+Relevant files:
+  narrator.py        text-to-speech driver used to render the audio
+  multi_speaker.py   variant for multi-voice generation
+
+Output layout:
+  bibles_audio/<book>_audio/<book>_NN.mp3
+  e.g. bibles_audio/ezekiel_audio/ezekiel_01.mp3
+       bibles_audio/psalms_audio/psalms_150.mp3
+
+After generation the MP3s get uploaded to Dropbox; we use the
+?raw=1 share links in the app (one URL per chapter).
+
+
+HOW TO ADD A NEW BOOK TO THIS REPO
+----------------------------------
+0. In extract_from_pdf_as_individual_files_summarize_then_append,
+   run the MHC extract + summarize scripts on the book's commentary
+   PDF to produce <book>_mhc_summarized.txt. That file becomes the
+   prompt input for step 1.
+
+1. Generate the narratives in netlify_niv_search using the
+   summarized MHC prompts from step 0, and confirm
+   storytime_output/<book>/<book>_NN.md exists for every chapter.
+
+2. Generate the audio in textToSpeech and upload each chapter MP3
+   to Dropbox. Collect the raw=1 URLs in chapter order.
+
+3. Merge the narrative text into public/storytime.json. Use a small
+   Python script that walks storytime_output/<book>/, parses the
+   chapter number from the filename, and writes keys of the form
+   "<BookName> <chapter>" — e.g. "Ezekiel 1" — with the file
+   contents as the value. Display names must match the app's
+   abbrevToBookName mapping in src/BibleApp.js.
+
+4. Add the Dropbox URLs to src/data/storytimeAudio.js under the
+   book's abbrev key (rt, job, ps, is, ez, ...). Chapter keys are
+   1-based integers, matching the abbrevs the rest of the app uses.
+
+5. The Story and Play buttons in src/BibleApp.js always render —
+   no allowlist to update. If a book isn't in storytime.json or
+   storytimeAudio.js the button opens a small "unavailable" modal
+   listing the supported books, so nothing in the pane breaks.
+
+
+KEY MAPPING REFERENCE
+---------------------
+Abbrev  Book        storytime.json key prefix
+gn/ge   Genesis     "Genesis N"
+ex      Exodus      "Exodus N"
+lv      Leviticus   "Leviticus N"
+nm      Numbers     "Numbers N"
+dt      Deuteronomy "Deuteronomy N"
+rt      Ruth        "Ruth N"
+job     Job         "Job N"
+ps      Psalms      "Psalms N"
+is      Isaiah      "Isaiah N"
+ez      Ezekiel     "Ezekiel N"
