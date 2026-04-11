@@ -1449,6 +1449,7 @@ const BibleApp = () => {
   const [showStorytimeModal, setShowStorytimeModal] = useState(false);
   const [storytimeContent, setStorytimeContent] = useState('');
   const [storytimeFontSize, setStorytimeFontSize] = useState(0.9);
+  const [storytimeUnavailableMsg, setStorytimeUnavailableMsg] = useState(null);
 
   // Story Time audio playback (Pentateuch chapter MP3s from Dropbox)
   const storytimeAudioRef = useRef(null);
@@ -2150,7 +2151,7 @@ const BibleApp = () => {
       setStorytimeContent(story);
       setShowStorytimeModal(true);
     } else {
-      alert(`No Story Time available for ${key}`);
+      setStorytimeUnavailableMsg(`No Story Time available for ${key}.`);
     }
   }, [storytimeData, selectedBook, selectedChapter, pane2Book, pane2Chapter]);
 
@@ -2160,7 +2161,11 @@ const BibleApp = () => {
     const activeChapter = pane2Chapter || selectedChapter;
     if (!activeBook) return;
     const url = getStorytimeAudioUrl(activeBook.abbrev, activeChapter);
-    if (!url) return;
+    if (!url) {
+      const bookName = abbrevToBookName[activeBook.abbrev] || activeBook.abbrev;
+      setStorytimeUnavailableMsg(`No Story Time audio available for ${bookName} ${activeChapter}.`);
+      return;
+    }
     const audio = storytimeAudioRef.current;
     if (!audio) return;
     if (audio.src !== url) audio.src = url;
@@ -4971,8 +4976,8 @@ const BibleApp = () => {
                   +
                 </button>
 
-                {/* Story Time Audio Play/Pause Toggle (Pentateuch only) */}
-                {selectedBook && getStorytimeAudioUrl((pane2Book || selectedBook).abbrev, pane2Chapter || selectedChapter) && (
+                {/* Story Time Audio Play/Pause Toggle */}
+                {selectedBook && (
                   <button
                     onClick={handleStorytimeAudioToggle}
                     className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
@@ -5031,12 +5036,12 @@ const BibleApp = () => {
                   </button>
                 )}
 
-                {/* Story Time Button (Pentateuch only, detects pane 2 book) */}
-                {storytimeData && selectedBook && ['gn', 'ge', 'ex', 'lv', 'nm', 'dt'].includes((pane2Book || selectedBook).abbrev) && (
+                {/* Story Time Button (detects pane 2 book) */}
+                {storytimeData && selectedBook && (
                   <button
                     onClick={handleStorytimeButtonClick}
                     className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
-                    title="Copy Story Time narrative for this chapter"
+                    title="Open Story Time narrative for this chapter"
                   >
                     Story
                   </button>
@@ -7930,6 +7935,40 @@ const BibleApp = () => {
             <button
               onClick={() => setShowStorytimeModal(false)}
               style={{ marginTop: 16, padding: '8px 16px', background: isDarkMode ? '#555' : '#e5e7eb', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : '#333' }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Story Time unavailable modal */}
+      {storytimeUnavailableMsg && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setStorytimeUnavailableMsg(null); }}
+        >
+          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333' }}>
+              Story Time unavailable
+            </h3>
+            <p style={{ margin: '0 0 12px', fontSize: '0.95em', color: isDarkMode ? '#d0d0d0' : '#444' }}>
+              {storytimeUnavailableMsg}
+            </p>
+            <p style={{ margin: '0 0 6px', fontSize: '0.85em', color: isDarkMode ? '#aaa' : '#666' }}>
+              Currently available for:
+            </p>
+            <ul style={{ margin: '0 0 16px 18px', padding: 0, fontSize: '0.9em', color: isDarkMode ? '#d0d0d0' : '#333', lineHeight: 1.5 }}>
+              <li>Genesis – Deuteronomy</li>
+              <li>Ruth</li>
+              <li>Job</li>
+              <li>Psalms</li>
+              <li>Isaiah</li>
+              <li>Ezekiel</li>
+            </ul>
+            <button
+              onClick={() => setStorytimeUnavailableMsg(null)}
+              style={{ padding: '8px 16px', background: isDarkMode ? '#555' : '#e5e7eb', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : '#333' }}
             >
               Close
             </button>
