@@ -1920,6 +1920,86 @@ const BibleApp = () => {
     }
   }, []);
 
+  // Deep-link via URL params: ?bookname&chapter[:verse]
+  // Mirrors the bibleSearchable.html convention so external apps (e.g. vercel_bible_plan)
+  // can link directly into a passage. Waits for bibleData before navigating.
+  useEffect(() => {
+    if (!bibleData || bibleData.length === 0) return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('code')) return; // Dropbox OAuth callback — handled above
+
+    const keys = Array.from(params.keys());
+    if (keys.length === 0) return;
+
+    const BOOK_TOKEN_TO_ABBREV = {
+      genesis: 'gn', exodus: 'ex', leviticus: 'lv', numbers: 'nm', deuteronomy: 'dt',
+      joshua: 'js', judges: 'jud', ruth: 'rt', '1samuel': '1sm', '2samuel': '2sm',
+      '1kings': '1kgs', '2kings': '2kgs', '1chronicles': '1ch', '2chronicles': '2ch',
+      ezra: 'ezr', nehemiah: 'ne', esther: 'et', job: 'job', psalms: 'ps', psalm: 'ps',
+      proverbs: 'prv', ecclesiastes: 'ec', songofsolomon: 'so', songofsongs: 'so', isaiah: 'is',
+      jeremiah: 'jr', lamentations: 'lm', ezekiel: 'ez', daniel: 'dn',
+      hosea: 'ho', joel: 'jl', amos: 'am', obadiah: 'ob', jonah: 'jn',
+      micah: 'mi', nahum: 'na', habakkuk: 'hk', zephaniah: 'zp', haggai: 'hg',
+      zechariah: 'zc', malachi: 'ml', matthew: 'mt', mark: 'mk', luke: 'lk',
+      john: 'jo', acts: 'act', romans: 'rm', '1corinthians': '1co', '2corinthians': '2co',
+      galatians: 'gl', ephesians: 'eph', philippians: 'ph', colossians: 'cl',
+      '1thessalonians': '1ts', '2thessalonians': '2ts', '1timothy': '1tm', '2timothy': '2tm',
+      titus: 'tt', philemon: 'phm', hebrews: 'hb', james: 'jm', '1peter': '1pe',
+      '2peter': '2pe', '1john': '1jo', '2john': '2jo', '3john': '3jo', jude: 'jd',
+      revelation: 're',
+    };
+
+    const bookToken = keys[0].toLowerCase().replace(/\s+/g, '');
+    const abbrev = BOOK_TOKEN_TO_ABBREV[bookToken];
+    if (!abbrev) return;
+
+    const book = bibleData.find((b) => b.abbrev === abbrev);
+    if (!book) return;
+
+    let chapter = 1;
+    let verse = null;
+    if (keys[1]) {
+      const parts = keys[1].split(':');
+      const c = parseInt(parts[0], 10);
+      if (!isNaN(c)) chapter = c;
+      if (parts[1]) {
+        const v = parseInt(parts[1].split('-')[0], 10);
+        if (!isNaN(v)) verse = v;
+      }
+    }
+    if (book.chapters && chapter > book.chapters.length) chapter = book.chapters.length;
+    if (chapter < 1) chapter = 1;
+
+    setSelectedBook(book);
+    setSelectedChapter(chapter);
+    setShowCrossRef(null);
+    setPrimaryReading({ book, chapter });
+    setIsViewingCrossRef(false);
+    setPane2Book(null);
+    setPane2Chapter(null);
+    setPane2History([]);
+
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    if (verse != null) {
+      const tryScroll = (attempts) => {
+        if (attempts > 20) return;
+        const el = document.getElementById(`right-pane-verse-${verse}`);
+        const pane = kjvContentRef.current;
+        if (el && pane) {
+          const elRect = el.getBoundingClientRect();
+          const paneRect = pane.getBoundingClientRect();
+          const offset = elRect.top - paneRect.top + pane.scrollTop - pane.clientHeight / 3;
+          pane.scrollTo({ top: offset, behavior: 'smooth' });
+        } else {
+          setTimeout(() => tryScroll(attempts + 1), 200);
+        }
+      };
+      setTimeout(() => tryScroll(0), 400);
+    }
+  }, [bibleData]);
+
   // Load Spanish RVR data for Spanish Verse Grid TTS
   useEffect(() => {
     const loadSpanishData = async () => {
