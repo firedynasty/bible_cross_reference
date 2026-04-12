@@ -458,7 +458,17 @@ const NavigationPlaceholder = ({
   onCursive,
   showCursiveModal,
   onBreathe,
-  showBreatheModal
+  showBreatheModal,
+  sidebarLang,
+  onSidebarLangCycle,
+  onLangToggleOpen,
+  showVerseGrid,
+  showSpanishGrid,
+  showHebrewGrid,
+  showFrenchGrid,
+  fontScale,
+  onFontScaleDown,
+  onFontScaleUp
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -648,50 +658,53 @@ const NavigationPlaceholder = ({
           </button>
         )}
 
-        {/* View Mode Toggle Button */}
+        {/* Font Size Controls */}
         <button
-          onClick={() => onViewModeToggle && onViewModeToggle()}
-          className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
-            viewMode === 'interleaved-pd'
-              ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-              : viewMode === 'interleaved'
-              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-          }`}
-          title={viewMode === 'interleaved-pd' ? "Switch to side-by-side view" : viewMode === 'interleaved' ? "Switch to interleaved PD view" : "Switch to interleaved view"}
+          onClick={onFontScaleDown}
+          className="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold"
+          title="Decrease font size"
         >
-          {viewMode === 'interleaved-pd' ? '⇅ Interleaved PD' : viewMode === 'interleaved' ? '⇅ Interleaved' : '⇔ Side-by-Side'}
+          -
+        </button>
+        <button
+          onClick={onFontScaleUp}
+          className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold"
+          title="Increase font size"
+        >
+          +
         </button>
 
-        {/* Pane 2 Only Toggle Button */}
-        {viewMode === 'side-by-side' && (
-          <button
-            onClick={() => onPane2OnlyToggle && onPane2OnlyToggle()}
-            className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
-              showPane2Only
-                ? 'bg-green-200 text-green-800 hover:bg-green-300'
-                : 'bg-green-100 text-green-700 hover:bg-green-200'
-            }`}
-            title={showPane2Only ? "Switch back to dual pane view" : "Hide pane 1, show only pane 2"}
-          >
-            {showPane2Only ? '⇅ Pane 2 Only PD' : '⇅ Dual Pane'}
-          </button>
-        )}
-
-        {/* Dual Pane PD - click either pane to page down */}
-        {viewMode === 'side-by-side' && !showPane2Only && (
-          <button
-            onClick={() => onDualPanePDToggle && onDualPanePDToggle()}
-            className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
-              dualPanePD
-                ? 'bg-orange-200 text-orange-800 hover:bg-orange-300'
-                : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-            }`}
-            title={dualPanePD ? "Disable click-to-page-down" : "Click either pane to page down"}
-          >
-            {dualPanePD ? '⇅ Dual PD On' : '⇅ Dual PD Off'}
-          </button>
-        )}
+        {/* Language cycle + open buttons */}
+        {(() => {
+          const langColors = {
+            cant: 'bg-amber-500 hover:bg-amber-600',
+            chin: 'bg-green-500 hover:bg-green-600',
+            heb: 'bg-indigo-500 hover:bg-indigo-600',
+            span: 'bg-orange-500 hover:bg-orange-600',
+            fr: 'bg-blue-600 hover:bg-blue-700',
+          };
+          const isOpen = showVerseGrid || showSpanishGrid || showHebrewGrid || showFrenchGrid;
+          const label = sidebarLang || 'cant';
+          const colorClass = langColors[label];
+          return (
+            <>
+              <button
+                onClick={onSidebarLangCycle}
+                className={`ml-2 px-2 py-0.5 rounded focus:outline-none text-xs text-white font-semibold ${colorClass}`}
+                title="Cycle language (cant / chin / heb / span / fr)"
+              >
+                {label}
+              </button>
+              <button
+                onClick={onLangToggleOpen}
+                className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${isOpen ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                title={isOpen ? 'Close language sidebar' : 'Open language sidebar'}
+              >
+                {isOpen ? '✕' : '▶'}
+              </button>
+            </>
+          );
+        })()}
 
         {/* Grid TTS Read Mode Toggle */}
         <button
@@ -4950,24 +4963,7 @@ const BibleApp = () => {
               };
               const label = sidebarLang || 'cant';
               const colorClass = langColors[label];
-              return (
-                <>
-                  <button
-                    onClick={cycleLang}
-                    className={`px-2 py-0.5 rounded focus:outline-none text-xs text-white font-semibold ${colorClass}`}
-                    title="Cycle language (cant / chin / heb / span / fr)"
-                  >
-                    {label}
-                  </button>
-                  <button
-                    onClick={toggleOpen}
-                    className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${isOpen ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                    title={isOpen ? 'Close language sidebar' : 'Open language sidebar'}
-                  >
-                    {isOpen ? '✕' : '▶'}
-                  </button>
-                </>
-              );
+              return null; /* Language cycle + open buttons hidden */
             })()}
             
             
@@ -4986,21 +4982,7 @@ const BibleApp = () => {
                   ))}
                 </select>
 
-                {/* Next Chapter Button (top bar) */}
-                {selectedBook && selectedChapter < selectedBook.chapters.length && (
-                  <button
-                    onClick={() => {
-                      handleChapterSelect(selectedChapter + 1, true);
-                      if (chapterContentRef.current) {
-                        setTimeout(() => { chapterContentRef.current.scrollTop = 0; }, 100);
-                      }
-                    }}
-                    className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-bold ${isDarkMode ? 'bg-gray-600 text-white hover:bg-gray-500' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'}`}
-                    title="Next Chapter"
-                  >
-                    &gt;
-                  </button>
-                )}
+                {/* Next Chapter Button (top bar) - hidden */}
 
                 {/* Cycle Pane 1 Translation Button */}
                 {(() => {
@@ -5053,22 +5035,6 @@ const BibleApp = () => {
                   );
                 })()}
 
-                {/* Font Size Controls */}
-                <button
-                  onClick={() => setFontScale(prev => Math.max(0.5, prev - 0.1))}
-                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold"
-                  title="Decrease font size"
-                >
-                  -
-                </button>
-                <button
-                  onClick={() => setFontScale(prev => Math.min(2, prev + 0.1))}
-                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold"
-                  title="Increase font size"
-                >
-                  +
-                </button>
-
                 {/* Story Time Audio Play/Pause Toggle */}
                 {selectedBook && (
                   <button
@@ -5077,6 +5043,17 @@ const BibleApp = () => {
                     title={isStorytimeAudioPlaying ? 'Pause Story Time audio' : 'Play Story Time audio'}
                   >
                     {isStorytimeAudioPlaying ? 'Pause ‖' : 'Play ▶'}
+                  </button>
+                )}
+
+                {/* Story Time Button (detects pane 2 book) */}
+                {storytimeData && selectedBook && (
+                  <button
+                    onClick={handleStorytimeButtonClick}
+                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
+                    title="Open Story Time narrative for this chapter"
+                  >
+                    Story
                   </button>
                 )}
 
@@ -5126,17 +5103,6 @@ const BibleApp = () => {
                     title="Copy book prompt/commentary to clipboard"
                   >
                     Prompt
-                  </button>
-                )}
-
-                {/* Story Time Button (detects pane 2 book) */}
-                {storytimeData && selectedBook && (
-                  <button
-                    onClick={handleStorytimeButtonClick}
-                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
-                    title="Open Story Time narrative for this chapter"
-                  >
-                    Story
                   </button>
                 )}
 
@@ -5377,6 +5343,35 @@ const BibleApp = () => {
               }}
               showBreatheModal={showBreatheModal}
               onBreathe={() => setShowBreatheModal(true)}
+              sidebarLang={sidebarLang}
+              onSidebarLangCycle={() => {
+                const langOptions = ['cant', 'chin', 'heb', 'span', 'fr'];
+                const idx = langOptions.indexOf(sidebarLang);
+                setSidebarLang(langOptions[(idx + 1) % langOptions.length]);
+              }}
+              onLangToggleOpen={() => {
+                const isOpen = showVerseGrid || showSpanishGrid || showHebrewGrid || showFrenchGrid;
+                if (isOpen) {
+                  setShowVerseGrid(false);
+                  setShowSpanishGrid(false);
+                  setShowHebrewGrid(false);
+                  setShowFrenchGrid(false);
+                } else {
+                  const lang = sidebarLang || 'cant';
+                  setSidebarLang(lang);
+                  setShowVerseGrid(lang === 'cant' || lang === 'chin');
+                  setShowSpanishGrid(lang === 'span');
+                  setShowHebrewGrid(lang === 'heb');
+                  setShowFrenchGrid(lang === 'fr');
+                }
+              }}
+              showVerseGrid={showVerseGrid}
+              showSpanishGrid={showSpanishGrid}
+              showHebrewGrid={showHebrewGrid}
+              showFrenchGrid={showFrenchGrid}
+              fontScale={fontScale}
+              onFontScaleDown={() => setFontScale(prev => Math.max(0.5, prev - 0.1))}
+              onFontScaleUp={() => setFontScale(prev => Math.min(2, prev + 0.1))}
               onQA={() => {
                 if (!studyQData) {
                   const baseUrl = getBaseUrl();
