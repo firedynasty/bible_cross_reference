@@ -1315,7 +1315,20 @@ const BibleApp = () => {
   const [showKJVOnMobile, setShowKJVOnMobile] = useState(true);
 
   // Font size control (multiplier: 1 = base size)
-  const [fontScale, setFontScale] = useState(1);
+  const [fontScale, setFontScale] = useState(() => {
+    try {
+      const stored = localStorage.getItem('bible-font-scale');
+      if (stored == null) return 1;
+      const n = parseFloat(stored);
+      if (isNaN(n)) return 1;
+      return Math.min(2, Math.max(0.5, n));
+    } catch {
+      return 1;
+    }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('bible-font-scale', String(fontScale)); } catch {}
+  }, [fontScale]);
   
   // Available translations
   const translations = React.useMemo(() => [
