@@ -1474,8 +1474,21 @@ const BibleApp = () => {
   // State for Story Time Modal
   const [showStorytimeModal, setShowStorytimeModal] = useState(false);
   const [storytimeContent, setStorytimeContent] = useState('');
-  const [storytimeFontSize, setStorytimeFontSize] = useState(0.9);
+  const [storytimeFontSize, setStorytimeFontSize] = useState(() => {
+    try {
+      const stored = localStorage.getItem('storytime-font-size');
+      if (stored == null) return 0.9;
+      const n = parseFloat(stored);
+      if (isNaN(n)) return 0.9;
+      return Math.min(2.0, Math.max(0.6, n));
+    } catch {
+      return 0.9;
+    }
+  });
   const [storytimeUnavailableMsg, setStorytimeUnavailableMsg] = useState(null);
+  useEffect(() => {
+    try { localStorage.setItem('storytime-font-size', String(storytimeFontSize)); } catch {}
+  }, [storytimeFontSize]);
 
   // Story Time audio playback (Pentateuch chapter MP3s from Dropbox)
   const storytimeAudioRef = useRef(null);
@@ -5129,8 +5142,18 @@ const BibleApp = () => {
                   className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold inline-block ${nltPsalmsData ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
                   title={nltPsalmsData ? "NLT Psalms active — click to disable" : "Load NLT for Psalms in pane 2"}
                 >
-                  NLT{nltPsalmsData ? '✓' : ''}
+                  NLT(Ps only){nltPsalmsData ? '✓' : ''}
                 </button>
+
+                <a
+                  href="https://cdpn.io/pen/debug/KwVxmKR"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-amber-500 text-white hover:bg-amber-600 font-semibold inline-block"
+                  title="Open Reader"
+                >
+                  Reader
+                </a>
 
                 {/* Fill-in-the-Blank Quiz Button - moved to TextToSpeech after QA */}
 
