@@ -5155,6 +5155,16 @@ const BibleApp = () => {
                   Reader
                 </a>
 
+                <a
+                  href="https://vercel-bible-plan.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-teal-500 text-white hover:bg-teal-600 font-semibold inline-block"
+                  title="Open Bible Plan"
+                >
+                  Plan
+                </a>
+
                 {/* Fill-in-the-Blank Quiz Button - moved to TextToSpeech after QA */}
 
                 {/* Study Questions Button - moved to TextToSpeech after Lower */}
