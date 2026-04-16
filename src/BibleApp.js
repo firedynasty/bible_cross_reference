@@ -5146,6 +5146,16 @@ const BibleApp = () => {
                   Plan
                 </a>
 
+                <a
+                  href="https://cdpn.io/pen/debug/vEKYpYB"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-teal-500 text-white hover:bg-teal-600 font-semibold inline-block"
+                  title="Open Math"
+                >
+                  Math
+                </a>
+
                 {/* Fill-in-the-Blank Quiz Button - moved to TextToSpeech after QA */}
 
                 {/* Study Questions Button - moved to TextToSpeech after Lower */}
