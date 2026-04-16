@@ -1305,7 +1305,13 @@ const BibleApp = () => {
   const [showGlosses, setShowGlosses] = useState(true);
 
   // View mode control (side-by-side, interleaved, or interleaved-pd)
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem('bibleAppViewMode') || 'side-by-side');
+  // Toggle buttons are currently hidden — force side-by-side on load so users
+  // with a stale 'interleaved' value in localStorage don't get stuck.
+  const [viewMode, setViewMode] = useState(() => {
+    const stored = localStorage.getItem('bibleAppViewMode');
+    if (stored !== 'side-by-side') localStorage.setItem('bibleAppViewMode', 'side-by-side');
+    return 'side-by-side';
+  });
   useEffect(() => { localStorage.setItem('bibleAppViewMode', viewMode); }, [viewMode]);
 
   // Pane 2 only mode - hides pane 1, shows only pane 2 at full width
@@ -1442,6 +1448,7 @@ const BibleApp = () => {
   const [cursiveSpeed, setCursiveSpeed] = useState(() => parseInt(localStorage.getItem('cursive-speed') ?? '3'));
   const [cursiveSize, setCursiveSize] = useState(() => parseInt(localStorage.getItem('cursive-size') ?? '52'));
   const [cursiveScrollLevel, setCursiveScrollLevel] = useState(() => parseInt(localStorage.getItem('cursive-scroll') ?? '0'));
+  const [cursiveInput, setCursiveInput] = useState('');
   const [showQuiz2Modal, setShowQuiz2Modal] = useState(false);
   const [quiz2BucketIndex, setQuiz2BucketIndex] = useState(0);
   const [quiz2Input, setQuiz2Input] = useState('');
@@ -2735,6 +2742,8 @@ const BibleApp = () => {
     const isManuallyScrollingRef = isManuallyScrolling;
 
     const handleKeyDown = (e) => {
+      // Cursive modal: disable ALL global keyboard shortcuts so user can type freely
+      if (showCursiveModal) return;
       // Buckets modal: spacebar = next bucket, shift+space = previous bucket
       if (showBucketsModal && e.key === ' ') {
         e.preventDefault();
@@ -2744,35 +2753,6 @@ const BibleApp = () => {
           setBucketIndex(prev => prev + 1);
         }
         setBucketSlider(1);
-        return;
-      }
-      // Cursive modal: spacebar = next bucket, shift+space = previous bucket
-      if (showCursiveModal && e.key === ' ') {
-        e.preventDefault();
-        if (e.shiftKey) {
-          setCursiveBucketIndex(prev => Math.max(0, prev - 1));
-        } else {
-          setCursiveBucketIndex(prev => prev + 1);
-        }
-        // Clear current animation and auto-write after 500ms
-        if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-        if (window._cursiveScrollTimer) { clearInterval(window._cursiveScrollTimer); window._cursiveScrollTimer = null; }
-        const outputText = document.querySelector('.cursive-output-text');
-        const outputScroll = document.querySelector('.cursive-output-scroll');
-        if (outputText) outputText.innerHTML = '';
-        if (outputScroll) outputScroll.scrollTop = 0;
-        setTimeout(() => {
-          const writeBtn = document.querySelector('.cursive-write-btn');
-          if (writeBtn) writeBtn.click();
-        }, 500);
-        return;
-      }
-      // Cursive modal: Escape to close
-      if (showCursiveModal && e.key === 'Escape') {
-        e.preventDefault();
-        if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-        if (window._cursiveScrollTimer) { clearInterval(window._cursiveScrollTimer); window._cursiveScrollTimer = null; }
-        setShowCursiveModal(false);
         return;
       }
       // Breathe modal: Escape to close
@@ -7457,6 +7437,21 @@ const BibleApp = () => {
         const fadeMs = [700, 500, 350, 220, 120][cursiveSpeed - 1];
         const delayMs = [600, 420, 280, 170, 90][cursiveSpeed - 1];
 
+        const goToBucket = (newIdx) => {
+          if (newIdx < 0 || newIdx >= buckets.length) return;
+          setCursiveBucketIndex(newIdx);
+          if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
+          if (window._cursiveScrollTimer) { clearInterval(window._cursiveScrollTimer); window._cursiveScrollTimer = null; }
+          const outputText = document.querySelector('.cursive-output-text');
+          const outputScroll = document.querySelector('.cursive-output-scroll');
+          if (outputText) outputText.innerHTML = '';
+          if (outputScroll) outputScroll.scrollTop = 0;
+          setTimeout(() => {
+            const writeBtn = document.querySelector('.cursive-write-btn');
+            if (writeBtn) writeBtn.click();
+          }, 500);
+        };
+
         return (
           <div
             style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
@@ -7503,24 +7498,51 @@ const BibleApp = () => {
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', flexShrink: 0 }}>
                 {/* Bucket selector */}
                 <div style={{ flex: 1, minWidth: 160 }}>
-                  <label style={{ display: 'block', fontSize: '0.72rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c8956c', marginBottom: 4 }}>Bucket</label>
-                  <select
-                    value={cursiveBucketIndex}
+                  <label style={{ display: 'block', fontSize: '0.72rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c8956c', marginBottom: 4 }}>
+                    Bucket {clampedIdx + 1} / {buckets.length}
+                  </label>
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'stretch' }}>
+                    <select
+                      value={cursiveBucketIndex}
+                      onChange={(e) => goToBucket(parseInt(e.target.value))}
+                      style={{ flex: 1, padding: 6, border: '1px solid #c9b99a', borderRadius: 2, background: 'rgba(255,255,255,0.7)', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, color: '#1a1209' }}
+                    >
+                      {buckets.map((bucket, idx) => {
+                        const firstV = idx * LINES_PER_BUCKET + 1;
+                        const lastV = idx * LINES_PER_BUCKET + bucket.length;
+                        return <option key={idx} value={idx}>{idx + 1}. Verses {firstV}–{lastV}</option>;
+                      })}
+                    </select>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <button
+                        onClick={() => goToBucket(cursiveBucketIndex - 1)}
+                        disabled={cursiveBucketIndex <= 0}
+                        title="Previous bucket"
+                        style={{ padding: '0 8px', border: '1px solid #c9b99a', borderRadius: 2, background: cursiveBucketIndex <= 0 ? 'rgba(255,255,255,0.3)' : '#8b4513', color: cursiveBucketIndex <= 0 ? '#c9b99a' : '#f5f0e8', fontSize: 12, lineHeight: 1, cursor: cursiveBucketIndex <= 0 ? 'not-allowed' : 'pointer', flex: 1 }}
+                      >▲</button>
+                      <button
+                        onClick={() => goToBucket(cursiveBucketIndex + 1)}
+                        disabled={cursiveBucketIndex >= buckets.length - 1}
+                        title="Next bucket"
+                        style={{ padding: '0 8px', border: '1px solid #c9b99a', borderRadius: 2, background: cursiveBucketIndex >= buckets.length - 1 ? 'rgba(255,255,255,0.3)' : '#8b4513', color: cursiveBucketIndex >= buckets.length - 1 ? '#c9b99a' : '#f5f0e8', fontSize: 12, lineHeight: 1, cursor: cursiveBucketIndex >= buckets.length - 1 ? 'not-allowed' : 'pointer', flex: 1 }}
+                      >▼</button>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={cursiveInput}
                     onChange={(e) => {
-                      setCursiveBucketIndex(parseInt(e.target.value));
-                      setTimeout(() => {
-                        const writeBtn = document.querySelector('.cursive-write-btn');
-                        if (writeBtn) writeBtn.click();
-                      }, 500);
+                      const v = e.target.value;
+                      setCursiveInput(v);
+                      const n = parseInt(v, 10);
+                      if (!isNaN(n) && n >= 1 && n <= buckets.length) {
+                        goToBucket(n - 1);
+                      }
                     }}
-                    style={{ width: '100%', padding: 6, border: '1px solid #c9b99a', borderRadius: 2, background: 'rgba(255,255,255,0.7)', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, color: '#1a1209' }}
-                  >
-                    {buckets.map((bucket, idx) => {
-                      const firstV = idx * LINES_PER_BUCKET + 1;
-                      const lastV = idx * LINES_PER_BUCKET + bucket.length;
-                      return <option key={idx} value={idx}>Verses {firstV}–{lastV}</option>;
-                    })}
-                  </select>
+                    placeholder={`Type 1–${buckets.length || 1} to jump`}
+                    style={{ width: '100%', marginTop: 4, padding: 6, border: '1px solid #c9b99a', borderRadius: 2, background: 'rgba(255,255,255,0.7)', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, color: '#1a1209' }}
+                  />
                 </div>
 
                 {/* Sliders */}
@@ -7627,7 +7649,7 @@ const BibleApp = () => {
               </div>
 
               <div style={{ marginTop: 8, fontSize: 11, color: '#c8956c', textAlign: 'center' }}>
-                Space = next bucket &nbsp;|&nbsp; Shift+Space = previous
+                Type a bucket # in the input to jump &nbsp;|&nbsp; All other shortcuts disabled while open
               </div>
             </div>
           </div>
