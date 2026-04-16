@@ -7534,10 +7534,38 @@ const BibleApp = () => {
                     value={cursiveInput}
                     onChange={(e) => {
                       const v = e.target.value;
+                      const matches = v.match(/\d+/g);
+                      if (matches && matches.length > 0) {
+                        const n = parseInt(matches[matches.length - 1], 10);
+                        if (!isNaN(n) && n >= 1 && n <= buckets.length) {
+                          e.target.value = '';
+                          setCursiveInput('');
+                          goToBucket(n - 1);
+                          return;
+                        }
+                      }
                       setCursiveInput(v);
-                      const n = parseInt(v, 10);
-                      if (!isNaN(n) && n >= 1 && n <= buckets.length) {
-                        goToBucket(n - 1);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const matches = cursiveInput.match(/\d+/g);
+                        if (matches && matches.length > 0) {
+                          const n = parseInt(matches[matches.length - 1], 10);
+                          if (!isNaN(n) && n >= 1 && n <= buckets.length) {
+                            goToBucket(n - 1);
+                          }
+                        }
+                        setCursiveInput('');
+                      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Home' || e.key === 'End') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const scroll = document.querySelector('.cursive-output-scroll');
+                        if (scroll) {
+                          const toTop = e.key === 'ArrowUp' || e.key === 'Home';
+                          scroll.scrollTo({ top: toTop ? 0 : scroll.scrollHeight, behavior: 'smooth' });
+                        }
                       }
                     }}
                     placeholder={`Type 1–${buckets.length || 1} to jump`}
