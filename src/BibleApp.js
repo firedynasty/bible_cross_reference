@@ -1449,6 +1449,7 @@ const BibleApp = () => {
   const [cursiveSize, setCursiveSize] = useState(() => parseInt(localStorage.getItem('cursive-size') ?? '52'));
   const [cursiveScrollLevel, setCursiveScrollLevel] = useState(() => parseInt(localStorage.getItem('cursive-scroll') ?? '0'));
   const [cursiveInput, setCursiveInput] = useState('');
+  const [cursiveClipboardBuckets, setCursiveClipboardBuckets] = useState(null);
   const [showQuiz2Modal, setShowQuiz2Modal] = useState(false);
   const [quiz2BucketIndex, setQuiz2BucketIndex] = useState(0);
   const [quiz2Input, setQuiz2Input] = useState('');
@@ -7419,23 +7420,72 @@ const BibleApp = () => {
             p2Verses = bk.chapters[p2Chapter - 1];
           }
         }
-        const buckets = [];
-        for (let i = 0; i < p2Verses.length; i += LINES_PER_BUCKET) {
-          buckets.push(p2Verses.slice(i, i + LINES_PER_BUCKET));
+        const isClipboardMode = Array.isArray(cursiveClipboardBuckets) && cursiveClipboardBuckets.length > 0;
+        let buckets = [];
+        let bucketLabels = [];
+        if (isClipboardMode) {
+          buckets = cursiveClipboardBuckets;
+          bucketLabels = buckets.map((t, idx) => {
+            const preview = t.slice(0, 32).replace(/\s+/g, ' ').trim();
+            return `${idx + 1}. ${preview}${t.length > 32 ? '…' : ''} (${t.length} ch)`;
+          });
+        } else {
+          const verseBuckets = [];
+          for (let i = 0; i < p2Verses.length; i += LINES_PER_BUCKET) {
+            verseBuckets.push(p2Verses.slice(i, i + LINES_PER_BUCKET));
+          }
+          buckets = verseBuckets.map((bucket, idx) => bucket.map((verse, i) => {
+            const verseNum = idx * LINES_PER_BUCKET + i + 1;
+            const text = typeof verse === 'string' ? verse : (verse.text || verse.verse || String(verse));
+            return `${verseNum}. ${text}`;
+          }).join(' '));
+          bucketLabels = verseBuckets.map((bucket, idx) => {
+            const firstV = idx * LINES_PER_BUCKET + 1;
+            const lastV = idx * LINES_PER_BUCKET + bucket.length;
+            return `${idx + 1}. Verses ${firstV}–${lastV}`;
+          });
         }
         const clampedIdx = Math.min(cursiveBucketIndex, Math.max(0, buckets.length - 1));
         if (clampedIdx !== cursiveBucketIndex) setCursiveBucketIndex(clampedIdx);
-        const currentBucket = buckets[clampedIdx] || [];
-
-        // Build text from current bucket
-        const bucketText = currentBucket.map((verse, i) => {
-          const verseNum = clampedIdx * LINES_PER_BUCKET + i + 1;
-          const text = typeof verse === 'string' ? verse : (verse.text || verse.verse || String(verse));
-          return `${verseNum}. ${text}`;
-        }).join(' ');
+        const bucketText = buckets[clampedIdx] || '';
 
         const fadeMs = [700, 500, 350, 220, 120][cursiveSpeed - 1];
         const delayMs = [600, 420, 280, 170, 90][cursiveSpeed - 1];
+
+        const doPaste = async () => {
+          try {
+            const raw = await navigator.clipboard.readText();
+            const clean = (raw || '').replace(/\s+/g, ' ').trim();
+            if (!clean) { alert('Clipboard is empty.'); return; }
+            const MAX = 500;
+            const out = [];
+            let i = 0;
+            while (i < clean.length) {
+              if (clean.length - i <= MAX) { out.push(clean.slice(i).trim()); break; }
+              let end = i + MAX;
+              const slice = clean.slice(i, end);
+              const sentEnd = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('! '), slice.lastIndexOf('? '));
+              if (sentEnd > MAX / 2) {
+                end = i + sentEnd + 1;
+              } else {
+                const sp = clean.lastIndexOf(' ', end);
+                if (sp > i + MAX / 2) end = sp;
+              }
+              out.push(clean.slice(i, end).trim());
+              i = end;
+            }
+            setCursiveClipboardBuckets(out);
+            setCursiveBucketIndex(0);
+            if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
+            if (window._cursiveScrollTimer) { clearInterval(window._cursiveScrollTimer); window._cursiveScrollTimer = null; }
+            const outputText = document.querySelector('.cursive-output-text');
+            const outputScroll = document.querySelector('.cursive-output-scroll');
+            if (outputText) outputText.innerHTML = '';
+            if (outputScroll) outputScroll.scrollTop = 0;
+          } catch (err) {
+            alert('Could not read clipboard: ' + (err?.message || err));
+          }
+        };
 
         const goToBucket = (newIdx) => {
           if (newIdx < 0 || newIdx >= buckets.length) return;
@@ -7474,7 +7524,7 @@ const BibleApp = () => {
               >&times;</button>
 
               <h2 style={{ fontFamily: "'Alex Brush', cursive", fontSize: '2.2rem', color: '#8b4513', textAlign: 'center', margin: '0 0 2px', letterSpacing: '0.02em' }}>
-                {p2BookName} {p2Chapter} — Cursive
+                {isClipboardMode ? 'Clipboard' : `${p2BookName} ${p2Chapter}`} — Cursive
               </h2>
               <p style={{ fontSize: '0.82rem', fontStyle: 'italic', color: '#c8956c', letterSpacing: '0.12em', textAlign: 'center', margin: '0 0 12px' }}>
                 animate your verses in ink
@@ -7507,11 +7557,9 @@ const BibleApp = () => {
                       onChange={(e) => goToBucket(parseInt(e.target.value))}
                       style={{ flex: 1, padding: 6, border: '1px solid #c9b99a', borderRadius: 2, background: 'rgba(255,255,255,0.7)', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, color: '#1a1209' }}
                     >
-                      {buckets.map((bucket, idx) => {
-                        const firstV = idx * LINES_PER_BUCKET + 1;
-                        const lastV = idx * LINES_PER_BUCKET + bucket.length;
-                        return <option key={idx} value={idx}>{idx + 1}. Verses {firstV}–{lastV}</option>;
-                      })}
+                      {bucketLabels.map((label, idx) => (
+                        <option key={idx} value={idx}>{label}</option>
+                      ))}
                     </select>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                       <button
@@ -7558,6 +7606,10 @@ const BibleApp = () => {
                           }
                         }
                         setCursiveInput('');
+                      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        goToBucket(cursiveBucketIndex + (e.key === 'ArrowRight' ? 1 : -1));
                       } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Home' || e.key === 'End') {
                         e.preventDefault();
                         e.stopPropagation();
@@ -7653,25 +7705,34 @@ const BibleApp = () => {
                   </button>
                   <button
                     onClick={() => {
+                      if (isClipboardMode) { doPaste(); return; }
                       if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
                       if (window._cursiveScrollTimer) { clearInterval(window._cursiveScrollTimer); window._cursiveScrollTimer = null; }
                     }}
+                    title={isClipboardMode ? 'Re-read clipboard into buckets' : 'Stop animation'}
                     style={{ padding: '6px 12px', border: '1.5px solid #8b4513', borderRadius: 2, background: 'transparent', color: '#8b4513', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '0.9rem', letterSpacing: '0.1em', cursor: 'pointer' }}
                   >
-                    Stop
+                    {isClipboardMode ? 'Repaste' : 'Stop'}
                   </button>
                   <button
                     onClick={() => {
-                      if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-                      if (window._cursiveScrollTimer) { clearInterval(window._cursiveScrollTimer); window._cursiveScrollTimer = null; }
-                      const outputText = document.querySelector('.cursive-output-text');
-                      const outputScroll = document.querySelector('.cursive-output-scroll');
-                      if (outputText) outputText.innerHTML = '';
-                      if (outputScroll) outputScroll.scrollTop = 0;
+                      if (isClipboardMode) {
+                        setCursiveClipboardBuckets(null);
+                        setCursiveBucketIndex(0);
+                        if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
+                        if (window._cursiveScrollTimer) { clearInterval(window._cursiveScrollTimer); window._cursiveScrollTimer = null; }
+                        const outputText = document.querySelector('.cursive-output-text');
+                        const outputScroll = document.querySelector('.cursive-output-scroll');
+                        if (outputText) outputText.innerHTML = '';
+                        if (outputScroll) outputScroll.scrollTop = 0;
+                      } else {
+                        doPaste();
+                      }
                     }}
-                    style={{ padding: '6px 12px', border: '1.5px solid #8b4513', borderRadius: 2, background: 'transparent', color: '#8b4513', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '0.9rem', letterSpacing: '0.1em', cursor: 'pointer' }}
+                    style={{ padding: '6px 12px', border: '1.5px solid #8b4513', borderRadius: 2, background: isClipboardMode ? '#8b4513' : 'transparent', color: isClipboardMode ? '#f5f0e8' : '#8b4513', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '0.9rem', letterSpacing: '0.1em', cursor: 'pointer' }}
+                    title={isClipboardMode ? 'Return to chapter verses' : 'Paste clipboard, split into 500-char buckets'}
                   >
-                    Clear
+                    {isClipboardMode ? 'Unpaste' : 'Paste'}
                   </button>
                 </div>
               </div>
