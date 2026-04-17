@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { Book, Link, ChevronRight, History, BookOpen, Save, Database, Download } from 'lucide-react';
 import TextToSpeech from './components/TextToSpeech';
+import FurtherReadingModal from './components/FurtherReadingModal';
 import { getStorytimeAudioUrl } from './data/storytimeAudio';
 
 // Import Firebase modules
@@ -1176,6 +1177,7 @@ const BibleApp = () => {
   const [selectedBook, setSelectedBook] = useState(null);
   const [selectedChapter, setSelectedChapter] = useState(1);
   const [showBookDropdown, setShowBookDropdown] = useState(false);
+  const [showFiguresModal, setShowFiguresModal] = useState(false);
   const [pendingBookSelection, setPendingBookSelection] = useState(null);
   const pendingBookRef = useRef(null);
   const [crossReferences, setCrossReferences] = useState({});
@@ -5156,6 +5158,14 @@ const BibleApp = () => {
                   Math
                 </a>
 
+                <button
+                  onClick={() => setShowFiguresModal(true)}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-teal-500 text-white hover:bg-teal-600 font-semibold inline-block"
+                  title="Figures"
+                >
+                  Figures
+                </button>
+
                 {/* Fill-in-the-Blank Quiz Button - moved to TextToSpeech after QA */}
 
                 {/* Study Questions Button - moved to TextToSpeech after Lower */}
@@ -8394,6 +8404,8 @@ const BibleApp = () => {
           </div>
         );
       })()}
+
+      <FurtherReadingModal open={showFiguresModal} onClose={() => setShowFiguresModal(false)} />
 
     </div>
   );
