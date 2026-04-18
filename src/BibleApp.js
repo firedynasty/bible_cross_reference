@@ -1452,6 +1452,8 @@ const BibleApp = () => {
   const [cursiveScrollLevel, setCursiveScrollLevel] = useState(() => parseInt(localStorage.getItem('cursive-scroll') ?? '0'));
   const [cursiveInput, setCursiveInput] = useState('');
   const [cursiveClipboardBuckets, setCursiveClipboardBuckets] = useState(null);
+  const cursiveGoToBucketRef = useRef(null);
+  const cursiveBucketIndexRef = useRef(0);
   const [showQuiz2Modal, setShowQuiz2Modal] = useState(false);
   const [quiz2BucketIndex, setQuiz2BucketIndex] = useState(0);
   const [quiz2Input, setQuiz2Input] = useState('');
@@ -2745,8 +2747,19 @@ const BibleApp = () => {
     const isManuallyScrollingRef = isManuallyScrolling;
 
     const handleKeyDown = (e) => {
-      // Cursive modal: disable ALL global keyboard shortcuts so user can type freely
-      if (showCursiveModal) return;
+      // Cursive modal: Escape restarts, ArrowRight/Left navigates buckets; all other shortcuts disabled
+      if (showCursiveModal) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          const writeBtn = document.querySelector('.cursive-write-btn');
+          if (writeBtn) writeBtn.click();
+        } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const delta = e.key === 'ArrowRight' ? 1 : -1;
+          if (cursiveGoToBucketRef.current) cursiveGoToBucketRef.current(cursiveBucketIndexRef.current + delta);
+        }
+        return;
+      }
       // Buckets modal: spacebar = next bucket, shift+space = previous bucket
       if (showBucketsModal && e.key === ' ') {
         e.preventDefault();
@@ -7521,6 +7534,8 @@ const BibleApp = () => {
             if (writeBtn) writeBtn.click();
           }, 500);
         };
+        cursiveGoToBucketRef.current = goToBucket;
+        cursiveBucketIndexRef.current = clampedIdx;
 
         return (
           <div
@@ -7581,20 +7596,13 @@ const BibleApp = () => {
                         <option key={idx} value={idx}>{label}</option>
                       ))}
                     </select>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <button
-                        onClick={() => goToBucket(cursiveBucketIndex - 1)}
-                        disabled={cursiveBucketIndex <= 0}
-                        title="Previous bucket"
-                        style={{ padding: '0 8px', border: '1px solid #c9b99a', borderRadius: 2, background: cursiveBucketIndex <= 0 ? 'rgba(255,255,255,0.3)' : '#8b4513', color: cursiveBucketIndex <= 0 ? '#c9b99a' : '#f5f0e8', fontSize: 12, lineHeight: 1, cursor: cursiveBucketIndex <= 0 ? 'not-allowed' : 'pointer', flex: 1 }}
-                      >▲</button>
+                    {cursiveBucketIndex < buckets.length - 1 && (
                       <button
                         onClick={() => goToBucket(cursiveBucketIndex + 1)}
-                        disabled={cursiveBucketIndex >= buckets.length - 1}
                         title="Next bucket"
-                        style={{ padding: '0 8px', border: '1px solid #c9b99a', borderRadius: 2, background: cursiveBucketIndex >= buckets.length - 1 ? 'rgba(255,255,255,0.3)' : '#8b4513', color: cursiveBucketIndex >= buckets.length - 1 ? '#c9b99a' : '#f5f0e8', fontSize: 12, lineHeight: 1, cursor: cursiveBucketIndex >= buckets.length - 1 ? 'not-allowed' : 'pointer', flex: 1 }}
+                        style={{ padding: '0 8px', border: '1px solid #c9b99a', borderRadius: 2, background: '#8b4513', color: '#f5f0e8', fontSize: 12, lineHeight: 1, cursor: 'pointer' }}
                       >▼</button>
-                    </div>
+                    )}
                   </div>
                   <input
                     type="text"
@@ -7615,7 +7623,11 @@ const BibleApp = () => {
                       setCursiveInput(v);
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === 'Escape') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // handled by global keydown; stopPropagation prevents double-fire
+                      } else if (e.key === 'Enter') {
                         e.preventDefault();
                         e.stopPropagation();
                         const matches = cursiveInput.match(/\d+/g);
@@ -7626,10 +7638,6 @@ const BibleApp = () => {
                           }
                         }
                         setCursiveInput('');
-                      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        goToBucket(cursiveBucketIndex + (e.key === 'ArrowRight' ? 1 : -1));
                       } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Home' || e.key === 'End') {
                         e.preventDefault();
                         e.stopPropagation();
