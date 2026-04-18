@@ -1450,7 +1450,7 @@ const BibleApp = () => {
   const [cursiveBucketIndex, setCursiveBucketIndex] = useState(0);
   const [cursiveSpeed, setCursiveSpeed] = useState(() => parseInt(localStorage.getItem('cursive-speed') ?? '3'));
   const [cursiveSize, setCursiveSize] = useState(() => parseInt(localStorage.getItem('cursive-size') ?? '52'));
-  const [cursiveScrollLevel, setCursiveScrollLevel] = useState(() => parseInt(localStorage.getItem('cursive-scroll') ?? '0'));
+  const [cursiveReveal, setCursiveReveal] = useState(() => parseInt(localStorage.getItem('cursive-reveal') ?? '0'));
   const [cursiveInput, setCursiveInput] = useState('');
   const [cursiveClipboardBuckets, setCursiveClipboardBuckets] = useState(null);
   const cursiveGoToBucketRef = useRef(null);
@@ -2758,6 +2758,10 @@ const BibleApp = () => {
           e.preventDefault();
           const delta = e.key === 'ArrowRight' ? 1 : -1;
           if (cursiveGoToBucketRef.current) cursiveGoToBucketRef.current(cursiveBucketIndexRef.current + delta);
+        } else if (e.key === ' ') {
+          e.preventDefault();
+          const outputScroll = document.querySelector('.cursive-output-scroll');
+          if (outputScroll) outputScroll.scrollTop = outputScroll.scrollHeight;
         }
         return;
       }
@@ -7546,7 +7550,7 @@ const BibleApp = () => {
             setCursiveClipboardBuckets(out);
             setCursiveBucketIndex(0);
             if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-            if (window._cursiveScrollTimer) { clearInterval(window._cursiveScrollTimer); window._cursiveScrollTimer = null; }
+
             const outputText = document.querySelector('.cursive-output-text');
             const outputScroll = document.querySelector('.cursive-output-scroll');
             if (outputText) outputText.innerHTML = '';
@@ -7560,7 +7564,6 @@ const BibleApp = () => {
           if (newIdx < 0 || newIdx >= buckets.length) return;
           setCursiveBucketIndex(newIdx);
           if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-          if (window._cursiveScrollTimer) { clearInterval(window._cursiveScrollTimer); window._cursiveScrollTimer = null; }
           const outputText = document.querySelector('.cursive-output-text');
           const outputScroll = document.querySelector('.cursive-output-scroll');
           if (outputText) outputText.innerHTML = '';
@@ -7709,10 +7712,10 @@ const BibleApp = () => {
                   </div>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c8956c' }}>
-                      <span>Scroll</span><span>{cursiveScrollLevel}</span>
+                      <span>Reveal</span><span>{cursiveReveal}%</span>
                     </div>
-                    <input type="range" min="0" max="5" value={cursiveScrollLevel}
-                      onChange={(e) => { const v = parseInt(e.target.value); setCursiveScrollLevel(v); localStorage.setItem('cursive-scroll', v); }}
+                    <input type="range" min="0" max="100" value={cursiveReveal}
+                      onChange={(e) => { const v = parseInt(e.target.value); setCursiveReveal(v); localStorage.setItem('cursive-reveal', v); }}
                       style={{ width: '100%', accentColor: '#8b4513', cursor: 'pointer' }} />
                   </div>
                 </div>
@@ -7728,33 +7731,31 @@ const BibleApp = () => {
 
                       // Stop any existing animation
                       if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-                      if (window._cursiveScrollTimer) { clearInterval(window._cursiveScrollTimer); window._cursiveScrollTimer = null; }
+          
                       outputText.innerHTML = '';
                       if (outputScroll) outputScroll.scrollTop = 0;
 
                       outputText.style.fontSize = cursiveSize + 'px';
                       const words = bucketText.split(/\s+/).filter(Boolean);
+                      const revealCount = Math.floor(words.length * cursiveReveal / 100);
                       const spans = words.map((word, i) => {
                         const sp = document.createElement('span');
-                        sp.style.cssText = `display:inline;opacity:0;transition:opacity ${fadeMs}ms ease`;
+                        sp.style.cssText = i < revealCount
+                          ? `display:inline;opacity:1`
+                          : `display:inline;opacity:0;transition:opacity ${fadeMs}ms ease`;
                         sp.textContent = i < words.length - 1 ? word + ' ' : word;
                         outputText.appendChild(sp);
                         return sp;
                       });
 
-                      // Start auto-scroll if level > 0
-                      if (cursiveScrollLevel > 0) {
-                        const px = [20, 40, 70, 110, 160][cursiveScrollLevel - 1];
-                        window._cursiveScrollTimer = setInterval(() => {
-                          if (outputScroll) outputScroll.scrollBy({ top: px, behavior: 'smooth' });
-                        }, 1000);
-                      }
+                      // If fully revealed, no animation needed
+                      if (revealCount >= words.length) return;
 
-                      let i = 0;
+                      let i = revealCount;
                       function next() {
                         if (i >= spans.length) { window._cursiveTimer = null; return; }
                         spans[i].style.opacity = '1';
-                        if (outputScroll && cursiveScrollLevel === 0) {
+                        if (outputScroll) {
                           const nearBottom = outputScroll.scrollHeight - outputScroll.scrollTop - outputScroll.clientHeight < 80;
                           if (nearBottom) outputScroll.scrollTop = outputScroll.scrollHeight;
                         }
@@ -7771,7 +7772,7 @@ const BibleApp = () => {
                     onClick={() => {
                       if (isClipboardMode) { doPaste(); return; }
                       if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-                      if (window._cursiveScrollTimer) { clearInterval(window._cursiveScrollTimer); window._cursiveScrollTimer = null; }
+          
                     }}
                     title={isClipboardMode ? 'Re-read clipboard into buckets' : 'Stop animation'}
                     style={{ padding: '6px 12px', border: '1.5px solid #8b4513', borderRadius: 2, background: 'transparent', color: '#8b4513', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '0.9rem', letterSpacing: '0.1em', cursor: 'pointer' }}
@@ -7784,7 +7785,7 @@ const BibleApp = () => {
                         setCursiveClipboardBuckets(null);
                         setCursiveBucketIndex(0);
                         if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-                        if (window._cursiveScrollTimer) { clearInterval(window._cursiveScrollTimer); window._cursiveScrollTimer = null; }
+            
                         const outputText = document.querySelector('.cursive-output-text');
                         const outputScroll = document.querySelector('.cursive-output-scroll');
                         if (outputText) outputText.innerHTML = '';
