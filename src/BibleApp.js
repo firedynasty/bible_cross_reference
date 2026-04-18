@@ -5182,6 +5182,39 @@ const BibleApp = () => {
                   Figures
                 </button>
 
+                <button
+                  onClick={() => {
+                    const effectivePane2Chapter = pane2Chapter || selectedChapter;
+                    const effectivePane2Abbrev = pane2Book ? pane2Book.abbrev : selectedBook?.abbrev;
+                    let verses = [];
+                    if (nltPsalmsData && effectivePane2Abbrev === 'ps') {
+                      const nltBook = nltPsalmsData.find(b => b.abbrev === 'ps');
+                      if (nltBook && nltBook.chapters[effectivePane2Chapter - 1]) {
+                        verses = nltBook.chapters[effectivePane2Chapter - 1];
+                      }
+                    }
+                    if (!verses.length && rightPaneBibleData) {
+                      let bookAbbrev = effectivePane2Abbrev;
+                      if (bookAbbrev && selectedTranslation.includes('he_heb')) {
+                        bookAbbrev = getKjvBookAbbrev(bookAbbrev);
+                      }
+                      const rightPaneBook = rightPaneBibleData.find(b => b.abbrev === bookAbbrev);
+                      if (rightPaneBook && rightPaneBook.chapters[effectivePane2Chapter - 1]) {
+                        verses = rightPaneBook.chapters[effectivePane2Chapter - 1];
+                      }
+                    }
+                    const bookName = pane2Book ? getBookName(pane2Book.abbrev) : (selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : '');
+                    const translationLabel = nltPsalmsData && effectivePane2Abbrev === 'ps' ? 'NLT' : getTranslationShortName(rightPaneTranslation);
+                    const header = `${bookName} ${effectivePane2Chapter} (${translationLabel})`;
+                    const text = header + '\n\n' + verses.map((v, i) => `${i + 1} ${v}`).join('\n');
+                    navigator.clipboard.writeText(text);
+                  }}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold inline-block"
+                  title="Copy pane 2 text to clipboard"
+                >
+                  Copy Pane 2
+                </button>
+
                 {/* Fill-in-the-Blank Quiz Button - moved to TextToSpeech after QA */}
 
                 {/* Study Questions Button - moved to TextToSpeech after Lower */}
