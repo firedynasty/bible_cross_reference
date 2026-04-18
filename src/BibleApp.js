@@ -1360,6 +1360,7 @@ const BibleApp = () => {
     { id: 'he_heb_nikkud.json', name: 'Hebrew - With Nikkud (Vowel Points)' },
     { id: 'he_heb_strong.json', name: 'Hebrew - With Strong\'s Numbers' },
     { id: 'fr_apee.json', name: 'French - APEE' },
+    { id: 'en_rhyme.json', name: 'English - Bible Rhyme' },
   ], []);
   
   // Store current position for translation changes
@@ -4590,7 +4591,8 @@ const BibleApp = () => {
       'ko_ko.json': 'KO',
       'he_heb_no_strong.json': 'HEB',
       'he_heb_strong.json': 'HEB-Strong',
-      'he_heb_nikkud.json': 'HEB-Nikkud'
+      'he_heb_nikkud.json': 'HEB-Nikkud',
+      'en_rhyme.json': 'Rhyme'
     };
     
     return translationMap[translationId] || translationId.split('_')[1].split('.')[0].toUpperCase();
@@ -5003,6 +5005,7 @@ const BibleApp = () => {
                     if (id.includes('rvr')) return 'rvr';
                     if (id.includes('he_heb')) return 'heb';
                     if (id.includes('apee')) return 'apee';
+                    if (id.includes('rhyme')) return 'rhyme';
                     return id.split('_')[1] || id;
                   };
                   const cyclePane1 = () => {
