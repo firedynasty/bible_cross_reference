@@ -7649,6 +7649,10 @@ const BibleApp = () => {
                     value={cursiveInput}
                     onChange={(e) => {
                       const v = e.target.value;
+                      if (v.includes(',')) {
+                        setCursiveInput(v);
+                        return;
+                      }
                       const matches = v.match(/\d+/g);
                       if (matches && matches.length > 0) {
                         const n = parseInt(matches[matches.length - 1], 10);
@@ -7669,6 +7673,17 @@ const BibleApp = () => {
                       } else if (e.key === 'Enter') {
                         e.preventDefault();
                         e.stopPropagation();
+                        if (cursiveInput.includes(',')) {
+                          const nums = cursiveInput.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= buckets.length);
+                          if (nums.length > 0) {
+                            const combined = nums.map(n => buckets[n - 1]).join('\n\n');
+                            navigator.clipboard.writeText(combined).then(() => {
+                              setCursiveInput('Copied ' + nums.join(',') + '!');
+                              setTimeout(() => setCursiveInput(''), 1200);
+                            });
+                            return;
+                          }
+                        }
                         const matches = cursiveInput.match(/\d+/g);
                         if (matches && matches.length > 0) {
                           const n = parseInt(matches[matches.length - 1], 10);
@@ -7803,7 +7818,7 @@ const BibleApp = () => {
               </div>
 
               <div style={{ marginTop: 8, fontSize: 11, color: '#c8956c', textAlign: 'center' }}>
-                Type a bucket # in the input to jump &nbsp;|&nbsp; All other shortcuts disabled while open
+                Type a bucket # to jump &nbsp;|&nbsp; Type 1,2,3 + Enter to copy those buckets (add a comma first) &nbsp;|&nbsp; Spacebar scrolls to bottom
               </div>
             </div>
           </div>
