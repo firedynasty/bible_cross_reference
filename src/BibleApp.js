@@ -1432,6 +1432,7 @@ const BibleApp = () => {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [searchLastInfo, setSearchLastInfo] = useState('');
 
   // State for Fill-in-the-Blank Quiz Modal
   const [showQuizModal, setShowQuizModal] = useState(false);
@@ -5124,9 +5125,9 @@ const BibleApp = () => {
 
                 {/* Book Search Button */}
                 <button
-                  onClick={() => { setShowSearchModal(true); setSearchKeyword(''); setSearchResults([]); }}
+                  onClick={() => { setShowSearchModal(true); }}
                   className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-teal-500 text-white hover:bg-teal-600 font-semibold"
-                  title="Search current book"
+                  title="Search next 30 chapters"
                 >
                   Srch
                 </button>
@@ -5547,6 +5548,13 @@ const BibleApp = () => {
                 // Swipe left: go to pane 2
                 setShowKJVOnMobile(true);
                 localStorage.setItem('mobilePanePreference', 'pane2');
+              } else if (dx < 0 && showKJVOnMobile) {
+                // Swipe left while already on pane 2: go to next chapter
+                const nextChapterButtons = Array.from(document.querySelectorAll('button'))
+                  .filter(button => button.textContent.includes('Next Chapter'));
+                if (nextChapterButtons.length > 0) {
+                  nextChapterButtons[0].click();
+                }
               } else if (dx > 0 && showKJVOnMobile) {
                 // Swipe right: go to pane 1
                 setShowKJVOnMobile(false);
@@ -8364,25 +8372,48 @@ const BibleApp = () => {
         );
       })()}
 
-      {/* Book Search Modal */}
+      {/* Book Search Modal - searches next 30 chapters across books */}
       {showSearchModal && (() => {
         const bookName = selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : 'Book';
         const handleSearch = (keyword) => {
-          if (!keyword.trim() || !selectedBook || !selectedBook.chapters) {
+          if (!keyword.trim() || !selectedBook || !bibleData) {
             setSearchResults([]);
             return;
           }
           const kw = keyword.toLowerCase();
           const results = [];
-          selectedBook.chapters.forEach((verses, chIdx) => {
-            if (!verses) return;
-            verses.forEach((text, vIdx) => {
-              if (text.toLowerCase().includes(kw)) {
-                results.push({ chapter: chIdx + 1, verse: vIdx + 1, text });
-              }
-            });
-          });
+          const currentBookIdx = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
+          if (currentBookIdx === -1) return;
+          const startChapter = selectedChapter || 1;
+          let chaptersSearched = 0;
+          const maxChapters = 30;
+          let lastSearchedBook = '';
+          let lastSearchedChapter = 0;
+          for (let bookIdx = currentBookIdx; bookIdx < bibleData.length && chaptersSearched < maxChapters; bookIdx++) {
+            const book = bibleData[bookIdx];
+            if (!book.chapters) continue;
+            const chStart = (bookIdx === currentBookIdx) ? startChapter - 1 : 0;
+            for (let chIdx = chStart; chIdx < book.chapters.length && chaptersSearched < maxChapters; chIdx++) {
+              chaptersSearched++;
+              lastSearchedBook = book.book || getBookName(book.abbrev);
+              lastSearchedChapter = chIdx + 1;
+              const verses = book.chapters[chIdx];
+              if (!verses) continue;
+              verses.forEach((text, vIdx) => {
+                if (text.toLowerCase().includes(kw)) {
+                  results.push({
+                    bookAbbrev: book.abbrev,
+                    bookName: book.book || getBookName(book.abbrev),
+                    chapter: chIdx + 1,
+                    verse: vIdx + 1,
+                    text
+                  });
+                }
+              });
+            }
+          }
           setSearchResults(results);
+          setSearchLastInfo(chaptersSearched > 0 ? `Searched ${chaptersSearched} ch, ending at ${lastSearchedBook} ${lastSearchedChapter}` : '');
         };
         return (
           <div
@@ -8391,7 +8422,7 @@ const BibleApp = () => {
           >
             <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
               <h3 style={{ margin: '0 0 12px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
-                Search {bookName}
+                Search next 30 chapters from {bookName} {selectedChapter}
               </h3>
               <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchKeyword); }} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                 <input
@@ -8415,6 +8446,11 @@ const BibleApp = () => {
                   Search
                 </button>
               </form>
+              {searchLastInfo && (
+                <p style={{ fontSize: 11, color: isDarkMode ? '#7dd3fc' : '#0369a1', marginBottom: 8, textAlign: 'center', fontStyle: 'italic' }}>
+                  {searchLastInfo}
+                </p>
+              )}
               <div style={{ overflowY: 'auto', flex: 1 }}>
                 {searchResults.length > 0 ? (
                   <>
@@ -8427,10 +8463,22 @@ const BibleApp = () => {
                       const before = r.text.slice(0, idx);
                       const match = r.text.slice(idx, idx + searchKeyword.length);
                       const after = r.text.slice(idx + searchKeyword.length);
+                      const isSameBook = r.bookAbbrev === selectedBook?.abbrev;
                       return (
                         <button
                           key={i}
-                          onClick={() => { handleChapterSelect(r.chapter); setShowSearchModal(false); }}
+                          onClick={() => {
+                            if (isSameBook) {
+                              handleChapterSelect(r.chapter);
+                            } else {
+                              const targetBook = bibleData.find(b => b.abbrev === r.bookAbbrev);
+                              if (targetBook) {
+                                setSelectedBook(targetBook);
+                                setSelectedChapter(r.chapter);
+                              }
+                            }
+                            setShowSearchModal(false);
+                          }}
                           style={{
                             display: 'block', width: '100%', padding: '10px 12px', marginBottom: 6, fontSize: 13,
                             border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, cursor: 'pointer',
@@ -8441,6 +8489,7 @@ const BibleApp = () => {
                           onMouseLeave={(e) => e.target.style.background = isDarkMode ? '#1e1e1e' : '#fafafa'}
                         >
                           <span style={{ fontWeight: 700, color: isDarkMode ? '#5eead4' : '#0d9488', marginRight: 8 }}>
+                            {!isSameBook && <span style={{ color: isDarkMode ? '#fbbf24' : '#b45309' }}>{r.bookName} </span>}
                             {r.chapter}:{r.verse}
                           </span>
                           <span>{before}<strong style={{ background: isDarkMode ? '#365314' : '#fef08a', padding: '0 2px', borderRadius: 2 }}>{match}</strong>{after}</span>
