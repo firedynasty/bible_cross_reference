@@ -525,6 +525,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   // Speak the selected verse - now with multilingual support
   const speakVerse = useCallback((verseNumber = selectedVerse) => {
     console.log('speakVerse called with verse:', verseNumber);
+    console.log('📖 TTS reading from book:', currentBook, '| chapter:', currentChapter, '| translation:', rightPaneTranslation);
     console.log('verses available:', verses.length);
     console.log('isSpeaking:', isSpeaking);
     
@@ -775,11 +776,31 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     };
 
     window.addEventListener('readCurrentVerse', handleReadCurrentVerse);
-    
+
     return () => {
       window.removeEventListener('readCurrentVerse', handleReadCurrentVerse);
     };
   }, [isSpeaking, speakVerse]);
+
+  // Listen for readFullChapter event - starts from verse 1, reads to end
+  useEffect(() => {
+    const handleReadFullChapter = () => {
+      if (isSpeaking) {
+        // If already speaking, stop
+        stopSpeaking();
+        setReadToEnd(false);
+      } else {
+        // Start from verse 1, enable readToEnd
+        setSelectedVerse(1);
+        setReadToEnd(true);
+        setDelayRead(false);
+        setTimeout(() => speakVerse(1), 100);
+      }
+    };
+
+    window.addEventListener('readFullChapter', handleReadFullChapter);
+    return () => window.removeEventListener('readFullChapter', handleReadFullChapter);
+  }, [isSpeaking, speakVerse, stopSpeaking]);
 
   // Function to speak book and chapter
   const speakBookAndChapter = useCallback((book, chapter) => {
@@ -1192,7 +1213,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       <div className="relative">
         <button
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="hidden px-2 py-0.5 rounded focus:outline-none bg-purple-100 text-purple-700 hover:bg-purple-200 flex items-center text-xs"
+          className="hidden"
           title={`Select verse to read in ${currentLanguageInfo.name}`}
         >
           Verse {selectedVerse}
@@ -1228,11 +1249,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       <button
         onClick={scrollToNextVerse}
         disabled={selectedVerse >= maxVerses}
-        className={`hidden px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
-          selectedVerse >= maxVerses
-            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            : 'bg-green-100 text-green-700 hover:bg-green-200'
-        }`}
+        className="hidden"
         title="Scroll to next verse"
       >
         <ChevronRight className="w-3 h-3 mr-1" />
@@ -1251,26 +1268,18 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
             speakVerse();
           }
         }}
-        className={`hidden px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
-          isSpeaking
-            ? 'bg-red-100 text-red-700 hover:bg-red-200'
-            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-        }`}
+        className="hidden"
         title={isSpeaking ? "Stop reading" : `Read 5 verses continuously in ${currentLanguageInfo.name}`}
       >
         <Play className="w-3 h-3 mr-1" />
-        {isSpeaking ? 'Stop' : 'Read(continuous)'}
+        {isSpeaking ? 'Stop' : 'Read'}
       </button>
 
       {/* Next Verse Button - Hidden */}
       <button
         onClick={nextVerseAndRead}
         disabled={selectedVerse >= maxVerses || isSpeaking}
-        className={`hidden px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
-          selectedVerse >= maxVerses || isSpeaking
-            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            : 'bg-green-100 text-green-700 hover:bg-green-200'
-        }`}
+        className="hidden"
         title="Move to next verse and read it"
       >
         <SkipForward className="w-3 h-3 mr-1" />
@@ -1280,11 +1289,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       {/* Repeat Current Verse Button */}
       <button
         onClick={repeatCurrentVerse}
-        className={`hidden px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
-          isSpeaking
-            ? 'bg-red-100 text-red-700 hover:bg-red-200'
-            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-        }`}
+        className="hidden"
         title={isSpeaking ? "Stop reading" : `Repeat selected verse in ${currentLanguageInfo.name}`}
       >
         <Play className="w-3 h-3 mr-1" />
@@ -1345,11 +1350,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
             }
           }
         }}
-        className={`hidden px-2 py-0.5 rounded focus:outline-none flex items-center text-xs transition-colors ${
-          readToEnd 
-            ? 'bg-orange-500 text-white hover:bg-orange-600'
-            : 'bg-gray-400 text-gray-700 hover:bg-gray-500'
-        }`}
+        className="hidden"
         title={`Read to end is ${readToEnd ? 'ON' : 'OFF'} - Click to toggle or press '/' key`}
       >
         Read2End(/) {readToEnd ? 'ON' : 'OFF'}

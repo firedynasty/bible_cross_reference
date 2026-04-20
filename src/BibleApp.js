@@ -445,6 +445,8 @@ const NavigationPlaceholder = ({
   onShowVerseGrid,
   chineseBibleData,
   lastGridVerse,
+  pane2Book,
+  pane2Chapter,
   gridReadMode,
   onGridReadModeToggle,
   onNextChapter,
@@ -773,8 +775,8 @@ const NavigationPlaceholder = ({
         {/* Text to Speech Component */}
         <TextToSpeech
           rightPaneBibleData={rightPaneBibleData}
-          currentBook={book.abbrev}
-          currentChapter={chapter}
+          currentBook={pane2Book ? pane2Book.abbrev : book.abbrev}
+          currentChapter={pane2Chapter || chapter}
           rightPaneTranslation={rightPaneTranslation}
           speechVolume={speechVolume}
           translations={translations}
@@ -5052,6 +5054,15 @@ const BibleApp = () => {
                   );
                 })()}
 
+                {/* Read Full Chapter TTS Button */}
+                <button
+                  onClick={() => window.dispatchEvent(new CustomEvent('readFullChapter'))}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-500 text-white hover:bg-blue-600 font-semibold"
+                  title="Read pane 2 chapter aloud from top to bottom"
+                >
+                  Read
+                </button>
+
                 {/* Story Time Audio Play/Pause Toggle */}
                 {selectedBook && (
                   <button
@@ -5398,6 +5409,8 @@ const BibleApp = () => {
               onShowVerseGrid={() => setShowVerseGrid(true)}
               chineseBibleData={chineseBibleData}
               lastGridVerse={lastGridVerse}
+              pane2Book={pane2Book}
+              pane2Chapter={pane2Chapter}
               showStudyQModal={showStudyQModal}
               showQuizModal={showQuizModal}
               onQuiz={() => {

@@ -28,6 +28,8 @@ FILENAME_TO_BOOK = {
     "psalms90_150": "Psalms 90-150",
     "romans": "Romans",
     "solomon": "Song of Solomon",
+    "joshua": "Joshua",
+    "judges": "Judges",
 }
 
 

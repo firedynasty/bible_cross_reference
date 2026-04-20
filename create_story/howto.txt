@@ -1,0 +1,5 @@
+./run.sh 07 for the next book 
+
+then the .txt updates with the final books that are in there storytime_checklist.txt
+
+

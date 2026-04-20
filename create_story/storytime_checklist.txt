@@ -1,0 +1,84 @@
+# Story Time Generation Checklist
+# ================================
+# Mark [x] when done. ./run.sh picks the first unchecked [ ] book
+# and runs the full pipeline for it, then marks it [x].
+#
+# Pipeline per book:
+#   1. Extract MHC HTML → summarize with Anthropic (step1)
+#   2. Generate Story Time narrative with OpenAI GPT-4o (step2)
+#   3. Merge into public/storytime.json (step3)
+#
+# Usage:
+#   ./run.sh              # next unchecked book
+#   ./run.sh Joshua       # specific book
+#   ./run.sh --dry-run    # show what's next
+
+# OLD TESTAMENT
+[x] MHC01 | Genesis        | 50 ch
+[x] MHC02 | Exodus         | 40 ch
+[x] MHC03 | Leviticus      | 27 ch
+[x] MHC04 | Numbers        | 36 ch
+[x] MHC05 | Deuteronomy    | 34 ch
+[x] MHC06 | Joshua         | 24 ch
+[x] MHC07 | Judges         | 21 ch
+[x] MHC08 | Ruth           |  4 ch
+[ ] MHC09 | 1 Samuel       | 31 ch
+[ ] MHC10 | 2 Samuel       | 24 ch
+[ ] MHC11 | 1 Kings        | 22 ch
+[ ] MHC12 | 2 Kings        | 25 ch
+[ ] MHC13 | 1 Chronicles   | 29 ch
+[ ] MHC14 | 2 Chronicles   | 36 ch
+[ ] MHC15 | Ezra           | 10 ch
+[ ] MHC16 | Nehemiah       | 13 ch
+[ ] MHC17 | Esther         | 10 ch
+[x] MHC18 | Job            | 42 ch
+[x] MHC19 | Psalms         |150 ch
+[ ] MHC20 | Proverbs       | 31 ch
+[ ] MHC21 | Ecclesiastes   | 12 ch
+[ ] MHC22 | Song of Solomon|  8 ch
+[x] MHC23 | Isaiah         | 66 ch
+[ ] MHC24 | Jeremiah       | 52 ch
+[ ] MHC25 | Lamentations   |  5 ch
+[x] MHC26 | Ezekiel        | 48 ch
+[ ] MHC27 | Daniel         | 12 ch
+[ ] MHC28 | Hosea          | 14 ch
+[ ] MHC29 | Joel           |  3 ch
+[ ] MHC30 | Amos           |  9 ch
+[ ] MHC31 | Obadiah        |  1 ch
+[ ] MHC32 | Jonah          |  4 ch
+[ ] MHC33 | Micah          |  7 ch
+[ ] MHC34 | Nahum          |  3 ch
+[ ] MHC35 | Habakkuk       |  3 ch
+[ ] MHC36 | Zephaniah      |  3 ch
+[ ] MHC37 | Haggai         |  2 ch
+[ ] MHC38 | Zechariah      | 14 ch
+[ ] MHC39 | Malachi        |  4 ch
+
+# NEW TESTAMENT
+[ ] MHC40 | Matthew        | 28 ch
+[ ] MHC41 | Mark           | 16 ch
+[ ] MHC42 | Luke           | 24 ch
+[ ] MHC43 | John           | 21 ch
+[ ] MHC44 | Acts           | 28 ch
+[ ] MHC45 | Romans         | 16 ch
+[ ] MHC46 | 1 Corinthians  | 16 ch
+[ ] MHC47 | 2 Corinthians  | 13 ch
+[ ] MHC48 | Galatians      |  6 ch
+[ ] MHC49 | Ephesians      |  6 ch
+[ ] MHC50 | Philippians    |  4 ch
+[ ] MHC51 | Colossians     |  4 ch
+[ ] MHC52 | 1 Thessalonians|  5 ch
+[ ] MHC53 | 2 Thessalonians|  3 ch
+[ ] MHC54 | 1 Timothy      |  6 ch
+[ ] MHC55 | 2 Timothy      |  4 ch
+[ ] MHC56 | Titus          |  3 ch
+[ ] MHC57 | Philemon       |  1 ch
+[ ] MHC58 | Hebrews        | 13 ch
+[ ] MHC59 | James          |  5 ch
+[ ] MHC60 | 1 Peter        |  5 ch
+[ ] MHC61 | 2 Peter        |  3 ch
+[ ] MHC62 | 1 John         |  5 ch
+[ ] MHC63 | 2 John         |  1 ch
+[ ] MHC64 | 3 John         |  1 ch
+[ ] MHC65 | Jude           |  1 ch
+[ ] MHC66 | Revelation     | 22 ch
