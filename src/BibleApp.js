@@ -2333,6 +2333,11 @@ const BibleApp = () => {
     if (!activeBook) return;
     const url = getRhymeAudioUrl(activeBook.abbrev, activeChapter);
     if (!url) return;
+    // Auto-switch pane 2 to Bible Rhyme if not already
+    if (rightPaneTranslation !== 'en_rhyme.json') {
+      setRightPaneTranslation('en_rhyme.json');
+      setSelectedDropdownTranslation('en_rhyme.json');
+    }
     const audio = rhymeAudioRef.current;
     if (!audio) return;
     if (audio.src !== url) audio.src = url;
@@ -2341,7 +2346,7 @@ const BibleApp = () => {
     } else {
       audio.pause();
     }
-  }, [pane2Book, pane2Chapter, selectedBook, selectedChapter]);
+  }, [pane2Book, pane2Chapter, selectedBook, selectedChapter, rightPaneTranslation]);
   const handleRhymeAudioToggleRef = useRef(handleRhymeAudioToggle);
   useEffect(() => { handleRhymeAudioToggleRef.current = handleRhymeAudioToggle; }, [handleRhymeAudioToggle]);
 
