@@ -3323,7 +3323,7 @@ const BibleApp = () => {
         window.dispatchEvent(event);
         e.preventDefault();
       }
-      // Enter key - play Rhyme audio (Psalms only), otherwise read current verse
+      // Enter key - play Rhyme audio (Psalms only)
       else if (e.key === 'Enter') {
         if (showQuiz2Modal) return;
         const activeBook = pane2Book || selectedBook;
@@ -3331,9 +3331,6 @@ const BibleApp = () => {
         const rhymeUrl = activeBook ? getRhymeAudioUrl(activeBook.abbrev, activeChapter) : null;
         if (rhymeUrl) {
           handleRhymeAudioToggle();
-        } else {
-          const event = new CustomEvent('readCurrentVerse');
-          window.dispatchEvent(event);
         }
         e.preventDefault();
       }
