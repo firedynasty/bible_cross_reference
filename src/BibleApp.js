@@ -3323,12 +3323,18 @@ const BibleApp = () => {
         window.dispatchEvent(event);
         e.preventDefault();
       }
-      // Enter key - read the currently selected verse
+      // Enter key - play Rhyme audio (Psalms only), otherwise read current verse
       else if (e.key === 'Enter') {
         if (showQuiz2Modal) return;
-        // Dispatch custom event to read current verse
-        const event = new CustomEvent('readCurrentVerse');
-        window.dispatchEvent(event);
+        const activeBook = pane2Book || selectedBook;
+        const activeChapter = pane2Chapter || selectedChapter;
+        const rhymeUrl = activeBook ? getRhymeAudioUrl(activeBook.abbrev, activeChapter) : null;
+        if (rhymeUrl) {
+          handleRhymeAudioToggle();
+        } else {
+          const event = new CustomEvent('readCurrentVerse');
+          window.dispatchEvent(event);
+        }
         e.preventDefault();
       }
       // Apostrophe (') key - speak the current book and chapter (moved from Shift+5)
@@ -4973,6 +4979,18 @@ const BibleApp = () => {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
+                <span className="text-xs ml-0.5">(Ps)</span>
+              </button>
+            )}
+
+            {/* Quick navigate to Psalms — hidden when already in Psalms */}
+            {selectedBook && selectedBook.abbrev !== 'ps' && (
+              <button
+                onClick={() => handleBookSelect('ps')}
+                className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-pink-500 text-white hover:bg-pink-600 font-semibold"
+                title="Go to Psalms chapter 1"
+              >
+                Psalms
               </button>
             )}
 
