@@ -1163,6 +1163,15 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         Breathe
       </button>
 
+      {/* Read Full Chapter TTS Button */}
+      <button
+        onClick={() => window.dispatchEvent(new CustomEvent('readFullChapter'))}
+        className="px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-500 text-white hover:bg-blue-600 font-semibold"
+        title="Read pane 2 chapter aloud from top to bottom"
+      >
+        Read
+      </button>
+
       {/* Part-by-part reading button - hidden, functionality moved to grid clicks */}
 
       {/* Chinese Verse Copy Dropdown */}

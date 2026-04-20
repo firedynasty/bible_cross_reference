@@ -4,6 +4,7 @@ import { Book, Link, ChevronRight, History, BookOpen, Save, Database, Download }
 import TextToSpeech from './components/TextToSpeech';
 import FurtherReadingModal from './components/FurtherReadingModal';
 import { getStorytimeAudioUrl } from './data/storytimeAudio';
+import { getRhymeAudioUrl } from './data/rhymeAudio';
 
 // Import Firebase modules
 import { initializeApp } from 'firebase/app';
@@ -1510,6 +1511,10 @@ const BibleApp = () => {
   const storytimeAudioRef = useRef(null);
   const [isStorytimeAudioPlaying, setIsStorytimeAudioPlaying] = useState(false);
 
+  // Rhyme audio playback (Bible Rhyme chapter MP3s from Dropbox)
+  const rhymeAudioRef = useRef(null);
+  const [isRhymeAudioPlaying, setIsRhymeAudioPlaying] = useState(false);
+
   // Language sidebar cycle state: null | 'cant' | 'chin' | 'heb' | 'span' | 'fr'
   const [sidebarLang, setSidebarLang] = useState(null);
 
@@ -2311,6 +2316,23 @@ const BibleApp = () => {
     }
   }, [pane2Book, pane2Chapter, selectedBook, selectedChapter]);
 
+  // Toggle play/pause for Rhyme audio
+  const handleRhymeAudioToggle = useCallback(() => {
+    const activeBook = pane2Book || selectedBook;
+    const activeChapter = pane2Chapter || selectedChapter;
+    if (!activeBook) return;
+    const url = getRhymeAudioUrl(activeBook.abbrev, activeChapter);
+    if (!url) return;
+    const audio = rhymeAudioRef.current;
+    if (!audio) return;
+    if (audio.src !== url) audio.src = url;
+    if (audio.paused) {
+      audio.play().catch(err => console.warn('Rhyme audio play failed:', err));
+    } else {
+      audio.pause();
+    }
+  }, [pane2Book, pane2Chapter, selectedBook, selectedChapter]);
+
   // Stop audio whenever the active pane 2 book/chapter changes
   useEffect(() => {
     const audio = storytimeAudioRef.current;
@@ -2319,6 +2341,12 @@ const BibleApp = () => {
       audio.currentTime = 0;
     }
     setIsStorytimeAudioPlaying(false);
+    const rhymeAudio = rhymeAudioRef.current;
+    if (rhymeAudio && !rhymeAudio.paused) {
+      rhymeAudio.pause();
+      rhymeAudio.currentTime = 0;
+    }
+    setIsRhymeAudioPlaying(false);
   }, [pane2Book, pane2Chapter, selectedBook, selectedChapter]);
 
   // Helper: speak all parts sequentially with 1.5s pauses (for undelimit mode)
@@ -5054,14 +5082,18 @@ const BibleApp = () => {
                   );
                 })()}
 
-                {/* Read Full Chapter TTS Button */}
-                <button
-                  onClick={() => window.dispatchEvent(new CustomEvent('readFullChapter'))}
-                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-500 text-white hover:bg-blue-600 font-semibold"
-                  title="Read pane 2 chapter aloud from top to bottom"
-                >
-                  Read
-                </button>
+                {/* Read Full Chapter TTS Button — moved to TTS hidden controls */}
+
+                {/* Rhyme Audio Play/Pause (Psalms only) */}
+                {selectedBook && getRhymeAudioUrl((pane2Book || selectedBook).abbrev, pane2Chapter || selectedChapter) && (
+                  <button
+                    onClick={handleRhymeAudioToggle}
+                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-pink-500 text-white hover:bg-pink-600 font-semibold"
+                    title={isRhymeAudioPlaying ? 'Pause Rhyme audio' : 'Play Rhyme audio'}
+                  >
+                    {isRhymeAudioPlaying ? 'Rhyme ‖' : 'Rhyme ▶'}
+                  </button>
+                )}
 
                 {/* Story Time Audio Play/Pause Toggle */}
                 {selectedBook && (
@@ -8209,6 +8241,15 @@ const BibleApp = () => {
         onPlay={() => setIsStorytimeAudioPlaying(true)}
         onPause={() => setIsStorytimeAudioPlaying(false)}
         onEnded={() => setIsStorytimeAudioPlaying(false)}
+        style={{ display: 'none' }}
+      />
+      {/* Hidden audio element for Rhyme chapter playback */}
+      <audio
+        ref={rhymeAudioRef}
+        preload="none"
+        onPlay={() => setIsRhymeAudioPlaying(true)}
+        onPause={() => setIsRhymeAudioPlaying(false)}
+        onEnded={() => setIsRhymeAudioPlaying(false)}
         style={{ display: 'none' }}
       />
 
