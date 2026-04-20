@@ -1185,9 +1185,19 @@ const BibleApp = () => {
   const pendingBookRef = useRef(null);
   const [crossReferences, setCrossReferences] = useState({});
 
+  // Refs so keyboard handlers always see fresh values without stale closures
+  const selectedBookRef = useRef(null);
+  const selectedChapterRef = useRef(1);
+  useEffect(() => { selectedBookRef.current = selectedBook; }, [selectedBook]);
+  useEffect(() => { selectedChapterRef.current = selectedChapter; }, [selectedChapter]);
+
   // Independent pane 2 book/chapter (for cross-ref navigation)
   const [pane2Book, setPane2Book] = useState(null);
   const [pane2Chapter, setPane2Chapter] = useState(null);
+  const pane2BookRef = useRef(null);
+  const pane2ChapterRef = useRef(null);
+  useEffect(() => { pane2BookRef.current = pane2Book; }, [pane2Book]);
+  useEffect(() => { pane2ChapterRef.current = pane2Chapter; }, [pane2Chapter]);
   const [pane2History, setPane2History] = useState([]); // back-navigation stack
 
   // Reset pane 2 when a new book is selected (so pane 2 follows pane 1 on book changes)
@@ -2332,6 +2342,8 @@ const BibleApp = () => {
       audio.pause();
     }
   }, [pane2Book, pane2Chapter, selectedBook, selectedChapter]);
+  const handleRhymeAudioToggleRef = useRef(handleRhymeAudioToggle);
+  useEffect(() => { handleRhymeAudioToggleRef.current = handleRhymeAudioToggle; }, [handleRhymeAudioToggle]);
 
   // Stop audio whenever the active pane 2 book/chapter changes
   useEffect(() => {
@@ -3326,11 +3338,11 @@ const BibleApp = () => {
       // Enter key - play Rhyme audio (Psalms only)
       else if (e.key === 'Enter') {
         if (showQuiz2Modal) return;
-        const activeBook = pane2Book || selectedBook;
-        const activeChapter = pane2Chapter || selectedChapter;
+        const activeBook = pane2BookRef.current || selectedBookRef.current;
+        const activeChapter = pane2ChapterRef.current || selectedChapterRef.current;
         const rhymeUrl = activeBook ? getRhymeAudioUrl(activeBook.abbrev, activeChapter) : null;
         if (rhymeUrl) {
-          handleRhymeAudioToggle();
+          handleRhymeAudioToggleRef.current();
         }
         e.preventDefault();
       }
