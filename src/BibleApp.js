@@ -8316,6 +8316,37 @@ const BibleApp = () => {
               >
                 📋
               </button>
+              <button
+                onClick={() => {
+                  const clean = (storytimeContent || '').replace(/\s+/g, ' ').trim();
+                  if (!clean) return;
+                  const MAX = 500;
+                  const out = [];
+                  let i = 0;
+                  while (i < clean.length) {
+                    if (clean.length - i <= MAX) { out.push(clean.slice(i).trim()); break; }
+                    let end = i + MAX;
+                    const slice = clean.slice(i, end);
+                    const sentEnd = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('! '), slice.lastIndexOf('? '));
+                    if (sentEnd > MAX / 2) {
+                      end = i + sentEnd + 1;
+                    } else {
+                      const sp = clean.lastIndexOf(' ', end);
+                      if (sp > i + MAX / 2) end = sp;
+                    }
+                    out.push(clean.slice(i, end).trim());
+                    i = end;
+                  }
+                  setCursiveClipboardBuckets(out);
+                  setCursiveBucketIndex(0);
+                  if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
+                  setShowCursiveModal(true);
+                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85em', color: isDarkMode ? '#d97706' : '#b45309', padding: '4px 8px', fontWeight: 'bold' }}
+                title="Send to Cursive"
+              >
+                ✍️
+              </button>
             </div>
             <div style={{ overflowY: 'auto', flex: 1, fontSize: `${storytimeFontSize}em`, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : '#333', whiteSpace: 'pre-wrap' }}>
               {storytimeContent.split('\n').map((line, i) => {
