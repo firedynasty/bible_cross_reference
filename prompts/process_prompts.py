@@ -30,6 +30,12 @@ FILENAME_TO_BOOK = {
     "solomon": "Song of Solomon",
     "joshua": "Joshua",
     "judges": "Judges",
+    "1_samuel": "1 Samuel",
+    "2_samuel": "2 Samuel",
+    "1_kings": "1 Kings",
+    "2_kings": "2 Kings",
+    "1_chronicles": "1 Chronicles",
+    "2_chronicles": "2 Chronicles",
 }
 
 

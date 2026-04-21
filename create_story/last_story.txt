@@ -1,0 +1,33 @@
+=======================================
+  Book: 1 Chronicles
+  Written /Users/stanleytan/Documents/technical/github/vercel_bible_current/prompts/1_chronicles.txt (29 chapters, 98,244 chars)
+  Added mapping: '1_chronicles' -> '1 Chronicles'
+  Regenerating prompts.json...
+Generated /Users/stanleytan/Documents/technical/github/vercel_bible_current/prompts/../public/prompts.json
+Entries: 23
+  1 Chronicles: 98,244 chars
+  1 Kings: 75,088 chars
+  1 Samuel: 108,389 chars
+  2 Corinthians: 111,210 chars
+  2 Kings: 83,940 chars
+  2 Samuel: 82,131 chars
+  Ecclesiastes: 28,486 chars
+  Esther: 1,719 chars
+  Exodus: 1,477 chars
+  Genesis: 56,553 chars
+  Hebrews Part 1: 101,619 chars
+  Hebrews Part 2: 80,255 chars
+  Isaiah Part 1: 129,360 chars
+  Isaiah Part 2: 71,189 chars
+  Joshua: 77,806 chars
+  Judges: 73,938 chars
+  Leviticus: 39,044 chars
+  Luke: 17,710 chars
+  Proverbs: 27,973 chars
+  Psalms 1-89: 129,432 chars
+  Psalms 90-150: 82,251 chars
+  Romans: 111,984 chars
+  Song of Solomon: 1,653 chars
+  Marked MHC13 as done in checklist
+
+

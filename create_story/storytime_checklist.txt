@@ -22,12 +22,12 @@
 [x] MHC06 | Joshua         | 24 ch
 [x] MHC07 | Judges         | 21 ch
 [x] MHC08 | Ruth           |  4 ch
-[ ] MHC09 | 1 Samuel       | 31 ch
-[ ] MHC10 | 2 Samuel       | 24 ch
-[ ] MHC11 | 1 Kings        | 22 ch
-[ ] MHC12 | 2 Kings        | 25 ch
-[ ] MHC13 | 1 Chronicles   | 29 ch
-[ ] MHC14 | 2 Chronicles   | 36 ch
+[x] MHC09 | 1 Samuel       | 31 ch
+[x] MHC10 | 2 Samuel       | 24 ch
+[x] MHC11 | 1 Kings        | 22 ch
+[x] MHC12 | 2 Kings        | 25 ch
+[x] MHC13 | 1 Chronicles   | 29 ch
+[x] MHC14 | 2 Chronicles   | 36 ch
 [ ] MHC15 | Ezra           | 10 ch
 [ ] MHC16 | Nehemiah       | 13 ch
 [ ] MHC17 | Esther         | 10 ch

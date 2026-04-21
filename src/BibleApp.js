@@ -2796,7 +2796,7 @@ const BibleApp = () => {
     const isManuallyScrollingRef = isManuallyScrolling;
 
     const handleKeyDown = (e) => {
-      // Cursive modal: Escape restarts, ArrowRight/Left navigates buckets; all other shortcuts disabled
+      // Cursive modal: Escape restarts, ArrowRight/Left navigates buckets, ArrowDown/Up scrolls output; all other shortcuts disabled
       if (showCursiveModal) {
         if (e.key === 'Escape') {
           e.preventDefault();
@@ -2806,6 +2806,13 @@ const BibleApp = () => {
           e.preventDefault();
           const delta = e.key === 'ArrowRight' ? 1 : -1;
           if (cursiveGoToBucketRef.current) cursiveGoToBucketRef.current(cursiveBucketIndexRef.current + delta);
+        } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          const outputScroll = document.querySelector('.cursive-output-scroll');
+          if (outputScroll) {
+            const pageHeight = outputScroll.clientHeight * 0.9;
+            outputScroll.scrollBy({ top: e.key === 'ArrowDown' ? pageHeight : -pageHeight, behavior: 'smooth' });
+          }
         } else if (e.key === ' ') {
           e.preventDefault();
           const outputScroll = document.querySelector('.cursive-output-scroll');
@@ -3304,22 +3311,16 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // Left Arrow - go to previous verse
+      // Left Arrow - go to previous chapter
       else if (e.key === 'ArrowLeft') {
-        // Dispatch custom event to navigate to previous verse
-        const event = new CustomEvent('navigateVerse', {
-          detail: { direction: 'previous' }
-        });
-        window.dispatchEvent(event);
+        const prevBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Previous Chapter'));
+        if (prevBtn) prevBtn.click();
         e.preventDefault();
       }
-      // Right Arrow - go to next verse
+      // Right Arrow - go to next chapter
       else if (e.key === 'ArrowRight') {
-        // Dispatch custom event to navigate to next verse
-        const event = new CustomEvent('navigateVerse', {
-          detail: { direction: 'next' }
-        });
-        window.dispatchEvent(event);
+        const nextBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Next Chapter'));
+        if (nextBtn) nextBtn.click();
         e.preventDefault();
       }
       // '[' key - go to previous verse (copy of ArrowLeft functionality)
@@ -7610,27 +7611,57 @@ const BibleApp = () => {
         const fadeMs = [700, 500, 350, 220, 120][cursiveSpeed - 1];
         const delayMs = [600, 420, 280, 170, 90][cursiveSpeed - 1];
 
+        const cleanMarkdown = (text) => {
+          let t = text;
+          t = t.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');   // [text](url) → text
+          t = t.replace(/^#{1,6}\s+/gm, '');                 // ## headings
+          t = t.replace(/\*\*\*(.+?)\*\*\*/g, '$1');         // ***bold italic***
+          t = t.replace(/\*\*(.+?)\*\*/g, '$1');              // **bold**
+          t = t.replace(/__(.+?)__/g, '$1');                  // __bold__
+          t = t.replace(/\*(.+?)\*/g, '$1');                  // *italic*
+          t = t.replace(/_(.+?)_/g, '$1');                    // _italic_
+          t = t.replace(/`([^`]+)`/g, '$1');                  // `inline code`
+          t = t.replace(/^>\s?/gm, '');                       // > blockquotes
+          t = t.replace(/^[-*]{3,}\s*$/gm, '');               // --- / *** hr
+          t = t.replace(/^\|.*\|$/gm, '');                    // | table rows |
+          t = t.replace(/^[-|:\s]+$/gm, '');                  // table separator lines
+          t = t.replace(/^[-*+]\s+/gm, '');                   // - list items
+          t = t.replace(/^\d+\.\s+/gm, '');                   // 1. ordered list items
+          t = t.replace(/\n{3,}/g, '\n\n');                   // collapse blank lines
+          return t.trim();
+        };
+
         const doPaste = async () => {
           try {
             const raw = await navigator.clipboard.readText();
-            const clean = (raw || '').replace(/\s+/g, ' ').trim();
+            const cleaned = cleanMarkdown(raw || '');
+            const clean = cleaned.replace(/\s+/g, ' ').trim();
             if (!clean) { alert('Clipboard is empty.'); return; }
-            const MAX = 500;
-            const out = [];
-            let i = 0;
-            while (i < clean.length) {
-              if (clean.length - i <= MAX) { out.push(clean.slice(i).trim()); break; }
-              let end = i + MAX;
-              const slice = clean.slice(i, end);
-              const sentEnd = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('! '), slice.lastIndexOf('? '));
-              if (sentEnd > MAX / 2) {
-                end = i + sentEnd + 1;
-              } else {
-                const sp = clean.lastIndexOf(' ', end);
-                if (sp > i + MAX / 2) end = sp;
+
+            let out;
+            // Check for @-marker sections (e.g. @1, @2, @A sample draft)
+            const hasAtMarkers = /(?:^|\n)\s*@\S/.test(cleaned);
+            if (hasAtMarkers) {
+              // Split on lines starting with @ — keep the @ prefix in each bucket
+              out = cleaned.split(/\n(?=\s*@\S)/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
+            } else {
+              out = [];
+              const MAX = 500;
+              let i = 0;
+              while (i < clean.length) {
+                if (clean.length - i <= MAX) { out.push(clean.slice(i).trim()); break; }
+                let end = i + MAX;
+                const slice = clean.slice(i, end);
+                const sentEnd = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('! '), slice.lastIndexOf('? '));
+                if (sentEnd > MAX / 2) {
+                  end = i + sentEnd + 1;
+                } else {
+                  const sp = clean.lastIndexOf(' ', end);
+                  if (sp > i + MAX / 2) end = sp;
+                }
+                out.push(clean.slice(i, end).trim());
+                i = end;
               }
-              out.push(clean.slice(i, end).trim());
-              i = end;
             }
             setCursiveClipboardBuckets(out);
             setCursiveBucketIndex(0);
@@ -8323,24 +8354,50 @@ const BibleApp = () => {
               </button>
               <button
                 onClick={() => {
-                  const clean = (storytimeContent || '').replace(/\s+/g, ' ').trim();
+                  const raw = storytimeContent || '';
+                  // Clean markdown formatting
+                  let t = raw;
+                  t = t.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+                  t = t.replace(/^#{1,6}\s+/gm, '');
+                  t = t.replace(/\*\*\*(.+?)\*\*\*/g, '$1');
+                  t = t.replace(/\*\*(.+?)\*\*/g, '$1');
+                  t = t.replace(/__(.+?)__/g, '$1');
+                  t = t.replace(/\*(.+?)\*/g, '$1');
+                  t = t.replace(/_(.+?)_/g, '$1');
+                  t = t.replace(/`([^`]+)`/g, '$1');
+                  t = t.replace(/^>\s?/gm, '');
+                  t = t.replace(/^[-*]{3,}\s*$/gm, '');
+                  t = t.replace(/^\|.*\|$/gm, '');
+                  t = t.replace(/^[-|:\s]+$/gm, '');
+                  t = t.replace(/^[-*+]\s+/gm, '');
+                  t = t.replace(/^\d+\.\s+/gm, '');
+                  t = t.replace(/\n{3,}/g, '\n\n');
+                  const cleaned = t.trim();
+                  const clean = cleaned.replace(/\s+/g, ' ').trim();
                   if (!clean) return;
-                  const MAX = 500;
-                  const out = [];
-                  let i = 0;
-                  while (i < clean.length) {
-                    if (clean.length - i <= MAX) { out.push(clean.slice(i).trim()); break; }
-                    let end = i + MAX;
-                    const slice = clean.slice(i, end);
-                    const sentEnd = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('! '), slice.lastIndexOf('? '));
-                    if (sentEnd > MAX / 2) {
-                      end = i + sentEnd + 1;
-                    } else {
-                      const sp = clean.lastIndexOf(' ', end);
-                      if (sp > i + MAX / 2) end = sp;
+
+                  let out;
+                  const hasAtMarkers = /(?:^|\n)\s*@\S/.test(cleaned);
+                  if (hasAtMarkers) {
+                    out = cleaned.split(/\n(?=\s*@\S)/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
+                  } else {
+                    out = [];
+                    const MAX = 500;
+                    let i = 0;
+                    while (i < clean.length) {
+                      if (clean.length - i <= MAX) { out.push(clean.slice(i).trim()); break; }
+                      let end = i + MAX;
+                      const slice = clean.slice(i, end);
+                      const sentEnd = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('! '), slice.lastIndexOf('? '));
+                      if (sentEnd > MAX / 2) {
+                        end = i + sentEnd + 1;
+                      } else {
+                        const sp = clean.lastIndexOf(' ', end);
+                        if (sp > i + MAX / 2) end = sp;
+                      }
+                      out.push(clean.slice(i, end).trim());
+                      i = end;
                     }
-                    out.push(clean.slice(i, end).trim());
-                    i = end;
                   }
                   setCursiveClipboardBuckets(out);
                   setCursiveBucketIndex(0);
