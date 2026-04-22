@@ -5296,6 +5296,23 @@ const BibleApp = () => {
                   Copy Pane 2
                 </button>
 
+                {/* WEB / Rhyme toggle */}
+                <button
+                  onClick={() => {
+                    const next = rightPaneTranslation === 'en_rhyme.json' ? 'en_web.json' : 'en_rhyme.json';
+                    setRightPaneTranslation(next);
+                    setSelectedDropdownTranslation(next);
+                  }}
+                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold inline-block ${
+                    rightPaneTranslation === 'en_rhyme.json'
+                      ? 'bg-pink-500 text-white hover:bg-pink-600'
+                      : 'bg-teal-500 text-white hover:bg-teal-600'
+                  }`}
+                  title="Toggle pane 2 between WEB and Rhyme"
+                >
+                  {rightPaneTranslation === 'en_rhyme.json' ? 'Rhyme' : 'WEB'}
+                </button>
+
                 {/* Fill-in-the-Blank Quiz Button - moved to TextToSpeech after QA */}
 
                 {/* Study Questions Button - moved to TextToSpeech after Lower */}
