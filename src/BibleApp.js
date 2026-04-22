@@ -5803,17 +5803,19 @@ const BibleApp = () => {
                                     key={i}
                                     onClick={() => handleCrossRefNavigate(ref)}
                                     className={`mr-2 ${
-                                      isPentateuch
+                                      isPentateuch || isIsaiah
                                         ? 'hover:opacity-80'
-                                        : isIsaiah
-                                          ? (isDarkMode ? 'text-gray-200 hover:text-white' : 'text-black hover:opacity-70')
-                                          : isOrange
-                                            ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
-                                            : isNT
-                                              ? (isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-800')
-                                              : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
+                                        : isOrange
+                                          ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
+                                          : isNT
+                                            ? (isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-800')
+                                            : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
                                     }`}
-                                    style={isPentateuch ? { color: isDarkMode ? '#FCD34D' : '#92400E' } : undefined}
+                                    style={
+                                      isPentateuch ? { color: isDarkMode ? '#FCD34D' : '#92400E' }
+                                      : isIsaiah ? { color: isDarkMode ? '#e8e8e6' : '#242422' }
+                                      : undefined
+                                    }
                                   >
                                     {getBookName(ref.book)} {ref.chapter}:{ref.verse}{i < crossReferences[refKey].length - 1 ? ',' : ''}
                                   </button>
@@ -6062,6 +6064,7 @@ const BibleApp = () => {
                             <span className="font-medium mr-1">Refs:</span>
                             {crossReferences[refKey].map((ref, i) => {
                               const isPentateuch = ['gn','ge','ex','lv','nm','dt'].includes(ref.book);
+                              const isIsaiah = ref.book === 'is';
                               const isOrange = ['ps','rm','hb','lk'].includes(ref.book);
                               const isNT = ['mt','mk','jo','act','1co','2co','gl','eph','ph','cl','1ts','2ts','1tm','2tm','tt','phm','jm','1pe','2pe','1jo','2jo','3jo','jd','re'].includes(ref.book);
                               return (
@@ -6069,7 +6072,7 @@ const BibleApp = () => {
                                 key={i}
                                 onClick={() => handleCrossRefNavigate(ref)}
                                 className={`mr-2 ${
-                                  isPentateuch
+                                  isPentateuch || isIsaiah
                                     ? 'hover:opacity-80'
                                     : isOrange
                                       ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
@@ -6077,7 +6080,11 @@ const BibleApp = () => {
                                         ? (isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-800')
                                         : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
                                 }`}
-                                style={isPentateuch ? { color: isDarkMode ? '#FCD34D' : '#92400E' } : undefined}
+                                style={
+                                  isPentateuch ? { color: isDarkMode ? '#FCD34D' : '#92400E' }
+                                  : isIsaiah ? { color: isDarkMode ? '#e8e8e6' : '#242422' }
+                                  : undefined
+                                }
                               >
                                 {getBookName(ref.book)} {ref.chapter}:{ref.verse}{i < crossReferences[refKey].length - 1 ? ',' : ''}
                               </button>
