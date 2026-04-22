@@ -6597,9 +6597,9 @@ const BibleApp = () => {
                       <div></div>
                     )}
 
-                    {/* Home button to scroll to top */}
+                    {/* Home button — scroll pane 2 to top only, leave pane 2 location */}
                     <button
-                      onClick={handleHomeReset}
+                      onClick={() => { if (kjvContentRef.current) kjvContentRef.current.scrollTop = 0; }}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
                       Home (esc)
