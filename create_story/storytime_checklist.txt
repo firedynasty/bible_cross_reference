@@ -39,8 +39,8 @@
 [x] MHC23 | Isaiah         | 66 ch
 [ ] MHC24 | Jeremiah       | 52 ch
 [ ] MHC25 | Lamentations   |  5 ch
-[x] MHC26 | Ezekiel        | 48 ch
-[ ] MHC27 | Daniel         | 12 ch
+[ ] MHC26 | Ezekiel        | 48 ch
+[x] MHC27 | Daniel         | 12 ch
 [ ] MHC28 | Hosea          | 14 ch
 [ ] MHC29 | Joel           |  3 ch
 [ ] MHC30 | Amos           |  9 ch
@@ -51,7 +51,7 @@
 [ ] MHC35 | Habakkuk       |  3 ch
 [ ] MHC36 | Zephaniah      |  3 ch
 [ ] MHC37 | Haggai         |  2 ch
-[ ] MHC38 | Zechariah      | 14 ch
+[x] MHC38 | Zechariah      | 14 ch
 [ ] MHC39 | Malachi        |  4 ch
 
 # NEW TESTAMENT

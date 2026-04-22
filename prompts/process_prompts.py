@@ -36,6 +36,9 @@ FILENAME_TO_BOOK = {
     "2_kings": "2 Kings",
     "1_chronicles": "1 Chronicles",
     "2_chronicles": "2 Chronicles",
+    "ezekiel": "Ezekiel",
+    "daniel": "Daniel",
+    "zechariah": "Zechariah",
 }
 
 
