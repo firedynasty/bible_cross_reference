@@ -7812,6 +7812,29 @@ const BibleApp = () => {
                   <label style={{ display: 'block', fontSize: '0.72rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c8956c', marginBottom: 4 }}>
                     Bucket {clampedIdx + 1} / {buckets.length}
                   </label>
+                  <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 4 }}>
+                    {buckets.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => goToBucket(idx)}
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: 4,
+                          border: 'none',
+                          fontSize: 12,
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          color: '#fff',
+                          background: idx === clampedIdx
+                            ? 'linear-gradient(45deg, #8b4513, #a0522d)'
+                            : 'linear-gradient(45deg, #4caf50, #45a049)',
+                          boxShadow: idx === clampedIdx ? '0 0 0 2px #c8956c' : 'none'
+                        }}
+                      >
+                        {idx + 1}
+                      </button>
+                    ))}
+                  </div>
                   <div style={{ display: 'flex', gap: 4, alignItems: 'stretch' }}>
                     <select
                       value={cursiveBucketIndex}
