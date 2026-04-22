@@ -1226,6 +1226,7 @@ const BibleApp = () => {
 
   // State to track primary reading vs cross-reference viewing
   const [isViewingCrossRef, setIsViewingCrossRef] = useState(false);
+  const [lastCrossRef, setLastCrossRef] = useState(null); // { book, chapter, verse, label }
 
   // State for book number input with timeout
   const [bookNumberInput, setBookNumberInput] = useState('');
@@ -4436,6 +4437,9 @@ const BibleApp = () => {
       // Mark that we're viewing a cross-reference
       setIsViewingCrossRef(true);
 
+      // Remember last cross-ref for the jump-back button
+      setLastCrossRef({ book: ref.book, chapter: ref.chapter, verse: ref.verse, label: `${getBookName(ref.book)} ${ref.chapter}:${ref.verse}` });
+
       // Auto-add to ref history
       setRefHistory(prev => {
         if (prev.length > 0 && prev[prev.length - 1].parsed.abbrev === ref.book) return prev;
@@ -6408,10 +6412,15 @@ const BibleApp = () => {
                       Exact Sync
                     </span>
                     <div className="ml-auto flex items-center">
-                      <div className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded mr-2">
-                        Keys: 'o', 'p', '0'
-                      </div>
-                      
+                      {lastCrossRef && (
+                        <button
+                          onClick={() => handleCrossRefNavigate(lastCrossRef)}
+                          className={`text-xs px-2 py-1 rounded mr-2 font-semibold ${isDarkMode ? 'bg-gray-700 text-yellow-300 hover:bg-gray-600' : 'bg-gray-100 text-blue-700 hover:bg-gray-200'}`}
+                          title="Jump pane 2 back to last cross-reference"
+                        >
+                          {lastCrossRef.label}
+                        </button>
+                      )}
                     </div>
                   </h2>
                   <div className="space-y-5">
