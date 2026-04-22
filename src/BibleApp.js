@@ -1497,6 +1497,7 @@ const BibleApp = () => {
 
   // State for Psalm Hymns Modal
   const [psalmHymnsData, setPsalmHymnsData] = useState(null);
+  const [lukeHymnsData, setLukeHymnsData] = useState(null);
   const [showHymnModal, setShowHymnModal] = useState(false);
 
   // State for Story Time Modal
@@ -1863,6 +1864,23 @@ const BibleApp = () => {
       }
     };
     loadPsalmHymns();
+  }, []);
+
+  // Load luke hymns JSON on startup
+  useEffect(() => {
+    const loadLukeHymns = async () => {
+      try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}/luke_hymns.json`);
+        if (response.ok) {
+          const data = await response.json();
+          setLukeHymnsData(data);
+        }
+      } catch (error) {
+        console.log('No luke_hymns.json found');
+      }
+    };
+    loadLukeHymns();
   }, []);
 
   // Load verse filters JSON on startup
@@ -5181,12 +5199,12 @@ const BibleApp = () => {
                   DB
                 </button>}
 
-                {/* Hymn Recommendations Button (Psalms only) */}
-                {psalmHymnsData && selectedBook && selectedBook.abbrev === 'ps' && (
+                {/* Hymn Recommendations Button (always visible) */}
+                {(psalmHymnsData || lukeHymnsData) && (
                   <button
                     onClick={() => setShowHymnModal(true)}
                     className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-rose-500 text-white hover:bg-rose-600 font-semibold"
-                    title="Recommended hymns for this Psalm"
+                    title="Recommended hymns"
                   >
                     Hymn
                   </button>
@@ -8506,10 +8524,15 @@ const BibleApp = () => {
         </div>
       )}
 
-      {/* Psalm Hymn Recommendations Modal */}
-      {showHymnModal && psalmHymnsData && (() => {
+      {/* Hymn Recommendations Modal (Psalms and Luke) */}
+      {showHymnModal && (() => {
         const chapterKey = String(selectedChapter);
-        const hymns = psalmHymnsData[chapterKey] || [];
+        const isLuke = selectedBook && selectedBook.abbrev === 'lk';
+        const isPsalm = selectedBook && selectedBook.abbrev === 'ps';
+        const hasHymns = isLuke || isPsalm;
+        const hymnSource = isLuke ? lukeHymnsData : psalmHymnsData;
+        const hymns = hasHymns ? ((hymnSource && hymnSource[chapterKey]) || []) : [];
+        const bookLabel = isLuke ? `Luke ${selectedChapter}` : isPsalm ? `Psalm ${selectedChapter}` : (selectedBook ? selectedBook.name || selectedBook.abbrev : '');
         return (
           <div
             style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
@@ -8517,15 +8540,19 @@ const BibleApp = () => {
           >
             <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
               <h3 style={{ margin: '0 0 4px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
-                Recommended Hymns for Psalm {selectedChapter}
+                {hasHymns ? `Recommended Hymns for ${bookLabel}` : 'Hymn Recommendations'}
               </h3>
               <p style={{ margin: '0 0 16px', fontSize: '0.8em', color: isDarkMode ? '#999' : '#888', textAlign: 'center' }}>
                 From the 1955 Hymnary
               </p>
               <div style={{ overflowY: 'auto', flex: 1 }}>
-                {hymns.length === 0 ? (
+                {!hasHymns ? (
                   <p style={{ textAlign: 'center', color: isDarkMode ? '#999' : '#666', padding: 20 }}>
-                    No hymn recommendations found for this Psalm.
+                    Hymn recommendations are currently only available for Psalms and Luke.
+                  </p>
+                ) : hymns.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: isDarkMode ? '#999' : '#666', padding: 20 }}>
+                    No hymn recommendations found for {bookLabel}.
                   </p>
                 ) : (
                   hymns.map((h, idx) => (
