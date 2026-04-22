@@ -5248,13 +5248,13 @@ const BibleApp = () => {
                 </button>
 
                 <a
-                  href="https://cdpn.io/pen/debug/KwVxmKR"
+                  href="https://search-niv.netlify.app"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-amber-500 text-white hover:bg-amber-600 font-semibold inline-block"
-                  title="Open Reader"
+                  title="Go to Search"
                 >
-                  Reader
+                  Go:Search
                 </a>
 
                 <a
@@ -5333,6 +5333,23 @@ const BibleApp = () => {
                   title="Toggle pane 2 between WEB and Rhyme"
                 >
                   {rightPaneTranslation === 'en_rhyme.json' ? 'to: WEB' : 'to: Rhyme'}
+                </button>
+
+                {/* KJV / CUV toggle */}
+                <button
+                  onClick={() => {
+                    const next = rightPaneTranslation === 'zh_cuv.json' ? 'en_kjv.json' : 'zh_cuv.json';
+                    setRightPaneTranslation(next);
+                    setSelectedDropdownTranslation(next);
+                  }}
+                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold inline-block ${
+                    rightPaneTranslation === 'zh_cuv.json'
+                      ? 'bg-amber-500 text-white hover:bg-amber-600'
+                      : 'bg-indigo-500 text-white hover:bg-indigo-600'
+                  }`}
+                  title="Toggle pane 2 between KJV and CUV"
+                >
+                  {rightPaneTranslation === 'zh_cuv.json' ? 'to: KJV' : 'to: CUV'}
                 </button>
 
                 {/* Fill-in-the-Blank Quiz Button - moved to TextToSpeech after QA */}
