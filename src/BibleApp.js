@@ -5310,7 +5310,7 @@ const BibleApp = () => {
                   }`}
                   title="Toggle pane 2 between WEB and Rhyme"
                 >
-                  {rightPaneTranslation === 'en_rhyme.json' ? 'Rhyme' : 'WEB'}
+                  {rightPaneTranslation === 'en_rhyme.json' ? 'to: WEB' : 'to: Rhyme'}
                 </button>
 
                 {/* Fill-in-the-Blank Quiz Button - moved to TextToSpeech after QA */}
