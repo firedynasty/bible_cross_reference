@@ -19,6 +19,80 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const [lastChineseVerseIdx, setLastChineseVerseIdx] = useState(0);
   const timerIdRef = useRef(null);
 
+  // OpenAI TTS state
+  const [oaiTtsLoading, setOaiTtsLoading] = useState(false);
+  const [oaiTtsPlaying, setOaiTtsPlaying] = useState(false);
+  const oaiAudioRef = useRef(null);
+  const oaiStopRef = useRef(false);
+
+  const stopOaiTts = () => {
+    oaiStopRef.current = true;
+    if (oaiAudioRef.current) { oaiAudioRef.current.pause(); oaiAudioRef.current = null; }
+    setOaiTtsPlaying(false);
+    setOaiTtsLoading(false);
+  };
+
+  const handleOpenAiRead = async () => {
+    if (oaiTtsPlaying || oaiTtsLoading) { stopOaiTts(); return; }
+
+    let apiKey = localStorage.getItem('OPENAI_API_KEY') || '';
+    if (!apiKey) {
+      apiKey = window.prompt('Enter your OpenAI API key (saved to localStorage):');
+      if (!apiKey) return;
+      try { localStorage.setItem('OPENAI_API_KEY', apiKey.trim()); } catch {}
+      apiKey = apiKey.trim();
+    }
+
+    // Get chapter verses from rightPaneBibleData
+    const book = rightPaneBibleData ? rightPaneBibleData.find(b => b.abbrev === currentBook) : null;
+    const verses = book && book.chapters[(currentChapter || 1) - 1] ? book.chapters[(currentChapter || 1) - 1] : [];
+    if (!verses.length) return;
+
+    const fullText = verses.map((v, i) => {
+      const t = typeof v === 'string' ? v : (v.text || v.verse || String(v));
+      return `${i + 1}. ${t}`;
+    }).join(' ');
+
+    // Split into chunks ≤ 4000 chars at sentence/verse boundaries
+    const chunks = [];
+    let current = '';
+    for (const sentence of fullText.split(/(?<=\.\s)/)) {
+      if ((current + sentence).length > 4000) { if (current) chunks.push(current.trim()); current = sentence; }
+      else current += sentence;
+    }
+    if (current.trim()) chunks.push(current.trim());
+
+    oaiStopRef.current = false;
+    setOaiTtsLoading(true);
+    setOaiTtsPlaying(false);
+
+    for (const chunk of chunks) {
+      if (oaiStopRef.current) break;
+      try {
+        const resp = await fetch('https://api.openai.com/v1/audio/speech', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+          body: JSON.stringify({ model: 'tts-1', input: chunk, voice: 'onyx', speed: 1.0 })
+        });
+        if (!resp.ok) { console.error('OpenAI TTS error', resp.status); stopOaiTts(); return; }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        await new Promise((resolve) => {
+          if (oaiStopRef.current) { URL.revokeObjectURL(url); resolve(); return; }
+          const audio = new Audio(url);
+          oaiAudioRef.current = audio;
+          setOaiTtsLoading(false);
+          setOaiTtsPlaying(true);
+          audio.onended = () => { URL.revokeObjectURL(url); oaiAudioRef.current = null; resolve(); };
+          audio.onerror = () => { URL.revokeObjectURL(url); oaiAudioRef.current = null; resolve(); };
+          audio.play();
+        });
+      } catch (e) { console.error('OpenAI TTS fetch error', e); stopOaiTts(); return; }
+    }
+    setOaiTtsPlaying(false);
+    setOaiTtsLoading(false);
+  };
+
   // Part-by-part reading state (using refs to avoid stale closures)
   const partPartsRef = useRef([]);
   const partIndexRef = useRef(0);
@@ -1165,6 +1239,15 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       >
         To:TextR
       </a>
+
+      {/* OpenAI TTS Read button (Onyx voice) */}
+      <button
+        onClick={handleOpenAiRead}
+        className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${oaiTtsPlaying ? 'bg-red-500 text-white hover:bg-red-600' : oaiTtsLoading ? 'bg-yellow-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+        title={oaiTtsPlaying ? 'Stop reading' : 'Read chapter aloud with OpenAI Onyx voice'}
+      >
+        {oaiTtsLoading ? '...' : oaiTtsPlaying ? 'Stop' : 'Read'}
+      </button>
 
       {/* Part-by-part reading button - hidden, functionality moved to grid clicks */}
 
