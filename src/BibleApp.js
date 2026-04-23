@@ -8121,24 +8121,40 @@ const BibleApp = () => {
               style={{ background: isDarkMode ? '#1e1e1e' : '#fff', borderRadius: 12, padding: 24, width: '92%', maxWidth: 700, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', position: 'relative' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <button
-                  onClick={() => setQuiz2FontSize(prev => Math.max(10, prev - 2))}
-                  style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
-                  title="Decrease font size"
-                >−</button>
-                <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: isDarkMode ? '#f0f0f0' : '#1a1a1a', textAlign: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                {/* Font size group — top left */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <button
+                    onClick={() => setQuiz2FontSize(prev => Math.max(10, prev - 2))}
+                    style={{ width: 30, height: 30, fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                    title="Decrease font size"
+                  >−</button>
+                  <button
+                    onClick={() => setQuiz2FontSize(prev => Math.min(28, prev + 2))}
+                    style={{ width: 30, height: 30, fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                    title="Increase font size"
+                  >+</button>
+                </div>
+
+                {/* Title — center */}
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: isDarkMode ? '#f0f0f0' : '#1a1a1a', textAlign: 'center', flex: 1, padding: '0 8px' }}>
                   Recite — {q2BookName} {q2Chapter}{isPsalms && nltPsalmsData ? ' (NLT)' : ''}
                 </h2>
-                <button
-                  onClick={() => setQuiz2FontSize(prev => Math.min(28, prev + 2))}
-                  style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', marginRight: 36 }}
-                  title="Increase font size"
-                >+</button>
+
+                {/* Arrow buttons — top right */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 36 }}>
+                  <button
+                    onClick={() => setQuiz2RevealCount(c => Math.max(c - 1, 0))}
+                    style={{ width: 30, height: 30, fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                    title="Hide last word"
+                  >←</button>
+                  <button
+                    onClick={() => setQuiz2RevealCount(c => Math.min(c + 1, totalWords))}
+                    style={{ width: 30, height: 30, fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#be185d' : '#be185d', color: '#fff' }}
+                    title="Reveal next word"
+                  >→</button>
+                </div>
               </div>
-              <p style={{ margin: '0 0 10px', fontSize: '0.8rem', color: isDarkMode ? '#aaa' : '#777' }}>
-                Slide or use <strong>→</strong> / <strong>←</strong> to reveal words, <strong>↑</strong> / <strong>↓</strong> to jump verses.
-              </p>
 
               {/* Verse number jump buttons */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
