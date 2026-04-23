@@ -1155,14 +1155,16 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         Breathe
       </button>
 
-      {/* Read Full Chapter TTS Button */}
-      <button
-        onClick={() => window.dispatchEvent(new CustomEvent('readFullChapter'))}
+      {/* To:TextR link button */}
+      <a
+        href="https://vercel-text-to-speech.vercel.app/"
+        target="_blank"
+        rel="noopener noreferrer"
         className="px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-500 text-white hover:bg-blue-600 font-semibold"
-        title="Read pane 2 chapter aloud from top to bottom"
+        title="Open Text-to-Speech app"
       >
-        Read
-      </button>
+        To:TextR
+      </a>
 
       {/* Part-by-part reading button - hidden, functionality moved to grid clicks */}
 
