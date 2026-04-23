@@ -1136,14 +1136,6 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         Recite
       </button>
 
-      {/* Buckets Button */}
-      <button
-        onClick={() => onBuckets && onBuckets()}
-        className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showBucketsModal ? 'bg-purple-600 text-white' : 'bg-purple-500 text-white hover:bg-purple-600'}`}
-        title="Bucket viewer for pane 2 chapter"
-      >
-        Buckets
-      </button>
 
       {/* Cursive Writing Button */}
       <button
