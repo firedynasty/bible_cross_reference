@@ -8052,23 +8052,10 @@ const BibleApp = () => {
         const q2Book = pane2Book || selectedBook;
         const q2Chapter = pane2Chapter || selectedChapter;
         const q2BookName = q2Book ? (q2Book.book || getBookName(q2Book.abbrev)) : '';
-        const isPsalms = q2Book && q2Book.abbrev === 'ps';
 
-        // Auto-load NLT Psalms data on first use
-        if (isPsalms && !nltPsalmsData) {
-          const baseUrl = window.location.hostname === 'localhost' ? '' : '';
-          fetch(`${baseUrl}/en_nlt_psalms.json`)
-            .then(r => r.json())
-            .then(data => setNltPsalmsData(data))
-            .catch(e => console.warn('Failed to load NLT Psalms:', e));
-        }
-
+        // Use exactly what pane 2 is showing — no special-casing
         let q2Verses = [];
-        if (isPsalms && nltPsalmsData) {
-          const nltBook = nltPsalmsData.find(b => b.abbrev === 'ps');
-          if (nltBook && nltBook.chapters[q2Chapter - 1]) q2Verses = nltBook.chapters[q2Chapter - 1];
-        }
-        if (!q2Verses.length && rightPaneBibleData && q2Book) {
+        if (rightPaneBibleData && q2Book) {
           const rpBook = rightPaneBibleData.find(b => b.abbrev === q2Book.abbrev);
           if (rpBook && rpBook.chapters[q2Chapter - 1]) q2Verses = rpBook.chapters[q2Chapter - 1];
         }
@@ -8138,7 +8125,7 @@ const BibleApp = () => {
 
                 {/* Title — center */}
                 <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: isDarkMode ? '#f0f0f0' : '#1a1a1a', textAlign: 'center', flex: 1, padding: '0 8px' }}>
-                  Recite — {q2BookName} {q2Chapter}{isPsalms && nltPsalmsData ? ' (NLT)' : ''}
+                  Recite — {q2BookName} {q2Chapter}
                 </h2>
 
                 {/* Arrow buttons — top right */}
