@@ -32,47 +32,44 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     setOaiTtsLoading(false);
   };
 
+  const handleOaiKey = () => {
+    const existing = localStorage.getItem('OPENAI_API_KEY') || '';
+    const input = window.prompt('OpenAI API key (leave blank to clear):', existing);
+    if (input === null) return; // cancelled
+    try {
+      if (input.trim()) localStorage.setItem('OPENAI_API_KEY', input.trim());
+      else localStorage.removeItem('OPENAI_API_KEY');
+    } catch {}
+  };
+
   const handleOpenAiRead = async () => {
     if (oaiTtsPlaying || oaiTtsLoading) { stopOaiTts(); return; }
 
-    let apiKey = localStorage.getItem('OPENAI_API_KEY') || '';
-    if (!apiKey) {
-      apiKey = window.prompt('Enter your OpenAI API key (saved to localStorage):');
-      if (!apiKey) return;
-      try { localStorage.setItem('OPENAI_API_KEY', apiKey.trim()); } catch {}
-      apiKey = apiKey.trim();
-    }
+    const apiKey = (localStorage.getItem('OPENAI_API_KEY') || '').trim();
+    if (!apiKey) { alert('No API key set — click the Key button first.'); return; }
 
     // Get chapter verses from rightPaneBibleData
     const book = rightPaneBibleData ? rightPaneBibleData.find(b => b.abbrev === currentBook) : null;
-    const verses = book && book.chapters[(currentChapter || 1) - 1] ? book.chapters[(currentChapter || 1) - 1] : [];
-    if (!verses.length) return;
+    const rawVerses = book && book.chapters[(currentChapter || 1) - 1] ? book.chapters[(currentChapter || 1) - 1] : [];
+    if (!rawVerses.length) return;
 
-    const fullText = verses.map((v, i) => {
+    // Build one text entry per verse (verse-by-verse like the TTS app)
+    const verseTexts = rawVerses.map((v, i) => {
       const t = typeof v === 'string' ? v : (v.text || v.verse || String(v));
-      return `${i + 1}. ${t}`;
-    }).join(' ');
-
-    // Split into chunks ≤ 4000 chars at sentence/verse boundaries
-    const chunks = [];
-    let current = '';
-    for (const sentence of fullText.split(/(?<=\.\s)/)) {
-      if ((current + sentence).length > 4000) { if (current) chunks.push(current.trim()); current = sentence; }
-      else current += sentence;
-    }
-    if (current.trim()) chunks.push(current.trim());
+      return `${i + 1}. ${t.replace(/\{[^}]*\}/g, '').trim()}`;
+    });
 
     oaiStopRef.current = false;
     setOaiTtsLoading(true);
     setOaiTtsPlaying(false);
 
-    for (const chunk of chunks) {
+    for (const verseText of verseTexts) {
       if (oaiStopRef.current) break;
       try {
         const resp = await fetch('https://api.openai.com/v1/audio/speech', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-          body: JSON.stringify({ model: 'tts-1', input: chunk, voice: 'onyx', speed: 1.0 })
+          body: JSON.stringify({ model: 'tts-1', input: verseText, voice: 'onyx', speed: 1.0 })
         });
         if (!resp.ok) { console.error('OpenAI TTS error', resp.status); stopOaiTts(); return; }
         const blob = await resp.blob();
@@ -1237,14 +1234,23 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         className="px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-500 text-white hover:bg-blue-600 font-semibold"
         title="Open Text-to-Speech app"
       >
-        To:TextR
+        Go:TextR
       </a>
 
-      {/* OpenAI TTS Read button (Onyx voice) */}
+      {/* OpenAI API Key button */}
+      <button
+        onClick={handleOaiKey}
+        className="px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-gray-500 text-white hover:bg-gray-600"
+        title="Set OpenAI API key for TTS"
+      >
+        Key
+      </button>
+
+      {/* OpenAI TTS Read button (Onyx voice, verse by verse) */}
       <button
         onClick={handleOpenAiRead}
         className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${oaiTtsPlaying ? 'bg-red-500 text-white hover:bg-red-600' : oaiTtsLoading ? 'bg-yellow-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-        title={oaiTtsPlaying ? 'Stop reading' : 'Read chapter aloud with OpenAI Onyx voice'}
+        title={oaiTtsPlaying ? 'Stop reading' : 'Read chapter verse by verse with OpenAI Onyx voice'}
       >
         {oaiTtsLoading ? '...' : oaiTtsPlaying ? 'Stop' : 'Read'}
       </button>
