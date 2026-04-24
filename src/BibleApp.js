@@ -2919,7 +2919,7 @@ const BibleApp = () => {
         }
       }
       // Up Arrow - scroll up one line at a time in KJV pane (opposite of 'x' key)
-      else if (e.key === 'ArrowUp' && kjvContentRef.current && !showQuiz2Modal) {
+      else if ((e.key === 'ArrowUp' || e.key === '-') && kjvContentRef.current && !showQuiz2Modal) {
         
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
@@ -3014,7 +3014,7 @@ const BibleApp = () => {
         }
       }
       // 'p' key, PageDown key, or ArrowDown key - page down (scrolls both sidebar and main content)
-      else if ((e.key === 'p' || e.key === 'PageDown' || e.key === 'ArrowDown') && kjvContentRef.current && !showQuiz2Modal) {
+      else if ((e.key === 'p' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === '+' || e.key === '=') && kjvContentRef.current && !showQuiz2Modal) {
         // If sidebar is open, scroll the sidebar too
         if (showSidebar && sidebarScrollRef.current) {
           const sidebarPane = sidebarScrollRef.current;
@@ -5353,6 +5353,7 @@ const BibleApp = () => {
                     const next = rightPaneTranslation === 'zh_cuv.json' ? 'en_kjv.json' : 'zh_cuv.json';
                     setRightPaneTranslation(next);
                     setSelectedDropdownTranslation(next);
+                    setSelectedTranslation('en_web.json');
                   }}
                   className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold inline-block ${
                     rightPaneTranslation === 'zh_cuv.json'
@@ -5936,6 +5937,7 @@ const BibleApp = () => {
                       </button>
                     )}
                   </div>
+                  <div className="text-center text-gray-400 text-xs pb-2">-/+ pageup/down</div>
                 </div>
               )}
             </div>
@@ -6720,9 +6722,9 @@ const BibleApp = () => {
                       </button>
                     )}
                   </div>
+                  <div className="text-center text-gray-400 text-xs pb-2">-/+ pageup/down</div>
                 </div>
               )}
-                )}
             </div>
           </div>
         )}
