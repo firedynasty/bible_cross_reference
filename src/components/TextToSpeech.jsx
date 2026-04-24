@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { ChevronDown, ChevronRight, Play, SkipForward } from 'lucide-react';
+import kjvAudioData from '../data/kjvAudio';
 
 const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse, onNextChapter, onQA, showStudyQModal, onQuiz, showQuizModal, onQuiz2, showQuiz2Modal, onBuckets, showBucketsModal, onCursive, showCursiveModal, onBreathe, showBreatheModal }, ref) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
@@ -25,11 +26,56 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const oaiAudioRef = useRef(null);
   const oaiStopRef = useRef(false);
 
+  // KJV audio state
+  const [kjvPlaying, setKjvPlaying] = useState(false);
+  const kjvAudioRef = useRef(null);
+
+  const stopKjvAudio = () => {
+    if (kjvAudioRef.current) { kjvAudioRef.current.pause(); kjvAudioRef.current = null; }
+    setKjvPlaying(false);
+  };
+
   const stopOaiTts = () => {
     oaiStopRef.current = true;
     if (oaiAudioRef.current) { oaiAudioRef.current.pause(); oaiAudioRef.current = null; }
     setOaiTtsPlaying(false);
     setOaiTtsLoading(false);
+  };
+
+  const handleKjvRead = () => {
+    // If already playing, just pause (keep position)
+    if (kjvPlaying) {
+      if (kjvAudioRef.current) kjvAudioRef.current.pause();
+      setKjvPlaying(false);
+      return;
+    }
+
+    // If we have an existing audio for the same chapter, resume it
+    if (kjvAudioRef.current && !kjvAudioRef.current.ended) {
+      stopOaiTts();
+      window.speechSynthesis.cancel();
+      setKjvPlaying(true);
+      kjvAudioRef.current.play();
+      return;
+    }
+
+    // Otherwise create new audio
+    stopOaiTts();
+    window.speechSynthesis.cancel();
+
+    const bookChapters = kjvAudioData[currentBook];
+    if (!bookChapters) { alert('No KJV audio for this book'); return; }
+    const url = bookChapters[currentChapter || 1];
+    if (!url) { alert(`No KJV audio for chapter ${currentChapter}`); return; }
+
+    const audio = new Audio(url);
+    kjvAudioRef.current = audio;
+    setKjvPlaying(true);
+    audio.play();
+    audio.onplay = () => setKjvPlaying(true);
+    audio.onpause = () => setKjvPlaying(false);
+    audio.onended = () => setKjvPlaying(false);
+    audio.onerror = () => { setKjvPlaying(false); kjvAudioRef.current = null; };
   };
 
   const handleOaiKey = () => {
@@ -44,6 +90,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
 
   const handleOpenAiRead = async () => {
     if (oaiTtsPlaying || oaiTtsLoading) { stopOaiTts(); return; }
+    stopKjvAudio(); // Stop KJV audio if playing
 
     const apiKey = (localStorage.getItem('OPENAI_API_KEY') || '').trim();
     if (!apiKey) { alert('No API key set — click the Key button first.'); return; }
@@ -380,6 +427,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   useEffect(() => {
     setSelectedVerse(1);
     setAutoScrollRunning(false);
+    stopKjvAudio();
     // Clear any existing timer
     if (timerIdRef.current) {
       clearTimeout(timerIdRef.current);
@@ -1253,6 +1301,15 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         title={oaiTtsPlaying ? 'Stop reading' : 'Read chapter verse by verse with OpenAI Onyx voice'}
       >
         {oaiTtsLoading ? '...' : oaiTtsPlaying ? 'Stop' : 'Read'}
+      </button>
+
+      {/* KJV Audio Read button */}
+      <button
+        onClick={handleKjvRead}
+        className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${kjvPlaying ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-amber-700 text-white hover:bg-amber-800'}`}
+        title={kjvPlaying ? 'Stop KJV audio' : 'Play KJV audio for this chapter'}
+      >
+        {kjvPlaying ? 'Stop' : 'Read:KJV'}
       </button>
 
       {/* Part-by-part reading button - hidden, functionality moved to grid clicks */}
