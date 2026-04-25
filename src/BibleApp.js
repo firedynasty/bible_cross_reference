@@ -5032,14 +5032,16 @@ const BibleApp = () => {
               </button>
             )}
 
-            {/* Quick navigate to Psalms — hidden when already in Psalms */}
-            {selectedBook && selectedBook.abbrev !== 'ps' && (
+            {/* Toggle navigate to Psalms / Proverbs */}
+            {selectedBook && (
               <button
-                onClick={() => handleBookSelect('ps')}
+                onClick={() => {
+                  handleBookSelect(selectedBook.abbrev === 'ps' ? 'prv' : 'ps');
+                }}
                 className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-pink-500 text-white hover:bg-pink-600 font-semibold"
-                title="Go to Psalms chapter 1"
+                title={selectedBook.abbrev === 'ps' ? 'Go to Proverbs' : 'Go to Psalms'}
               >
-                Psalms
+                {selectedBook.abbrev === 'ps' ? 'to: Prov' : 'to: Psalms'}
               </button>
             )}
 
@@ -5151,7 +5153,7 @@ const BibleApp = () => {
 
                 {/* Read Full Chapter TTS Button — moved to TTS hidden controls */}
 
-                {/* Rhyme Audio Play/Pause (Psalms only) */}
+                {/* Rhyme Audio Play/Pause (Psalms & Proverbs) */}
                 {selectedBook && getRhymeAudioUrl((pane2Book || selectedBook).abbrev, pane2Chapter || selectedChapter) && (
                   <button
                     onClick={handleRhymeAudioToggle}
