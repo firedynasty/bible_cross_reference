@@ -1536,6 +1536,8 @@ const BibleApp = () => {
   // Rhyme audio playback (Bible Rhyme chapter MP3s from Dropbox)
   const rhymeAudioRef = useRef(null);
   const [isRhymeAudioPlaying, setIsRhymeAudioPlaying] = useState(false);
+  const [rhymeAutoPlay, setRhymeAutoPlay] = useState(false);
+  const rhymeAutoAdvancingRef = useRef(false);
 
   // Language sidebar cycle state: null | 'cant' | 'chin' | 'heb' | 'span' | 'fr'
   const [sidebarLang, setSidebarLang] = useState(null);
@@ -2387,12 +2389,17 @@ const BibleApp = () => {
       audio.currentTime = 0;
     }
     setIsStorytimeAudioPlaying(false);
-    const rhymeAudio = rhymeAudioRef.current;
-    if (rhymeAudio && !rhymeAudio.paused) {
-      rhymeAudio.pause();
-      rhymeAudio.currentTime = 0;
+    // Skip stopping rhyme audio when auto-advancing chapters
+    if (rhymeAutoAdvancingRef.current) {
+      rhymeAutoAdvancingRef.current = false;
+    } else {
+      const rhymeAudio = rhymeAudioRef.current;
+      if (rhymeAudio && !rhymeAudio.paused) {
+        rhymeAudio.pause();
+        rhymeAudio.currentTime = 0;
+      }
+      setIsRhymeAudioPlaying(false);
     }
-    setIsRhymeAudioPlaying(false);
   }, [pane2Book, pane2Chapter, selectedBook, selectedChapter]);
 
   // Helper: speak all parts sequentially with 1.5s pauses (for undelimit mode)
@@ -5162,6 +5169,21 @@ const BibleApp = () => {
                   >
                     {isRhymeAudioPlaying ? 'Rhyme ‖' : 'Rhyme ▶'}
                   </button>
+                )}
+                {/* Rhyme auto-play toggle */}
+                {selectedBook && getRhymeAudioUrl((pane2Book || selectedBook).abbrev, pane2Chapter || selectedChapter) && (
+                  <label className="ml-1 inline-flex items-center cursor-pointer" title={rhymeAutoPlay ? 'Auto-play: ON (will advance chapters)' : 'Auto-play: OFF'}>
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        checked={rhymeAutoPlay}
+                        onChange={() => setRhymeAutoPlay(prev => !prev)}
+                        className="sr-only"
+                      />
+                      <div className={`w-7 h-4 rounded-full transition-colors ${rhymeAutoPlay ? 'bg-pink-500' : 'bg-gray-300'}`}></div>
+                      <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${rhymeAutoPlay ? 'translate-x-3' : ''}`}></div>
+                    </div>
+                  </label>
                 )}
 
                 {/* Story Time Audio Play/Pause Toggle */}
@@ -8399,7 +8421,29 @@ const BibleApp = () => {
         preload="none"
         onPlay={() => setIsRhymeAudioPlaying(true)}
         onPause={() => setIsRhymeAudioPlaying(false)}
-        onEnded={() => setIsRhymeAudioPlaying(false)}
+        onEnded={() => {
+          if (rhymeAutoPlay) {
+            const book = pane2Book || selectedBook;
+            const chapter = pane2Chapter || selectedChapter;
+            if (book && chapter < book.chapters.length) {
+              const nextChapter = chapter + 1;
+              const nextUrl = getRhymeAudioUrl(book.abbrev, nextChapter);
+              if (nextUrl) {
+                rhymeAutoAdvancingRef.current = true;
+                handleChapterSelect(nextChapter);
+                setTimeout(() => {
+                  const audio = rhymeAudioRef.current;
+                  if (audio) {
+                    audio.src = nextUrl;
+                    audio.play().catch(err => console.warn('Rhyme auto-play failed:', err));
+                  }
+                }, 300);
+                return;
+              }
+            }
+          }
+          setIsRhymeAudioPlaying(false);
+        }}
         style={{ display: 'none' }}
       />
 
