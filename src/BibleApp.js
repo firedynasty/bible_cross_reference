@@ -1213,6 +1213,7 @@ const BibleApp = () => {
     pendingBookRef.current = pendingBookSelection;
   }, [pendingBookSelection]);
   const [showCrossRef, setShowCrossRef] = useState(null);
+  const [expandedRefsData, setExpandedRefsData] = useState(null); // { verseLabel, refs: [{label, text}] }
 
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
@@ -4248,6 +4249,7 @@ const BibleApp = () => {
     setSelectedChapter(chapterNum);
     console.log("✓ setSelectedChapter called with:", chapterNum);
     setShowCrossRef(null); // Hide any cross-reference popup
+    setExpandedRefsData(null); // Clear expanded cross-references
 
     // No need to reset auto-scroll timer here - will be handled in NavigationPlaceholder component
 
@@ -4519,6 +4521,36 @@ const BibleApp = () => {
       };
       setTimeout(() => scrollToVerse(ref.verse), 300);
     }
+  };
+
+  // Handle expanding all cross-references for a verse into pane 2
+  const handleExpandRefs = (refKey, verseNumber) => {
+    const refs = crossReferences[refKey];
+    if (!refs || refs.length === 0) return;
+    const sourceData = rightPaneBibleData || bibleData || [];
+    const results = refs.map(ref => {
+      const book = sourceData.find(b => b.abbrev === ref.book);
+      let verseText = '';
+      if (book && book.chapters[ref.chapter - 1]) {
+        const verses = book.chapters[ref.chapter - 1];
+        if (verses[ref.verse - 1]) {
+          const v = verses[ref.verse - 1];
+          verseText = typeof v === 'string' ? v : (v.text || v.verse || String(v));
+        }
+      }
+      return {
+        label: `${getBookName(ref.book)} ${ref.chapter}:${ref.verse}`,
+        text: verseText || '(verse not found in current translation)',
+        book: ref.book,
+        chapter: ref.chapter,
+        verse: ref.verse
+      };
+    });
+    const bookName = selectedBook ? getBookName(selectedBook.abbrev) : '';
+    setExpandedRefsData({
+      verseLabel: `${bookName} ${selectedChapter}:${verseNumber}`,
+      refs: results
+    });
   };
 
   // Handle clicking a Strong's number — load index + dictionary if needed, show concordance in pane 2
@@ -5988,6 +6020,13 @@ const BibleApp = () => {
                                   </button>
                                   );
                                 })}
+                                <button
+                                  onClick={() => handleExpandRefs(refKey, item.verseNumber)}
+                                  className={`ml-1 inline-flex items-center ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-500 hover:text-blue-700'}`}
+                                  title="Show all cross-reference verses in pane 2"
+                                >
+                                  <Link className="h-4 w-4" />
+                                </button>
                               </div>
                             )}
                           </div>
@@ -6258,13 +6297,20 @@ const BibleApp = () => {
                               </button>
                               );
                             })}
+                            <button
+                              onClick={() => handleExpandRefs(refKey, verseNumber)}
+                              className={`ml-1 inline-flex items-center ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-500 hover:text-blue-700'}`}
+                              title="Show all cross-reference verses in pane 2"
+                            >
+                              <Link className="h-4 w-4" />
+                            </button>
                           </div>
                         )}
                       </div>
                     );
                   })}
                 </div>
-                
+
                 {/* Chapter Navigation - Simple inline approach */}
                 <div className="mt-10 flex justify-between pb-4">
                   {selectedChapter > 1 ? (
@@ -6373,6 +6419,49 @@ const BibleApp = () => {
                 }}
                 style={{ cursor: 'default' }}
               >
+                {/* Expanded Cross-References View */}
+                {expandedRefsData && (
+                  <div className={`${showPane2Only ? 'max-w-[70ch] mx-auto' : ''} pb-8`}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333' }}>
+                        Cross-References — {expandedRefsData.verseLabel}
+                      </h3>
+                      <button
+                        onClick={() => setExpandedRefsData(null)}
+                        style={{ width: 28, height: 28, fontSize: 14, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#555' : '#d0d0d0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                      >✕</button>
+                    </div>
+                    <div className="space-y-4">
+                      {expandedRefsData.refs.map((ref, i) => {
+                        const isPentateuch = ['gn','ge','ex','lv','nm','dt'].includes(ref.book);
+                        const isIsaiah = ref.book === 'is';
+                        const isOrange = ['ps','rm','hb','lk'].includes(ref.book);
+                        const isNT = ['mt','mk','jo','act','1co','2co','gl','eph','ph','cl','1ts','2ts','1tm','2tm','tt','phm','jm','1pe','2pe','1jo','2jo','3jo','jd','re'].includes(ref.book);
+                        const labelColor = isPentateuch ? (isDarkMode ? '#FCD34D' : '#92400E')
+                          : isIsaiah ? (isDarkMode ? '#e8e8e6' : '#242422')
+                          : isOrange ? (isDarkMode ? '#fb923c' : '#ea580c')
+                          : isNT ? (isDarkMode ? '#86efac' : '#16a34a')
+                          : (isDarkMode ? '#93c5fd' : '#2563eb');
+                        return (
+                          <div key={i} className={`p-3 rounded-md ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                            <a
+                              href={`https://www.biblegateway.com/passage/?search=${encodeURIComponent(getBookName(ref.book) + ' ' + ref.chapter)}&version=NLT`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-bold mb-1 hover:underline"
+                              style={{ color: labelColor, padding: 0, fontSize: '0.95rem', textDecoration: 'none' }}
+                            >
+                              {ref.label}
+                            </a>
+                            <p style={{ margin: '4px 0 0', fontSize: '1rem', lineHeight: 1.6, color: isDarkMode ? '#d0d0d0' : '#333' }}>
+                              {ref.text}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 {showStudyQModal && studyQData && (() => {
                   const bookName = selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : '';
                   const bookQuestions = selectedBook && studyQData[selectedBook.abbrev];
