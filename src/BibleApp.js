@@ -1473,6 +1473,7 @@ const BibleApp = () => {
   const [cursiveReveal, setCursiveReveal] = useState(() => parseInt(localStorage.getItem('cursive-reveal') ?? '0'));
   const [cursiveInput, setCursiveInput] = useState('');
   const [cursiveClipboardBuckets, setCursiveClipboardBuckets] = useState(null);
+  const [cursiveSource, setCursiveSource] = useState(() => localStorage.getItem('cursive-source') || 'pane2'); // 'story' or 'pane2'
   const cursiveGoToBucketRef = useRef(null);
   const cursiveBucketIndexRef = useRef(0);
   const [showQuiz2Modal, setShowQuiz2Modal] = useState(false);
@@ -2853,6 +2854,18 @@ const BibleApp = () => {
           e.preventDefault();
           const outputScroll = document.querySelector('.cursive-output-scroll');
           if (outputScroll) outputScroll.scrollTop = outputScroll.scrollHeight;
+        } else if (e.key === '[') {
+          e.preventDefault();
+          const btn = document.querySelector('[data-cursive-source="pane2"]');
+          if (btn) btn.click();
+        } else if (e.key === ']') {
+          e.preventDefault();
+          const btn = document.querySelector('[data-cursive-source="story"]');
+          if (btn) btn.click();
+        } else if (e.key === '.') {
+          e.preventDefault();
+          const btn = document.querySelector('[data-cursive-next]');
+          if (btn) btn.click();
         }
         return;
       }
@@ -5597,7 +5610,68 @@ const BibleApp = () => {
               }}
               showCursiveModal={showCursiveModal}
               onCursive={() => {
-                setCursiveBucketIndex(0);
+                setCursiveBucketIndex(-1);
+                const savedSource = localStorage.getItem('cursive-source') || 'pane2';
+                setCursiveSource(savedSource);
+                if (savedSource === 'story' && storytimeData) {
+                  const activeBook = pane2Book || selectedBook;
+                  const activeChapter = pane2Chapter || selectedChapter;
+                  if (activeBook) {
+                    const bookName = abbrevToBookName[activeBook.abbrev] || activeBook.abbrev;
+                    const key = `${bookName} ${activeChapter}`;
+                    const story = storytimeData[key];
+                    if (story) {
+                      let t = story;
+                      t = t.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+                      t = t.replace(/^#{1,6}\s+/gm, '');
+                      t = t.replace(/\*\*\*(.+?)\*\*\*/g, '$1');
+                      t = t.replace(/\*\*(.+?)\*\*/g, '$1');
+                      t = t.replace(/__(.+?)__/g, '$1');
+                      t = t.replace(/\*(.+?)\*/g, '$1');
+                      t = t.replace(/_(.+?)_/g, '$1');
+                      t = t.replace(/`([^`]+)`/g, '$1');
+                      t = t.replace(/^>\s?/gm, '');
+                      t = t.replace(/^[-*]{3,}\s*$/gm, '');
+                      t = t.replace(/^\|.*\|$/gm, '');
+                      t = t.replace(/^[-|:\s]+$/gm, '');
+                      t = t.replace(/^[-*+]\s+/gm, '');
+                      t = t.replace(/^\d+\.\s+/gm, '');
+                      t = t.replace(/\n{3,}/g, '\n\n');
+                      const cleaned = t.trim();
+                      const clean = cleaned.replace(/\s+/g, ' ').trim();
+                      if (clean) {
+                        let out;
+                        const hasAtMarkers = /(?:^|\n)\s*@\S/.test(cleaned);
+                        if (hasAtMarkers) {
+                          out = cleaned.split(/\n(?=\s*@\S)/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
+                        } else {
+                          out = [];
+                          const MAX = 500;
+                          let i = 0;
+                          while (i < clean.length) {
+                            if (clean.length - i <= MAX) { out.push(clean.slice(i).trim()); break; }
+                            let end = i + MAX;
+                            const slice = clean.slice(i, end);
+                            const sentEnd = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('! '), slice.lastIndexOf('? '));
+                            if (sentEnd > MAX / 2) { end = i + sentEnd + 1; } else {
+                              const sp = clean.lastIndexOf(' ', end);
+                              if (sp > i + MAX / 2) end = sp;
+                            }
+                            out.push(clean.slice(i, end).trim());
+                            i = end;
+                          }
+                        }
+                        setCursiveClipboardBuckets(out);
+                      }
+                    } else {
+                      // No story available, fall back to pane2
+                      setCursiveSource('pane2'); localStorage.setItem('cursive-source', 'pane2');
+                      setCursiveClipboardBuckets(null);
+                    }
+                  }
+                } else {
+                  setCursiveClipboardBuckets(null);
+                }
                 setShowCursiveModal(true);
               }}
               showBreatheModal={showBreatheModal}
@@ -7713,7 +7787,7 @@ const BibleApp = () => {
             return `${idx + 1}. Verses ${firstV}–${lastV}`;
           });
         }
-        const clampedIdx = Math.min(cursiveBucketIndex, Math.max(0, buckets.length - 1));
+        const clampedIdx = Math.min(cursiveBucketIndex, Math.max(-1, buckets.length - 1));
         if (clampedIdx !== cursiveBucketIndex) setCursiveBucketIndex(clampedIdx);
         const bucketText = buckets[clampedIdx] || '';
 
@@ -7773,7 +7847,7 @@ const BibleApp = () => {
               }
             }
             setCursiveClipboardBuckets(out);
-            setCursiveBucketIndex(0);
+            setCursiveBucketIndex(-1);
             if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
 
             const outputText = document.querySelector('.cursive-output-text');
@@ -7786,13 +7860,20 @@ const BibleApp = () => {
         };
 
         const goToBucket = (newIdx) => {
-          if (newIdx < 0 || newIdx >= buckets.length) return;
+          if (newIdx < -1 || newIdx >= buckets.length) return;
           setCursiveBucketIndex(newIdx);
           if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
           const outputText = document.querySelector('.cursive-output-text');
           const outputScroll = document.querySelector('.cursive-output-scroll');
           if (outputText) outputText.innerHTML = '';
           if (outputScroll) outputScroll.scrollTop = 0;
+          if (newIdx === -1) {
+            // Show book & chapter title on the "0" landing page
+            if (outputText) {
+              outputText.innerHTML = `<span style="font-size:1.6em">${p2BookName} ${p2Chapter}</span>`;
+            }
+            return;
+          }
           setTimeout(() => {
             const writeBtn = document.querySelector('.cursive-write-btn');
             if (writeBtn) writeBtn.click();
@@ -7817,10 +7898,177 @@ const BibleApp = () => {
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <button
-                onClick={() => setShowCursiveModal(false)}
-                style={{ position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', fontSize: 28, color: '#8b4513', cursor: 'pointer', lineHeight: 1 }}
-              >&times;</button>
+              <div style={{ position: 'absolute', top: 10, right: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
+                <button
+                  onClick={() => {
+                    const newSource = 'pane2';
+                    setCursiveSource(newSource); localStorage.setItem('cursive-source', newSource);
+                    setCursiveClipboardBuckets(null);
+                    setCursiveBucketIndex(-1);
+                    if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
+                    const outputText = document.querySelector('.cursive-output-text');
+                    const outputScroll = document.querySelector('.cursive-output-scroll');
+                    if (outputText) outputText.innerHTML = '';
+                    if (outputScroll) outputScroll.scrollTop = 0;
+                  }}
+                  data-cursive-source="pane2"
+                  style={{ background: cursiveSource === 'pane2' ? '#8b4513' : 'transparent', color: cursiveSource === 'pane2' ? 'white' : '#8b4513', border: '1px solid #8b4513', borderRadius: 4, cursor: 'pointer', fontSize: '0.7rem', padding: '2px 8px', fontWeight: 'bold' }}
+                >
+                  Pane 2 [
+                </button>
+                <button
+                  onClick={() => {
+                    if (!storytimeData || !p2Book) return;
+                    const bookName = abbrevToBookName[p2Book.abbrev] || p2Book.abbrev;
+                    const key = `${bookName} ${p2Chapter}`;
+                    const story = storytimeData[key];
+                    if (!story) return; // no story available, stay on pane2
+                    const newSource = 'story';
+                    setCursiveSource(newSource); localStorage.setItem('cursive-source', newSource);
+                    // Chunk story into buckets
+                    let t = story;
+                    t = t.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+                    t = t.replace(/^#{1,6}\s+/gm, '');
+                    t = t.replace(/\*\*\*(.+?)\*\*\*/g, '$1');
+                    t = t.replace(/\*\*(.+?)\*\*/g, '$1');
+                    t = t.replace(/__(.+?)__/g, '$1');
+                    t = t.replace(/\*(.+?)\*/g, '$1');
+                    t = t.replace(/_(.+?)_/g, '$1');
+                    t = t.replace(/`([^`]+)`/g, '$1');
+                    t = t.replace(/^>\s?/gm, '');
+                    t = t.replace(/^[-*]{3,}\s*$/gm, '');
+                    t = t.replace(/^\|.*\|$/gm, '');
+                    t = t.replace(/^[-|:\s]+$/gm, '');
+                    t = t.replace(/^[-*+]\s+/gm, '');
+                    t = t.replace(/^\d+\.\s+/gm, '');
+                    t = t.replace(/\n{3,}/g, '\n\n');
+                    const cleaned = t.trim();
+                    const clean = cleaned.replace(/\s+/g, ' ').trim();
+                    if (!clean) return;
+                    let out;
+                    const hasAtMarkers = /(?:^|\n)\s*@\S/.test(cleaned);
+                    if (hasAtMarkers) {
+                      out = cleaned.split(/\n(?=\s*@\S)/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
+                    } else {
+                      out = [];
+                      const MAX = 500;
+                      let i = 0;
+                      while (i < clean.length) {
+                        if (clean.length - i <= MAX) { out.push(clean.slice(i).trim()); break; }
+                        let end = i + MAX;
+                        const slice = clean.slice(i, end);
+                        const sentEnd = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('! '), slice.lastIndexOf('? '));
+                        if (sentEnd > MAX / 2) { end = i + sentEnd + 1; } else {
+                          const sp = clean.lastIndexOf(' ', end);
+                          if (sp > i + MAX / 2) end = sp;
+                        }
+                        out.push(clean.slice(i, end).trim());
+                        i = end;
+                      }
+                    }
+                    setCursiveClipboardBuckets(out);
+                    setCursiveBucketIndex(-1);
+                    if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
+                    const outputText = document.querySelector('.cursive-output-text');
+                    const outputScroll = document.querySelector('.cursive-output-scroll');
+                    if (outputText) outputText.innerHTML = '';
+                    if (outputScroll) outputScroll.scrollTop = 0;
+                  }}
+                  data-cursive-source="story"
+                  style={{ background: cursiveSource === 'story' ? '#7c3aed' : 'transparent', color: cursiveSource === 'story' ? 'white' : '#7c3aed', border: '1px solid #7c3aed', borderRadius: 4, cursor: 'pointer', fontSize: '0.7rem', padding: '2px 8px', fontWeight: 'bold', opacity: (storytimeData && p2Book && storytimeData[`${abbrevToBookName[p2Book.abbrev] || p2Book.abbrev} ${p2Chapter}`]) ? 1 : 0.4 }}
+                >
+                  Story ]
+                </button>
+                <button
+                  onClick={() => {
+                    const activeBook = p2Book;
+                    const activeChapter = p2Chapter;
+                    if (!activeBook) return;
+                    const maxChapters = activeBook.chapters ? activeBook.chapters.length : 999;
+                    let nextBook = activeBook;
+                    let nextChap = activeChapter + 1;
+                    if (nextChap > maxChapters) {
+                      const idx = bibleData.findIndex(b => b.abbrev === activeBook.abbrev);
+                      if (idx === -1 || idx >= bibleData.length - 1) return;
+                      nextBook = bibleData[idx + 1];
+                      nextChap = 1;
+                    }
+                    if (nextBook.abbrev !== activeBook.abbrev) setSelectedBook(nextBook);
+                    handleChapterSelect(nextChap, true);
+                    // If in story mode, reload story for new chapter
+                    if (cursiveSource === 'story' && storytimeData) {
+                      const bookName = abbrevToBookName[nextBook.abbrev] || nextBook.abbrev;
+                      const key = `${bookName} ${nextChap}`;
+                      const story = storytimeData[key];
+                      if (story) {
+                        let t2 = story;
+                        t2 = t2.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+                        t2 = t2.replace(/^#{1,6}\s+/gm, '');
+                        t2 = t2.replace(/\*\*\*(.+?)\*\*\*/g, '$1');
+                        t2 = t2.replace(/\*\*(.+?)\*\*/g, '$1');
+                        t2 = t2.replace(/__(.+?)__/g, '$1');
+                        t2 = t2.replace(/\*(.+?)\*/g, '$1');
+                        t2 = t2.replace(/_(.+?)_/g, '$1');
+                        t2 = t2.replace(/`([^`]+)`/g, '$1');
+                        t2 = t2.replace(/^>\s?/gm, '');
+                        t2 = t2.replace(/^[-*]{3,}\s*$/gm, '');
+                        t2 = t2.replace(/^\|.*\|$/gm, '');
+                        t2 = t2.replace(/^[-|:\s]+$/gm, '');
+                        t2 = t2.replace(/^[-*+]\s+/gm, '');
+                        t2 = t2.replace(/^\d+\.\s+/gm, '');
+                        t2 = t2.replace(/\n{3,}/g, '\n\n');
+                        const cleaned2 = t2.trim();
+                        const clean2 = cleaned2.replace(/\s+/g, ' ').trim();
+                        if (clean2) {
+                          let out2;
+                          const hasAt2 = /(?:^|\n)\s*@\S/.test(cleaned2);
+                          if (hasAt2) {
+                            out2 = cleaned2.split(/\n(?=\s*@\S)/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
+                          } else {
+                            out2 = [];
+                            const MAX2 = 500;
+                            let j = 0;
+                            while (j < clean2.length) {
+                              if (clean2.length - j <= MAX2) { out2.push(clean2.slice(j).trim()); break; }
+                              let end2 = j + MAX2;
+                              const slice2 = clean2.slice(j, end2);
+                              const sentEnd2 = Math.max(slice2.lastIndexOf('. '), slice2.lastIndexOf('! '), slice2.lastIndexOf('? '));
+                              if (sentEnd2 > MAX2 / 2) { end2 = j + sentEnd2 + 1; } else {
+                                const sp2 = clean2.lastIndexOf(' ', end2);
+                                if (sp2 > j + MAX2 / 2) end2 = sp2;
+                              }
+                              out2.push(clean2.slice(j, end2).trim());
+                              j = end2;
+                            }
+                          }
+                          setCursiveClipboardBuckets(out2);
+                        }
+                      } else {
+                        // No story for next chapter, switch to pane2
+                        setCursiveClipboardBuckets(null);
+                        setCursiveSource('pane2'); localStorage.setItem('cursive-source', 'pane2');
+                      }
+                    } else {
+                      setCursiveClipboardBuckets(null);
+                    }
+                    setCursiveBucketIndex(-1);
+                    if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
+                    const outputText = document.querySelector('.cursive-output-text');
+                    const outputScroll = document.querySelector('.cursive-output-scroll');
+                    if (outputText) outputText.innerHTML = '';
+                    if (outputScroll) outputScroll.scrollTop = 0;
+                  }}
+                  data-cursive-next="true"
+                  style={{ background: '#8b4513', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.7rem', color: 'white', padding: '2px 8px', fontWeight: 'bold' }}
+                  title="Next chapter"
+                >
+                  Next . &gt;
+                </button>
+                <button
+                  onClick={() => setShowCursiveModal(false)}
+                  style={{ background: 'none', border: 'none', fontSize: 24, color: '#8b4513', cursor: 'pointer', lineHeight: 1, marginLeft: 2 }}
+                >&times;</button>
+              </div>
 
               <h2 style={{ fontFamily: "'Alex Brush', cursive", fontSize: '2.2rem', color: '#8b4513', textAlign: 'center', margin: '0 0 2px', letterSpacing: '0.02em' }}>
                 {isClipboardMode ? 'Clipboard' : `${p2BookName} ${p2Chapter}`} — Cursive
@@ -7848,9 +8096,27 @@ const BibleApp = () => {
                 {/* Bucket selector */}
                 <div style={{ flex: 1, minWidth: 160 }}>
                   <label style={{ display: 'block', fontSize: '0.72rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c8956c', marginBottom: 4 }}>
-                    Bucket {clampedIdx + 1} / {buckets.length}
+                    {clampedIdx === -1 ? `${p2BookName} ${p2Chapter}` : `Bucket ${clampedIdx + 1} / ${buckets.length}`}
                   </label>
                   <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 4 }}>
+                    <button
+                      onClick={() => goToBucket(-1)}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: 4,
+                        border: 'none',
+                        fontSize: 12,
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        color: '#fff',
+                        background: clampedIdx === -1
+                          ? 'linear-gradient(45deg, #8b4513, #a0522d)'
+                          : 'linear-gradient(45deg, #888, #666)',
+                        boxShadow: clampedIdx === -1 ? '0 0 0 2px #c8956c' : 'none'
+                      }}
+                    >
+                      0
+                    </button>
                     {buckets.map((_, idx) => (
                       <button
                         key={idx}
@@ -7879,6 +8145,7 @@ const BibleApp = () => {
                       onChange={(e) => goToBucket(parseInt(e.target.value))}
                       style={{ flex: 1, padding: 6, border: '1px solid #c9b99a', borderRadius: 2, background: 'rgba(255,255,255,0.7)', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, color: '#1a1209' }}
                     >
+                      <option value={-1}>0. {p2BookName} {p2Chapter}</option>
                       {bucketLabels.map((label, idx) => (
                         <option key={idx} value={idx}>{label}</option>
                       ))}
@@ -8046,7 +8313,7 @@ const BibleApp = () => {
                     onClick={() => {
                       if (isClipboardMode) {
                         setCursiveClipboardBuckets(null);
-                        setCursiveBucketIndex(0);
+                        setCursiveBucketIndex(-1);
                         if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
             
                         const outputText = document.querySelector('.cursive-output-text');
@@ -8484,6 +8751,44 @@ const BibleApp = () => {
                 📋
               </button>
               <button
+                onClick={handleStorytimeAudioToggle}
+                style={{ background: isDarkMode ? '#7c3aed' : '#8b5cf6', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.75em', color: 'white', padding: '4px 8px', fontWeight: 'bold' }}
+                title={isStorytimeAudioPlaying ? 'Pause Story Time audio' : 'Play Story Time audio'}
+              >
+                {isStorytimeAudioPlaying ? 'Pause ‖' : 'Play ▶'}
+              </button>
+              <button
+                onClick={() => {
+                  const activeBook = pane2Book || selectedBook;
+                  const activeChapter = pane2Chapter || selectedChapter;
+                  if (!activeBook || !storytimeData) return;
+                  const maxChapters = activeBook.chapters ? activeBook.chapters.length : 999;
+                  let nextBook = activeBook;
+                  let nextChap = activeChapter + 1;
+                  if (nextChap > maxChapters) {
+                    const idx = bibleData.findIndex(b => b.abbrev === activeBook.abbrev);
+                    if (idx === -1 || idx >= bibleData.length - 1) return;
+                    nextBook = bibleData[idx + 1];
+                    nextChap = 1;
+                  }
+                  const bookName = abbrevToBookName[nextBook.abbrev] || nextBook.abbrev;
+                  const key = `${bookName} ${nextChap}`;
+                  const story = storytimeData[key];
+                  if (story) {
+                    if (nextBook.abbrev !== activeBook.abbrev) setSelectedBook(nextBook);
+                    handleChapterSelect(nextChap, true);
+                    setStorytimeContent(story);
+                  } else {
+                    setStorytimeUnavailableMsg(`No Story Time available for ${key}.`);
+                    setShowStorytimeModal(false);
+                  }
+                }}
+                style={{ background: isDarkMode ? '#7c3aed' : '#8b5cf6', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.75em', color: 'white', padding: '4px 8px', fontWeight: 'bold' }}
+                title="Go to next chapter's story"
+              >
+                Next &gt;
+              </button>
+              <button
                 onClick={() => {
                   const raw = storytimeContent || '';
                   // Clean markdown formatting
@@ -8531,8 +8836,10 @@ const BibleApp = () => {
                     }
                   }
                   setCursiveClipboardBuckets(out);
-                  setCursiveBucketIndex(0);
+                  setCursiveBucketIndex(-1);
+                    setCursiveSource('story'); localStorage.setItem('cursive-source', 'story');
                   if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
+                  setShowStorytimeModal(false);
                   setShowCursiveModal(true);
                 }}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85em', color: isDarkMode ? '#d97706' : '#b45309', padding: '4px 8px', fontWeight: 'bold' }}
