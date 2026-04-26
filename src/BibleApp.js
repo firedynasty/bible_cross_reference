@@ -5084,19 +5084,6 @@ const BibleApp = () => {
               </button>
             )}
 
-            {/* Toggle navigate to Psalms / Proverbs */}
-            {selectedBook && (
-              <button
-                onClick={() => {
-                  handleBookSelect(selectedBook.abbrev === 'ps' ? 'prv' : 'ps');
-                }}
-                className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-pink-500 text-white hover:bg-pink-600 font-semibold"
-                title={selectedBook.abbrev === 'ps' ? 'Go to Proverbs' : 'Go to Psalms'}
-              >
-                {selectedBook.abbrev === 'ps' ? 'to: Prov' : 'to: Psalms'}
-              </button>
-            )}
-
             {/* Language cycle + open buttons */}
             {(() => {
               const langOptions = ['cant', 'chin', 'heb', 'span', 'fr'];
@@ -5229,17 +5216,6 @@ const BibleApp = () => {
                       <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${rhymeAutoPlay ? 'translate-x-3' : ''}`}></div>
                     </div>
                   </label>
-                )}
-
-                {/* Story Time Audio Play/Pause Toggle */}
-                {selectedBook && (
-                  <button
-                    onClick={handleStorytimeAudioToggle}
-                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
-                    title={isStorytimeAudioPlaying ? 'Pause Story Time audio' : 'Play Story Time audio'}
-                  >
-                    {isStorytimeAudioPlaying ? 'Pause ‖' : 'Play ▶'}
-                  </button>
                 )}
 
                 {/* Story Time Button (detects pane 2 book) */}
@@ -5433,6 +5409,19 @@ const BibleApp = () => {
                 >
                   {rightPaneTranslation === 'zh_cuv.json' ? 'to: KJV' : 'to: CUV'}
                 </button>
+
+                {/* Toggle navigate to Psalms / Proverbs */}
+                {selectedBook && (
+                  <button
+                    onClick={() => {
+                      handleBookSelect(selectedBook.abbrev === 'ps' ? 'prv' : 'ps');
+                    }}
+                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-pink-500 text-white hover:bg-pink-600 font-semibold"
+                    title={selectedBook.abbrev === 'ps' ? 'Go to Proverbs' : 'Go to Psalms'}
+                  >
+                    {selectedBook.abbrev === 'ps' ? 'to: Prov' : 'to: Psalms'}
+                  </button>
+                )}
 
                 {/* Fill-in-the-Blank Quiz Button - moved to TextToSpeech after QA */}
 
@@ -6082,12 +6071,31 @@ const BibleApp = () => {
             /* Side-by-side View - Original two-pane layout */
             <>
           {/* Bible Text Display */}
-          <div 
-            ref={chapterContentRef} 
+          <div
+            ref={chapterContentRef}
             className={`${showPane2Only ? 'hidden' : isMobileView && !isTabletView && showKJVOnMobile ? 'hidden' : isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'} relative`}
             onClick={(event) => handlePaneClick(event, 'left')}
             style={{ cursor: 'default' }}
           >
+            {/* Pane 1 previous chapter arrow — desktop/tablet only */}
+            {(!isMobileView || isTabletView) && selectedBook && selectedChapter > 1 && (
+              <button
+                onClick={() => {
+                  localStorage.removeItem('mobileScrollPosition');
+                  setMobileScrollPosition(0);
+                  handleChapterSelect(selectedChapter - 1, true);
+                  setPane2Book(null);
+                  setPane2Chapter(null);
+                  setTimeout(() => { handleHomeReset(); }, 100);
+                }}
+                style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
+                title={`Previous chapter (${selectedChapter - 1})`}
+              >
+                <svg width="48" height="48" viewBox="0 0 64 64"><path d="M44 8 L20 32 L44 56" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            )}
             {selectedBook && selectedChapter > 0 && (
               <div>
                 {/* Read and Repeat buttons - Hidden */}
@@ -6401,7 +6409,54 @@ const BibleApp = () => {
           
           {/* Right Pane Bible Panel - Toggle visibility on mobile, always show on tablet and desktop */}
           {(showPane2Only || !isMobileView || isTabletView || showKJVOnMobile) && (
-            <div className={`${showPane2Only ? 'w-full' : isMobileView && !isTabletView ? 'w-full' : 'w-1/2'} ${showPane2Only ? '' : 'border-l'} border-gray-200 bg-gray-50 flex flex-col`}>
+            <div className={`${showPane2Only ? 'w-full' : isMobileView && !isTabletView ? 'w-full' : 'w-1/2'} ${showPane2Only ? '' : 'border-l'} border-gray-200 bg-gray-50 flex flex-col relative`}>
+              {/* Pane 2 chapter nav arrows — desktop/tablet only */}
+              {(!isMobileView || isTabletView) && selectedBook && (() => {
+                const p2Book = pane2Book || selectedBook;
+                const p2Chapter = pane2Chapter || selectedChapter;
+                const hasPrev = p2Chapter > 1;
+                const hasNext = p2Book && p2Chapter < p2Book.chapters.length;
+                const navToChapter = (ch) => {
+                  localStorage.removeItem('mobileScrollPosition');
+                  setMobileScrollPosition(0);
+                  setSelectedBook(p2Book);
+                  setSelectedChapter(ch);
+                  setPane2Book(null);
+                  setPane2Chapter(null);
+                  setPrimaryReading({ book: p2Book, chapter: ch });
+                  setIsViewingCrossRef(false);
+                  setTimeout(() => { handleHomeReset(); }, 100);
+                };
+                return (
+                  <>
+                    <button
+                      onClick={() => {
+                        const pane = kjvContentRef.current;
+                        if (pane) { pane.scrollTop = Math.min(pane.scrollHeight - pane.clientHeight, pane.scrollTop + pane.clientHeight * 0.9); }
+                        const pane1 = chapterContentRef.current;
+                        if (pane1) { pane1.scrollTop = Math.min(pane1.scrollHeight - pane1.clientHeight, pane1.scrollTop + pane1.clientHeight * 0.9); }
+                      }}
+                      style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
+                      title="Page down"
+                    >
+                      <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                    {hasNext && (
+                      <button
+                        onClick={() => navToChapter(p2Chapter + 1)}
+                        style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
+                        title={`Next chapter (${p2Chapter + 1})`}
+                      >
+                        <svg width="48" height="48" viewBox="0 0 64 64"><path d="M20 8 L44 32 L20 56" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
               {/* KJV Bible Text Display */}
               <div
                 ref={kjvContentRef}
@@ -6423,7 +6478,7 @@ const BibleApp = () => {
                 {expandedRefsData && (
                   <div className={`${showPane2Only ? 'max-w-[70ch] mx-auto' : ''} pb-8`}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333' }}>
+                      <h3 style={{ margin: 0, fontSize: `${fontScale * 1.1}em`, color: isDarkMode ? '#e0e0e0' : '#333' }}>
                         Cross-References — {expandedRefsData.verseLabel}
                       </h3>
                       <button
@@ -6449,11 +6504,11 @@ const BibleApp = () => {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="font-bold mb-1 hover:underline"
-                              style={{ color: labelColor, padding: 0, fontSize: '0.95rem', textDecoration: 'none' }}
+                              style={{ color: labelColor, padding: 0, fontSize: `${fontScale * 0.95}rem`, textDecoration: 'none' }}
                             >
                               {ref.label}
                             </a>
-                            <p style={{ margin: '4px 0 0', fontSize: '1rem', lineHeight: 1.6, color: isDarkMode ? '#d0d0d0' : '#333' }}>
+                            <p style={{ margin: '4px 0 0', fontSize: `${fontScale * 1.125}rem`, lineHeight: 1.6, color: isDarkMode ? '#d0d0d0' : '#333' }}>
                               {ref.text}
                             </p>
                           </div>
@@ -6833,9 +6888,9 @@ const BibleApp = () => {
                       <div></div>
                     )}
 
-                    {/* Home button — scroll pane 2 to top only, leave pane 2 location */}
+                    {/* Home button — scroll both panes to top */}
                     <button
-                      onClick={() => { if (kjvContentRef.current) kjvContentRef.current.scrollTop = 0; }}
+                      onClick={() => { if (kjvContentRef.current) kjvContentRef.current.scrollTop = 0; if (chapterContentRef.current) chapterContentRef.current.scrollTop = 0; }}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
                     >
                       Home (esc)
@@ -7223,6 +7278,16 @@ const BibleApp = () => {
               onChange={(e) => setRefPromptValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && refPromptValue.trim()) {
+                  const trimmed = refPromptValue.trim();
+                  if (/^\d+$/.test(trimmed) && selectedBook) {
+                    const ch = parseInt(trimmed);
+                    if (ch >= 1 && ch <= selectedBook.chapters.length) {
+                      handleChapterSelect(ch, true);
+                      setShowRefPrompt(false);
+                      setRefPromptValue('');
+                      return;
+                    }
+                  }
                   addToHistory();
                   setRefPromptValue('');
                 }
@@ -7239,6 +7304,16 @@ const BibleApp = () => {
               <button
                 onClick={() => {
                   if (refPromptValue.trim()) {
+                    const trimmed = refPromptValue.trim();
+                    if (/^\d+$/.test(trimmed) && selectedBook) {
+                      const ch = parseInt(trimmed);
+                      if (ch >= 1 && ch <= selectedBook.chapters.length) {
+                        handleChapterSelect(ch, true);
+                        setShowRefPrompt(false);
+                        setRefPromptValue('');
+                        return;
+                      }
+                    }
                     addToHistory();
                     setRefPromptValue('');
                   }
