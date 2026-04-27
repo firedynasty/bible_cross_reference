@@ -4635,6 +4635,9 @@ const BibleApp = () => {
       verseLabel: `${bookName} ${selectedChapter}:${verseNumber}`,
       refs: results
     });
+    if (kjvContentRef.current) {
+      kjvContentRef.current.scrollTop = 0;
+    }
   };
 
   // Handle clicking a Strong's number — load index + dictionary if needed, show concordance in pane 2
