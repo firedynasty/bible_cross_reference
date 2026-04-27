@@ -422,6 +422,7 @@ const NavigationPlaceholder = ({
   onClipboardClick,
   onDarkModeToggle,
   isDarkMode,
+  isSepiaMode,
   touchScrollMode,
   onTouchScrollModeChange,
   touchScrollModes,
@@ -600,11 +601,13 @@ const NavigationPlaceholder = ({
           className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
             isDarkMode
               ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-              : 'bg-gray-700 text-white hover:bg-gray-800'
+              : isSepiaMode
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-gray-700 text-white hover:bg-gray-800'
           }`}
-          title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+          title={isDarkMode ? "Switch to sepia mode" : isSepiaMode ? "Switch to light mode" : "Switch to dark mode"}
         >
-          {isDarkMode ? 'Light (d)' : 'Dark (d)'}
+          {isDarkMode ? 'Sepia (d)' : isSepiaMode ? 'Light (d)' : 'Dark (d)'}
         </button>
 
         {/* Gloss Toggle Button */}
@@ -1452,8 +1455,10 @@ const BibleApp = () => {
   // State to track if device is tablet (separate from mobile)
   const [isTabletView, setIsTabletView] = useState(false);
   
-  // State to track dark/light mode
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  // State to track theme mode: 'light', 'dark', or 'sepia'
+  const [themeMode, setThemeMode] = useState('light');
+  const isDarkMode = themeMode === 'dark';
+  const isSepiaMode = themeMode === 'sepia';
   
   // State to track speech volume (normal or softer)
   const [speechVolume, setSpeechVolume] = useState('softer');
@@ -1535,12 +1540,28 @@ const BibleApp = () => {
   const [cursiveInput, setCursiveInput] = useState('');
   const [cursiveClipboardBuckets, setCursiveClipboardBuckets] = useState(null);
   const [cursiveSource, setCursiveSource] = useState(() => localStorage.getItem('cursive-source') || 'pane2'); // 'story' or 'pane2'
+  const [cursiveSyllables] = useState(true);
+  const hyphRef = useRef(null);
   const cursiveGoToBucketRef = useRef(null);
   const cursiveBucketIndexRef = useRef(0);
   const [showQuiz2Modal, setShowQuiz2Modal] = useState(false);
   const [quiz2BucketIndex, setQuiz2BucketIndex] = useState(0);
   const [quiz2RevealCount, setQuiz2RevealCount] = useState(0);
   const [nltPsalmsData, setNltPsalmsData] = useState(null);
+
+  // Load Hypher for syllable hyphenation
+  useEffect(() => {
+    if (cursiveSyllables && !hyphRef.current) {
+      Promise.all([
+        import(/* webpackIgnore: true */ 'https://esm.sh/hypher'),
+        import(/* webpackIgnore: true */ 'https://esm.sh/hyphenation.en-us')
+      ]).then(([HypherMod, enMod]) => {
+        const Hypher = HypherMod.default || HypherMod;
+        const english = enMod.default || enMod;
+        hyphRef.current = new Hypher(english);
+      }).catch(err => console.warn('Failed to load Hypher:', err));
+    }
+  }, [cursiveSyllables]);
 
   // State for Breathe Modal
   const [showBreatheModal, setShowBreatheModal] = useState(false);
@@ -3691,6 +3712,7 @@ const BibleApp = () => {
           isViewingCrossRef,
           stickyPane,
           isDarkMode,
+          themeMode,
           mobileScrollPosition: isMobileView ? chapterContentRef.current?.scrollTop || 0 : 0
         };
         localStorage.setItem('bibleReaderState', JSON.stringify(stateToSave));
@@ -3698,7 +3720,7 @@ const BibleApp = () => {
         console.warn("Error saving state to localStorage:", e);
       }
     }
-  }, [selectedBook, selectedChapter, selectedTranslation, rightPaneTranslation, primaryReading, isViewingCrossRef, stickyPane, isDarkMode, isMobileView]);
+  }, [selectedBook, selectedChapter, selectedTranslation, rightPaneTranslation, primaryReading, isViewingCrossRef, stickyPane, isDarkMode, themeMode, isMobileView]);
 
   // Initialize Firebase database keys if they don't exist
   useEffect(() => {
@@ -3961,9 +3983,11 @@ const BibleApp = () => {
             // Always use KJV as the sticky pane
             setStickyPane('kjv');
             
-            // Restore dark mode setting if available
-            if (parsedState.isDarkMode !== undefined) {
-              setIsDarkMode(parsedState.isDarkMode);
+            // Restore theme mode setting if available
+            if (parsedState.themeMode) {
+              setThemeMode(parsedState.themeMode);
+            } else if (parsedState.isDarkMode !== undefined) {
+              setThemeMode(parsedState.isDarkMode ? 'dark' : 'light');
             }
 
             // Restore right pane translation if available
@@ -4146,9 +4170,9 @@ const BibleApp = () => {
       });
   };
   
-  // Toggle between dark and light mode
+  // Cycle through theme modes: light → dark → sepia → light
   const toggleDarkMode = () => {
-    setIsDarkMode(prevMode => !prevMode);
+    setThemeMode(prev => prev === 'light' ? 'dark' : prev === 'dark' ? 'sepia' : 'light');
   };
 
   // Load cross references from external JSON file
@@ -5072,10 +5096,10 @@ const BibleApp = () => {
 
   // Main render
   return (
-    <div className={`flex h-screen ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+    <div className={`flex h-screen ${isDarkMode ? 'bg-gray-800' : isSepiaMode ? '' : 'bg-gray-100'}`} style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a' } : {}}>
       {/* Book Selection Sidebar - Hidden on Mobile and Tablet */}
       {showSidebar && (
-        <div className={`${isMobileView || isTabletView ? 'absolute z-10 h-full' : 'w-80'} ${isDarkMode ? 'bg-gray-800 text-white border-r border-gray-700' : 'bg-white border-r border-gray-200'} overflow-y-auto`}>
+        <div className={`${isMobileView || isTabletView ? 'absolute z-10 h-full' : 'w-80'} ${isDarkMode ? 'bg-gray-800 text-white border-r border-gray-700' : isSepiaMode ? 'border-r border-gray-300' : 'bg-white border-r border-gray-200'} overflow-y-auto`} style={isSepiaMode ? { backgroundColor: '#efe6d0', color: '#5a5a5a' } : {}}>
           <div className="p-2 border-b border-gray-200 flex justify-between items-center">
             <h2 className="text-lg font-semibold flex items-center">
               <Book className="mr-1 h-4 w-4" />
@@ -5129,7 +5153,7 @@ const BibleApp = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar with Navigation and Chapter Selection */}
-        <div className={`${isDarkMode ? 'bg-gray-800 text-white border-b border-gray-700' : 'bg-white border-b border-gray-200'} p-1 flex flex-wrap items-center justify-between`}>
+        <div className={`${isDarkMode ? 'bg-gray-800 text-white border-b border-gray-700' : isSepiaMode ? 'border-b border-gray-300' : 'bg-white border-b border-gray-200'} p-1 flex flex-wrap items-center justify-between`} style={isSepiaMode ? { backgroundColor: '#efe6d0', color: '#5a5a5a' } : {}}>
           <div className="flex items-center space-x-2">
             {/* Sidebar toggle button for mobile, tablet and full screen */}
             {!showSidebar && (
@@ -5593,6 +5617,7 @@ const BibleApp = () => {
               isTabletView={isTabletView}
               stickyPane={stickyPane}
               isDarkMode={isDarkMode}
+              isSepiaMode={isSepiaMode}
               onNextChapter={handleChapterSelect}
               bibleData={bibleData}
               setSelectedBook={setSelectedBook}
@@ -5600,7 +5625,7 @@ const BibleApp = () => {
               onFirebaseToggle={setFirebaseEnabled}
               showGlosses={showGlosses}
               onGlossToggle={() => setShowGlosses(!showGlosses)}
-              onDarkModeToggle={() => setIsDarkMode(!isDarkMode)}
+              onDarkModeToggle={toggleDarkMode}
               onTouchScrollModeChange={setTouchScrollMode}
               touchScrollMode={touchScrollMode}
               viewMode={viewMode}
@@ -5629,6 +5654,7 @@ const BibleApp = () => {
               onClipboardClick={handleClipboardButtonClick}
               onDarkModeToggle={toggleDarkMode}
               isDarkMode={isDarkMode}
+              isSepiaMode={isSepiaMode}
               touchScrollMode={touchScrollMode}
               onTouchScrollModeChange={setTouchScrollMode}
               touchScrollModes={touchScrollModes}
@@ -5901,7 +5927,7 @@ const BibleApp = () => {
             <div
               ref={chapterContentRef}
               className="w-full overflow-y-auto p-4 md:p-8 bg-white relative"
-              style={{ backgroundColor: isDarkMode ? '#1f2937' : '#E7DFC8', color: isDarkMode ? 'white' : '#5A4333' }}
+              style={{ backgroundColor: isDarkMode ? '#1f2937' : isSepiaMode ? '#f4ecd8' : '#E7DFC8', color: isDarkMode ? 'white' : isSepiaMode ? '#5a5a5a' : '#5A4333' }}
               onClick={viewMode === 'interleaved-pd' ? (e) => {
                 if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('a') || e.target.closest('select')) return;
                 const pane = chapterContentRef.current;
@@ -6138,9 +6164,9 @@ const BibleApp = () => {
           {/* Bible Text Display */}
           <div
             ref={chapterContentRef}
-            className={`${showPane2Only ? 'hidden' : isMobileView && !isTabletView && showKJVOnMobile ? 'hidden' : isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'} relative`}
+            className={`${showPane2Only ? 'hidden' : isMobileView && !isTabletView && showKJVOnMobile ? 'hidden' : isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : isSepiaMode ? '' : 'bg-white'} relative`}
             onClick={(event) => handlePaneClick(event, 'left')}
-            style={{ cursor: 'default' }}
+            style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a', cursor: 'default' } : { cursor: 'default' }}
           >
             {/* Pane 1 previous chapter arrow — desktop/tablet only */}
             {(!isMobileView || isTabletView) && selectedBook && selectedChapter > 1 && (
@@ -6474,7 +6500,7 @@ const BibleApp = () => {
           
           {/* Right Pane Bible Panel - Toggle visibility on mobile, always show on tablet and desktop */}
           {(showPane2Only || !isMobileView || isTabletView || showKJVOnMobile) && (
-            <div className={`${showPane2Only ? 'w-full' : isMobileView && !isTabletView ? 'w-full' : 'w-1/2'} ${showPane2Only ? '' : 'border-l'} border-gray-200 bg-gray-50 flex flex-col relative`}>
+            <div className={`${showPane2Only ? 'w-full' : isMobileView && !isTabletView ? 'w-full' : 'w-1/2'} ${showPane2Only ? '' : 'border-l'} ${isDarkMode ? 'border-gray-700 bg-gray-800' : isSepiaMode ? 'border-gray-300' : 'border-gray-200 bg-gray-50'} flex flex-col relative`} style={isSepiaMode ? { backgroundColor: '#f4ecd8' } : {}}>
               {/* Pane 2 chapter nav arrows — desktop/tablet only */}
               {(!isMobileView || isTabletView) && selectedBook && (() => {
                 const p2Book = pane2Book || selectedBook;
@@ -6497,8 +6523,21 @@ const BibleApp = () => {
                     <button
                       onClick={() => {
                         const pane = kjvContentRef.current;
-                        if (pane) { pane.scrollTop = Math.min(pane.scrollHeight - pane.clientHeight, pane.scrollTop + pane.clientHeight * 0.9); }
                         const pane1 = chapterContentRef.current;
+                        const maxScroll = pane ? pane.scrollHeight - pane.clientHeight : 0;
+                        const atBottom = pane && maxScroll > 0 && pane.scrollTop >= maxScroll - 5;
+
+                        if (atBottom && hasNext) {
+                          pane2BottomClickCount.current += 1;
+                          if (pane2BottomClickCount.current >= 2) {
+                            pane2BottomClickCount.current = 0;
+                            navToChapter(p2Chapter + 1);
+                          }
+                          return;
+                        }
+
+                        pane2BottomClickCount.current = 0;
+                        if (pane) { pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9); }
                         if (pane1) { pane1.scrollTop = Math.min(pane1.scrollHeight - pane1.clientHeight, pane1.scrollTop + pane1.clientHeight * 0.9); }
                       }}
                       style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
@@ -6525,7 +6564,8 @@ const BibleApp = () => {
               {/* KJV Bible Text Display */}
               <div
                 ref={kjvContentRef}
-                className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white'}`}
+                className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white' : isSepiaMode ? '' : 'bg-white'}`}
+                style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a' } : {}}
                 onClick={(event) => {
                   if (showPane2Only) {
                     if (event.target.tagName === 'A' || event.target.tagName === 'BUTTON' || event.target.closest('button') || event.target.closest('a') || event.target.closest('select')) return;
@@ -8495,6 +8535,14 @@ const BibleApp = () => {
                       if (outputScroll) outputScroll.scrollTop = 0;
 
                       outputText.style.fontSize = cursiveSize + 'px';
+                      const syllabifyWord = (w) => {
+                        if (!cursiveSyllables || !hyphRef.current) return w;
+                        const m = w.match(/^(\W*)(.*?)(\W*)$/);
+                        if (!m) return w;
+                        const [, lead, core, trail] = m;
+                        if (!core) return w;
+                        return lead + hyphRef.current.hyphenate(core).join('\u00B7') + trail;
+                      };
                       const words = bucketText.split(/\s+/).filter(Boolean);
                       const revealCount = Math.floor(words.length * cursiveReveal / 100);
                       const spans = words.map((word, i) => {
@@ -8502,7 +8550,8 @@ const BibleApp = () => {
                         sp.style.cssText = i < revealCount
                           ? `display:inline;opacity:1`
                           : `display:inline;opacity:0;transition:opacity ${fadeMs}ms ease`;
-                        sp.textContent = i < words.length - 1 ? word + ' ' : word;
+                        const display = syllabifyWord(word);
+                        sp.textContent = i < words.length - 1 ? display + ' ' : display;
                         outputText.appendChild(sp);
                         return sp;
                       });
