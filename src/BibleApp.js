@@ -6171,7 +6171,7 @@ const BibleApp = () => {
             onClick={(event) => handlePaneClick(event, 'left')}
             style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a', cursor: 'default' } : { cursor: 'default' }}
           >
-            {/* Pane 1 previous chapter arrow — desktop/tablet only */}
+            {/* Pane 1 page-down button — desktop/tablet only */}
             {(!isMobileView || isTabletView) && selectedBook && selectedChapter > 0 && (
               <button
                 onClick={() => {
@@ -6188,6 +6188,38 @@ const BibleApp = () => {
               >
                 <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
+            )}
+            {/* Pane toggle + page-down buttons — mobile only */}
+            {isMobileView && !isTabletView && selectedBook && selectedChapter > 0 && (
+              <>
+                <button
+                  onClick={() => {
+                    setShowKJVOnMobile(true);
+                    localStorage.setItem('mobilePanePreference', 'pane2');
+                  }}
+                  style={{ position: 'sticky', top: '50%', left: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'left', color: 'white', fontSize: 22, fontWeight: 700 }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = ''; }}
+                  title="Switch to Pane 2"
+                >
+                  2
+                </button>
+                <button
+                  onClick={() => {
+                    const pane1 = chapterContentRef.current;
+                    if (pane1) {
+                      const maxScroll = pane1.scrollHeight - pane1.clientHeight;
+                      pane1.scrollTop = Math.min(maxScroll, pane1.scrollTop + pane1.clientHeight * 0.9);
+                    }
+                  }}
+                  style={{ position: 'sticky', top: '50%', right: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'right' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = ''; }}
+                  title="Page down"
+                >
+                  <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+              </>
             )}
             {selectedBook && selectedChapter > 0 && (
               <div>
@@ -6572,6 +6604,38 @@ const BibleApp = () => {
                 }}
                 style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a', cursor: 'default' } : { cursor: 'default' }}
               >
+                {/* Pane toggle + page-down buttons — mobile only */}
+                {isMobileView && !isTabletView && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setShowKJVOnMobile(false);
+                        localStorage.setItem('mobilePanePreference', 'pane1');
+                      }}
+                      style={{ position: 'sticky', top: '50%', left: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'left', color: 'white', fontSize: 22, fontWeight: 700 }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = ''; }}
+                      title="Switch to Pane 1"
+                    >
+                      1
+                    </button>
+                    <button
+                      onClick={() => {
+                        const pane = kjvContentRef.current;
+                        if (pane) {
+                          const maxScroll = pane.scrollHeight - pane.clientHeight;
+                          pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
+                        }
+                      }}
+                      style={{ position: 'sticky', top: '50%', right: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'right' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = ''; }}
+                      title="Page down"
+                    >
+                      <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                  </>
+                )}
                 {/* Expanded Cross-References View */}
                 {expandedRefsData && (
                   <div className={`${showPane2Only ? 'max-w-[70ch] mx-auto' : ''} pb-8`}>
