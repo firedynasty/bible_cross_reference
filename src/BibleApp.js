@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Book, Link, ChevronRight, History, BookOpen, Save, Database, Download } from 'lucide-react';
 import TextToSpeech from './components/TextToSpeech';
 import FurtherReadingModal from './components/FurtherReadingModal';
+import ClassicalMusicModal from './components/ClassicalMusicModal';
 import { getStorytimeAudioUrl } from './data/storytimeAudio';
 import { getRhymeAudioUrl } from './data/rhymeAudio';
 
@@ -472,7 +473,10 @@ const NavigationPlaceholder = ({
   showFrenchGrid,
   fontScale,
   onFontScaleDown,
-  onFontScaleUp
+  onFontScaleUp,
+  onClassicalMusic,
+  onClassicalTogglePlay,
+  classicalPlaying
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -705,6 +709,59 @@ const NavigationPlaceholder = ({
                 title={isOpen ? 'Close language sidebar' : 'Open language sidebar'}
               >
                 {isOpen ? '✕' : '▶'}
+              </button>
+              {/* Freestyle Beats Toggle */}
+              {(() => {
+                const audioRef = React.createRef();
+                // Use a module-level approach via data attribute on the button
+                return (
+                  <button
+                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-yellow-200 text-yellow-800 hover:bg-yellow-300"
+                    title="Play/pause freestyle beats (random position)"
+                    onClick={(e) => {
+                      const btn = e.currentTarget;
+                      let audio = btn._freestyleAudio;
+                      if (!audio) {
+                        audio = new Audio('https://www.dropbox.com/scl/fi/snh3td5yp8yigg30hil70/1-Hour-Of-Freestyle-Rap-Beats-Trap-Beats-Mix-2024-POH5DmNygI0.m4a?rlkey=pggb6ycpylxik1o5yv44uquj7&st=wlelqohf&raw=1');
+                        audio.preload = 'auto';
+                        btn._freestyleAudio = audio;
+                        audio.addEventListener('ended', () => {
+                          btn.textContent = '♪';
+                        });
+                      }
+                      if (!audio.paused) {
+                        audio.pause();
+                        btn.textContent = '♪';
+                      } else {
+                        const randomTime = Math.random() * 3000; // ~50 min = 3000 sec
+                        audio.currentTime = randomTime;
+                        audio.play().then(() => {
+                          btn.textContent = '⏸';
+                        }).catch(() => {});
+                      }
+                    }}
+                  >
+                    ♪
+                  </button>
+                );
+              })()}
+              <button
+                className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-amber-100 text-amber-900 hover:bg-amber-200"
+                title="Open classical music player"
+                onClick={() => onClassicalMusic && onClassicalMusic()}
+              >
+                🎻
+              </button>
+              <button
+                className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${
+                  classicalPlaying
+                    ? 'bg-red-200 text-red-800 hover:bg-red-300'
+                    : 'bg-green-200 text-green-800 hover:bg-green-300'
+                }`}
+                title={classicalPlaying ? 'Pause classical music' : 'Play classical music'}
+                onClick={() => onClassicalTogglePlay && onClassicalTogglePlay()}
+              >
+                {classicalPlaying ? '⏸' : '▶'}
               </button>
             </>
           );
@@ -1181,6 +1238,9 @@ const BibleApp = () => {
   const [selectedChapter, setSelectedChapter] = useState(1);
   const [showBookDropdown, setShowBookDropdown] = useState(false);
   const [showFiguresModal, setShowFiguresModal] = useState(false);
+  const [showClassicalModal, setShowClassicalModal] = useState(false);
+  const [classicalPlaying, setClassicalPlaying] = useState(false);
+  const classicalRef = useRef(null);
   const [pendingBookSelection, setPendingBookSelection] = useState(null);
   const pendingBookRef = useRef(null);
   const [crossReferences, setCrossReferences] = useState({});
@@ -5726,6 +5786,11 @@ const BibleApp = () => {
               fontScale={fontScale}
               onFontScaleDown={() => setFontScale(prev => Math.max(0.5, prev - 0.1))}
               onFontScaleUp={() => setFontScale(prev => Math.min(2, prev + 0.1))}
+              onClassicalMusic={() => setShowClassicalModal(true)}
+              onClassicalTogglePlay={() => {
+                if (classicalRef.current) classicalRef.current.togglePlay();
+              }}
+              classicalPlaying={classicalPlaying}
               onQA={() => {
                 if (!studyQData) {
                   const baseUrl = getBaseUrl();
@@ -9300,6 +9365,7 @@ const BibleApp = () => {
       })()}
 
       <FurtherReadingModal open={showFiguresModal} onClose={() => setShowFiguresModal(false)} />
+      <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
 
     </div>
   );
