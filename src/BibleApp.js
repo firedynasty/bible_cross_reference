@@ -6169,22 +6169,21 @@ const BibleApp = () => {
             style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a', cursor: 'default' } : { cursor: 'default' }}
           >
             {/* Pane 1 previous chapter arrow — desktop/tablet only */}
-            {(!isMobileView || isTabletView) && selectedBook && selectedChapter > 1 && (
+            {(!isMobileView || isTabletView) && selectedBook && selectedChapter > 0 && (
               <button
                 onClick={() => {
-                  localStorage.removeItem('mobileScrollPosition');
-                  setMobileScrollPosition(0);
-                  handleChapterSelect(selectedChapter - 1, true);
-                  setPane2Book(null);
-                  setPane2Chapter(null);
-                  setTimeout(() => { handleHomeReset(); }, 100);
+                  const pane1 = chapterContentRef.current;
+                  if (pane1) {
+                    const maxScroll = pane1.scrollHeight - pane1.clientHeight;
+                    pane1.scrollTop = Math.min(maxScroll, pane1.scrollTop + pane1.clientHeight * 0.9);
+                  }
                 }}
-                style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
-                title={`Previous chapter (${selectedChapter - 1})`}
+                style={{ position: 'sticky', top: '50%', left: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'left' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = ''; }}
+                title="Page down"
               >
-                <svg width="48" height="48" viewBox="0 0 64 64"><path d="M44 8 L20 32 L44 56" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
             )}
             {selectedBook && selectedChapter > 0 && (
@@ -6523,22 +6522,14 @@ const BibleApp = () => {
                     <button
                       onClick={() => {
                         const pane = kjvContentRef.current;
-                        const pane1 = chapterContentRef.current;
-                        const maxScroll = pane ? pane.scrollHeight - pane.clientHeight : 0;
-                        const atBottom = pane && maxScroll > 0 && pane.scrollTop >= maxScroll - 5;
-
+                        if (!pane) return;
+                        const maxScroll = pane.scrollHeight - pane.clientHeight;
+                        const atBottom = maxScroll > 0 && pane.scrollTop >= maxScroll - 5;
                         if (atBottom && hasNext) {
-                          pane2BottomClickCount.current += 1;
-                          if (pane2BottomClickCount.current >= 2) {
-                            pane2BottomClickCount.current = 0;
-                            navToChapter(p2Chapter + 1);
-                          }
+                          navToChapter(p2Chapter + 1);
                           return;
                         }
-
-                        pane2BottomClickCount.current = 0;
-                        if (pane) { pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9); }
-                        if (pane1) { pane1.scrollTop = Math.min(pane1.scrollHeight - pane1.clientHeight, pane1.scrollTop + pane1.clientHeight * 0.9); }
+                        pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
                       }}
                       style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
@@ -6565,7 +6556,6 @@ const BibleApp = () => {
               <div
                 ref={kjvContentRef}
                 className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white' : isSepiaMode ? '' : 'bg-white'}`}
-                style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a' } : {}}
                 onClick={(event) => {
                   if (showPane2Only) {
                     if (event.target.tagName === 'A' || event.target.tagName === 'BUTTON' || event.target.closest('button') || event.target.closest('a') || event.target.closest('select')) return;
@@ -6577,18 +6567,18 @@ const BibleApp = () => {
                     handlePaneClick(event, 'right');
                   }
                 }}
-                style={{ cursor: 'default' }}
+                style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a', cursor: 'default' } : { cursor: 'default' }}
               >
                 {/* Expanded Cross-References View */}
                 {expandedRefsData && (
                   <div className={`${showPane2Only ? 'max-w-[70ch] mx-auto' : ''} pb-8`}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <h3 style={{ margin: 0, fontSize: `${fontScale * 1.1}em`, color: isDarkMode ? '#e0e0e0' : '#333' }}>
+                      <h3 style={{ margin: 0, fontSize: `${fontScale * 1.1}em`, color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333' }}>
                         Cross-References — {expandedRefsData.verseLabel}
                       </h3>
                       <button
                         onClick={() => setExpandedRefsData(null)}
-                        style={{ width: 28, height: 28, fontSize: 14, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#555' : '#d0d0d0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                        style={{ width: 28, height: 28, fontSize: 14, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#555' : isSepiaMode ? '#d4c9a8' : '#d0d0d0', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333' }}
                       >✕</button>
                     </div>
                     <div className="space-y-4">
@@ -6603,7 +6593,7 @@ const BibleApp = () => {
                           : isNT ? (isDarkMode ? '#86efac' : '#16a34a')
                           : (isDarkMode ? '#93c5fd' : '#2563eb');
                         return (
-                          <div key={i} className={`p-3 rounded-md ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                          <div key={i} className={`p-3 rounded-md ${isDarkMode ? 'bg-gray-800' : ''}`} style={isSepiaMode ? { backgroundColor: '#e8ddc4' } : !isDarkMode ? { backgroundColor: '#f9fafb' } : {}}>
                             <a
                               href={`https://www.biblegateway.com/passage/?search=${encodeURIComponent(getBookName(ref.book) + ' ' + ref.chapter)}&version=NLT`}
                               target="_blank"
@@ -6613,7 +6603,7 @@ const BibleApp = () => {
                             >
                               {ref.label}
                             </a>
-                            <p style={{ margin: '4px 0 0', fontSize: `${fontScale * 1.125}rem`, lineHeight: 1.6, color: isDarkMode ? '#d0d0d0' : '#333' }}>
+                            <p style={{ margin: '4px 0 0', fontSize: `${fontScale * 1.125}rem`, lineHeight: 1.6, color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333' }}>
                               {ref.text}
                             </p>
                           </div>
