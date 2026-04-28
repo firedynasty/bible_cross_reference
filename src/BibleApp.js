@@ -6168,9 +6168,9 @@ const BibleApp = () => {
           {/* Bible Text Display */}
           <div
             ref={chapterContentRef}
-            className={`${showPane2Only ? 'hidden' : isMobileView && !isTabletView && showKJVOnMobile ? 'hidden' : isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white' : isSepiaMode ? '' : 'bg-white'} relative`}
+            className={`${showPane2Only ? 'hidden' : isMobileView && !isTabletView && showKJVOnMobile ? 'hidden' : isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : 'bg-white'} relative`}
             onClick={(event) => handlePaneClick(event, 'left')}
-            style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a', cursor: 'default' } : { cursor: 'default' }}
+            style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a', cursor: 'default', scrollbarColor: '#c4b89a #f4ecd8' } : isDarkMode ? { cursor: 'default', scrollbarColor: '#555 #1a1a2e' } : { cursor: 'default' }}
           >
             {/* Pane 1 page-down button — desktop/tablet only */}
             {(!isMobileView || isTabletView) && selectedBook && selectedChapter > 0 && (
@@ -6591,7 +6591,7 @@ const BibleApp = () => {
               {/* KJV Bible Text Display */}
               <div
                 ref={kjvContentRef}
-                className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white' : isSepiaMode ? '' : 'bg-white'}`}
+                className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : 'bg-white'}`}
                 onClick={(event) => {
                   if (showPane2Only) {
                     if (event.target.tagName === 'A' || event.target.tagName === 'BUTTON' || event.target.closest('button') || event.target.closest('a') || event.target.closest('select')) return;
@@ -6603,7 +6603,7 @@ const BibleApp = () => {
                     handlePaneClick(event, 'right');
                   }
                 }}
-                style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a', cursor: 'default' } : { cursor: 'default' }}
+                style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a', cursor: 'default', scrollbarColor: '#c4b89a #f4ecd8' } : isDarkMode ? { cursor: 'default', scrollbarColor: '#555 #1a1a2e' } : { cursor: 'default' }}
               >
                 {/* Pane toggle + page-down buttons — mobile only */}
                 {isMobileView && !isTabletView && (
@@ -9190,8 +9190,16 @@ const BibleApp = () => {
                   const el = storytimeScrollRef.current;
                   if (!el) return;
                   const maxScroll = el.scrollHeight - el.clientHeight;
-                  const atBottom = maxScroll > 0 && el.scrollTop >= maxScroll - 5;
-                  if (atBottom) {
+                  // Only scroll if there's content to scroll
+                  if (maxScroll > 5) {
+                    const atBottom = el.scrollTop >= maxScroll - 5;
+                    if (!atBottom) {
+                      el.scrollTop = Math.min(maxScroll, el.scrollTop + el.clientHeight * 0.9);
+                      return;
+                    }
+                  }
+                  // At bottom or no scrollable content — go to next chapter
+                  {
                     // Go to next chapter story, update both panes
                     const activeBook = pane2Book || selectedBook;
                     const activeChapter = pane2Chapter || selectedChapter;
@@ -9216,9 +9224,7 @@ const BibleApp = () => {
                       setStorytimeUnavailableMsg(`No Story Time available for ${key}.`);
                       setShowStorytimeModal(false);
                     }
-                    return;
                   }
-                  el.scrollTop = Math.min(maxScroll, el.scrollTop + el.clientHeight * 0.9);
                 }}
                 style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
@@ -9227,7 +9233,7 @@ const BibleApp = () => {
               >
                 <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
-            <div ref={storytimeScrollRef} style={{ overflowY: 'auto', flex: 1, fontSize: `${storytimeFontSize}em`, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333', whiteSpace: 'pre-wrap', scrollbarWidth: 'none', msOverflowStyle: 'none' }} className="hide-scrollbar">
+            <div ref={storytimeScrollRef} className={isDarkMode ? 'scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : ''} style={{ overflowY: 'auto', flex: 1, fontSize: `${storytimeFontSize}em`, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333', whiteSpace: 'pre-wrap', direction: 'rtl', scrollbarColor: isDarkMode ? '#555 #2a2a2a' : isSepiaMode ? '#c4b89a #f4ecd8' : undefined }}><div style={{ direction: 'ltr' }}>
               {storytimeContent.split('\n').map((line, i) => {
                 if (line.startsWith('# ')) return <h2 key={i} style={{ fontSize: '1.2em', fontWeight: 'bold', margin: '8px 0' }}>{line.slice(2)}</h2>;
                 if (line.startsWith('## ')) return <h3 key={i} style={{ fontSize: '1.05em', fontWeight: 'bold', margin: '12px 0 4px' }}>{line.slice(3)}</h3>;
@@ -9242,7 +9248,7 @@ const BibleApp = () => {
                     : part
                 )}</p>;
               })}
-            </div>
+            </div></div>
             </div>
             <button
               onClick={() => setShowStorytimeModal(false)}

@@ -16,6 +16,24 @@ code {
     monospace;
 }
 
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
+.scrollbar-dark::-webkit-scrollbar {
+  width: 8px;
+}
+.scrollbar-dark::-webkit-scrollbar-track {
+  background: #2a2a2a;
+}
+.scrollbar-dark::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.scrollbar-sepia::-webkit-scrollbar {
+  width: 8px;
+}
+.scrollbar-sepia::-webkit-scrollbar-track {
+  background: #f4ecd8;
+}
+.scrollbar-sepia::-webkit-scrollbar-thumb {
+  background: #c4b89a;
+  border-radius: 4px;
 }
