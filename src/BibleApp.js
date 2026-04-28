@@ -9190,41 +9190,7 @@ const BibleApp = () => {
                   const el = storytimeScrollRef.current;
                   if (!el) return;
                   const maxScroll = el.scrollHeight - el.clientHeight;
-                  // Only scroll if there's content to scroll
-                  if (maxScroll > 5) {
-                    const atBottom = el.scrollTop >= maxScroll - 5;
-                    if (!atBottom) {
-                      el.scrollTop = Math.min(maxScroll, el.scrollTop + el.clientHeight * 0.9);
-                      return;
-                    }
-                  }
-                  // At bottom or no scrollable content — go to next chapter
-                  {
-                    // Go to next chapter story, update both panes
-                    const activeBook = pane2Book || selectedBook;
-                    const activeChapter = pane2Chapter || selectedChapter;
-                    if (!activeBook || !storytimeData) return;
-                    const maxChapters = activeBook.chapters ? activeBook.chapters.length : 999;
-                    let nextBook = activeBook;
-                    let nextChap = activeChapter + 1;
-                    if (nextChap > maxChapters) {
-                      const idx = bibleData.findIndex(b => b.abbrev === activeBook.abbrev);
-                      if (idx === -1 || idx >= bibleData.length - 1) return;
-                      nextBook = bibleData[idx + 1];
-                      nextChap = 1;
-                    }
-                    const bookName = abbrevToBookName[nextBook.abbrev] || nextBook.abbrev;
-                    const key = `${bookName} ${nextChap}`;
-                    const story = storytimeData[key];
-                    if (story) {
-                      if (nextBook.abbrev !== activeBook.abbrev) setSelectedBook(nextBook);
-                      handleChapterSelect(nextChap, true);
-                      setStorytimeContent(story);
-                    } else {
-                      setStorytimeUnavailableMsg(`No Story Time available for ${key}.`);
-                      setShowStorytimeModal(false);
-                    }
-                  }
+                  el.scrollTop = Math.min(maxScroll, el.scrollTop + el.clientHeight * 0.9);
                 }}
                 style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
