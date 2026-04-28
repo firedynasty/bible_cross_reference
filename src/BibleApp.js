@@ -6121,19 +6121,12 @@ const BibleApp = () => {
 
                   {/* Chapter Navigation */}
                   <div className="mt-10 flex justify-between pb-4">
-                    {selectedChapter > 1 ? (
-                      <button
-                        onClick={() => {
-                          handleChapterSelect(selectedChapter - 1, true);
-                          handleHomeReset();
-                        }}
-                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
-                      >
-                        &lt; Previous Chapter (z)
-                      </button>
-                    ) : (
-                      <div></div>
-                    )}
+                    <button
+                      onClick={handleStorytimeButtonClick}
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
+                    >
+                      Story
+                    </button>
 
                     <button
                       onClick={handleHomeReset}
@@ -6447,20 +6440,12 @@ const BibleApp = () => {
 
                 {/* Chapter Navigation - Simple inline approach */}
                 <div className="mt-10 flex justify-between pb-4">
-                  {selectedChapter > 1 ? (
-                    <button
-                      onClick={() => {
-                        handleChapterSelect(selectedChapter - 1, true);
-                        // Reset all scroll state immediately
-                        handleHomeReset();
-                      }}
-                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
-                    >
-                      &lt; Previous Chapter (z)
-                    </button>
-                  ) : (
-                    <div></div>
-                  )}
+                  <button
+                    onClick={handleStorytimeButtonClick}
+                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
+                  >
+                    Story
+                  </button>
 
                   {/* Home button to scroll to top */}
                   <button
@@ -7029,27 +7014,12 @@ const BibleApp = () => {
               
               {/* Navigation buttons for KJV panel */}
                   <div className="mt-10 flex justify-between pb-4">
-                    {selectedChapter > 1 ? (
-                      <button
-                        onClick={() => {
-                          // Clear mobile scroll position immediately to prevent restoration
-                          localStorage.removeItem('mobileScrollPosition');
-                          setMobileScrollPosition(0);
-                          
-                          handleChapterSelect(selectedChapter - 1, true);
-                          
-                          // Reset all scroll state after content loads
-                          setTimeout(() => {
-                            handleHomeReset();
-                          }, 100);
-                        }}
-                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
-                      >
-                        &lt; Previous Chapter (z)
-                      </button>
-                    ) : (
-                      <div></div>
-                    )}
+                    <button
+                      onClick={handleStorytimeButtonClick}
+                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
+                    >
+                      Story
+                    </button>
 
                     {/* Home button — scroll both panes to top */}
                     <button
@@ -9114,6 +9084,7 @@ const BibleApp = () => {
                     if (nextBook.abbrev !== activeBook.abbrev) setSelectedBook(nextBook);
                     handleChapterSelect(nextChap, true);
                     setStorytimeContent(story);
+                    if (storytimeScrollRef.current) storytimeScrollRef.current.scrollTop = 0;
                   } else {
                     setStorytimeUnavailableMsg(`No Story Time available for ${key}.`);
                     setShowStorytimeModal(false);
@@ -9217,10 +9188,34 @@ const BibleApp = () => {
             </div></div>
             </div>
             <button
-              onClick={() => setShowStorytimeModal(false)}
+              onClick={() => {
+                const activeBook = pane2Book || selectedBook;
+                const activeChapter = pane2Chapter || selectedChapter;
+                if (activeBook && storytimeData) {
+                  const maxChapters = activeBook.chapters ? activeBook.chapters.length : 999;
+                  let nextBook = activeBook;
+                  let nextChap = activeChapter + 1;
+                  if (nextChap > maxChapters) {
+                    const idx = bibleData.findIndex(b => b.abbrev === activeBook.abbrev);
+                    if (idx >= 0 && idx < bibleData.length - 1) {
+                      nextBook = bibleData[idx + 1];
+                      nextChap = 1;
+                    }
+                  }
+                  const bookName = abbrevToBookName[nextBook.abbrev] || nextBook.abbrev;
+                  const key = `${bookName} ${nextChap}`;
+                  const story = storytimeData[key];
+                  if (story) {
+                    if (nextBook.abbrev !== activeBook.abbrev) setSelectedBook(nextBook);
+                    handleChapterSelect(nextChap, true);
+                    setStorytimeContent(story);
+                  }
+                }
+                setShowStorytimeModal(false);
+              }}
               style={{ marginTop: 16, padding: '8px 16px', background: isDarkMode ? '#555' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333' }}
             >
-              Close
+              Next &amp; Close
             </button>
           </div>
         </div>
