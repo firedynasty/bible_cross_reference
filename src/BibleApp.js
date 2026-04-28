@@ -1588,6 +1588,7 @@ const BibleApp = () => {
   const [showHymnModal, setShowHymnModal] = useState(false);
 
   // State for Story Time Modal
+  const storytimeScrollRef = useRef(null);
   const [showStorytimeModal, setShowStorytimeModal] = useState(false);
   const [storytimeContent, setStorytimeContent] = useState('');
   const [storytimeFontSize, setStorytimeFontSize] = useState(() => {
@@ -9055,21 +9056,21 @@ const BibleApp = () => {
           style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowStorytimeModal(false); }}
         >
-          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 600, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: isDarkMode ? '#2a2a2a' : isSepiaMode ? '#f4ecd8' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 600, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 8 }}>
-              <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', flex: 1 }}>
+              <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333', flex: 1 }}>
                 Story Time — {selectedBook ? (abbrevToBookName[(pane2Book || selectedBook).abbrev] || (pane2Book || selectedBook).abbrev) : ''} {pane2Chapter || selectedChapter}
               </h3>
               <button
                 onClick={() => setStorytimeFontSize(s => Math.max(0.6, s - 0.1))}
-                style={{ background: isDarkMode ? '#444' : '#e5e7eb', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '4px 10px', fontWeight: 'bold' }}
+                style={{ background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333', padding: '4px 10px', fontWeight: 'bold' }}
                 title="Decrease font size"
               >
                 A−
               </button>
               <button
                 onClick={() => setStorytimeFontSize(s => Math.min(2.0, s + 0.1))}
-                style={{ background: isDarkMode ? '#444' : '#e5e7eb', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '4px 10px', fontWeight: 'bold' }}
+                style={{ background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333', padding: '4px 10px', fontWeight: 'bold' }}
                 title="Increase font size"
               >
                 A+
@@ -9080,7 +9081,7 @@ const BibleApp = () => {
                     .then(() => alert('Copied to clipboard'))
                     .catch(err => alert('Failed to copy: ' + err));
                 }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1em', color: isDarkMode ? '#aaa' : '#666', padding: '4px 8px' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1em', color: isDarkMode ? '#aaa' : isSepiaMode ? '#8a7a5a' : '#666', padding: '4px 8px' }}
                 title="Copy to clipboard"
               >
                 📋
@@ -9183,12 +9184,55 @@ const BibleApp = () => {
                 ✍️
               </button>
             </div>
-            <div style={{ overflowY: 'auto', flex: 1, fontSize: `${storytimeFontSize}em`, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : '#333', whiteSpace: 'pre-wrap' }}>
+            <div style={{ position: 'relative', flex: 1, display: 'flex', overflow: 'hidden' }}>
+              <button
+                onClick={() => {
+                  const el = storytimeScrollRef.current;
+                  if (!el) return;
+                  const maxScroll = el.scrollHeight - el.clientHeight;
+                  const atBottom = maxScroll > 0 && el.scrollTop >= maxScroll - 5;
+                  if (atBottom) {
+                    // Go to next chapter story, update both panes
+                    const activeBook = pane2Book || selectedBook;
+                    const activeChapter = pane2Chapter || selectedChapter;
+                    if (!activeBook || !storytimeData) return;
+                    const maxChapters = activeBook.chapters ? activeBook.chapters.length : 999;
+                    let nextBook = activeBook;
+                    let nextChap = activeChapter + 1;
+                    if (nextChap > maxChapters) {
+                      const idx = bibleData.findIndex(b => b.abbrev === activeBook.abbrev);
+                      if (idx === -1 || idx >= bibleData.length - 1) return;
+                      nextBook = bibleData[idx + 1];
+                      nextChap = 1;
+                    }
+                    const bookName = abbrevToBookName[nextBook.abbrev] || nextBook.abbrev;
+                    const key = `${bookName} ${nextChap}`;
+                    const story = storytimeData[key];
+                    if (story) {
+                      if (nextBook.abbrev !== activeBook.abbrev) setSelectedBook(nextBook);
+                      handleChapterSelect(nextChap, true);
+                      setStorytimeContent(story);
+                    } else {
+                      setStorytimeUnavailableMsg(`No Story Time available for ${key}.`);
+                      setShowStorytimeModal(false);
+                    }
+                    return;
+                  }
+                  el.scrollTop = Math.min(maxScroll, el.scrollTop + el.clientHeight * 0.9);
+                }}
+                style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
+                title="Page down"
+              >
+                <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            <div ref={storytimeScrollRef} style={{ overflowY: 'auto', flex: 1, fontSize: `${storytimeFontSize}em`, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333', whiteSpace: 'pre-wrap' }}>
               {storytimeContent.split('\n').map((line, i) => {
                 if (line.startsWith('# ')) return <h2 key={i} style={{ fontSize: '1.2em', fontWeight: 'bold', margin: '8px 0' }}>{line.slice(2)}</h2>;
                 if (line.startsWith('## ')) return <h3 key={i} style={{ fontSize: '1.05em', fontWeight: 'bold', margin: '12px 0 4px' }}>{line.slice(3)}</h3>;
                 if (line.startsWith('### ')) return <h4 key={i} style={{ fontSize: '0.95em', fontWeight: 'bold', margin: '10px 0 4px' }}>{line.slice(4)}</h4>;
-                if (line.startsWith('---')) return <hr key={i} style={{ border: 'none', borderTop: `1px solid ${isDarkMode ? '#555' : '#ddd'}`, margin: '12px 0' }} />;
+                if (line.startsWith('---')) return <hr key={i} style={{ border: 'none', borderTop: `1px solid ${isDarkMode ? '#555' : isSepiaMode ? '#c4b89a' : '#ddd'}`, margin: '12px 0' }} />;
                 if (line.trim() === '') return <div key={i} style={{ height: 8 }} />;
                 // Handle **bold** within lines
                 const parts = line.split(/(\*\*[^*]+\*\*)/g);
@@ -9199,9 +9243,10 @@ const BibleApp = () => {
                 )}</p>;
               })}
             </div>
+            </div>
             <button
               onClick={() => setShowStorytimeModal(false)}
-              style={{ marginTop: 16, padding: '8px 16px', background: isDarkMode ? '#555' : '#e5e7eb', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : '#333' }}
+              style={{ marginTop: 16, padding: '8px 16px', background: isDarkMode ? '#555' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333' }}
             >
               Close
             </button>
@@ -9215,17 +9260,17 @@ const BibleApp = () => {
           style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
           onClick={(e) => { if (e.target === e.currentTarget) setStorytimeUnavailableMsg(null); }}
         >
-          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-            <h3 style={{ margin: '0 0 12px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333' }}>
+          <div style={{ background: isDarkMode ? '#2a2a2a' : isSepiaMode ? '#f4ecd8' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333' }}>
               Story Time unavailable
             </h3>
-            <p style={{ margin: '0 0 12px', fontSize: '0.95em', color: isDarkMode ? '#d0d0d0' : '#444' }}>
+            <p style={{ margin: '0 0 12px', fontSize: '0.95em', color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#6a6a5a' : '#444' }}>
               {storytimeUnavailableMsg}
             </p>
-            <p style={{ margin: '0 0 6px', fontSize: '0.85em', color: isDarkMode ? '#aaa' : '#666' }}>
+            <p style={{ margin: '0 0 6px', fontSize: '0.85em', color: isDarkMode ? '#aaa' : isSepiaMode ? '#8a7a5a' : '#666' }}>
               Currently available for:
             </p>
-            <ul style={{ margin: '0 0 16px 18px', padding: 0, fontSize: '0.9em', color: isDarkMode ? '#d0d0d0' : '#333', lineHeight: 1.5 }}>
+            <ul style={{ margin: '0 0 16px 18px', padding: 0, fontSize: '0.9em', color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333', lineHeight: 1.5 }}>
               <li>Genesis – Deuteronomy</li>
               <li>Ruth</li>
               <li>Job</li>
@@ -9235,7 +9280,7 @@ const BibleApp = () => {
             </ul>
             <button
               onClick={() => setStorytimeUnavailableMsg(null)}
-              style={{ padding: '8px 16px', background: isDarkMode ? '#555' : '#e5e7eb', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : '#333' }}
+              style={{ padding: '8px 16px', background: isDarkMode ? '#555' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: '0.9em', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333' }}
             >
               Close
             </button>
