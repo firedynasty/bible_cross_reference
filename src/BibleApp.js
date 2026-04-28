@@ -9220,14 +9220,14 @@ const BibleApp = () => {
                   }
                   el.scrollTop = Math.min(maxScroll, el.scrollTop + el.clientHeight * 0.9);
                 }}
-                style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
                 title="Page down"
               >
                 <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
-            <div ref={storytimeScrollRef} style={{ overflowY: 'auto', flex: 1, fontSize: `${storytimeFontSize}em`, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333', whiteSpace: 'pre-wrap' }}>
+            <div ref={storytimeScrollRef} style={{ overflowY: 'auto', flex: 1, fontSize: `${storytimeFontSize}em`, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333', whiteSpace: 'pre-wrap', scrollbarWidth: 'none', msOverflowStyle: 'none' }} className="hide-scrollbar">
               {storytimeContent.split('\n').map((line, i) => {
                 if (line.startsWith('# ')) return <h2 key={i} style={{ fontSize: '1.2em', fontWeight: 'bold', margin: '8px 0' }}>{line.slice(2)}</h2>;
                 if (line.startsWith('## ')) return <h3 key={i} style={{ fontSize: '1.05em', fontWeight: 'bold', margin: '12px 0 4px' }}>{line.slice(3)}</h3>;
