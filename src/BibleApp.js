@@ -1370,8 +1370,8 @@ const BibleApp = () => {
   const [selectedTranslation, setSelectedTranslation] = useState('en_kjv.json');
   const [selectedDropdownTranslation, setSelectedDropdownTranslation] = useState('en_kjv.json');
   
-  // Add translation support for right pane (default to KJV)
-  const [rightPaneTranslation, setRightPaneTranslation] = useState('en_kjv.json');
+  // Add translation support for right pane (default to CUV)
+  const [rightPaneTranslation, setRightPaneTranslation] = useState('zh_cuv.json');
   
   // Store right pane Bible data
   const [rightPaneBibleData, setRightPaneBibleData] = useState(null);

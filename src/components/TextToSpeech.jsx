@@ -20,6 +20,10 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const [lastChineseVerseIdx, setLastChineseVerseIdx] = useState(0);
   const timerIdRef = useRef(null);
 
+  // Chapters to clipboard modal state
+  const [showChaptersClipboardModal, setShowChaptersClipboardModal] = useState(false);
+  const [chaptersRange, setChaptersRange] = useState('');
+
   // OpenAI TTS state
   const [oaiTtsLoading, setOaiTtsLoading] = useState(false);
   const [oaiTtsPlaying, setOaiTtsPlaying] = useState(false);
@@ -1311,6 +1315,83 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       >
         {kjvPlaying ? 'Stop' : 'Read:KJV'}
       </button>
+
+      {/* Chapters to Clipboard button */}
+      <button
+        onClick={() => setShowChaptersClipboardModal(true)}
+        className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-500 text-white hover:bg-blue-600"
+        title="Copy chapters of current book to clipboard"
+      >
+        Chp📋
+      </button>
+
+      {/* Chapters to Clipboard Modal */}
+      {showChaptersClipboardModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowChaptersClipboardModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-80 shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-3 dark:text-white">Copy Chapters to Clipboard</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+              Enter chapter range for current book (e.g. "1-10" or "3-5")
+            </p>
+            <input
+              type="text"
+              value={chaptersRange}
+              onChange={e => setChaptersRange(e.target.value)}
+              placeholder="e.g. 1-10"
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white mb-4"
+              autoFocus
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  document.getElementById('chaptersClipboardBtn').click();
+                }
+              }}
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setShowChaptersClipboardModal(false); setChaptersRange(''); }}
+                className="px-3 py-1.5 rounded text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                id="chaptersClipboardBtn"
+                onClick={async () => {
+                  const range = chaptersRange.trim();
+                  if (!range) return;
+                  const match = range.match(/^(\d+)\s*-\s*(\d+)$/);
+                  if (!match) { alert('Please enter a valid range like "1-10"'); return; }
+                  const start = parseInt(match[1]);
+                  const end = parseInt(match[2]);
+                  if (start < 1 || end < start) { alert('Invalid range'); return; }
+                  const book = rightPaneBibleData ? rightPaneBibleData.find(b => b.abbrev === currentBook) : null;
+                  if (!book) { alert('Book not found'); return; }
+                  let text = `${book.name || book.abbrev}\n\n`;
+                  for (let ch = start; ch <= end; ch++) {
+                    const verses = book.chapters[ch - 1];
+                    if (!verses) continue;
+                    text += `Chapter ${ch}\n`;
+                    verses.forEach((v, i) => {
+                      const verseText = typeof v === 'string' ? v : (v.text || v.verse || String(v));
+                      text += `${i + 1}. ${verseText.replace(/\{[^}]*\}/g, '').trim()}\n`;
+                    });
+                    text += '\n';
+                  }
+                  try {
+                    await navigator.clipboard.writeText(text.trim());
+                    setShowChaptersClipboardModal(false);
+                    setChaptersRange('');
+                  } catch (err) {
+                    alert('Failed to copy to clipboard');
+                  }
+                }}
+                className="px-3 py-1.5 rounded text-sm font-semibold bg-blue-500 text-white hover:bg-blue-600"
+              >
+                To Clipboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Part-by-part reading button - hidden, functionality moved to grid clicks */}
 
