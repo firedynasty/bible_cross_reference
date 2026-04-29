@@ -2933,10 +2933,8 @@ const BibleApp = () => {
             const pageHeight = outputScroll.clientHeight * 0.9;
             outputScroll.scrollBy({ top: e.key === 'ArrowDown' ? pageHeight : -pageHeight, behavior: 'smooth' });
           }
-        } else if (e.key === ' ') {
-          e.preventDefault();
-          const outputScroll = document.querySelector('.cursive-output-scroll');
-          if (outputScroll) outputScroll.scrollTop = outputScroll.scrollHeight;
+          const cursiveInput = outputScroll && outputScroll.parentElement && outputScroll.parentElement.querySelector('input[type="text"]');
+          if (cursiveInput) cursiveInput.focus();
         } else if (e.key === '[') {
           e.preventDefault();
           const btn = document.querySelector('[data-cursive-source="pane2"]');
@@ -8449,7 +8447,18 @@ const BibleApp = () => {
                     </select>
                     {cursiveBucketIndex < buckets.length - 1 && (
                       <button
-                        onClick={() => goToBucket(cursiveBucketIndex + 1)}
+                        onClick={() => {
+                          const scrollEl = document.querySelector('.cursive-output-scroll');
+                          if (scrollEl) {
+                            const maxScroll = scrollEl.scrollHeight - scrollEl.clientHeight;
+                            const atBottom = maxScroll <= 0 || scrollEl.scrollTop >= maxScroll - 5;
+                            if (!atBottom) {
+                              scrollEl.scrollTop = Math.min(maxScroll, scrollEl.scrollTop + scrollEl.clientHeight * 0.9);
+                              return;
+                            }
+                          }
+                          goToBucket(cursiveBucketIndex + 1);
+                        }}
                         title="Next bucket"
                         style={{ padding: '0 8px', border: '1px solid #c9b99a', borderRadius: 2, background: '#8b4513', color: '#f5f0e8', fontSize: 12, lineHeight: 1, cursor: 'pointer' }}
                       >▼</button>
@@ -8509,8 +8518,9 @@ const BibleApp = () => {
                         e.stopPropagation();
                         const scroll = document.querySelector('.cursive-output-scroll');
                         if (scroll) {
+                            const pageHeight = scroll.clientHeight * 0.9;
                           const toTop = e.key === 'ArrowUp' || e.key === 'Home';
-                          scroll.scrollTo({ top: toTop ? 0 : scroll.scrollHeight, behavior: 'smooth' });
+                          scroll.scrollBy({ top: toTop ? -pageHeight : pageHeight, behavior: 'smooth' });
                         }
                       }
                     }}
