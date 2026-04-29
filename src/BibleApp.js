@@ -8438,7 +8438,7 @@ const BibleApp = () => {
                     <select
                       value={cursiveBucketIndex}
                       onChange={(e) => goToBucket(parseInt(e.target.value))}
-                      style={{ flex: 1, padding: 6, border: '1px solid #c9b99a', borderRadius: 2, background: 'rgba(255,255,255,0.7)', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, color: '#1a1209' }}
+                      style={{ flex: 1, padding: 6, border: '1px solid #c9b99a', borderRadius: 2, background: isDarkMode ? '#1a1a2e' : 'rgba(255,255,255,0.7)', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, color: isDarkMode ? '#fff' : '#1a1209' }}
                     >
                       <option value={-1}>0. {p2BookName} {p2Chapter}</option>
                       {bucketLabels.map((label, idx) => (
@@ -8525,7 +8525,7 @@ const BibleApp = () => {
                       }
                     }}
                     placeholder={`Type 1–${buckets.length || 1} to jump`}
-                    style={{ width: '100%', marginTop: 4, padding: 6, border: '1px solid #c9b99a', borderRadius: 2, background: 'rgba(255,255,255,0.7)', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, color: '#1a1209' }}
+                    style={{ width: '100%', marginTop: 4, padding: 6, border: '1px solid #c9b99a', borderRadius: 2, background: isDarkMode ? '#1a1a2e' : 'rgba(255,255,255,0.7)', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, color: isDarkMode ? '#fff' : '#1a1209' }}
                   />
                 </div>
 
