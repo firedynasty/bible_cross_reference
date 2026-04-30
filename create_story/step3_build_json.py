@@ -40,14 +40,14 @@ def run():
         display_name = folder_to_display.get(folder_name, folder_name.replace('_', ' ').title())
 
         files = sorted(book_dir.glob("*.md"),
-                       key=lambda f: int(re.search(r'(\d+)', f.stem).group(1))
-                       if re.search(r'(\d+)', f.stem) else 0)
+                       key=lambda f: int(re.findall(r'(\d+)', f.stem)[-1])
+                       if re.findall(r'(\d+)', f.stem) else 0)
 
         for filepath in files:
-            m = re.search(r'(\d+)', filepath.stem)
-            if not m:
+            nums = re.findall(r'(\d+)', filepath.stem)
+            if not nums:
                 continue
-            chapter = int(m.group(1))
+            chapter = int(nums[-1])
             key = f"{display_name} {chapter}"
             content = filepath.read_text(encoding='utf-8').strip()
             if content:

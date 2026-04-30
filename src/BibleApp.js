@@ -9317,12 +9317,13 @@ const BibleApp = () => {
               Currently available for:
             </p>
             <ul style={{ margin: '0 0 16px 18px', padding: 0, fontSize: '0.9em', color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333', lineHeight: 1.5 }}>
-              <li>Genesis – Deuteronomy</li>
-              <li>Ruth</li>
+              <li>Genesis – 2 Chronicles</li>
               <li>Job</li>
               <li>Psalms</li>
               <li>Isaiah</li>
               <li>Ezekiel</li>
+              <li>Daniel</li>
+              <li>Zechariah</li>
             </ul>
             <button
               onClick={() => setStorytimeUnavailableMsg(null)}
