@@ -5374,6 +5374,44 @@ const BibleApp = () => {
                   >
                     {isStorytimeAudioPlaying ? '⏸' : '▶'}
                   </button>
+                  <button
+                    onClick={() => {
+                      const activeBook = pane2Book || selectedBook;
+                      if (!activeBook || !storytimeData) return;
+                      const bookName = abbrevToBookName[activeBook.abbrev] || activeBook.abbrev;
+                      const maxChapters = activeBook.chapters ? activeBook.chapters.length : 999;
+                      const input = prompt(`Copy Story Time chapters for ${bookName} (${maxChapters} chapters)\nEnter range (e.g. 1-10):`);
+                      if (!input) return;
+                      const match = input.trim().match(/^(\d+)\s*-\s*(\d+)$/);
+                      if (!match) { alert('Please enter a range like 1-10'); return; }
+                      const start = parseInt(match[1], 10);
+                      const end = parseInt(match[2], 10);
+                      if (start < 1 || end < start || end > maxChapters) { alert(`Invalid range. ${bookName} has chapters 1-${maxChapters}.`); return; }
+                      const parts = [];
+                      const missing = [];
+                      for (let ch = start; ch <= end; ch++) {
+                        const key = `${bookName} ${ch}`;
+                        const story = storytimeData[key];
+                        if (story) {
+                          parts.push(story);
+                        } else {
+                          missing.push(ch);
+                        }
+                      }
+                      if (parts.length === 0) { alert(`No Story Time data found for ${bookName} chapters ${start}-${end}.`); return; }
+                      navigator.clipboard.writeText(parts.join('\n\n'))
+                        .then(() => {
+                          let msg = `Copied ${parts.length} chapter(s) of ${bookName} (${start}-${end}) to clipboard.`;
+                          if (missing.length > 0) msg += `\nMissing chapters: ${missing.join(', ')}`;
+                          alert(msg);
+                        })
+                        .catch(err => alert('Failed to copy: ' + err));
+                    }}
+                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-500 text-white hover:bg-blue-600"
+                    title="Copy chapters of current book to clipboard"
+                  >
+                    Chp📋
+                  </button>
                   </>
                 )}
 
