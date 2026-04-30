@@ -1616,6 +1616,7 @@ const BibleApp = () => {
   // Story Time audio playback (Pentateuch chapter MP3s from Dropbox)
   const storytimeAudioRef = useRef(null);
   const [isStorytimeAudioPlaying, setIsStorytimeAudioPlaying] = useState(false);
+  const storytimeTtsRef = useRef(false); // true when system voice TTS is speaking storytime
 
   // Rhyme audio playback (Bible Rhyme chapter MP3s from Dropbox)
   const rhymeAudioRef = useRef(null);
@@ -2425,21 +2426,65 @@ const BibleApp = () => {
     const activeBook = pane2Book || selectedBook;
     const activeChapter = pane2Chapter || selectedChapter;
     if (!activeBook) return;
-    const url = getStorytimeAudioUrl(activeBook.abbrev, activeChapter);
-    if (!url) {
-      const bookName = abbrevToBookName[activeBook.abbrev] || activeBook.abbrev;
-      setStorytimeUnavailableMsg(`No Story Time audio available for ${bookName} ${activeChapter}.`);
+
+    // If system TTS is currently speaking, stop it
+    if (storytimeTtsRef.current) {
+      window.speechSynthesis.cancel();
+      storytimeTtsRef.current = false;
+      setIsStorytimeAudioPlaying(false);
       return;
     }
-    const audio = storytimeAudioRef.current;
-    if (!audio) return;
-    if (audio.src !== url) audio.src = url;
-    if (audio.paused) {
-      audio.play().catch(err => console.warn('Story Time audio play failed:', err));
+
+    const url = getStorytimeAudioUrl(activeBook.abbrev, activeChapter);
+    if (url) {
+      // Play Dropbox mp3
+      const audio = storytimeAudioRef.current;
+      if (!audio) return;
+      if (audio.src !== url) audio.src = url;
+      if (audio.paused) {
+        audio.play().catch(err => console.warn('Story Time audio play failed:', err));
+      } else {
+        audio.pause();
+      }
     } else {
-      audio.pause();
+      // Fall back to system voice TTS for the story text
+      const bookName = abbrevToBookName[activeBook.abbrev] || activeBook.abbrev;
+      const key = `${bookName} ${activeChapter}`;
+      const story = storytimeData && storytimeData[key];
+      if (!story) {
+        setStorytimeUnavailableMsg(`No Story Time available for ${bookName} ${activeChapter}.`);
+        return;
+      }
+      // Strip markdown formatting for cleaner speech
+      const cleanText = story
+        .replace(/^#+\s+/gm, '')
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/\*(.+?)\*/g, '$1')
+        .replace(/_(.+?)_/g, '$1')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/^>\s?/gm, '')
+        .replace(/^[-*]{3,}\s*$/gm, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'en-US';
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        let voice = voices.find(v => v.lang === 'en-US' && v.name.includes('Google'));
+        if (!voice) voice = voices.find(v => v.lang === 'en-US' && (v.name.includes('Enhanced') || v.name.includes('Premium')));
+        if (!voice) voice = voices.find(v => v.lang === 'en-US');
+        if (voice) utterance.voice = voice;
+      }
+      utterance.onend = () => { storytimeTtsRef.current = false; setIsStorytimeAudioPlaying(false); };
+      utterance.onerror = () => { storytimeTtsRef.current = false; setIsStorytimeAudioPlaying(false); };
+      storytimeTtsRef.current = true;
+      setIsStorytimeAudioPlaying(true);
+      window.speechSynthesis.speak(utterance);
     }
-  }, [pane2Book, pane2Chapter, selectedBook, selectedChapter]);
+  }, [pane2Book, pane2Chapter, selectedBook, selectedChapter, storytimeData]);
 
   // Toggle play/pause for Rhyme audio
   const handleRhymeAudioToggle = useCallback(() => {
@@ -2471,6 +2516,10 @@ const BibleApp = () => {
     if (audio && !audio.paused) {
       audio.pause();
       audio.currentTime = 0;
+    }
+    if (storytimeTtsRef.current) {
+      window.speechSynthesis.cancel();
+      storytimeTtsRef.current = false;
     }
     setIsStorytimeAudioPlaying(false);
     // Skip stopping rhyme audio when auto-advancing chapters
@@ -5306,6 +5355,7 @@ const BibleApp = () => {
 
                 {/* Story Time Button (detects pane 2 book) */}
                 {storytimeData && selectedBook && (
+                  <>
                   <button
                     onClick={handleStorytimeButtonClick}
                     className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
@@ -5313,6 +5363,18 @@ const BibleApp = () => {
                   >
                     Story
                   </button>
+                  <button
+                    onClick={handleStorytimeAudioToggle}
+                    className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${
+                      isStorytimeAudioPlaying
+                        ? 'bg-red-200 text-red-800 hover:bg-red-300'
+                        : 'bg-green-200 text-green-800 hover:bg-green-300'
+                    }`}
+                    title={isStorytimeAudioPlaying ? 'Pause Story Time audio' : 'Play Story Time audio'}
+                  >
+                    {isStorytimeAudioPlaying ? '⏸' : '▶'}
+                  </button>
+                  </>
                 )}
 
                 {/* Reference Prompt Button */}
@@ -8273,6 +8335,13 @@ const BibleApp = () => {
                   style={{ background: cursiveSource === 'story' ? '#7c3aed' : 'transparent', color: cursiveSource === 'story' ? 'white' : '#7c3aed', border: '1px solid #7c3aed', borderRadius: 4, cursor: 'pointer', fontSize: '0.7rem', padding: '2px 8px', fontWeight: 'bold', opacity: (storytimeData && p2Book && storytimeData[`${abbrevToBookName[p2Book.abbrev] || p2Book.abbrev} ${p2Chapter}`]) ? 1 : 0.4 }}
                 >
                   Story ]
+                </button>
+                <button
+                  onClick={handleStorytimeAudioToggle}
+                  style={{ background: isStorytimeAudioPlaying ? '#fee2e2' : '#dcfce7', color: isStorytimeAudioPlaying ? '#991b1b' : '#166534', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.7rem', padding: '2px 8px', fontWeight: 'bold' }}
+                  title={isStorytimeAudioPlaying ? 'Pause Story Time audio' : 'Play Story Time audio'}
+                >
+                  {isStorytimeAudioPlaying ? '⏸' : '▶'}
                 </button>
                 <button
                   onClick={() => {
