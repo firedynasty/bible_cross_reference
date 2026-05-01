@@ -6321,20 +6321,38 @@ const BibleApp = () => {
                 <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
             )}
-            {/* Pane toggle + page-down buttons — mobile only */}
+            {/* Pane toggle button — mobile only, top left */}
+            {isMobileView && !isTabletView && selectedBook && selectedChapter > 0 && (
+              <button
+                onClick={() => {
+                  setShowKJVOnMobile(true);
+                  localStorage.setItem('mobilePanePreference', 'pane2');
+                }}
+                style={{ position: 'sticky', top: 6, left: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'left', color: 'white', fontSize: 22, fontWeight: 700 }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = ''; }}
+                title="Switch to Pane 2"
+              >
+                2
+              </button>
+            )}
+            {/* Page-down buttons — mobile only, left + right */}
             {isMobileView && !isTabletView && selectedBook && selectedChapter > 0 && (
               <>
                 <button
                   onClick={() => {
-                    setShowKJVOnMobile(true);
-                    localStorage.setItem('mobilePanePreference', 'pane2');
+                    const pane1 = chapterContentRef.current;
+                    if (pane1) {
+                      const maxScroll = pane1.scrollHeight - pane1.clientHeight;
+                      pane1.scrollTop = Math.min(maxScroll, pane1.scrollTop + pane1.clientHeight * 0.9);
+                    }
                   }}
-                  style={{ position: 'sticky', top: '50%', left: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'left', color: 'white', fontSize: 22, fontWeight: 700 }}
+                  style={{ position: 'sticky', top: '50%', left: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'left' }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = ''; }}
-                  title="Switch to Pane 2"
+                  title="Page down"
                 >
-                  2
+                  <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
                 <button
                   onClick={() => {
@@ -6728,20 +6746,38 @@ const BibleApp = () => {
                 }}
                 style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a', cursor: 'default', scrollbarColor: '#c4b89a #f4ecd8' } : isDarkMode ? { cursor: 'default', scrollbarColor: '#555 #1a1a2e' } : { cursor: 'default' }}
               >
-                {/* Pane toggle + page-down buttons — mobile only */}
+                {/* Pane toggle button — mobile only, top left */}
+                {isMobileView && !isTabletView && (
+                  <button
+                    onClick={() => {
+                      setShowKJVOnMobile(false);
+                      localStorage.setItem('mobilePanePreference', 'pane1');
+                    }}
+                    style={{ position: 'sticky', top: 6, left: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'left', color: 'white', fontSize: 22, fontWeight: 700 }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = ''; }}
+                    title="Switch to Pane 1"
+                  >
+                    1
+                  </button>
+                )}
+                {/* Page-down buttons — mobile only, left + right */}
                 {isMobileView && !isTabletView && (
                   <>
                     <button
                       onClick={() => {
-                        setShowKJVOnMobile(false);
-                        localStorage.setItem('mobilePanePreference', 'pane1');
+                        const pane = kjvContentRef.current;
+                        if (pane) {
+                          const maxScroll = pane.scrollHeight - pane.clientHeight;
+                          pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
+                        }
                       }}
-                      style={{ position: 'sticky', top: '50%', left: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'left', color: 'white', fontSize: 22, fontWeight: 700 }}
+                      style={{ position: 'sticky', top: '50%', left: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.45)', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'left' }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.45)'; e.currentTarget.style.transform = ''; }}
-                      title="Switch to Pane 1"
+                      title="Page down"
                     >
-                      1
+                      <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
                     <button
                       onClick={() => {
