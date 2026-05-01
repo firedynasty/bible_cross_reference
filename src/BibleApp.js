@@ -5424,6 +5424,46 @@ const BibleApp = () => {
                   Ref
                 </button>
 
+                {/* Reading Ruler Toggle Button */}
+                <button
+                  onClick={() => {
+                    if (window.readingRuler) {
+                      window.readingRuler.cleanup();
+                    } else {
+                      const ruler = document.createElement('div');
+                      ruler.id = 'reading-ruler-overlay';
+                      ruler.style.position = 'fixed';
+                      ruler.style.left = '0';
+                      ruler.style.right = '0';
+                      ruler.style.height = '3px';
+                      ruler.style.backgroundColor = 'rgba(255, 165, 0, 0.8)';
+                      ruler.style.pointerEvents = 'none';
+                      ruler.style.zIndex = '99999';
+                      ruler.style.boxShadow = '0 0 10px rgba(255, 165, 0, 0.5), 0 0 20px rgba(255, 165, 0, 0.3)';
+                      document.body.appendChild(ruler);
+                      let isActive = true;
+                      const handleMouseMove = (e) => { if (isActive) { ruler.style.top = `${e.clientY}px`; } };
+                      const handleKeyPress = (e) => {
+                        if (e.key === ' ') { isActive = !isActive; }
+                      };
+                      document.addEventListener('mousemove', handleMouseMove);
+                      document.addEventListener('keydown', handleKeyPress);
+                      window.readingRuler = {
+                        cleanup: () => {
+                          document.removeEventListener('mousemove', handleMouseMove);
+                          document.removeEventListener('keydown', handleKeyPress);
+                          if (ruler.parentNode) { document.body.removeChild(ruler); }
+                          delete window.readingRuler;
+                        }
+                      };
+                    }
+                  }}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-orange-500 text-white hover:bg-orange-600 font-semibold"
+                  title="Toggle reading ruler"
+                >
+                  📏
+                </button>
+
                 {/* Collection Modal Button */}
                 <button
                   onClick={() => { setExpandedCollection(lastCollectionClick.collection); setShowCollectionModal(true); }}
