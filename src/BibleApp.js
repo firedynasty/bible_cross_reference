@@ -8890,8 +8890,9 @@ const BibleApp = () => {
             onKeyDown={(e) => {
               if (e.key === 'ArrowRight') { e.preventDefault(); setQuiz2RevealCount(c => Math.min(c + 1, totalWords)); }
               else if (e.key === 'ArrowLeft') { e.preventDefault(); setQuiz2RevealCount(c => Math.max(c - 1, 0)); }
-              else if (e.key === 'ArrowDown') { e.preventDefault(); const next = activeVerseIdx + 1; if (next < verseBoundaries.length) setQuiz2RevealCount(verseBoundaries[next]); }
-              else if (e.key === 'ArrowUp') { e.preventDefault(); const prev = activeVerseIdx - 1; if (prev >= 0) setQuiz2RevealCount(verseBoundaries[prev]); else setQuiz2RevealCount(0); }
+              else if (e.key === 'ArrowDown') { e.preventDefault(); const next = activeVerseIdx + 1; if (next < verseBoundaries.length) setQuiz2RevealCount(verseBoundaries[next]); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) { const activeP = scrollEl.querySelectorAll('p')[next < verseBoundaries.length ? next : activeVerseIdx]; if (activeP) activeP.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
+              else if (e.key === 'ArrowUp') { e.preventDefault(); const prev = activeVerseIdx - 1; if (prev >= 0) setQuiz2RevealCount(verseBoundaries[prev]); else setQuiz2RevealCount(0); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) { if (prev <= 0) { scrollEl.scrollTop = 0; } else { const activeP = scrollEl.querySelectorAll('p')[prev]; if (activeP) activeP.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } }
+              else if (e.key === ' ') { e.preventDefault(); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) scrollEl.scrollTop += scrollEl.clientHeight * 0.8; }
             }}
             tabIndex={0}
             ref={(el) => { if (el) el.focus(); }}
@@ -8962,7 +8963,7 @@ const BibleApp = () => {
               </div>
 
               {/* Verses display */}
-              <div style={{ overflowY: 'auto', flex: 1, lineHeight: 1.8, fontSize: quiz2FontSize }}>
+              <div data-recite-scroll style={{ overflowY: 'auto', flex: 1, lineHeight: 1.8, fontSize: quiz2FontSize }}>
                 {verseEntries.map((entry, vi) => {
                   const startIdx = verseBoundaries[vi];
                   const words = entry.text.split(/\s+/).filter(Boolean);
