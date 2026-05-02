@@ -5271,59 +5271,24 @@ const BibleApp = () => {
                   ))}
                 </select>
 
-                {/* Next Chapter Button (top bar) - hidden */}
+                {/* WEB / Rhyme toggle */}
+                <button
+                  onClick={() => {
+                    const next = rightPaneTranslation === 'en_rhyme.json' ? 'en_web.json' : 'en_rhyme.json';
+                    setRightPaneTranslation(next);
+                    setSelectedDropdownTranslation(next);
+                  }}
+                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold inline-block ${
+                    rightPaneTranslation === 'en_rhyme.json'
+                      ? 'bg-pink-500 text-white hover:bg-pink-600'
+                      : 'bg-teal-500 text-white hover:bg-teal-600'
+                  }`}
+                  title="Toggle pane 2 between WEB and Rhyme"
+                >
+                  {rightPaneTranslation === 'en_rhyme.json' ? 'to: WEB' : 'to: Rhyme'}
+                </button>
 
-                {/* Cycle Pane 1 Translation Button */}
-                {(() => {
-                  const shortLabel = (id) => {
-                    if (!id) return '?';
-                    if (id.includes('kjv')) return 'kjv';
-                    if (id.includes('web')) return 'web';
-                    if (id.includes('cuv')) return 'cuv';
-                    if (id.includes('rvr')) return 'rvr';
-                    if (id.includes('he_heb')) return 'heb';
-                    if (id.includes('apee')) return 'apee';
-                    if (id.includes('rhyme')) return 'rhyme';
-                    return id.split('_')[1] || id;
-                  };
-                  const cyclePane1 = () => {
-                    try {
-                      const currentIndex = translations.findIndex(t => t.id === selectedTranslation);
-                      const nextIndex = (currentIndex + 1) % translations.length;
-                      const next = translations[nextIndex].id;
-                      handleApplySelectedTranslationToPane1(next);
-                    } catch (e) { console.warn('Error cycling pane 1 translation:', e); }
-                  };
-                  const cyclePane2 = () => {
-                    try {
-                      const currentIndex = translations.findIndex(t => t.id === rightPaneTranslation);
-                      const nextIndex = (currentIndex + 1) % translations.length;
-                      const next = translations[nextIndex].id;
-                      setSelectedDropdownTranslation(next);
-                      setTimeout(() => {
-                        try { handleApplySelectedTranslationToPane2(next); } catch (e) { console.warn('Error applying translation:', e); }
-                      }, 150);
-                    } catch (e) { console.warn('Error cycling pane 2 translation:', e); }
-                  };
-                  return (
-                    <>
-                      <button
-                        onClick={cyclePane1}
-                        className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-indigo-500 text-white hover:bg-indigo-600 font-semibold"
-                        title="Cycle pane 1 translation"
-                      >
-                        1:{shortLabel(selectedTranslation)}
-                      </button>
-                      <button
-                        onClick={cyclePane2}
-                        className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-orange-500 text-white hover:bg-orange-600 font-semibold"
-                        title="Cycle pane 2 translation (n)"
-                      >
-                        2:{shortLabel(rightPaneTranslation)}
-                      </button>
-                    </>
-                  );
-                })()}
+                {/* Next Chapter Button (top bar) - hidden */}
 
                 {/* Read Full Chapter TTS Button — moved to TTS hidden controls */}
 
@@ -5601,23 +5566,6 @@ const BibleApp = () => {
                   Copy Pane 2
                 </button>
 
-                {/* WEB / Rhyme toggle */}
-                <button
-                  onClick={() => {
-                    const next = rightPaneTranslation === 'en_rhyme.json' ? 'en_web.json' : 'en_rhyme.json';
-                    setRightPaneTranslation(next);
-                    setSelectedDropdownTranslation(next);
-                  }}
-                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold inline-block ${
-                    rightPaneTranslation === 'en_rhyme.json'
-                      ? 'bg-pink-500 text-white hover:bg-pink-600'
-                      : 'bg-teal-500 text-white hover:bg-teal-600'
-                  }`}
-                  title="Toggle pane 2 between WEB and Rhyme"
-                >
-                  {rightPaneTranslation === 'en_rhyme.json' ? 'to: WEB' : 'to: Rhyme'}
-                </button>
-
                 {/* KJV / CUV toggle */}
                 <button
                   onClick={() => {
@@ -5648,6 +5596,58 @@ const BibleApp = () => {
                     {selectedBook.abbrev === 'ps' ? 'to: Prov' : 'to: Psalms'}
                   </button>
                 )}
+
+                {/* Cycle Pane 1 & 2 Translation Buttons */}
+                {(() => {
+                  const shortLabel = (id) => {
+                    if (!id) return '?';
+                    if (id.includes('kjv')) return 'kjv';
+                    if (id.includes('web')) return 'web';
+                    if (id.includes('cuv')) return 'cuv';
+                    if (id.includes('rvr')) return 'rvr';
+                    if (id.includes('he_heb')) return 'heb';
+                    if (id.includes('apee')) return 'apee';
+                    if (id.includes('rhyme')) return 'rhyme';
+                    return id.split('_')[1] || id;
+                  };
+                  const cyclePane1 = () => {
+                    try {
+                      const currentIndex = translations.findIndex(t => t.id === selectedTranslation);
+                      const nextIndex = (currentIndex + 1) % translations.length;
+                      const next = translations[nextIndex].id;
+                      handleApplySelectedTranslationToPane1(next);
+                    } catch (e) { console.warn('Error cycling pane 1 translation:', e); }
+                  };
+                  const cyclePane2 = () => {
+                    try {
+                      const currentIndex = translations.findIndex(t => t.id === rightPaneTranslation);
+                      const nextIndex = (currentIndex + 1) % translations.length;
+                      const next = translations[nextIndex].id;
+                      setSelectedDropdownTranslation(next);
+                      setTimeout(() => {
+                        try { handleApplySelectedTranslationToPane2(next); } catch (e) { console.warn('Error applying translation:', e); }
+                      }, 150);
+                    } catch (e) { console.warn('Error cycling pane 2 translation:', e); }
+                  };
+                  return (
+                    <>
+                      <button
+                        onClick={cyclePane1}
+                        className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-indigo-500 text-white hover:bg-indigo-600 font-semibold"
+                        title="Cycle pane 1 translation"
+                      >
+                        1:{shortLabel(selectedTranslation)}
+                      </button>
+                      <button
+                        onClick={cyclePane2}
+                        className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-orange-500 text-white hover:bg-orange-600 font-semibold"
+                        title="Cycle pane 2 translation (n)"
+                      >
+                        2:{shortLabel(rightPaneTranslation)}
+                      </button>
+                    </>
+                  );
+                })()}
 
                 {/* Fill-in-the-Blank Quiz Button - moved to TextToSpeech after QA */}
 
@@ -8897,7 +8897,7 @@ const BibleApp = () => {
             ref={(el) => { if (el) el.focus(); }}
           >
             <div
-              style={{ background: isDarkMode ? '#1e1e1e' : '#fff', borderRadius: 12, padding: 24, width: '92%', maxWidth: 700, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', position: 'relative' }}
+              style={{ background: isDarkMode ? '#2a2a2a' : isSepiaMode ? '#f4ecd8' : '#fff', borderRadius: 16, padding: 24, width: '92%', maxWidth: 700, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', position: 'relative' }}
               onClick={(e) => e.stopPropagation()}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -8905,18 +8905,18 @@ const BibleApp = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <button
                     onClick={() => setQuiz2FontSize(prev => Math.max(10, prev - 2))}
-                    style={{ width: 30, height: 30, fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                    style={{ width: 30, height: 30, fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333' }}
                     title="Decrease font size"
                   >−</button>
                   <button
                     onClick={() => setQuiz2FontSize(prev => Math.min(28, prev + 2))}
-                    style={{ width: 30, height: 30, fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                    style={{ width: 30, height: 30, fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333' }}
                     title="Increase font size"
                   >+</button>
                 </div>
 
                 {/* Title — center */}
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: isDarkMode ? '#f0f0f0' : '#1a1a1a', textAlign: 'center', flex: 1, padding: '0 8px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#1a1a1a', textAlign: 'center', flex: 1, padding: '0 8px' }}>
                   Recite — {q2BookName} {q2Chapter}
                 </h2>
 
@@ -8924,7 +8924,7 @@ const BibleApp = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 36 }}>
                   <button
                     onClick={() => setQuiz2RevealCount(c => Math.max(c - 1, 0))}
-                    style={{ width: 30, height: 30, fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+                    style={{ width: 30, height: 30, fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333' }}
                     title="Hide last word"
                   >←</button>
                   <button
@@ -8949,9 +8949,9 @@ const BibleApp = () => {
                       onClick={() => setQuiz2RevealCount(startIdx)}
                       style={{
                         padding: '2px 6px', fontSize: '0.7rem', fontWeight: 600, borderRadius: 4, cursor: 'pointer',
-                        border: isActive ? '2px solid #be185d' : `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
-                        background: isFullyRevealed ? '#be185d' : isPartial ? (isDarkMode ? '#4a2030' : '#fce7f3') : (isDarkMode ? '#2a2a2a' : '#f5f5f5'),
-                        color: isFullyRevealed ? '#fff' : (isDarkMode ? '#ccc' : '#555')
+                        border: isActive ? '2px solid #be185d' : `1px solid ${isDarkMode ? '#555' : isSepiaMode ? '#c4b99a' : '#ccc'}`,
+                        background: isFullyRevealed ? '#be185d' : isPartial ? (isDarkMode ? '#4a2030' : isSepiaMode ? '#e8dcc0' : '#fce7f3') : (isDarkMode ? '#333' : isSepiaMode ? '#ece3cc' : '#f5f5f5'),
+                        color: isFullyRevealed ? '#fff' : (isDarkMode ? '#ccc' : isSepiaMode ? '#5a5a5a' : '#555')
                       }}
                       title={`Jump to verse ${entry.num}`}
                     >
@@ -8961,41 +8961,22 @@ const BibleApp = () => {
                 })}
               </div>
 
-              {/* Slider scoped to active verse */}
-              <div style={{ marginBottom: 6, padding: '0 2px' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#ccc' : '#555', marginBottom: 4 }}>
-                  Verse {verseEntries[activeVerseIdx]?.num}
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={activeWordCount}
-                  value={activeProgress}
-                  onChange={(e) => setQuiz2RevealCount(activeStart + parseInt(e.target.value))}
-                  style={{ width: '100%', accentColor: '#be185d', cursor: 'pointer', height: 6 }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: isDarkMode ? '#888' : '#999', marginTop: 2 }}>
-                  <span>{activeProgress} / {activeWordCount} words</span>
-                  <span>{activeWordCount > 0 ? Math.round((activeProgress / activeWordCount) * 100) : 0}%</span>
-                </div>
-              </div>
-
               {/* Verses display */}
               <div style={{ overflowY: 'auto', flex: 1, lineHeight: 1.8, fontSize: quiz2FontSize }}>
                 {verseEntries.map((entry, vi) => {
                   const startIdx = verseBoundaries[vi];
                   const words = entry.text.split(/\s+/).filter(Boolean);
                   return (
-                    <p key={entry.num} style={{ margin: '0 0 10px', color: isDarkMode ? '#e0e0e0' : '#333' }}>
-                      <span style={{ fontWeight: 700, color: isDarkMode ? '#aaa' : '#888', fontSize: quiz2FontSize - 2, marginRight: 6 }}>{entry.num}</span>
+                    <p key={entry.num} style={{ margin: '0 0 10px', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#4a4a3a' : '#333' }}>
+                      <span style={{ fontWeight: 700, color: isDarkMode ? '#aaa' : isSepiaMode ? '#8a7a5a' : '#888', fontSize: quiz2FontSize - 2, marginRight: 6 }}>{entry.num}</span>
                       {words.map((word, wi) => {
                         const globalIdx = startIdx + wi;
                         const revealed = globalIdx < clampedReveal;
                         return (
                           <span key={wi}>
                             {revealed
-                              ? <span style={{ color: isDarkMode ? '#e0e0e0' : '#333' }}>{word}</span>
-                              : <span style={{ color: isDarkMode ? '#444' : '#ddd', letterSpacing: '0.05em' }}>{'_'.repeat(word.length)}</span>
+                              ? <span style={{ color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#4a4a3a' : '#333' }}>{word}</span>
+                              : <span style={{ color: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#ddd', letterSpacing: '0.05em' }}>{'_'.repeat(word.length)}</span>
                             }
                             {wi < words.length - 1 ? ' ' : ''}
                           </span>
@@ -9006,13 +8987,24 @@ const BibleApp = () => {
                 })}
               </div>
 
-              {/* Reset button */}
-              <button
-                onClick={() => setQuiz2RevealCount(0)}
-                style={{ padding: '6px 16px', background: isDarkMode ? '#333' : '#e5e7eb', color: isDarkMode ? '#ccc' : '#555', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', alignSelf: 'flex-start', marginTop: 8 }}
-              >
-                Reset
-              </button>
+              {/* Slider scoped to active verse — at bottom */}
+              <div style={{ marginTop: 8, padding: '0 2px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#ccc' : isSepiaMode ? '#6a6a5a' : '#555', marginBottom: 4 }}>
+                  Verse {verseEntries[activeVerseIdx]?.num}
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={activeWordCount}
+                  value={activeProgress}
+                  onChange={(e) => setQuiz2RevealCount(activeStart + parseInt(e.target.value))}
+                  style={{ width: '100%', accentColor: '#be185d', cursor: 'pointer', height: 6 }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: isDarkMode ? '#888' : isSepiaMode ? '#8a7a5a' : '#999', marginTop: 2 }}>
+                  <span>{activeProgress} / {activeWordCount} words</span>
+                  <span>{activeWordCount > 0 ? Math.round((activeProgress / activeWordCount) * 100) : 0}%</span>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -9022,6 +9014,7 @@ const BibleApp = () => {
       {showBreatheModal && (() => {
         const closeBreathe = () => {
           if (window._breatheInterval) { clearInterval(window._breatheInterval); window._breatheInterval = null; }
+          if (window._breatheAudioCtx) { window._breatheAudioCtx.close().catch(() => {}); window._breatheAudioCtx = null; }
           setShowBreatheModal(false);
         };
 
@@ -9072,6 +9065,26 @@ const BibleApp = () => {
 
                   if (window._breatheInterval) { clearInterval(window._breatheInterval); window._breatheInterval = null; }
 
+                  // Thud sound using Web Audio API — create context once on user click
+                  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                  audioCtx.resume();
+                  const playThud = () => {
+                    try {
+                      const osc = audioCtx.createOscillator();
+                      const gain = audioCtx.createGain();
+                      osc.type = 'sine';
+                      osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                      osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.15);
+                      gain.gain.setValueAtTime(1.0, audioCtx.currentTime);
+                      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+                      osc.connect(gain);
+                      gain.connect(audioCtx.destination);
+                      osc.start(audioCtx.currentTime);
+                      osc.stop(audioCtx.currentTime + 0.3);
+                    } catch (e) { /* ignore audio errors */ }
+                  };
+                  window._breatheAudioCtx = audioCtx;
+
                   let seconds = 0;
                   timerEl.textContent = '00:00';
                   timerEl.style.opacity = '1';
@@ -9087,6 +9100,8 @@ const BibleApp = () => {
                     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
                     const s = (seconds % 60).toString().padStart(2, '0');
                     timerEl.textContent = `${m}:${s}`;
+
+                    if (seconds % 5 === 0) playThud();
 
                     const cycle = Math.floor(seconds / 5) % 2;
                     if (cycle === 0) {

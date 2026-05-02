@@ -1275,7 +1275,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showBreatheModal ? 'bg-slate-700 text-white' : 'bg-slate-600 text-white hover:bg-slate-700'}`}
         title="Breathing exercise timer"
       >
-        Breathe
+        br_
       </button>
 
       {/* To:TextR link button */}
