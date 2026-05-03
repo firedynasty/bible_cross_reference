@@ -3670,9 +3670,16 @@ const BibleApp = () => {
           setShowCollectionModal(false);
         } else if (showDropboxModal) {
           setShowDropboxModal(false);
+        } else if (showQuiz2Modal) {
+          setShowQuiz2Modal(false);
+        } else if (showStorytimeModal) {
+          setShowStorytimeModal(false);
         } else {
-          console.log("Escape key pressed - toggling sidebar");
-          setShowSidebar(prev => !prev);
+          // No modal open — open Recite modal
+          window.speechSynthesis && window.speechSynthesis.cancel();
+          setQuiz2BucketIndex(0);
+          setQuiz2RevealCount(0);
+          setShowQuiz2Modal(true);
         }
         e.preventDefault();
       }
@@ -3748,7 +3755,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showQuiz2Modal]);
+  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showQuiz2Modal, showStorytimeModal]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
@@ -8868,6 +8875,15 @@ const BibleApp = () => {
           text: typeof verse === 'string' ? verse : (verse.text || verse.verse || String(verse))
         }));
 
+        const syllabifyWord = (w) => {
+          if (!hyphRef.current) return w;
+          const m = w.match(/^(\W*)(.*?)(\W*)$/);
+          if (!m) return w;
+          const [, lead, core, trail] = m;
+          if (!core) return w;
+          return lead + hyphRef.current.hyphenate(core).join('\u00B7') + trail;
+        };
+
         // Build flat word list with verse boundaries
         const allWords = [];
         const verseBoundaries = []; // index into allWords where each verse starts
@@ -9015,7 +9031,7 @@ const BibleApp = () => {
                         return (
                           <span key={wi}>
                             {revealed
-                              ? <span style={{ color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#4a4a3a' : '#333' }}>{word}</span>
+                              ? <span style={{ color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#4a4a3a' : '#333' }}>{syllabifyWord(word)}</span>
                               : <span style={{ color: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#ddd', letterSpacing: '0.05em' }}>{'_'.repeat(word.length)}</span>
                             }
                             {wi < words.length - 1 ? ' ' : ''}
