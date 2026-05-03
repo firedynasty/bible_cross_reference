@@ -8875,10 +8875,15 @@ const BibleApp = () => {
         const totalWords = allWords.length;
         const clampedReveal = Math.min(quiz2RevealCount, totalWords);
 
-        // Determine active verse index based on current reveal position
+        // Determine active verse index for slider (uses > so slider stays on current verse when fully revealed)
         let activeVerseIdx = 0;
         for (let vi = verseBoundaries.length - 1; vi >= 0; vi--) {
           if (clampedReveal > verseBoundaries[vi]) { activeVerseIdx = vi; break; }
+        }
+        // navVerseIdx: for swipe/keyboard navigation (uses >= so advancing past verse boundary moves to next)
+        let navVerseIdx = 0;
+        for (let vi = verseBoundaries.length - 1; vi >= 0; vi--) {
+          if (clampedReveal >= verseBoundaries[vi]) { navVerseIdx = vi; break; }
         }
         const activeStart = verseBoundaries[activeVerseIdx];
         const activeEnd = activeVerseIdx + 1 < verseBoundaries.length ? verseBoundaries[activeVerseIdx + 1] : totalWords;
@@ -8892,8 +8897,8 @@ const BibleApp = () => {
             onKeyDown={(e) => {
               if (e.key === 'ArrowRight') { e.preventDefault(); setQuiz2RevealCount(c => Math.min(c + 1, totalWords)); }
               else if (e.key === 'ArrowLeft') { e.preventDefault(); setQuiz2RevealCount(c => Math.max(c - 1, 0)); }
-              else if (e.key === 'ArrowDown') { e.preventDefault(); const next = activeVerseIdx + 1; if (next < verseBoundaries.length) setQuiz2RevealCount(verseBoundaries[next]); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) { const activeP = scrollEl.querySelectorAll('p')[next < verseBoundaries.length ? next : activeVerseIdx]; if (activeP) activeP.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
-              else if (e.key === 'ArrowUp') { e.preventDefault(); const prev = activeVerseIdx - 1; if (prev >= 0) setQuiz2RevealCount(verseBoundaries[prev]); else setQuiz2RevealCount(0); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) { if (prev <= 0) { scrollEl.scrollTop = 0; } else { const activeP = scrollEl.querySelectorAll('p')[prev]; if (activeP) activeP.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } }
+              else if (e.key === 'ArrowDown') { e.preventDefault(); const next = navVerseIdx + 1; if (next < verseBoundaries.length) setQuiz2RevealCount(verseBoundaries[next]); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) { const activeP = scrollEl.querySelectorAll('p')[next < verseBoundaries.length ? next : navVerseIdx]; if (activeP) activeP.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
+              else if (e.key === 'ArrowUp') { e.preventDefault(); const prev = navVerseIdx - 1; if (prev >= 0) setQuiz2RevealCount(verseBoundaries[prev]); else setQuiz2RevealCount(0); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) { if (prev <= 0) { scrollEl.scrollTop = 0; } else { const activeP = scrollEl.querySelectorAll('p')[prev]; if (activeP) activeP.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } }
               else if (e.key === ' ') { e.preventDefault(); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) scrollEl.scrollTop += scrollEl.clientHeight * 0.8; }
             }}
             tabIndex={0}
@@ -8913,8 +8918,8 @@ const BibleApp = () => {
                 reciteTouchStartY.current = null;
                 if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
                   const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]');
-                  if (dx > 0) { const next = activeVerseIdx + 1; if (next < verseBoundaries.length) { setQuiz2RevealCount(verseBoundaries[next]); if (scrollEl) { const p = scrollEl.querySelectorAll('p')[next]; if (p) p.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } }
-                  else { const prev = activeVerseIdx - 1; if (prev >= 0) { setQuiz2RevealCount(verseBoundaries[prev]); if (scrollEl) { const p = scrollEl.querySelectorAll('p')[prev]; if (p) p.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } else { setQuiz2RevealCount(0); if (scrollEl) scrollEl.scrollTop = 0; } }
+                  if (dx < 0) { const next = navVerseIdx + 1; if (next < verseBoundaries.length) { setQuiz2RevealCount(verseBoundaries[next]); if (scrollEl) { const p = scrollEl.querySelectorAll('p')[next]; if (p) p.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } }
+                  else { const prev = navVerseIdx - 1; if (prev >= 0) { setQuiz2RevealCount(verseBoundaries[prev]); if (scrollEl) { const p = scrollEl.querySelectorAll('p')[prev]; if (p) p.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } else { setQuiz2RevealCount(0); if (scrollEl) scrollEl.scrollTop = 0; } }
                 }
               }}
             >
