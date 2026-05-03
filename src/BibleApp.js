@@ -9068,7 +9068,7 @@ const BibleApp = () => {
                   <span>{activeWordCount > 0 ? Math.round((activeProgress / activeWordCount) * 100) : 0}%</span>
                 </div>
                 <div style={{ textAlign: 'center', fontSize: '0.65rem', color: isDarkMode ? '#666' : isSepiaMode ? '#a09a8a' : '#bbb', marginTop: 6 }}>
-                  swipe right to inc verse · left to dec · enter to reset slider
+                  swipe right to inc verse · left to dec · enter to reset slider · spacebar to fill
                 </div>
               </div>
             </div>
