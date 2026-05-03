@@ -8876,7 +8876,7 @@ const BibleApp = () => {
         // Determine active verse index based on current reveal position
         let activeVerseIdx = 0;
         for (let vi = verseBoundaries.length - 1; vi >= 0; vi--) {
-          if (clampedReveal >= verseBoundaries[vi]) { activeVerseIdx = vi; break; }
+          if (clampedReveal > verseBoundaries[vi]) { activeVerseIdx = vi; break; }
         }
         const activeStart = verseBoundaries[activeVerseIdx];
         const activeEnd = activeVerseIdx + 1 < verseBoundaries.length ? verseBoundaries[activeVerseIdx + 1] : totalWords;
