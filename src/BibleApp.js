@@ -8887,6 +8887,20 @@ const BibleApp = () => {
           <div
             style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.55)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
             onClick={(e) => { if (e.target === e.currentTarget) setShowQuiz2Modal(false); }}
+            onTouchStart={(e) => { e.currentTarget._reciteTouchX = e.touches[0].clientX; e.currentTarget._reciteTouchY = e.touches[0].clientY; }}
+            onTouchEnd={(e) => {
+              const startX = e.currentTarget._reciteTouchX;
+              const startY = e.currentTarget._reciteTouchY;
+              if (startX == null) return;
+              const dx = e.changedTouches[0].clientX - startX;
+              const dy = e.changedTouches[0].clientY - startY;
+              if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+                if (dx > 0) { setQuiz2RevealCount(c => Math.min(c + 1, totalWords)); }
+                else { setQuiz2RevealCount(c => Math.max(c - 1, 0)); }
+              }
+              e.currentTarget._reciteTouchX = null;
+              e.currentTarget._reciteTouchY = null;
+            }}
             onKeyDown={(e) => {
               if (e.key === 'ArrowRight') { e.preventDefault(); setQuiz2RevealCount(c => Math.min(c + 1, totalWords)); }
               else if (e.key === 'ArrowLeft') { e.preventDefault(); setQuiz2RevealCount(c => Math.max(c - 1, 0)); }
