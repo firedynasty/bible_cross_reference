@@ -8895,8 +8895,8 @@ const BibleApp = () => {
               const dx = e.changedTouches[0].clientX - startX;
               const dy = e.changedTouches[0].clientY - startY;
               if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-                if (dx > 0) { setQuiz2RevealCount(c => Math.min(c + 1, totalWords)); }
-                else { setQuiz2RevealCount(c => Math.max(c - 1, 0)); }
+                if (dx > 0) { const next = activeVerseIdx + 1; if (next < verseBoundaries.length) { setQuiz2RevealCount(verseBoundaries[next]); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) { const activeP = scrollEl.querySelectorAll('p')[next]; if (activeP) activeP.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } }
+                else { const prev = activeVerseIdx - 1; if (prev >= 0) { setQuiz2RevealCount(verseBoundaries[prev]); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) { const activeP = scrollEl.querySelectorAll('p')[prev]; if (activeP) activeP.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } else { setQuiz2RevealCount(0); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) scrollEl.scrollTop = 0; } }
               }
               e.currentTarget._reciteTouchX = null;
               e.currentTarget._reciteTouchY = null;
