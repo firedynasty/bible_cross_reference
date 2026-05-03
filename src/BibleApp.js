@@ -8919,6 +8919,7 @@ const BibleApp = () => {
               else if (e.key === 'ArrowLeft') { e.preventDefault(); setQuiz2RevealCount(c => Math.max(c - 1, 0)); }
               else if (e.key === 'ArrowDown') { e.preventDefault(); const next = navVerseIdx + 1; if (next < verseBoundaries.length) { setQuiz2RevealCount(verseBoundaries[next]); setForceSliderVerse(next); } const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) { const activeP = scrollEl.querySelectorAll('p')[next < verseBoundaries.length ? next : navVerseIdx]; if (activeP) activeP.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
               else if (e.key === 'ArrowUp') { e.preventDefault(); const prev = navVerseIdx - 1; if (prev >= 0) { setQuiz2RevealCount(verseBoundaries[prev]); setForceSliderVerse(prev); } else { setQuiz2RevealCount(0); setForceSliderVerse(0); } const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) { if (prev <= 0) { scrollEl.scrollTop = 0; } else { const activeP = scrollEl.querySelectorAll('p')[prev]; if (activeP) activeP.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } }
+              else if (e.key === 'Enter') { e.preventDefault(); setQuiz2RevealCount(activeStart); }
               else if (e.key === ' ') { e.preventDefault(); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) scrollEl.scrollTop += scrollEl.clientHeight * 0.8; }
             }}
             tabIndex={0}
@@ -9066,7 +9067,7 @@ const BibleApp = () => {
                   <span>{activeWordCount > 0 ? Math.round((activeProgress / activeWordCount) * 100) : 0}%</span>
                 </div>
                 <div style={{ textAlign: 'center', fontSize: '0.65rem', color: isDarkMode ? '#666' : isSepiaMode ? '#a09a8a' : '#bbb', marginTop: 6 }}>
-                  swipe right to inc verse · left to dec
+                  swipe right to inc verse · left to dec · enter to reset slider
                 </div>
               </div>
             </div>
