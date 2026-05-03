@@ -8875,11 +8875,17 @@ const BibleApp = () => {
         const totalWords = allWords.length;
         const clampedReveal = Math.min(quiz2RevealCount, totalWords);
 
-        // Single index: the verse we're currently on (>= so reaching a boundary moves to that verse)
+        // activeVerseIdx: drives slider mechanics — uses > so dragging slider to max never
+        // crosses the verse boundary, preventing the cascade-to-verse-39 bug
         let activeVerseIdx = 0;
         for (let vi = verseBoundaries.length - 1; vi >= 0; vi--) {
-          if (clampedReveal >= verseBoundaries[vi]) { activeVerseIdx = vi; break; }
+          if (clampedReveal > verseBoundaries[vi]) { activeVerseIdx = vi; break; }
         }
+        // swipeVerseIdx: drives navigation (swipe/keyboard/button highlight) — one step ahead
+        // of activeVerseIdx when count sits exactly on a verse boundary
+        const swipeVerseIdx = (activeVerseIdx + 1 < verseBoundaries.length && clampedReveal >= verseBoundaries[activeVerseIdx + 1])
+          ? activeVerseIdx + 1
+          : activeVerseIdx;
         const activeStart = verseBoundaries[activeVerseIdx];
         const activeEnd = activeVerseIdx + 1 < verseBoundaries.length ? verseBoundaries[activeVerseIdx + 1] : totalWords;
         const activeWordCount = activeEnd - activeStart;
@@ -8892,8 +8898,8 @@ const BibleApp = () => {
             onKeyDown={(e) => {
               if (e.key === 'ArrowRight') { e.preventDefault(); setQuiz2RevealCount(c => Math.min(c + 1, totalWords)); }
               else if (e.key === 'ArrowLeft') { e.preventDefault(); setQuiz2RevealCount(c => Math.max(c - 1, 0)); }
-              else if (e.key === 'ArrowDown') { e.preventDefault(); const next = activeVerseIdx + 1; if (next < verseBoundaries.length) setQuiz2RevealCount(verseBoundaries[next]); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) { const activeP = scrollEl.querySelectorAll('p')[next < verseBoundaries.length ? next : activeVerseIdx]; if (activeP) activeP.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
-              else if (e.key === 'ArrowUp') { e.preventDefault(); const prev = activeVerseIdx - 1; if (prev >= 0) setQuiz2RevealCount(verseBoundaries[prev]); else setQuiz2RevealCount(0); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) { if (prev <= 0) { scrollEl.scrollTop = 0; } else { const activeP = scrollEl.querySelectorAll('p')[prev]; if (activeP) activeP.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } }
+              else if (e.key === 'ArrowDown') { e.preventDefault(); const next = swipeVerseIdx + 1; if (next < verseBoundaries.length) setQuiz2RevealCount(verseBoundaries[next]); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) { const activeP = scrollEl.querySelectorAll('p')[next < verseBoundaries.length ? next : swipeVerseIdx]; if (activeP) activeP.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
+              else if (e.key === 'ArrowUp') { e.preventDefault(); const prev = swipeVerseIdx - 1; if (prev >= 0) setQuiz2RevealCount(verseBoundaries[prev]); else setQuiz2RevealCount(0); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) { if (prev <= 0) { scrollEl.scrollTop = 0; } else { const activeP = scrollEl.querySelectorAll('p')[prev]; if (activeP) activeP.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } }
               else if (e.key === ' ') { e.preventDefault(); const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]'); if (scrollEl) scrollEl.scrollTop += scrollEl.clientHeight * 0.8; }
             }}
             tabIndex={0}
@@ -8915,10 +8921,11 @@ const BibleApp = () => {
                 const dy = e.changedTouches[0].clientY - startY;
                 reciteTouchStartX.current = null;
                 reciteTouchStartY.current = null;
-                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50 && dx < 0) {
+                  // Only swipe left (dx < 0) advances to the next verse; right swipe is disabled
                   const scrollEl = e.currentTarget.querySelector('[data-recite-scroll]');
-                  if (dx < 0) { const next = activeVerseIdx + 1; if (next < verseBoundaries.length) { setQuiz2RevealCount(verseBoundaries[next]); if (scrollEl) { const p = scrollEl.querySelectorAll('p')[next]; if (p) p.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } }
-                  else { const prev = activeVerseIdx - 1; if (prev >= 0) { setQuiz2RevealCount(verseBoundaries[prev]); if (scrollEl) { const p = scrollEl.querySelectorAll('p')[prev]; if (p) p.scrollIntoView({ block: 'center', behavior: 'smooth' }); } } else { setQuiz2RevealCount(0); if (scrollEl) scrollEl.scrollTop = 0; } }
+                  const next = swipeVerseIdx + 1;
+                  if (next < verseBoundaries.length) { setQuiz2RevealCount(verseBoundaries[next]); if (scrollEl) { const p = scrollEl.querySelectorAll('p')[next]; if (p) p.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
                 }
               }}
             >
@@ -8963,7 +8970,7 @@ const BibleApp = () => {
                   const startIdx = verseBoundaries[vi];
                   const endIdx = vi + 1 < verseBoundaries.length ? verseBoundaries[vi + 1] : totalWords;
                   const isFullyRevealed = clampedReveal >= endIdx;
-                  const isActive = vi === activeVerseIdx && clampedReveal < endIdx;
+                  const isActive = vi === swipeVerseIdx && clampedReveal < endIdx;
                   const isPartial = clampedReveal > startIdx && clampedReveal < endIdx;
                   return (
                     <button
@@ -9019,7 +9026,7 @@ const BibleApp = () => {
                   min={0}
                   max={activeWordCount}
                   value={activeProgress}
-                  onChange={(e) => setQuiz2RevealCount(activeStart + parseInt(e.target.value))}
+                  onChange={(e) => setQuiz2RevealCount(Math.min(activeStart + parseInt(e.target.value), activeEnd))}
                   style={{ width: '100%', accentColor: '#be185d', cursor: 'pointer', height: 6 }}
                 />
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: isDarkMode ? '#888' : isSepiaMode ? '#8a7a5a' : '#999', marginTop: 2 }}>
