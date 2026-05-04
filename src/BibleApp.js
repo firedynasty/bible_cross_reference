@@ -1553,6 +1553,9 @@ const BibleApp = () => {
   const [quiz2BucketIndex, setQuiz2BucketIndex] = useState(0);
   const [quiz2RevealCount, setQuiz2RevealCount] = useState(0);
   const [forceSliderVerse, setForceSliderVerse] = useState(null);
+  const [sliderAlign, setSliderAlign] = useState(() => {
+    try { return localStorage.getItem('recite-slider-align') || 'left'; } catch { return 'left'; }
+  });
   const [nltPsalmsData, setNltPsalmsData] = useState(null);
 
   // Load Hypher for syllable hyphenation
@@ -1618,6 +1621,9 @@ const BibleApp = () => {
   useEffect(() => {
     try { localStorage.setItem('quiz2-font-size', String(quiz2FontSize)); } catch {}
   }, [quiz2FontSize]);
+  useEffect(() => {
+    try { localStorage.setItem('recite-slider-align', sliderAlign); } catch {}
+  }, [sliderAlign]);
 
   // Story Time audio playback (Pentateuch chapter MP3s from Dropbox)
   const storytimeAudioRef = useRef(null);
@@ -9045,24 +9051,31 @@ const BibleApp = () => {
                 })}
               </div>
 
-              {/* Slider scoped to active verse — at bottom, left half only for left-hand reach */}
-              <div style={{ marginTop: 8, padding: '0 2px', width: '50%' }}>
+              {/* Slider scoped to active verse — at bottom, half-width with L/R toggle */}
+              <div style={{ marginTop: 8, padding: '0 2px', width: '50%', marginLeft: sliderAlign === 'right' ? 'auto' : undefined }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#ccc' : isSepiaMode ? '#6a6a5a' : '#555', marginBottom: 4 }}>
                   Verse {verseEntries[sliderVerseIdx]?.num}
                 </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={activeWordCount}
-                  value={activeProgress}
-                  onChange={(e) => {
-                    setQuiz2RevealCount(activeStart + parseInt(e.target.value));
-                    sliderActiveRef.current = true;
-                    if (sliderActiveTimerRef.current) clearTimeout(sliderActiveTimerRef.current);
-                    sliderActiveTimerRef.current = setTimeout(() => { sliderActiveRef.current = false; }, 2000);
-                  }}
-                  style={{ width: '100%', accentColor: '#be185d', cursor: 'pointer', height: 6 }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input
+                    type="range"
+                    min={0}
+                    max={activeWordCount}
+                    value={activeProgress}
+                    onChange={(e) => {
+                      setQuiz2RevealCount(activeStart + parseInt(e.target.value));
+                      setForceSliderVerse(sliderVerseIdx);
+                      sliderActiveRef.current = true;
+                      if (sliderActiveTimerRef.current) clearTimeout(sliderActiveTimerRef.current);
+                      sliderActiveTimerRef.current = setTimeout(() => { sliderActiveRef.current = false; }, 2000);
+                    }}
+                    style={{ flex: 1, accentColor: '#be185d', cursor: 'pointer', height: 6 }}
+                  />
+                  <button
+                    onClick={() => setSliderAlign(a => a === 'left' ? 'right' : 'left')}
+                    style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 6px', borderRadius: 4, border: `1px solid ${isDarkMode ? '#555' : isSepiaMode ? '#c4b99a' : '#ccc'}`, background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e0e0e0', color: isDarkMode ? '#ccc' : isSepiaMode ? '#5a5a5a' : '#555', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >{sliderAlign === 'left' ? 'L' : 'R'}</button>
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: isDarkMode ? '#888' : isSepiaMode ? '#8a7a5a' : '#999', marginTop: 2 }}>
                   <span>{activeProgress} / {activeWordCount} words</span>
                   <span>{activeWordCount > 0 ? Math.round((activeProgress / activeWordCount) * 100) : 0}%</span>
