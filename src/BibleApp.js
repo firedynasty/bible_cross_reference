@@ -9045,8 +9045,8 @@ const BibleApp = () => {
                 })}
               </div>
 
-              {/* Slider scoped to active verse — at bottom */}
-              <div style={{ marginTop: 8, padding: '0 2px' }}>
+              {/* Slider scoped to active verse — at bottom, left half only for left-hand reach */}
+              <div style={{ marginTop: 8, padding: '0 2px', width: '50%' }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#ccc' : isSepiaMode ? '#6a6a5a' : '#555', marginBottom: 4 }}>
                   Verse {verseEntries[sliderVerseIdx]?.num}
                 </div>
