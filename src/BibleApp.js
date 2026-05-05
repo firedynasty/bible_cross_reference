@@ -8983,18 +8983,25 @@ const BibleApp = () => {
                   Recite — {q2BookName} {q2Chapter}
                 </h2>
 
-                {/* Arrow buttons — top right */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 36 }}>
+                {/* Verse nav arrows — top right */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, marginRight: 36 }}>
                   <button
-                    onClick={() => setQuiz2RevealCount(c => Math.max(c - 1, 0))}
-                    style={{ width: 30, height: 30, fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333' }}
-                    title="Hide last word"
-                  >←</button>
+                    onClick={() => {
+                      const prev = navVerseIdx - 1;
+                      if (prev >= 0) { setQuiz2RevealCount(verseBoundaries[prev]); setForceSliderVerse(prev); const scrollEl = document.querySelector('[data-recite-scroll]'); if (scrollEl) { const p = scrollEl.querySelectorAll('p')[prev]; if (p) p.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
+                      else { setQuiz2RevealCount(0); setForceSliderVerse(0); const scrollEl = document.querySelector('[data-recite-scroll]'); if (scrollEl) scrollEl.scrollTop = 0; }
+                    }}
+                    style={{ width: 30, height: 22, fontSize: 14, fontWeight: 700, border: 'none', borderRadius: 4, cursor: 'pointer', background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333' }}
+                    title="Previous verse"
+                  >↑</button>
                   <button
-                    onClick={() => setQuiz2RevealCount(c => Math.min(c + 1, totalWords))}
-                    style={{ width: 30, height: 30, fontSize: 16, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#be185d' : '#be185d', color: '#fff' }}
-                    title="Reveal next word"
-                  >→</button>
+                    onClick={() => {
+                      const next = navVerseIdx + 1;
+                      if (next < verseBoundaries.length) { setQuiz2RevealCount(verseBoundaries[next]); setForceSliderVerse(next); const scrollEl = document.querySelector('[data-recite-scroll]'); if (scrollEl) { const p = scrollEl.querySelectorAll('p')[next]; if (p) p.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
+                    }}
+                    style={{ width: 30, height: 22, fontSize: 14, fontWeight: 700, border: 'none', borderRadius: 4, cursor: 'pointer', background: isDarkMode ? '#be185d' : '#be185d', color: '#fff' }}
+                    title="Next verse"
+                  >↓</button>
                 </div>
               </div>
 
