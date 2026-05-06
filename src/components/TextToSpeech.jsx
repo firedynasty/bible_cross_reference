@@ -24,6 +24,10 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const [showChaptersClipboardModal, setShowChaptersClipboardModal] = useState(false);
   const [chaptersRange, setChaptersRange] = useState('');
 
+  // TTS settings modal state
+  const [showTtsModal, setShowTtsModal] = useState(false);
+  const [ttsProvider, setTtsProvider] = useState(() => localStorage.getItem('TTS_PROVIDER') || 'openai');
+
   // OpenAI TTS state
   const [oaiTtsLoading, setOaiTtsLoading] = useState(false);
   const [oaiTtsPlaying, setOaiTtsPlaying] = useState(false);
@@ -82,15 +86,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     audio.onerror = () => { setKjvPlaying(false); kjvAudioRef.current = null; };
   };
 
-  const handleOaiKey = () => {
-    const existing = localStorage.getItem('OPENAI_API_KEY') || '';
-    const input = window.prompt('OpenAI API key (leave blank to clear):', existing);
-    if (input === null) return; // cancelled
-    try {
-      if (input.trim()) localStorage.setItem('OPENAI_API_KEY', input.trim());
-      else localStorage.removeItem('OPENAI_API_KEY');
-    } catch {}
-  };
+  const handleOaiKey = () => setShowTtsModal(true);
 
   const handleOpenAiRead = async () => {
     if (oaiTtsPlaying || oaiTtsLoading) { stopOaiTts(); return; }
@@ -1585,6 +1581,68 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       >
         Read2End(/) {readToEnd ? 'ON' : 'OFF'}
       </button>
+      {/* TTS Settings Modal */}
+      {showTtsModal && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 50000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowTtsModal(false); }}
+        >
+          <div style={{ background: '#fff', borderRadius: 12, padding: 24, width: '90%', maxWidth: 360, boxShadow: '0 10px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>TTS Settings</h3>
+              <button onClick={() => setShowTtsModal(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#666' }}>&times;</button>
+            </div>
+
+            {/* Provider radio buttons */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: 8, color: '#555' }}>Provider</div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 0' }}>
+                <input
+                  type="radio"
+                  name="ttsProvider"
+                  value="openai"
+                  checked={ttsProvider === 'openai'}
+                  onChange={() => { setTtsProvider('openai'); localStorage.setItem('TTS_PROVIDER', 'openai'); }}
+                  style={{ accentColor: '#be185d' }}
+                />
+                <span style={{ fontSize: '0.85rem' }}>OpenAI (Onyx voice)</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 0', opacity: 0.5 }}>
+                <input type="radio" name="ttsProvider" value="browser" checked={ttsProvider === 'browser'} onChange={() => { setTtsProvider('browser'); localStorage.setItem('TTS_PROVIDER', 'browser'); }} style={{ accentColor: '#be185d' }} />
+                <span style={{ fontSize: '0.85rem' }}>Browser (free, built-in)</span>
+              </label>
+            </div>
+
+            {/* API Key input (only for OpenAI) */}
+            {ttsProvider === 'openai' && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: 6, color: '#555' }}>OpenAI API Key</div>
+                <input
+                  type="password"
+                  defaultValue={localStorage.getItem('OPENAI_API_KEY') || ''}
+                  placeholder="sk-..."
+                  onBlur={(e) => {
+                    const val = e.target.value.trim();
+                    try {
+                      if (val) localStorage.setItem('OPENAI_API_KEY', val);
+                      else localStorage.removeItem('OPENAI_API_KEY');
+                    } catch {}
+                  }}
+                  style={{ width: '100%', padding: '8px 10px', fontSize: '0.85rem', border: '1px solid #ccc', borderRadius: 6, boxSizing: 'border-box' }}
+                />
+                <div style={{ fontSize: '0.7rem', color: '#999', marginTop: 4 }}>Stored in localStorage. Leave blank to clear.</div>
+              </div>
+            )}
+
+            <button
+              onClick={() => setShowTtsModal(false)}
+              style={{ width: '100%', padding: '10px', fontSize: '0.9rem', fontWeight: 600, background: '#be185d', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

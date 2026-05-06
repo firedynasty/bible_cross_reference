@@ -1556,6 +1556,8 @@ const BibleApp = () => {
   const [sliderAlign, setSliderAlign] = useState(() => {
     try { return localStorage.getItem('recite-slider-align') || 'left'; } catch { return 'left'; }
   });
+  const [reciteTtsPlaying, setReciteTtsPlaying] = useState(false);
+  const reciteTtsAudioRef = useRef(null);
   const [nltPsalmsData, setNltPsalmsData] = useState(null);
 
   // Load Hypher for syllable hyphenation
@@ -9058,37 +9060,101 @@ const BibleApp = () => {
                 })}
               </div>
 
-              {/* Slider scoped to active verse — at bottom, half-width with L/R toggle */}
-              <div style={{ marginTop: 8, padding: '0 2px', width: '50%', marginLeft: sliderAlign === 'right' ? 'auto' : undefined }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#ccc' : isSepiaMode ? '#6a6a5a' : '#555', marginBottom: 4 }}>
-                  Verse {verseEntries[sliderVerseIdx]?.num}
+              {/* Slider + Read button — full width flex row */}
+              <div style={{ marginTop: 8, padding: '0 2px', display: 'flex', flexDirection: sliderAlign === 'right' ? 'row-reverse' : 'row', alignItems: 'center', gap: 12 }}>
+                {/* Slider half */}
+                <div style={{ width: '50%' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: isDarkMode ? '#ccc' : isSepiaMode ? '#6a6a5a' : '#555', marginBottom: 4 }}>
+                    Verse {verseEntries[sliderVerseIdx]?.num}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input
+                      type="range"
+                      min={0}
+                      max={activeWordCount}
+                      value={activeProgress}
+                      onChange={(e) => {
+                        setQuiz2RevealCount(activeStart + parseInt(e.target.value));
+                        setForceSliderVerse(sliderVerseIdx);
+                        sliderActiveRef.current = true;
+                        if (sliderActiveTimerRef.current) clearTimeout(sliderActiveTimerRef.current);
+                        sliderActiveTimerRef.current = setTimeout(() => { sliderActiveRef.current = false; }, 2000);
+                      }}
+                      style={{ flex: 1, accentColor: '#be185d', cursor: 'pointer', height: 6 }}
+                    />
+                    <button
+                      onClick={() => setSliderAlign(a => a === 'left' ? 'right' : 'left')}
+                      style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 6px', borderRadius: 4, border: `1px solid ${isDarkMode ? '#555' : isSepiaMode ? '#c4b99a' : '#ccc'}`, background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e0e0e0', color: isDarkMode ? '#ccc' : isSepiaMode ? '#5a5a5a' : '#555', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >{sliderAlign === 'left' ? 'L' : 'R'}</button>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: isDarkMode ? '#888' : isSepiaMode ? '#8a7a5a' : '#999', marginTop: 2 }}>
+                    <span>{activeProgress} / {activeWordCount} words</span>
+                    <span>{activeWordCount > 0 ? Math.round((activeProgress / activeWordCount) * 100) : 0}%</span>
+                  </div>
+                  <div style={{ textAlign: 'center', fontSize: '0.65rem', color: isDarkMode ? '#666' : isSepiaMode ? '#a09a8a' : '#bbb', marginTop: 6 }}>
+                    swipe right to inc verse · left to dec · enter to reset slider · spacebar to fill
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <input
-                    type="range"
-                    min={0}
-                    max={activeWordCount}
-                    value={activeProgress}
-                    onChange={(e) => {
-                      setQuiz2RevealCount(activeStart + parseInt(e.target.value));
-                      setForceSliderVerse(sliderVerseIdx);
-                      sliderActiveRef.current = true;
-                      if (sliderActiveTimerRef.current) clearTimeout(sliderActiveTimerRef.current);
-                      sliderActiveTimerRef.current = setTimeout(() => { sliderActiveRef.current = false; }, 2000);
-                    }}
-                    style={{ flex: 1, accentColor: '#be185d', cursor: 'pointer', height: 6 }}
-                  />
+                {/* Read button — fills the other 50% */}
+                <div style={{ width: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <button
-                    onClick={() => setSliderAlign(a => a === 'left' ? 'right' : 'left')}
-                    style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 6px', borderRadius: 4, border: `1px solid ${isDarkMode ? '#555' : isSepiaMode ? '#c4b99a' : '#ccc'}`, background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e0e0e0', color: isDarkMode ? '#ccc' : isSepiaMode ? '#5a5a5a' : '#555', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                  >{sliderAlign === 'left' ? 'L' : 'R'}</button>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: isDarkMode ? '#888' : isSepiaMode ? '#8a7a5a' : '#999', marginTop: 2 }}>
-                  <span>{activeProgress} / {activeWordCount} words</span>
-                  <span>{activeWordCount > 0 ? Math.round((activeProgress / activeWordCount) * 100) : 0}%</span>
-                </div>
-                <div style={{ textAlign: 'center', fontSize: '0.65rem', color: isDarkMode ? '#666' : isSepiaMode ? '#a09a8a' : '#bbb', marginTop: 6 }}>
-                  swipe right to inc verse · left to dec · enter to reset slider · spacebar to fill
+                    onClick={async () => {
+                      if (reciteTtsPlaying) {
+                        if (reciteTtsAudioRef.current) { reciteTtsAudioRef.current.pause(); reciteTtsAudioRef.current = null; }
+                        window.speechSynthesis.cancel();
+                        setReciteTtsPlaying(false);
+                        return;
+                      }
+                      let readIdx = sliderVerseIdx;
+                      let cleanText;
+                      if (activeProgress === 0 && sliderVerseIdx > 0) {
+                        // Slider at 0: read the full previous verse
+                        readIdx = sliderVerseIdx - 1;
+                        const verseText = verseEntries[readIdx]?.text;
+                        if (!verseText) return;
+                        cleanText = verseText.replace(/\{[^}]*\}/g, '').trim();
+                      } else {
+                        // Slider not at 0: read only the revealed words
+                        const verseText = verseEntries[readIdx]?.text;
+                        if (!verseText) return;
+                        const words = verseText.replace(/\{[^}]*\}/g, '').trim().split(/\s+/).filter(Boolean);
+                        cleanText = words.slice(0, activeProgress).join(' ');
+                        if (!cleanText) return;
+                      }
+                      const provider = localStorage.getItem('TTS_PROVIDER') || 'openai';
+
+                      if (provider === 'browser') {
+                        // Browser built-in speech synthesis
+                        setReciteTtsPlaying(true);
+                        const utter = new SpeechSynthesisUtterance(cleanText);
+                        utter.onend = () => setReciteTtsPlaying(false);
+                        utter.onerror = () => setReciteTtsPlaying(false);
+                        window.speechSynthesis.speak(utter);
+                      } else {
+                        // OpenAI TTS
+                        const apiKey = (localStorage.getItem('OPENAI_API_KEY') || '').trim();
+                        if (!apiKey) { alert('No API key set — click Key in the TTS panel to configure.'); return; }
+                        setReciteTtsPlaying(true);
+                        try {
+                          const resp = await fetch('https://api.openai.com/v1/audio/speech', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+                            body: JSON.stringify({ model: 'tts-1', input: cleanText, voice: 'onyx', speed: 1.0 })
+                          });
+                          if (!resp.ok) { console.error('OpenAI TTS error', resp.status); setReciteTtsPlaying(false); return; }
+                          const blob = await resp.blob();
+                          const url = URL.createObjectURL(blob);
+                          const audio = new Audio(url);
+                          reciteTtsAudioRef.current = audio;
+                          audio.onended = () => { URL.revokeObjectURL(url); reciteTtsAudioRef.current = null; setReciteTtsPlaying(false); };
+                          audio.onerror = () => { URL.revokeObjectURL(url); reciteTtsAudioRef.current = null; setReciteTtsPlaying(false); };
+                          audio.play();
+                        } catch (e) { console.error('Recite TTS error', e); setReciteTtsPlaying(false); }
+                      }
+                    }}
+                    style={{ fontSize: '1.1rem', fontWeight: 700, padding: '14px 24px', borderRadius: 8, border: 'none', background: reciteTtsPlaying ? '#dc2626' : '#be185d', color: '#fff', cursor: 'pointer', width: '80%', maxWidth: 180 }}
+                    title={reciteTtsPlaying ? 'Stop reading' : (activeProgress === 0 && sliderVerseIdx > 0 ? `Read verse ${verseEntries[sliderVerseIdx - 1]?.num}` : `Read verse ${verseEntries[sliderVerseIdx]?.num}`)}
+                  >{reciteTtsPlaying ? '■ Stop' : activeProgress === 0 && sliderVerseIdx > 0 ? `🔊 v${verseEntries[sliderVerseIdx - 1]?.num}` : `🔊 v${verseEntries[sliderVerseIdx]?.num} ${activeProgress}/${activeWordCount}`}</button>
                 </div>
               </div>
             </div>
