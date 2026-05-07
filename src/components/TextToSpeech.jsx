@@ -93,7 +93,15 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     stopKjvAudio(); // Stop KJV audio if playing
 
     const apiKey = (localStorage.getItem('OPENAI_API_KEY') || '').trim();
-    if (!apiKey) { alert('No API key set — click the Key button first.'); return; }
+    if (!apiKey) {
+      // Fallback to browser built-in speechSynthesis (macOS/iOS system voice)
+      if (isSpeaking) { stopSpeaking(); return; }
+      setSelectedVerse(1);
+      setReadToEnd(true);
+      setDelayRead(false);
+      setTimeout(() => speakVerse(1), 100);
+      return;
+    }
 
     // Get chapter verses from rightPaneBibleData
     const book = rightPaneBibleData ? rightPaneBibleData.find(b => b.abbrev === currentBook) : null;
