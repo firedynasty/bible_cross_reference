@@ -9068,20 +9068,61 @@ const BibleApp = () => {
                     Verse {verseEntries[sliderVerseIdx]?.num}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input
-                      type="range"
-                      min={0}
-                      max={activeWordCount}
-                      value={activeProgress}
-                      onChange={(e) => {
-                        setQuiz2RevealCount(activeStart + parseInt(e.target.value));
-                        setForceSliderVerse(sliderVerseIdx);
-                        sliderActiveRef.current = true;
-                        if (sliderActiveTimerRef.current) clearTimeout(sliderActiveTimerRef.current);
-                        sliderActiveTimerRef.current = setTimeout(() => { sliderActiveRef.current = false; }, 2000);
-                      }}
-                      style={{ flex: 1, accentColor: '#be185d', cursor: 'pointer', height: 6 }}
-                    />
+                    {/* 3-step segmented bar: 0 | half | full */}
+                    {(() => {
+                      // Find natural break (comma/period/semicolon/colon) nearest to midpoint
+                      const verseWords = (verseEntries[sliderVerseIdx]?.text || '').split(/\s+/).filter(Boolean);
+                      const mid = Math.round(activeWordCount / 2);
+                      let halfWords = mid;
+                      // Search outward from midpoint for a word ending in punctuation
+                      for (let offset = 0; offset < mid; offset++) {
+                        for (const idx of [mid - 1 - offset, mid + offset]) {
+                          if (idx >= 0 && idx < verseWords.length && /[,.\;:]$/.test(verseWords[idx])) {
+                            halfWords = idx + 1; // reveal up to and including the punctuated word
+                            offset = mid; // break outer loop
+                            break;
+                          }
+                        }
+                      }
+                      const steps = [
+                        { label: '0', value: 0 },
+                        { label: `${halfWords}`, value: halfWords },
+                        { label: `${activeWordCount}`, value: activeWordCount },
+                      ];
+                      // Determine active step index
+                      const activeStep = activeProgress === 0 ? 0 : activeProgress >= activeWordCount ? 2 : 1;
+                      const segBg = isDarkMode ? '#333' : isSepiaMode ? '#d4c9a8' : '#e0e0e0';
+                      const segActiveBg = '#be185d';
+                      const segText = isDarkMode ? '#ccc' : isSepiaMode ? '#5a5a5a' : '#555';
+                      const segActiveText = '#fff';
+                      return (
+                        <div style={{ display: 'flex', flex: 1, height: 34, borderRadius: 6, overflow: 'hidden', border: `1px solid ${isDarkMode ? '#555' : isSepiaMode ? '#c4b99a' : '#ccc'}` }}>
+                          {steps.map((step, i) => (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                setQuiz2RevealCount(activeStart + step.value);
+                                setForceSliderVerse(sliderVerseIdx);
+                                sliderActiveRef.current = true;
+                                if (sliderActiveTimerRef.current) clearTimeout(sliderActiveTimerRef.current);
+                                sliderActiveTimerRef.current = setTimeout(() => { sliderActiveRef.current = false; }, 2000);
+                              }}
+                              style={{
+                                flex: 1,
+                                border: 'none',
+                                borderRight: i < 2 ? `1px solid ${isDarkMode ? '#555' : isSepiaMode ? '#c4b99a' : '#ccc'}` : 'none',
+                                background: i <= activeStep ? segActiveBg : segBg,
+                                color: i <= activeStep ? segActiveText : segText,
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                padding: 0,
+                              }}
+                            >{step.value}/{activeWordCount}</button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                     <button
                       onClick={() => setSliderAlign(a => a === 'left' ? 'right' : 'left')}
                       style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 6px', borderRadius: 4, border: `1px solid ${isDarkMode ? '#555' : isSepiaMode ? '#c4b99a' : '#ccc'}`, background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e0e0e0', color: isDarkMode ? '#ccc' : isSepiaMode ? '#5a5a5a' : '#555', cursor: 'pointer', whiteSpace: 'nowrap' }}
