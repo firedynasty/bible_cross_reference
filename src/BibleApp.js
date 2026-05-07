@@ -9133,7 +9133,15 @@ const BibleApp = () => {
                       } else {
                         // OpenAI TTS
                         const apiKey = (localStorage.getItem('OPENAI_API_KEY') || '').trim();
-                        if (!apiKey) { alert('No API key set — click Key in the TTS panel to configure.'); return; }
+                        if (!apiKey) {
+                          // Fallback to browser built-in speechSynthesis (macOS/iOS system voice)
+                          setReciteTtsPlaying(true);
+                          const utter = new SpeechSynthesisUtterance(cleanText);
+                          utter.onend = () => setReciteTtsPlaying(false);
+                          utter.onerror = () => setReciteTtsPlaying(false);
+                          window.speechSynthesis.speak(utter);
+                          return;
+                        }
                         setReciteTtsPlaying(true);
                         try {
                           const resp = await fetch('https://api.openai.com/v1/audio/speech', {
