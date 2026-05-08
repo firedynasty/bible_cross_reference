@@ -477,7 +477,10 @@ const NavigationPlaceholder = ({
   onFontScaleUp,
   onClassicalMusic,
   onClassicalTogglePlay,
-  classicalPlaying
+  classicalPlaying,
+  showPane2Syllables,
+  onTogglePane2Syllables,
+  syllabifyText
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -595,6 +598,15 @@ const NavigationPlaceholder = ({
       {/* Current Location Display */}
       <div className="flex flex-wrap gap-y-2 items-center bg-blue-50 px-2 py-1 rounded-md text-blue-800 text-sm">
         
+        {/* Syllable toggle for pane 2 */}
+        <button
+          onClick={() => onTogglePane2Syllables && onTogglePane2Syllables()}
+          className={`ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showPane2Syllables ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-indigo-500 text-white hover:bg-indigo-600'}`}
+          title={showPane2Syllables ? 'Syllable breaks ON (click to hide)' : 'Show syllable breaks in pane 2'}
+        >
+          {showPane2Syllables ? 'Syl: ON' : 'Syllable'}
+        </button>
+
         {/* Dark Mode Toggle Button */}
         <button
           onClick={() => onDarkModeToggle && onDarkModeToggle()}
@@ -857,6 +869,8 @@ const NavigationPlaceholder = ({
           showCursiveModal={showCursiveModal}
           onBreathe={onBreathe}
           showBreatheModal={showBreatheModal}
+          showPane2Syllables={showPane2Syllables}
+          onTogglePane2Syllables={onTogglePane2Syllables}
         />
         
         {/* To Clipboard Button - Hidden */}
@@ -1546,6 +1560,7 @@ const BibleApp = () => {
   const [cursiveClipboardBuckets, setCursiveClipboardBuckets] = useState(null);
   const [cursiveSource, setCursiveSource] = useState(() => localStorage.getItem('cursive-source') || 'pane2'); // 'story' or 'pane2'
   const [cursiveSyllables] = useState(true);
+  const [showPane2Syllables, setShowPane2Syllables] = useState(false);
   const hyphRef = useRef(null);
   const cursiveGoToBucketRef = useRef(null);
   const cursiveBucketIndexRef = useRef(0);
@@ -1573,6 +1588,13 @@ const BibleApp = () => {
       }).catch(err => console.warn('Failed to load Hypher:', err));
     }
   }, [cursiveSyllables]);
+
+  const syllabifyText = (text) => {
+    if (!hyphRef.current || !text) return text;
+    return text.replace(/\b([a-zA-Z]+)\b/g, (match) => {
+      return hyphRef.current.hyphenate(match).join('\u00B7');
+    });
+  };
 
   // State for Breathe Modal
   const [showBreatheModal, setShowBreatheModal] = useState(false);
@@ -5980,6 +6002,9 @@ const BibleApp = () => {
                 if (classicalRef.current) classicalRef.current.togglePlay();
               }}
               classicalPlaying={classicalPlaying}
+              showPane2Syllables={showPane2Syllables}
+              onTogglePane2Syllables={() => setShowPane2Syllables(s => !s)}
+              syllabifyText={syllabifyText}
               onQA={() => {
                 if (!studyQData) {
                   const baseUrl = getBaseUrl();
@@ -6223,7 +6248,7 @@ const BibleApp = () => {
                               <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                                 {item.verseNumber}
                               </span>
-                              <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' && item.type === 'primary' ? renderWithStrongs(item.text, showGlosses) : renderWithGlosses(item.text, showGlosses)}</span>
+                              <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' && item.type === 'primary' ? renderWithStrongs(item.text, showGlosses) : renderWithGlosses(item.type === 'secondary' && showPane2Syllables ? syllabifyText(item.text) : item.text, showGlosses)}</span>
                               <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                 ({item.translation})
                               </span>
@@ -7188,7 +7213,7 @@ const BibleApp = () => {
                               >
                                 <p className="flex">
                                   <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
-                                  <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(verse, showGlosses)}</span>
+                                  <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(showPane2Syllables ? syllabifyText(verse) : verse, showGlosses)}</span>
                                 </p>
                               </div>
                             );

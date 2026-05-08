@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, us
 import { ChevronDown, ChevronRight, Play, SkipForward } from 'lucide-react';
 import kjvAudioData from '../data/kjvAudio';
 
-const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse, onNextChapter, onQA, showStudyQModal, onQuiz, showQuizModal, onQuiz2, showQuiz2Modal, onBuckets, showBucketsModal, onCursive, showCursiveModal, onBreathe, showBreatheModal }, ref) => {
+const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse, onNextChapter, onQA, showStudyQModal, onQuiz, showQuizModal, onQuiz2, showQuiz2Modal, onBuckets, showBucketsModal, onCursive, showCursiveModal, onBreathe, showBreatheModal, showPane2Syllables, onTogglePane2Syllables }, ref) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
