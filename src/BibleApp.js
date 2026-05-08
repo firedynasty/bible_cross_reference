@@ -1560,7 +1560,7 @@ const BibleApp = () => {
   const [cursiveClipboardBuckets, setCursiveClipboardBuckets] = useState(null);
   const [cursiveSource, setCursiveSource] = useState(() => localStorage.getItem('cursive-source') || 'pane2'); // 'story' or 'pane2'
   const [cursiveSyllables] = useState(true);
-  const [showPane2Syllables, setShowPane2Syllables] = useState(false);
+  const [showPane2Syllables, setShowPane2Syllables] = useState(() => localStorage.getItem('bible-pane2-syllables') === 'true');
   const hyphRef = useRef(null);
   const cursiveGoToBucketRef = useRef(null);
   const cursiveBucketIndexRef = useRef(0);
@@ -6003,7 +6003,7 @@ const BibleApp = () => {
               }}
               classicalPlaying={classicalPlaying}
               showPane2Syllables={showPane2Syllables}
-              onTogglePane2Syllables={() => setShowPane2Syllables(s => !s)}
+              onTogglePane2Syllables={() => setShowPane2Syllables(s => { const next = !s; localStorage.setItem('bible-pane2-syllables', next); return next; })}
               syllabifyText={syllabifyText}
               onQA={() => {
                 if (!studyQData) {
