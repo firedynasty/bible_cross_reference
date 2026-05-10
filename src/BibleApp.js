@@ -480,7 +480,8 @@ const NavigationPlaceholder = ({
   classicalPlaying,
   showPane2Syllables,
   onTogglePane2Syllables,
-  syllabifyText
+  syllabifyText,
+  onRefPrompt
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -598,6 +599,15 @@ const NavigationPlaceholder = ({
       {/* Current Location Display */}
       <div className="flex flex-wrap gap-y-2 items-center bg-blue-50 px-2 py-1 rounded-md text-blue-800 text-sm">
         
+        {/* Reference Prompt Button */}
+        <button
+          onClick={() => onRefPrompt && onRefPrompt()}
+          className="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-500 text-white hover:bg-blue-600 font-semibold"
+          title="Go to a Bible reference"
+        >
+          Ref
+        </button>
+
         {/* Syllable toggle for pane 2 */}
         <button
           onClick={() => onTogglePane2Syllables && onTogglePane2Syllables()}
@@ -1824,11 +1834,25 @@ const BibleApp = () => {
       // Set highlighted verses
       setHighlightedVerses(verses);
 
-      // Scroll to the first highlighted verse after render
+      // Scroll both panes to the first highlighted verse after render (with yellow highlight)
       if (verses.length > 0) {
+        const scrollPaneToVerse = (paneRef, elId, attempts = 0) => {
+          const el = document.getElementById(elId);
+          const pane = paneRef.current;
+          if (el && pane) {
+            const elRect = el.getBoundingClientRect();
+            const paneRect = pane.getBoundingClientRect();
+            const offset = elRect.top - paneRect.top + pane.scrollTop - pane.clientHeight / 3;
+            pane.scrollTo({ top: offset, behavior: 'smooth' });
+            el.style.backgroundColor = '#fef9c3';
+            setTimeout(() => { el.style.backgroundColor = ''; }, 3000);
+          } else if (attempts < 10) {
+            setTimeout(() => scrollPaneToVerse(paneRef, elId, attempts + 1), 150);
+          }
+        };
         setTimeout(() => {
-          const el = document.getElementById(`verse-${verses[0]}`);
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          scrollPaneToVerse(chapterContentRef, `verse-${verses[0]}`);
+          scrollPaneToVerse(kjvContentRef, `right-pane-verse-${verses[0]}`);
         }, 300);
       }
     }
@@ -5312,6 +5336,16 @@ const BibleApp = () => {
                   ))}
                 </select>
 
+                {/* Book Search Button */}
+                <button
+                  onClick={() => { setShowSearchModal(true); }}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-teal-500 text-white hover:bg-teal-600 font-semibold inline-flex items-center gap-1"
+                  title="Search next 30 chapters"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  Search
+                </button>
+
                 {/* WEB / Rhyme toggle */}
                 <button
                   onClick={() => {
@@ -5421,15 +5455,6 @@ const BibleApp = () => {
                   </>
                 )}
 
-                {/* Reference Prompt Button */}
-                <button
-                  onClick={() => setShowRefPrompt(true)}
-                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-500 text-white hover:bg-blue-600 font-semibold"
-                  title="Go to a Bible reference"
-                >
-                  Ref
-                </button>
-
                 {/* Reading Ruler Toggle Button */}
                 <button
                   onClick={() => {
@@ -5509,16 +5534,6 @@ const BibleApp = () => {
                     Prompt
                   </button>
                 )}
-
-                {/* Book Search Button */}
-                <button
-                  onClick={() => { setShowSearchModal(true); }}
-                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-teal-500 text-white hover:bg-teal-600 font-semibold inline-flex items-center gap-1"
-                  title="Search next 30 chapters"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                  Search
-                </button>
 
                 <button
                   onClick={() => {
@@ -6004,6 +6019,7 @@ const BibleApp = () => {
               showPane2Syllables={showPane2Syllables}
               onTogglePane2Syllables={() => setShowPane2Syllables(s => { const next = !s; localStorage.setItem('bible-pane2-syllables', next); return next; })}
               syllabifyText={syllabifyText}
+              onRefPrompt={() => setShowRefPrompt(true)}
               onQA={() => {
                 if (!studyQData) {
                   const baseUrl = getBaseUrl();
@@ -7559,30 +7575,29 @@ const BibleApp = () => {
       {showRefPrompt && (() => {
         const refs = refPromptValue.split(',').map(r => r.trim()).filter(r => r);
         const validRefs = refs.map(r => ({ raw: r, parsed: parseSingleBibleRef(r) })).filter(r => r.parsed);
-        // Helper: add current chapter + valid refs from input to history (deduped)
+        // Helper: add current chapter + valid refs from input to history (replaces existing same book+chapter)
         const addToHistory = () => {
           setRefHistory(prev => {
-            const existing = new Set(prev.map(h => `${h.parsed.abbrev}_${h.parsed.chapter}`));
+            // Collect keys that will be newly added so we can remove old duplicates
+            const newKeys = new Set();
             const toAdd = [];
             // Add current chapter first
             if (selectedBook && selectedChapter) {
               const curKey = `${selectedBook.abbrev}_${selectedChapter}`;
-              if (!existing.has(curKey)) {
-                const curLabel = `${getBookName(selectedBook.abbrev)} ${selectedChapter}`;
-                toAdd.push({ raw: curLabel, parsed: { abbrev: selectedBook.abbrev, chapter: selectedChapter } });
-                existing.add(curKey);
-              }
+              const curLabel = `${getBookName(selectedBook.abbrev)} ${selectedChapter}`;
+              toAdd.push({ raw: curLabel, parsed: { abbrev: selectedBook.abbrev, chapter: selectedChapter } });
+              newKeys.add(curKey);
             }
             // Then add typed refs
             for (const r of validRefs) {
               const key = `${r.parsed.abbrev}_${r.parsed.chapter}`;
-              if (!existing.has(key)) {
-                toAdd.push({ raw: r.raw, parsed: r.parsed });
-                existing.add(key);
-              }
+              toAdd.push({ raw: r.raw, parsed: r.parsed });
+              newKeys.add(key);
             }
             if (toAdd.length === 0) return prev;
-            return [...prev, ...toAdd];
+            // Remove old entries that match the same book+chapter, then append new ones
+            const filtered = prev.filter(h => !newKeys.has(`${h.parsed.abbrev}_${h.parsed.chapter}`));
+            return [...filtered, ...toAdd];
           });
         };
         return (
@@ -7599,7 +7614,7 @@ const BibleApp = () => {
                   <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>History</span>
                   <button
                     onClick={() => setRefHistory([])}
-                    style={{ fontSize: 11, color: isDarkMode ? '#f87171' : '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 6px' }}
+                    style={{ fontSize: 11, color: isDarkMode ? '#f87171' : '#dc2626', background: isDarkMode ? '#3b1c1c' : '#fef2f2', border: `1px solid ${isDarkMode ? '#7f1d1d' : '#fecaca'}`, borderRadius: 4, cursor: 'pointer', fontWeight: 600, padding: '3px 10px', marginLeft: 8 }}
                   >
                     Clear
                   </button>
@@ -7608,7 +7623,7 @@ const BibleApp = () => {
                   {refHistory.map((h, i) => (
                     <button
                       key={i}
-                      onClick={() => { navigateToRef(h.raw); setShowRefPrompt(false); }}
+                      onClick={() => { navigateToRefWithHighlight(h.raw); setShowRefPrompt(false); }}
                       style={{
                         padding: '5px 10px', fontSize: 12, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 6,
                         cursor: 'pointer', fontWeight: 600,
@@ -9847,11 +9862,11 @@ const BibleApp = () => {
               <h3 style={{ margin: '0 0 12px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
                 Search next 30 chapters (KJV) from {bookName} {selectedChapter}
               </h3>
-              <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchKeyword); setSearchKeyword(''); }} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchKeyword); setSearchKeyword(''); setTimeout(() => { const el = e.target.querySelector('input'); if (el) el.focus(); }, 0); }} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                 <input
                   type="text"
                   value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  onChange={(e) => { setSearchKeyword(e.target.value); setSearchResults([]); setSearchLastInfo(''); }}
                   placeholder="Enter keyword or phrase..."
                   autoFocus
                   style={{
