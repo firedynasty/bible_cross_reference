@@ -9902,9 +9902,9 @@ const BibleApp = () => {
                         <button
                           key={i}
                           onClick={() => {
-                            const scrollToFoundVerse = (verseNum, attempts = 0) => {
-                              const el = document.getElementById(`right-pane-verse-${verseNum}`);
-                              const pane = kjvContentRef.current;
+                            const scrollPaneToVerse = (paneRef, elId, verseNum, attempts = 0) => {
+                              const el = document.getElementById(elId);
+                              const pane = paneRef.current;
                               if (el && pane) {
                                 isManuallyScrolling.current = true;
                                 const elRect = el.getBoundingClientRect();
@@ -9916,18 +9916,25 @@ const BibleApp = () => {
                                 setTimeout(() => { el.style.backgroundColor = ''; el.style.color = ''; }, 3000);
                                 setTimeout(() => { isManuallyScrolling.current = false; }, 800);
                               } else if (attempts < 10) {
-                                setTimeout(() => scrollToFoundVerse(verseNum, attempts + 1), 150);
+                                setTimeout(() => scrollPaneToVerse(paneRef, elId, verseNum, attempts + 1), 150);
                               }
                             };
-                            // Navigate pane 2 to the target book/chapter
+                            // Navigate both panes to the target book/chapter
                             const targetBook = bibleData.find(b => b.abbrev === r.bookAbbrev);
                             if (targetBook) {
+                              setSelectedBook(targetBook);
+                              setSelectedChapter(r.chapter);
                               setPane2History(h => [...h, { book: pane2Book, chapter: pane2Chapter, concordance: strongsConcordance }]);
                               setPane2Book(targetBook);
                               setPane2Chapter(r.chapter);
                             }
                             setShowSearchModal(false);
-                            setTimeout(() => scrollToFoundVerse(r.verse), 300);
+                            setSearchResults([]);
+                            setSearchLastInfo('');
+                            setTimeout(() => {
+                              scrollPaneToVerse(chapterContentRef, `verse-${r.verse}`, r.verse);
+                              scrollPaneToVerse(kjvContentRef, `right-pane-verse-${r.verse}`, r.verse);
+                            }, 300);
                           }}
                           style={{
                             display: 'block', width: '100%', padding: '10px 12px', marginBottom: 6, fontSize: 13,
