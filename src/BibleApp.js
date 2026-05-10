@@ -1532,6 +1532,7 @@ const BibleApp = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLastInfo, setSearchLastInfo] = useState('');
+  const kjvSearchDataRef = useRef(null);
 
   // State for Fill-in-the-Blank Quiz Modal
   const [showQuizModal, setShowQuizModal] = useState(false);
@@ -3705,11 +3706,8 @@ const BibleApp = () => {
         } else if (showStorytimeModal) {
           setShowStorytimeModal(false);
         } else {
-          // No modal open — open Recite modal
-          window.speechSynthesis && window.speechSynthesis.cancel();
-          setQuiz2BucketIndex(0);
-          setQuiz2RevealCount(0);
-          setShowQuiz2Modal(true);
+          // No modal open — open Search modal
+          setShowSearchModal(true);
         }
         e.preventDefault();
       }
@@ -5515,10 +5513,11 @@ const BibleApp = () => {
                 {/* Book Search Button */}
                 <button
                   onClick={() => { setShowSearchModal(true); }}
-                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-teal-500 text-white hover:bg-teal-600 font-semibold"
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-teal-500 text-white hover:bg-teal-600 font-semibold inline-flex items-center gap-1"
                   title="Search next 30 chapters"
                 >
-                  Srch
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  Search
                 </button>
 
                 <button
@@ -9778,22 +9777,42 @@ const BibleApp = () => {
       {/* Book Search Modal - searches next 30 chapters across books */}
       {showSearchModal && (() => {
         const bookName = selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : 'Book';
-        const handleSearch = (keyword) => {
-          if (!keyword.trim() || !selectedBook || !bibleData) {
+        const getKjvData = async () => {
+          // Prefer rightPaneBibleData (pane 2 is usually KJV)
+          if (rightPaneBibleData && rightPaneTranslation === 'en_kjv.json') return rightPaneBibleData;
+          // Fall back to bibleData if pane 1 is KJV
+          if (bibleData && selectedTranslation === 'en_kjv.json') return bibleData;
+          // Otherwise, fetch and cache KJV
+          if (kjvSearchDataRef.current) return kjvSearchDataRef.current;
+          try {
+            const baseUrl = window.location.hostname === 'localhost' ? '' : '';
+            const resp = await fetch(`${baseUrl}/en_kjv.json`);
+            const data = await resp.json();
+            kjvSearchDataRef.current = data;
+            return data;
+          } catch (e) {
+            console.warn('Failed to load KJV for search:', e);
+            return bibleData; // last resort fallback
+          }
+        };
+        const handleSearch = async (keyword) => {
+          if (!keyword.trim() || !selectedBook) {
             setSearchResults([]);
             return;
           }
+          const kjvData = await getKjvData();
+          if (!kjvData) return;
           const kw = keyword.toLowerCase();
           const results = [];
-          const currentBookIdx = bibleData.findIndex(b => b.abbrev === selectedBook.abbrev);
+          const currentBookIdx = kjvData.findIndex(b => b.abbrev === selectedBook.abbrev);
           if (currentBookIdx === -1) return;
           const startChapter = selectedChapter || 1;
           let chaptersSearched = 0;
           const maxChapters = 30;
           let lastSearchedBook = '';
           let lastSearchedChapter = 0;
-          for (let bookIdx = currentBookIdx; bookIdx < bibleData.length && chaptersSearched < maxChapters; bookIdx++) {
-            const book = bibleData[bookIdx];
+          for (let bookIdx = currentBookIdx; bookIdx < kjvData.length && chaptersSearched < maxChapters; bookIdx++) {
+            const book = kjvData[bookIdx];
             if (!book.chapters) continue;
             const chStart = (bookIdx === currentBookIdx) ? startChapter - 1 : 0;
             for (let chIdx = chStart; chIdx < book.chapters.length && chaptersSearched < maxChapters; chIdx++) {
@@ -9816,37 +9835,49 @@ const BibleApp = () => {
             }
           }
           setSearchResults(results);
-          setSearchLastInfo(chaptersSearched > 0 ? `Searched ${chaptersSearched} ch, ending at ${lastSearchedBook} ${lastSearchedChapter}` : '');
+          setSearchLastInfo(chaptersSearched > 0 ? `Searched ${chaptersSearched} ch (KJV), ending at ${lastSearchedBook} ${lastSearchedChapter}` : '');
         };
         return (
           <div
             style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
             onClick={(e) => { if (e.target === e.currentTarget) setShowSearchModal(false); }}
+            onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setShowSearchModal(false); } }}
           >
-            <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '95%', maxWidth: 600, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
               <h3 style={{ margin: '0 0 12px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
-                Search next 30 chapters from {bookName} {selectedChapter}
+                Search next 30 chapters (KJV) from {bookName} {selectedChapter}
               </h3>
-              <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchKeyword); }} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchKeyword); setSearchKeyword(''); }} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                 <input
                   type="text"
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
-                  placeholder="Enter keyword..."
+                  placeholder="Enter keyword or phrase..."
                   autoFocus
                   style={{
                     flex: 1, padding: '8px 12px', fontSize: 15, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 8,
-                    background: isDarkMode ? '#1a1a1a' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333', outline: 'none'
+                    background: isDarkMode ? '#1a1a1a' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333', outline: 'none',
+                    minWidth: 0
                   }}
                 />
                 <button
                   type="submit"
                   style={{
                     padding: '8px 16px', fontSize: 14, border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
-                    background: '#0d9488', color: 'white'
+                    background: '#0d9488', color: 'white', whiteSpace: 'nowrap'
                   }}
                 >
                   Search
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setSearchKeyword(''); setSearchResults([]); setSearchLastInfo(''); }}
+                  style={{
+                    padding: '8px 12px', fontSize: 14, border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
+                    background: isDarkMode ? '#555' : '#d1d5db', color: isDarkMode ? '#e0e0e0' : '#374151', whiteSpace: 'nowrap'
+                  }}
+                >
+                  Clear
                 </button>
               </form>
               {searchLastInfo && (
@@ -9871,16 +9902,32 @@ const BibleApp = () => {
                         <button
                           key={i}
                           onClick={() => {
-                            if (isSameBook) {
-                              handleChapterSelect(r.chapter);
-                            } else {
-                              const targetBook = bibleData.find(b => b.abbrev === r.bookAbbrev);
-                              if (targetBook) {
-                                setSelectedBook(targetBook);
-                                setSelectedChapter(r.chapter);
+                            const scrollToFoundVerse = (verseNum, attempts = 0) => {
+                              const el = document.getElementById(`right-pane-verse-${verseNum}`);
+                              const pane = kjvContentRef.current;
+                              if (el && pane) {
+                                isManuallyScrolling.current = true;
+                                const elRect = el.getBoundingClientRect();
+                                const paneRect = pane.getBoundingClientRect();
+                                const offset = elRect.top - paneRect.top + pane.scrollTop - pane.clientHeight / 3;
+                                pane.scrollTo({ top: offset, behavior: 'smooth' });
+                                el.style.backgroundColor = isDarkMode ? '#b45309' : '#fef9c3';
+                                el.style.color = isDarkMode ? '#fffbeb' : '';
+                                setTimeout(() => { el.style.backgroundColor = ''; el.style.color = ''; }, 3000);
+                                setTimeout(() => { isManuallyScrolling.current = false; }, 800);
+                              } else if (attempts < 10) {
+                                setTimeout(() => scrollToFoundVerse(verseNum, attempts + 1), 150);
                               }
+                            };
+                            // Navigate pane 2 to the target book/chapter
+                            const targetBook = bibleData.find(b => b.abbrev === r.bookAbbrev);
+                            if (targetBook) {
+                              setPane2History(h => [...h, { book: pane2Book, chapter: pane2Chapter, concordance: strongsConcordance }]);
+                              setPane2Book(targetBook);
+                              setPane2Chapter(r.chapter);
                             }
                             setShowSearchModal(false);
+                            setTimeout(() => scrollToFoundVerse(r.verse), 300);
                           }}
                           style={{
                             display: 'block', width: '100%', padding: '10px 12px', marginBottom: 6, fontSize: 13,
