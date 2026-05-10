@@ -5280,7 +5280,7 @@ const BibleApp = () => {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
-                <span className="text-xs ml-0.5">(Ps)</span>
+
               </button>
             )}
 
@@ -5336,6 +5336,36 @@ const BibleApp = () => {
                   ))}
                 </select>
 
+                {/* Cycle pane 2 translation */}
+                <button
+                  onClick={() => {
+                    try {
+                      const currentIndex = translations.findIndex(t => t.id === rightPaneTranslation);
+                      const nextIndex = (currentIndex + 1) % translations.length;
+                      const next = translations[nextIndex].id;
+                      setSelectedDropdownTranslation(next);
+                      setTimeout(() => {
+                        try { handleApplySelectedTranslationToPane2(next); } catch (e) { console.warn('Error applying translation:', e); }
+                      }, 150);
+                    } catch (e) { console.warn('Error cycling pane 2 translation:', e); }
+                  }}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-orange-500 text-white hover:bg-orange-600 font-semibold"
+                  title="Cycle pane 2 translation (n)"
+                >
+                  2:{(() => {
+                    const id = rightPaneTranslation;
+                    if (!id) return '?';
+                    if (id.includes('kjv')) return 'kjv';
+                    if (id.includes('web')) return 'web';
+                    if (id.includes('cuv')) return 'cuv';
+                    if (id.includes('rvr')) return 'rvr';
+                    if (id.includes('he_heb')) return 'heb';
+                    if (id.includes('apee')) return 'apee';
+                    if (id.includes('rhyme')) return 'rhyme';
+                    return id.split('_')[1] || id;
+                  })()}
+                </button>
+
                 {/* Book Search Button */}
                 <button
                   onClick={() => { setShowSearchModal(true); }}
@@ -5347,22 +5377,6 @@ const BibleApp = () => {
                 </button>
 
                 {/* WEB / Rhyme toggle */}
-                <button
-                  onClick={() => {
-                    const next = rightPaneTranslation === 'en_rhyme.json' ? 'en_web.json' : 'en_rhyme.json';
-                    setRightPaneTranslation(next);
-                    setSelectedDropdownTranslation(next);
-                  }}
-                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold inline-block ${
-                    rightPaneTranslation === 'en_rhyme.json'
-                      ? 'bg-pink-500 text-white hover:bg-pink-600'
-                      : 'bg-teal-500 text-white hover:bg-teal-600'
-                  }`}
-                  title="Toggle pane 2 between WEB and Rhyme"
-                >
-                  {rightPaneTranslation === 'en_rhyme.json' ? 'to: WEB' : 'to: Rhyme'}
-                </button>
-
                 {/* Next Chapter Button (top bar) - hidden */}
 
                 {/* Read Full Chapter TTS Button — moved to TTS hidden controls */}
@@ -5654,6 +5668,22 @@ const BibleApp = () => {
                   </button>
                 )}
 
+                <button
+                  onClick={() => {
+                    const next = rightPaneTranslation === 'en_rhyme.json' ? 'en_web.json' : 'en_rhyme.json';
+                    setRightPaneTranslation(next);
+                    setSelectedDropdownTranslation(next);
+                  }}
+                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold inline-block ${
+                    rightPaneTranslation === 'en_rhyme.json'
+                      ? 'bg-pink-500 text-white hover:bg-pink-600'
+                      : 'bg-teal-500 text-white hover:bg-teal-600'
+                  }`}
+                  title="Toggle pane 2 between WEB and Rhyme"
+                >
+                  {rightPaneTranslation === 'en_rhyme.json' ? 'to: WEB' : 'to: Rhyme'}
+                </button>
+
                 {/* Cycle Pane 1 & 2 Translation Buttons */}
                 {(() => {
                   const shortLabel = (id) => {
@@ -5694,13 +5724,6 @@ const BibleApp = () => {
                         title="Cycle pane 1 translation"
                       >
                         1:{shortLabel(selectedTranslation)}
-                      </button>
-                      <button
-                        onClick={cyclePane2}
-                        className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-orange-500 text-white hover:bg-orange-600 font-semibold"
-                        title="Cycle pane 2 translation (n)"
-                      >
-                        2:{shortLabel(rightPaneTranslation)}
                       </button>
                     </>
                   );
