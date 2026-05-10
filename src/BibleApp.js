@@ -1539,6 +1539,7 @@ const BibleApp = () => {
 
   // State for Book Search Modal
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showPane2TranslationPicker, setShowPane2TranslationPicker] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLastInfo, setSearchLastInfo] = useState('');
@@ -5336,35 +5337,49 @@ const BibleApp = () => {
                   ))}
                 </select>
 
-                {/* Cycle pane 2 translation */}
-                <button
-                  onClick={() => {
-                    try {
-                      const currentIndex = translations.findIndex(t => t.id === rightPaneTranslation);
-                      const nextIndex = (currentIndex + 1) % translations.length;
-                      const next = translations[nextIndex].id;
-                      setSelectedDropdownTranslation(next);
-                      setTimeout(() => {
-                        try { handleApplySelectedTranslationToPane2(next); } catch (e) { console.warn('Error applying translation:', e); }
-                      }, 150);
-                    } catch (e) { console.warn('Error cycling pane 2 translation:', e); }
-                  }}
-                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-orange-500 text-white hover:bg-orange-600 font-semibold"
-                  title="Cycle pane 2 translation (n)"
-                >
-                  2:{(() => {
-                    const id = rightPaneTranslation;
-                    if (!id) return '?';
-                    if (id.includes('kjv')) return 'kjv';
-                    if (id.includes('web')) return 'web';
-                    if (id.includes('cuv')) return 'cuv';
-                    if (id.includes('rvr')) return 'rvr';
-                    if (id.includes('he_heb')) return 'heb';
-                    if (id.includes('apee')) return 'apee';
-                    if (id.includes('rhyme')) return 'rhyme';
-                    return id.split('_')[1] || id;
-                  })()}
-                </button>
+                {/* Pane 2 translation picker */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowPane2TranslationPicker(prev => !prev)}
+                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-orange-500 text-white hover:bg-orange-600 font-semibold"
+                    title="Pick pane 2 translation"
+                  >
+                    2:{(() => {
+                      const id = rightPaneTranslation;
+                      if (!id) return '?';
+                      if (id.includes('kjv')) return 'kjv';
+                      if (id.includes('web')) return 'web';
+                      if (id.includes('cuv')) return 'cuv';
+                      if (id.includes('rvr')) return 'rvr';
+                      if (id.includes('he_heb')) return 'heb';
+                      if (id.includes('apee')) return 'apee';
+                      if (id.includes('rhyme')) return 'rhyme';
+                      return id.split('_')[1] || id;
+                    })()}
+                  </button>
+                  {showPane2TranslationPicker && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowPane2TranslationPicker(false)} />
+                      <div className={`absolute left-0 top-full mt-1 z-50 rounded shadow-lg border min-w-[200px] ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
+                        {translations.map(t => (
+                          <button
+                            key={t.id}
+                            onClick={() => {
+                              setSelectedDropdownTranslation(t.id);
+                              setTimeout(() => {
+                                try { handleApplySelectedTranslationToPane2(t.id); } catch (e) { console.warn('Error applying translation:', e); }
+                              }, 150);
+                              setShowPane2TranslationPicker(false);
+                            }}
+                            className={`block w-full text-left px-3 py-1.5 text-sm hover:bg-orange-100 ${isDarkMode ? 'text-white hover:bg-gray-700' : 'text-gray-800'} ${t.id === rightPaneTranslation ? 'font-bold bg-orange-50' + (isDarkMode ? ' !bg-gray-700' : '') : ''}`}
+                          >
+                            {t.name}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
 
                 {/* Book Search Button */}
                 <button
