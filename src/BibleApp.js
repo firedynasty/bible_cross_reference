@@ -1467,6 +1467,7 @@ const BibleApp = () => {
     { id: 'he_heb_nikkud.json', name: 'Hebrew - With Nikkud (Vowel Points)' },
     { id: 'he_heb_strong.json', name: 'Hebrew - With Strong\'s Numbers' },
     { id: 'fr_apee.json', name: 'French - APEE' },
+    { id: 'en_bsb.json', name: 'English - Berean Standard Bible (BSB)' },
     { id: 'en_rhyme.json', name: 'English - Bible Rhyme' },
   ], []);
   
@@ -1543,7 +1544,8 @@ const BibleApp = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLastInfo, setSearchLastInfo] = useState('');
-  const kjvSearchDataRef = useRef(null);
+  const [searchTranslation, setSearchTranslation] = useState(() => localStorage.getItem('searchTranslation') || 'KJV');
+  const searchDataCacheRef = useRef({});
 
   // State for Fill-in-the-Blank Quiz Modal
   const [showQuizModal, setShowQuizModal] = useState(false);
@@ -1766,14 +1768,23 @@ const BibleApp = () => {
 
     // Match patterns like "Matthew 11:28-30" or "Psalm 23" or "1 Corinthians 13:4-8"
     const match = trimmed.match(/^(\d?\s*[A-Za-z]+(?:\s+of\s+[A-Za-z]+)?)\s+(\d+)(?::(.+))?$/i);
-    if (!match) return null;
+    if (match) {
+      const bookName = match[1].trim().toLowerCase();
+      const chapter = parseInt(match[2]);
+      const abbrev = bookNameToAbbrev[bookName];
+      if (abbrev) return { abbrev, chapter };
+    }
 
-    const bookName = match[1].trim().toLowerCase();
-    const chapter = parseInt(match[2]);
-    const abbrev = bookNameToAbbrev[bookName];
-    if (!abbrev) return null;
+    // Try book name only (no chapter) — default to chapter 1
+    // Handles "1 Timothy", "Genesis", "Song of Solomon", etc.
+    const bookOnly = trimmed.match(/^(\d?\s*[A-Za-z]+(?:\s+of\s+[A-Za-z]+)?)$/i);
+    if (bookOnly) {
+      const bookName = bookOnly[1].trim().toLowerCase();
+      const abbrev = bookNameToAbbrev[bookName];
+      if (abbrev) return { abbrev, chapter: 1 };
+    }
 
-    return { abbrev, chapter };
+    return null;
   }, []);
 
   // Navigate to a Bible reference string
@@ -5353,6 +5364,7 @@ const BibleApp = () => {
                       if (id.includes('rvr')) return 'rvr';
                       if (id.includes('he_heb')) return 'heb';
                       if (id.includes('apee')) return 'apee';
+                      if (id.includes('bsb')) return 'bsb';
                       if (id.includes('rhyme')) return 'rhyme';
                       return id.split('_')[1] || id;
                     })()}
@@ -9830,22 +9842,22 @@ const BibleApp = () => {
       {/* Book Search Modal - searches next 30 chapters across books */}
       {showSearchModal && (() => {
         const bookName = selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : 'Book';
-        const getKjvData = async () => {
-          // Prefer rightPaneBibleData (pane 2 is usually KJV)
-          if (rightPaneBibleData && rightPaneTranslation === 'en_kjv.json') return rightPaneBibleData;
-          // Fall back to bibleData if pane 1 is KJV
-          if (bibleData && selectedTranslation === 'en_kjv.json') return bibleData;
-          // Otherwise, fetch and cache KJV
-          if (kjvSearchDataRef.current) return kjvSearchDataRef.current;
+        const translationFileMap = { KJV: 'en_kjv.json', NIV: 'en_niv.json', NLT: 'en_nlt.json', BSB: 'en_bsb.json' };
+        const getSearchData = async () => {
+          const file = translationFileMap[searchTranslation] || 'en_kjv.json';
+          // Check if already loaded in a pane
+          if (rightPaneBibleData && rightPaneTranslation === file) return rightPaneBibleData;
+          if (bibleData && selectedTranslation === file) return bibleData;
+          // Check cache
+          if (searchDataCacheRef.current[file]) return searchDataCacheRef.current[file];
           try {
-            const baseUrl = window.location.hostname === 'localhost' ? '' : '';
-            const resp = await fetch(`${baseUrl}/en_kjv.json`);
+            const resp = await fetch(`/${file}`);
             const data = await resp.json();
-            kjvSearchDataRef.current = data;
+            searchDataCacheRef.current[file] = data;
             return data;
           } catch (e) {
-            console.warn('Failed to load KJV for search:', e);
-            return bibleData; // last resort fallback
+            console.warn(`Failed to load ${searchTranslation} for search:`, e);
+            return bibleData;
           }
         };
         const handleSearch = async (keyword) => {
@@ -9853,19 +9865,19 @@ const BibleApp = () => {
             setSearchResults([]);
             return;
           }
-          const kjvData = await getKjvData();
-          if (!kjvData) return;
+          const searchData = await getSearchData();
+          if (!searchData) return;
           const kw = keyword.toLowerCase();
           const results = [];
-          const currentBookIdx = kjvData.findIndex(b => b.abbrev === selectedBook.abbrev);
+          const currentBookIdx = searchData.findIndex(b => b.abbrev === selectedBook.abbrev);
           if (currentBookIdx === -1) return;
           const startChapter = selectedChapter || 1;
           let chaptersSearched = 0;
           const maxChapters = 30;
           let lastSearchedBook = '';
           let lastSearchedChapter = 0;
-          for (let bookIdx = currentBookIdx; bookIdx < kjvData.length && chaptersSearched < maxChapters; bookIdx++) {
-            const book = kjvData[bookIdx];
+          for (let bookIdx = currentBookIdx; bookIdx < searchData.length && chaptersSearched < maxChapters; bookIdx++) {
+            const book = searchData[bookIdx];
             if (!book.chapters) continue;
             const chStart = (bookIdx === currentBookIdx) ? startChapter - 1 : 0;
             for (let chIdx = chStart; chIdx < book.chapters.length && chaptersSearched < maxChapters; chIdx++) {
@@ -9888,7 +9900,7 @@ const BibleApp = () => {
             }
           }
           setSearchResults(results);
-          setSearchLastInfo(chaptersSearched > 0 ? `Searched ${chaptersSearched} ch (KJV), ending at ${lastSearchedBook} ${lastSearchedChapter}` : '');
+          setSearchLastInfo(chaptersSearched > 0 ? `Searched ${chaptersSearched} ch (${searchTranslation}), ending at ${lastSearchedBook} ${lastSearchedChapter}` : '');
         };
         return (
           <div
@@ -9897,9 +9909,24 @@ const BibleApp = () => {
             onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setShowSearchModal(false); } }}
           >
             <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '95%', maxWidth: 600, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-              <h3 style={{ margin: '0 0 12px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
-                Search next 30 chapters (KJV) from {bookName} {selectedChapter}
+              <h3 style={{ margin: '0 0 8px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
+                Search next 30 chapters from {bookName} {selectedChapter}
               </h3>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 10 }}>
+                {['KJV', 'NIV', 'NLT', 'BSB'].map(t => (
+                  <label key={t} style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 13, color: isDarkMode ? '#ccc' : '#555', fontWeight: searchTranslation === t ? 700 : 400 }}>
+                    <input
+                      type="radio"
+                      name="searchTranslation"
+                      value={t}
+                      checked={searchTranslation === t}
+                      onChange={() => { setSearchTranslation(t); localStorage.setItem('searchTranslation', t); setSearchResults([]); setSearchLastInfo(''); }}
+                      style={{ margin: 0 }}
+                    />
+                    {t}
+                  </label>
+                ))}
+              </div>
               <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchKeyword); setSearchKeyword(''); setTimeout(() => { const el = e.target.querySelector('input'); if (el) el.focus(); }, 0); }} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                 <input
                   type="text"
