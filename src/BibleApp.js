@@ -1564,6 +1564,7 @@ const BibleApp = () => {
   const [searchLastInfo, setSearchLastInfo] = useState('');
   const [searchTranslation, setSearchTranslation] = useState(() => localStorage.getItem('searchTranslation') || 'KJV');
   const searchDataCacheRef = useRef({});
+  const [searchStartRef, setSearchStartRef] = useState('');
 
   // State for Fill-in-the-Blank Quiz Modal
   const [showQuizModal, setShowQuizModal] = useState(false);
@@ -3761,7 +3762,7 @@ const BibleApp = () => {
           setShowStorytimeModal(false);
         } else {
           // No modal open — open Search modal
-          setShowSearchModal(true);
+          setShowSearchModal(true); setSearchStartRef('');
         }
         e.preventDefault();
       }
@@ -5425,7 +5426,7 @@ const BibleApp = () => {
 
                 {/* Book Search Button */}
                 <button
-                  onClick={() => { setShowSearchModal(true); }}
+                  onClick={() => { setShowSearchModal(true); setSearchStartRef(''); }}
                   className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-teal-500 text-white hover:bg-teal-600 font-semibold inline-flex items-center gap-1"
                   title="Search next 30 chapters"
                 >
@@ -9983,9 +9984,18 @@ const BibleApp = () => {
           if (!searchData) return;
           const kw = keyword.toLowerCase();
           const results = [];
-          const currentBookIdx = searchData.findIndex(b => b.abbrev === selectedBook.abbrev);
+          // If user specified a starting book/chapter, use that; otherwise use current position
+          let currentBookIdx;
+          let startChapter;
+          const parsedStart = searchStartRef.trim() ? parseSingleBibleRef(searchStartRef) : null;
+          if (parsedStart) {
+            currentBookIdx = searchData.findIndex(b => b.abbrev === parsedStart.abbrev);
+            startChapter = parsedStart.chapter || 1;
+          } else {
+            currentBookIdx = searchData.findIndex(b => b.abbrev === selectedBook.abbrev);
+            startChapter = selectedChapter || 1;
+          }
           if (currentBookIdx === -1) return;
-          const startChapter = selectedChapter || 1;
           let chaptersSearched = 0;
           const maxChapters = 30;
           let lastSearchedBook = '';
@@ -10024,7 +10034,7 @@ const BibleApp = () => {
           >
             <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '95%', maxWidth: 600, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
               <h3 style={{ margin: '0 0 8px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>
-                Search next 30 chapters from {bookName} {selectedChapter}
+                Search next 30 chapters
               </h3>
               <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 10 }}>
                 {['KJV', 'NIV', 'NLT', 'BSB'].map(t => (
@@ -10041,7 +10051,21 @@ const BibleApp = () => {
                   </label>
                 ))}
               </div>
-              <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchKeyword); setSearchKeyword(''); setTimeout(() => { const el = e.target.querySelector('input'); if (el) el.focus(); }, 0); }} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, justifyContent: 'center' }}>
+                <span style={{ fontSize: 13, color: isDarkMode ? '#aaa' : '#666', whiteSpace: 'nowrap' }}>Start from:</span>
+                <input
+                  type="text"
+                  value={searchStartRef}
+                  onChange={(e) => setSearchStartRef(e.target.value)}
+                  placeholder={`${bookName} ${selectedChapter} (current)`}
+                  style={{
+                    padding: '5px 10px', fontSize: 13, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 6,
+                    background: isDarkMode ? '#1a1a1a' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333', outline: 'none',
+                    width: 180
+                  }}
+                />
+              </div>
+              <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchKeyword); setSearchKeyword(''); setTimeout(() => { const el = e.target.querySelector('input[type="text"]'); if (el) el.focus(); }, 0); }} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                 <input
                   type="text"
                   value={searchKeyword}
