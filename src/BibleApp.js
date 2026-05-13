@@ -1425,6 +1425,19 @@ const BibleApp = () => {
 
   // Pane 2 only mode - hides pane 1, shows only pane 2 at full width
   const [showPane2Only, setShowPane2Only] = useState(false);
+  // Blank pane 1 content (keeps pane visible but empties text so Cmd+F skips it)
+  const [blankPane1, setBlankPane1] = useState(() => localStorage.getItem('blankPane1') === 'true');
+  // Reading guide — horizontal ruler line following mouse
+  const [readingGuide, setReadingGuide] = useState(() => localStorage.getItem('readingGuide') === 'true');
+  const readingGuideRef = useRef(null);
+  useEffect(() => {
+    if (!readingGuide) return;
+    const handler = (e) => {
+      if (readingGuideRef.current) readingGuideRef.current.style.top = e.clientY + 'px';
+    };
+    document.addEventListener('mousemove', handler);
+    return () => document.removeEventListener('mousemove', handler);
+  }, [readingGuide]);
   // Dual pane page-down mode - clicking either pane scrolls it down
   const [dualPanePD, setDualPanePD] = useState(false);
   // Count clicks at bottom of pane 2 before auto-advancing chapter
@@ -1522,7 +1535,12 @@ const BibleApp = () => {
   const [highlightedVerses, setHighlightedVerses] = useState([]);
   const [lastCollectionClick, setLastCollectionClick] = useState({ collection: null, ref: null });
   const [refPromptValue, setRefPromptValue] = useState('');
-  const [refHistory, setRefHistory] = useState([]);
+  const [refHistory, setRefHistory] = useState(() => {
+    try { const s = localStorage.getItem('bibleRefHistory'); return s ? JSON.parse(s) : []; } catch { return []; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('bibleRefHistory', JSON.stringify(refHistory)); } catch {}
+  }, [refHistory]);
 
   // State for Dropbox integration
   const [dropboxAccessToken, setDropboxAccessToken] = useState(null);
@@ -3236,8 +3254,8 @@ const BibleApp = () => {
           }, 50);
         }
       }
-      // 'p' key, PageDown key, or ArrowDown key - page down (scrolls both sidebar and main content)
-      else if ((e.key === 'p' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === '+' || e.key === '=') && kjvContentRef.current && !showQuiz2Modal) {
+      // 'p' key, PageDown key, ArrowDown key, or Spacebar - page down (scrolls both sidebar and main content)
+      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === '+' || e.key === '=') && kjvContentRef.current && !showQuiz2Modal) {
         // If sidebar is open, scroll the sidebar too
         if (showSidebar && sidebarScrollRef.current) {
           const sidebarPane = sidebarScrollRef.current;
@@ -5225,6 +5243,18 @@ const BibleApp = () => {
   // Main render
   return (
     <div className={`flex h-screen ${isDarkMode ? 'bg-gray-800' : isSepiaMode ? '' : 'bg-gray-100'}`} style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a' } : {}}>
+      {/* Reading guide ruler */}
+      {readingGuide && (
+        <div
+          ref={readingGuideRef}
+          style={{
+            position: 'fixed', left: 0, right: 0, height: 3,
+            background: 'rgba(255, 165, 0, 0.7)',
+            boxShadow: '0 0 10px rgba(255, 165, 0, 0.5)',
+            pointerEvents: 'none', zIndex: 9999,
+          }}
+        />
+      )}
       {/* Book Selection Sidebar - Hidden on Mobile and Tablet */}
       {showSidebar && (
         <div className={`${isMobileView || isTabletView ? 'absolute z-10 h-full' : 'w-80'} ${isDarkMode ? 'bg-gray-800 text-white border-r border-gray-700' : isSepiaMode ? 'border-r border-gray-300' : 'bg-white border-r border-gray-200'} overflow-y-auto`} style={isSepiaMode ? { backgroundColor: '#efe6d0', color: '#5a5a5a' } : {}}>
@@ -5594,16 +5624,6 @@ const BibleApp = () => {
                 </button>
 
                 <a
-                  href="https://search-niv.netlify.app"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-amber-500 text-white hover:bg-amber-600 font-semibold inline-block"
-                  title="Go to Search"
-                >
-                  Go:Search
-                </a>
-
-                <a
                   href="https://vercel-bible-plan.vercel.app/"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -5751,6 +5771,20 @@ const BibleApp = () => {
                         title="Cycle pane 1 translation"
                       >
                         1:{shortLabel(selectedTranslation)}
+                      </button>
+                      <button
+                        onClick={() => setBlankPane1(prev => { const next = !prev; localStorage.setItem('blankPane1', next); return next; })}
+                        className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${blankPane1 ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
+                        title={blankPane1 ? 'Show pane 1 content' : 'Blank pane 1 (for Cmd+F search)'}
+                      >
+                        clr P1
+                      </button>
+                      <button
+                        onClick={() => setReadingGuide(prev => { const next = !prev; localStorage.setItem('readingGuide', next); return next; })}
+                        className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${readingGuide ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
+                        title={readingGuide ? 'Hide reading guide ruler' : 'Show reading guide ruler'}
+                      >
+                        Ruler
                       </button>
                     </>
                   );
@@ -6482,7 +6516,7 @@ const BibleApp = () => {
                 </button>
               </>
             )}
-            {selectedBook && selectedChapter > 0 && (
+            {selectedBook && selectedChapter > 0 && !blankPane1 && (
               <div>
                 {/* Read and Repeat buttons - Hidden */}
                 <div className="hidden mb-4 flex gap-2">
@@ -7662,12 +7696,47 @@ const BibleApp = () => {
               <div style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>History</span>
-                  <button
-                    onClick={() => setRefHistory([])}
-                    style={{ fontSize: 11, color: isDarkMode ? '#f87171' : '#dc2626', background: isDarkMode ? '#3b1c1c' : '#fef2f2', border: `1px solid ${isDarkMode ? '#7f1d1d' : '#fecaca'}`, borderRadius: 4, cursor: 'pointer', fontWeight: 600, padding: '3px 10px', marginLeft: 8 }}
-                  >
-                    Clear
-                  </button>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      onClick={() => {
+                        if (!bibleData) return;
+                        const lines = [];
+                        for (const h of refHistory) {
+                          const verseMatch = h.raw.match(/:(\d+)(?:\s*[-–]\s*(\d+))?/);
+                          if (!verseMatch) continue;
+                          const parsed = parseSingleBibleRef(h.raw);
+                          if (!parsed) continue;
+                          const book = bibleData.find(b => b.abbrev === parsed.abbrev);
+                          if (!book || !book.chapters) continue;
+                          const ch = book.chapters[parsed.chapter - 1];
+                          if (!ch) continue;
+                          const fullBookName = getBookName(parsed.abbrev);
+                          const start = parseInt(verseMatch[1]);
+                          const end = verseMatch[2] ? parseInt(verseMatch[2]) : start;
+                          for (let v = start; v <= end; v++) {
+                            if (ch[v - 1]) lines.push(`${fullBookName} ${parsed.chapter}:${v} — ${ch[v - 1]}`);
+                          }
+                        }
+                        if (lines.length > 0) {
+                          const addition = lines.join('\n');
+                          setRefNotes(prev => {
+                            const updated = prev ? prev + '\n' + addition : addition;
+                            localStorage.setItem('bibleRefNotes', updated);
+                            return updated;
+                          });
+                        }
+                      }}
+                      style={{ fontSize: 11, color: isDarkMode ? '#86efac' : '#16a34a', background: isDarkMode ? '#1a2e1a' : '#f0fff0', border: `1px solid ${isDarkMode ? '#166534' : '#bbf7d0'}`, borderRadius: 4, cursor: 'pointer', fontWeight: 600, padding: '3px 10px' }}
+                    >
+                      Print
+                    </button>
+                    <button
+                      onClick={() => { setRefHistory([]); localStorage.removeItem('bibleRefHistory'); }}
+                      style={{ fontSize: 11, color: isDarkMode ? '#f87171' : '#dc2626', background: isDarkMode ? '#3b1c1c' : '#fef2f2', border: `1px solid ${isDarkMode ? '#7f1d1d' : '#fecaca'}`, borderRadius: 4, cursor: 'pointer', fontWeight: 600, padding: '3px 10px' }}
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {refHistory.map((h, i) => (
@@ -7760,8 +7829,43 @@ const BibleApp = () => {
                   </button>
                 )}
               </div>
-              <div style={{ fontSize: 11, color: isDarkMode ? '#666' : '#aaa', marginBottom: 6, fontStyle: 'italic', lineHeight: 1.4 }}>
-                Quoted refs like <span style={{ color: isDarkMode ? '#93c5fd' : '#3b82f6' }}>"Eph 5:25"</span> are extracted as clickable links
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <div style={{ fontSize: 11, color: isDarkMode ? '#666' : '#aaa', fontStyle: 'italic', lineHeight: 1.4 }}>
+                  Paste text — click Find Verses to extract refs to History
+                </div>
+                {textPasteContent && (
+                  <button
+                    onClick={() => {
+                      if (!textPasteContent) return;
+                      // Regex to find Bible refs like "Romans 8:28", "2 Corinthians 1:3-4", "Genesis 50:20", "Ps 23"
+                      const refRegex = /\b(\d?\s*(?:Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalms?|Proverbs?|Ecclesiastes|Song of Solomon|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Gen|Exo?d?|Lev|Num|Deut?|Josh?|Judg|Sam|Kgs|Chr|Neh|Est|Ps|Psa|Prov?|Eccl?|Song|Isa|Jer|Lam|Ezek?|Dan|Hos|Oba?|Jon|Mic|Nah|Hab|Zeph?|Hag|Zech?|Mal|Matt?|Mrk|Mk|Luk?|Lk|Joh?|Jn|Rom|Cor|Gal|Eph|Phil?|Php|Col|Thess|Tim|Tit|Phlm|Phm|Heb|Jas|Jam|Pet|Re|Rev))\s+(\d+)(?::(\d+)(?:\s*[-–]\s*(\d+))?)?/gi;
+                      const found = [];
+                      const seen = new Set();
+                      let m;
+                      while ((m = refRegex.exec(textPasteContent)) !== null) {
+                        const refStr = m[0].replace(/\*\*/g, '').trim();
+                        const parsed = parseSingleBibleRef(refStr);
+                        if (parsed) {
+                          const key = `${parsed.abbrev}_${parsed.chapter}`;
+                          if (!seen.has(refStr)) {
+                            seen.add(refStr);
+                            found.push({ raw: refStr, parsed });
+                          }
+                        }
+                      }
+                      if (found.length > 0) {
+                        setRefHistory(prev => {
+                          const existingKeys = new Set(prev.map(h => `${h.parsed.abbrev}_${h.parsed.chapter}`));
+                          const newItems = found.filter(f => !existingKeys.has(`${f.parsed.abbrev}_${f.parsed.chapter}`));
+                          return [...prev, ...newItems];
+                        });
+                      }
+                    }}
+                    style={{ fontSize: 11, color: isDarkMode ? '#86efac' : '#16a34a', background: isDarkMode ? '#1a2e1a' : '#f0fff0', border: `1px solid ${isDarkMode ? '#166534' : '#bbf7d0'}`, borderRadius: 4, cursor: 'pointer', fontWeight: 600, padding: '3px 10px', whiteSpace: 'nowrap' }}
+                  >
+                    Find Verses
+                  </button>
+                )}
               </div>
               <textarea
                 value={textPasteContent}
@@ -7809,14 +7913,24 @@ const BibleApp = () => {
             <div style={{ marginTop: 16, borderTop: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, paddingTop: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>Notes</span>
-                {refNotes && (
-                  <button
-                    onClick={() => { setRefNotes(''); localStorage.removeItem('bibleRefNotes'); }}
-                    style={{ fontSize: 11, color: isDarkMode ? '#f87171' : '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 6px' }}
-                  >
-                    Clear
-                  </button>
-                )}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {refNotes && (
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(refNotes); }}
+                      style={{ fontSize: 11, color: isDarkMode ? '#93c5fd' : '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 6px', marginBottom: 4 }}
+                    >
+                      Copy
+                    </button>
+                  )}
+                  {refNotes && (
+                    <button
+                      onClick={() => { setRefNotes(''); localStorage.removeItem('bibleRefNotes'); }}
+                      style={{ fontSize: 11, color: isDarkMode ? '#f87171' : '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 6px', marginBottom: 4 }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
               <textarea
                 value={refNotes}
