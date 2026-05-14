@@ -3255,58 +3255,62 @@ const BibleApp = () => {
           }, 50);
         }
       }
-      // 'p' key, PageDown key, ArrowDown key, or Spacebar - page down (scrolls both sidebar and main content)
+      // 'p' key, PageDown key, ArrowDown key, or Spacebar - page down (matches pane 2 page-down button: scroll, or advance chapter at bottom)
       else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === '+' || e.key === '=') && kjvContentRef.current && !showQuiz2Modal) {
-        // If sidebar is open, scroll the sidebar too
-        if (showSidebar && sidebarScrollRef.current) {
-          const sidebarPane = sidebarScrollRef.current;
-          const sidebarPageHeight = sidebarPane.clientHeight * 0.9;
-          const sidebarNewPosition = sidebarPane.scrollTop + sidebarPageHeight;
-          const sidebarMaxScroll = sidebarPane.scrollHeight - sidebarPane.clientHeight;
-          sidebarPane.scrollTop = Math.min(sidebarMaxScroll, sidebarNewPosition);
-        }
-        
-        // Calculate page height (approx viewport height)
-        const pageHeight = kjvContentRef.current.clientHeight * 0.9; // 90% of viewport
+        const kjvPane = kjvContentRef.current;
+        const maxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
+        const atBottom = maxScroll > 0 && kjvPane.scrollTop >= maxScroll - 5;
+        const p2Book = pane2BookRef.current || selectedBookRef.current;
+        const p2Chapter = pane2ChapterRef.current || selectedChapterRef.current;
+        const hasNext = p2Book && p2Chapter < p2Book.chapters.length;
 
-        // Set the flag to prevent feedback loops
-        isManuallyScrollingRef.current = true;
-
-        try {
-          // Calculate relative scroll positions - KJV is now the reference pane
-          const kjvPane = kjvContentRef.current;
-
-          // Scroll KJV pane down
-          const kjvNewPosition = kjvPane.scrollTop + pageHeight;
-          const kjvMaxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
-          kjvPane.scrollTop = Math.min(kjvMaxScroll, kjvNewPosition);
-
-          // Always synchronize with primary pane when using o/p keys
-          if (chapterContentRef.current) {
-            const primaryPane = chapterContentRef.current;
-
-            // Calculate new scroll percentage of KJV after scrolling
-            const newKjvScrollPercentage = kjvPane.scrollTop /
-              (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
-
-            // Apply the same percentage to primary pane
-            primaryPane.scrollTop = newKjvScrollPercentage *
-              (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
-
-            // Update last scroll position for sync algorithm
-            lastPrimaryScrollPos.current = primaryPane.scrollTop;
+        if (atBottom && hasNext) {
+          // At bottom with next chapter available — advance to next chapter (same as pane 2 page-down button)
+          localStorage.removeItem('mobileScrollPosition');
+          setMobileScrollPosition(0);
+          setSelectedBook(p2Book);
+          setSelectedChapter(p2Chapter + 1);
+          setPane2Book(null);
+          setPane2Chapter(null);
+          setPrimaryReading({ book: p2Book, chapter: p2Chapter + 1 });
+          setIsViewingCrossRef(false);
+          setTimeout(() => { handleHomeReset(); }, 100);
+        } else {
+          // Not at bottom — page down with sync
+          // If sidebar is open, scroll the sidebar too
+          if (showSidebar && sidebarScrollRef.current) {
+            const sidebarPane = sidebarScrollRef.current;
+            const sidebarPageHeight = sidebarPane.clientHeight * 0.9;
+            const sidebarNewPosition = sidebarPane.scrollTop + sidebarPageHeight;
+            const sidebarMaxScroll = sidebarPane.scrollHeight - sidebarPane.clientHeight;
+            sidebarPane.scrollTop = Math.min(sidebarMaxScroll, sidebarNewPosition);
           }
 
-          // In mobile view, update the mobile scroll position in localStorage
-          if (isMobileView) {
-            localStorage.setItem('mobileScrollPosition', chapterContentRef.current?.scrollTop.toString() || '0');
-            setMobileScrollPosition(chapterContentRef.current?.scrollTop || 0);
+          const pageHeight = kjvPane.clientHeight * 0.9;
+          isManuallyScrollingRef.current = true;
+
+          try {
+            kjvPane.scrollTop = Math.min(maxScroll, kjvPane.scrollTop + pageHeight);
+
+            // Synchronize pane 1
+            if (chapterContentRef.current) {
+              const primaryPane = chapterContentRef.current;
+              const newKjvScrollPercentage = kjvPane.scrollTop /
+                (kjvPane.scrollHeight - kjvPane.clientHeight || 1);
+              primaryPane.scrollTop = newKjvScrollPercentage *
+                (primaryPane.scrollHeight - primaryPane.clientHeight || 1);
+              lastPrimaryScrollPos.current = primaryPane.scrollTop;
+            }
+
+            if (isMobileView) {
+              localStorage.setItem('mobileScrollPosition', chapterContentRef.current?.scrollTop.toString() || '0');
+              setMobileScrollPosition(chapterContentRef.current?.scrollTop || 0);
+            }
+          } finally {
+            setTimeout(() => {
+              isManuallyScrollingRef.current = false;
+            }, 50);
           }
-        } finally {
-          // Reset the flag after a short delay
-          setTimeout(() => {
-            isManuallyScrollingRef.current = false;
-          }, 50);
         }
 
         e.preventDefault();
