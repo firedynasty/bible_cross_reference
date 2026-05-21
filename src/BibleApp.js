@@ -4,6 +4,7 @@ import { Book, Link, ChevronRight, History, BookOpen, Save, Database, Download }
 import TextToSpeech from './components/TextToSpeech';
 import FurtherReadingModal from './components/FurtherReadingModal';
 import ClassicalMusicModal from './components/ClassicalMusicModal';
+import YouTubeVideoModal from './components/YouTubeVideoModal';
 import { getStorytimeAudioUrl } from './data/storytimeAudio';
 import { getRhymeAudioUrl } from './data/rhymeAudio';
 
@@ -478,6 +479,7 @@ const NavigationPlaceholder = ({
   onClassicalMusic,
   onClassicalTogglePlay,
   classicalPlaying,
+  onYouTubeVideo,
   showPane2Syllables,
   onTogglePane2Syllables,
   syllabifyText,
@@ -721,6 +723,14 @@ const NavigationPlaceholder = ({
           const colorClass = langColors[label];
           return (
             <>
+              <button
+                className="ml-1 rounded focus:outline-none"
+                style={{padding:'4px 10px',background:'linear-gradient(45deg,#888,#666)',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px'}}
+                title="Book overview video"
+                onClick={() => onYouTubeVideo && onYouTubeVideo()}
+              >
+                <svg width="22" height="16" viewBox="0 0 68 48" style={{flexShrink:0}}><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61-1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="red"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg>
+              </button>
               <button
                 onClick={onSidebarLangCycle}
                 className={`ml-2 px-2 py-0.5 rounded focus:outline-none text-xs text-white font-semibold ${colorClass}`}
@@ -1268,6 +1278,7 @@ const BibleApp = () => {
   const [showClassicalModal, setShowClassicalModal] = useState(false);
   const [classicalPlaying, setClassicalPlaying] = useState(false);
   const classicalRef = useRef(null);
+  const [showYouTubeModal, setShowYouTubeModal] = useState(false);
   const [pendingBookSelection, setPendingBookSelection] = useState(null);
   const pendingBookRef = useRef(null);
   const [crossReferences, setCrossReferences] = useState({});
@@ -6111,6 +6122,7 @@ const BibleApp = () => {
                 if (classicalRef.current) classicalRef.current.togglePlay();
               }}
               classicalPlaying={classicalPlaying}
+              onYouTubeVideo={() => setShowYouTubeModal(true)}
               showPane2Syllables={showPane2Syllables}
               onTogglePane2Syllables={() => setShowPane2Syllables(s => { const next = !s; localStorage.setItem('bible-pane2-syllables', next); return next; })}
               syllabifyText={syllabifyText}
@@ -10172,6 +10184,7 @@ const BibleApp = () => {
 
       <FurtherReadingModal open={showFiguresModal} onClose={() => setShowFiguresModal(false)} />
       <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
+      <YouTubeVideoModal open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} bookAbbrev={selectedBook?.abbrev} />
 
     </div>
   );
