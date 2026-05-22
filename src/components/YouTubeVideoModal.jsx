@@ -243,9 +243,44 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev }) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-          <h2 className="text-lg font-semibold">
-            {bookName} — Overview
-            <span className="text-sm text-gray-400 ml-2 font-mono">{formatTime(currentTime)}</span>
+          <h2 className="text-lg font-semibold flex items-center flex-wrap gap-2">
+            <span>{bookName} — Overview</span>
+            <span className="text-sm text-gray-400 font-mono">{formatTime(currentTime)}</span>
+            {videoId && (
+              <>
+                <button
+                  onClick={() => {
+                    if (playerRef.current) {
+                      try {
+                        const t = playerRef.current.getCurrentTime() + 60;
+                        playerRef.current.seekTo(t, true);
+                        setCurrentTime(t);
+                        saveTime(bookAbbrev, t);
+                      } catch {}
+                    }
+                  }}
+                  className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                >
+                  +1 minute
+                </button>
+                &nbsp;&nbsp;
+                <button
+                  onClick={() => {
+                    if (playerRef.current) {
+                      try {
+                        const t = playerRef.current.getCurrentTime() + 300;
+                        playerRef.current.seekTo(t, true);
+                        setCurrentTime(t);
+                        saveTime(bookAbbrev, t);
+                      } catch {}
+                    }
+                  }}
+                  className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                >
+                  +5 minutes
+                </button>
+              </>
+            )}
           </h2>
           <button
             onClick={onClose}
