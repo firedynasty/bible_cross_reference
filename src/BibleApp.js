@@ -1709,6 +1709,8 @@ const BibleApp = () => {
   const [rhymeModalBook, setRhymeModalBook] = useState('ps');
   const [rhymeModalChapter, setRhymeModalChapter] = useState(1);
   const [rhymeRepeat, setRhymeRepeat] = useState(false);
+  const [rhymeCurrentTime, setRhymeCurrentTime] = useState(0);
+  const [rhymeDuration, setRhymeDuration] = useState(0);
 
   // Language sidebar cycle state: null | 'cant' | 'chin' | 'heb' | 'span' | 'fr'
   const [sidebarLang, setSidebarLang] = useState(null);
@@ -9620,6 +9622,8 @@ const BibleApp = () => {
         loop={rhymeRepeat}
         onPlay={() => setIsRhymeAudioPlaying(true)}
         onPause={() => setIsRhymeAudioPlaying(false)}
+        onTimeUpdate={(e) => setRhymeCurrentTime(e.target.currentTime)}
+        onLoadedMetadata={(e) => { setRhymeDuration(e.target.duration); setRhymeCurrentTime(e.target.currentTime); }}
         onEnded={() => {
           if (rhymeRepeat) return;
           if (rhymeAutoPlay) {
@@ -9700,8 +9704,13 @@ const BibleApp = () => {
                   if (!url) return;
                   const audio = rhymeAudioRef.current;
                   if (!audio) return;
-                  if (audio.src === url && !audio.paused) {
-                    audio.pause();
+                  if (audio.src === url || audio.src.endsWith(new URL(url).pathname)) {
+                    // Same track — toggle play/pause without resetting
+                    if (!audio.paused) {
+                      audio.pause();
+                    } else {
+                      audio.play().catch(err => console.warn('Rhyme audio play failed:', err));
+                    }
                   } else {
                     audio.src = url;
                     audio.play().catch(err => console.warn('Rhyme audio play failed:', err));
@@ -9720,6 +9729,29 @@ const BibleApp = () => {
               >
                 Go
               </button>
+            </div>
+
+            {/* Seek slider */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: isDarkMode ? '#aaa' : isSepiaMode ? '#7a6a4a' : '#666', marginBottom: 2 }}>
+                <span>{(() => { const m = Math.floor(rhymeCurrentTime / 60); const s = Math.floor(rhymeCurrentTime % 60); return `${m}:${s.toString().padStart(2, '0')}`; })()}</span>
+                <span>{(() => { const m = Math.floor(rhymeDuration / 60); const s = Math.floor(rhymeDuration % 60); return rhymeDuration > 0 ? `${m}:${s.toString().padStart(2, '0')}` : '--:--'; })()}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max={rhymeDuration || 100}
+                step="1"
+                value={rhymeCurrentTime}
+                onChange={(e) => {
+                  const t = Number(e.target.value);
+                  if (rhymeAudioRef.current) {
+                    rhymeAudioRef.current.currentTime = t;
+                    setRhymeCurrentTime(t);
+                  }
+                }}
+                style={{ width: '100%', accentColor: '#ec4899' }}
+              />
             </div>
 
             {/* Audio controls */}
