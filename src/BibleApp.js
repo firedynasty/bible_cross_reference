@@ -480,6 +480,7 @@ const NavigationPlaceholder = ({
   onClassicalTogglePlay,
   classicalPlaying,
   onYouTubeVideo,
+  isYouTubePlaying,
   showPane2Syllables,
   onTogglePane2Syllables,
   syllabifyText,
@@ -724,7 +725,7 @@ const NavigationPlaceholder = ({
           return (
             <>
               <button
-                className="ml-1 rounded focus:outline-none"
+                className={`ml-1 rounded focus:outline-none ${isYouTubePlaying ? 'ring-2 ring-white ring-offset-1 ring-offset-red-600' : ''}`}
                 style={{padding:'4px 10px',background:'linear-gradient(45deg,#888,#666)',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px'}}
                 title="Book overview video"
                 onClick={() => onYouTubeVideo && onYouTubeVideo()}
@@ -1279,6 +1280,7 @@ const BibleApp = () => {
   const [classicalPlaying, setClassicalPlaying] = useState(false);
   const classicalRef = useRef(null);
   const [showYouTubeModal, setShowYouTubeModal] = useState(false);
+  const [isYouTubePlaying, setIsYouTubePlaying] = useState(false);
   const [pendingBookSelection, setPendingBookSelection] = useState(null);
   const pendingBookRef = useRef(null);
   const [crossReferences, setCrossReferences] = useState({});
@@ -6110,6 +6112,7 @@ const BibleApp = () => {
               }}
               classicalPlaying={classicalPlaying}
               onYouTubeVideo={() => setShowYouTubeModal(true)}
+              isYouTubePlaying={isYouTubePlaying}
               showPane2Syllables={showPane2Syllables}
               onTogglePane2Syllables={() => setShowPane2Syllables(s => { const next = !s; localStorage.setItem('bible-pane2-syllables', next); return next; })}
               syllabifyText={syllabifyText}
@@ -10282,7 +10285,7 @@ const BibleApp = () => {
 
       <FurtherReadingModal open={showFiguresModal} onClose={() => setShowFiguresModal(false)} />
       <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
-      <YouTubeVideoModal open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} bookAbbrev={selectedBook?.abbrev} />
+      <YouTubeVideoModal open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} bookAbbrev={selectedBook?.abbrev} onPlayingChange={setIsYouTubePlaying} />
 
     </div>
   );

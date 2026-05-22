@@ -128,17 +128,23 @@ function saveTime(bookAbbrev, seconds) {
 }
 
 function formatTime(seconds) {
-  const m = Math.floor(seconds / 60);
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function YouTubeVideoModal({ open, onClose, bookAbbrev }) {
+export default function YouTubeVideoModal({ open, onClose, bookAbbrev, onPlayingChange }) {
   const [currentTime, setCurrentTime] = useState(0);
+  const [playerReady, setPlayerReady] = useState(false);
   const playerRef = useRef(null);
   const intervalRef = useRef(null);
   const containerRef = useRef(null);
   const bookAbbrevRef = useRef(bookAbbrev);
+  const activeBookRef = useRef(null);
 
   useEffect(() => { bookAbbrevRef.current = bookAbbrev; }, [bookAbbrev]);
 
@@ -158,23 +164,46 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev }) {
     return () => window.removeEventListener('keydown', handleKey);
   }, [open]);
 
+  // Destroy player and create new one when book changes
+  useEffect(() => {
+    if (!bookAbbrev) return;
+    if (activeBookRef.current === bookAbbrev) return;
+
+    // Destroy old player
+    if (playerRef.current) {
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+      try {
+        const t = playerRef.current.getCurrentTime();
+        if (t > 0) saveTime(activeBookRef.current, t);
+        playerRef.current.destroy();
+      } catch {}
+      playerRef.current = null;
+      setPlayerReady(false);
+      if (onPlayingChange) onPlayingChange(false);
+    }
+
+    activeBookRef.current = bookAbbrev;
+  }, [bookAbbrev]);
+
+  // Create player when modal first opens (and player doesn't exist yet)
   useEffect(() => {
     if (!open || !bookAbbrev) return;
+    if (playerRef.current) return; // already have a player
 
     const videoId = getYouTubeVideoId(bookAbbrev);
     if (!videoId) return;
+    if (!containerRef.current) return;
 
     const savedTime = getSavedTime(bookAbbrev);
     setCurrentTime(savedTime);
 
-    let player = null;
     let destroyed = false;
 
     loadYTApi().then((YT) => {
       if (destroyed) return;
       if (!containerRef.current) return;
 
-      player = new YT.Player(containerRef.current, {
+      const player = new YT.Player(containerRef.current, {
         videoId,
         playerVars: {
           autoplay: 0,
@@ -185,6 +214,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev }) {
           onReady: () => {
             if (destroyed) return;
             playerRef.current = player;
+            setPlayerReady(true);
             intervalRef.current = setInterval(() => {
               if (destroyed) return;
               try {
@@ -197,21 +227,27 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev }) {
             }, 5000);
           },
           onStateChange: (event) => {
-            if (event.data === YT.PlayerState.ENDED) {
+            if (event.data === YT.PlayerState.PLAYING) {
+              if (onPlayingChange) onPlayingChange(true);
+            } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.BUFFERING) {
+              if (onPlayingChange) onPlayingChange(false);
+            } else if (event.data === YT.PlayerState.ENDED) {
               saveTime(bookAbbrevRef.current, 0);
               setCurrentTime(0);
+              if (onPlayingChange) onPlayingChange(false);
             }
           },
         },
       });
     });
 
+    return () => { destroyed = true; };
+  }, [open, bookAbbrev]);
+
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
-      destroyed = true;
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
       if (playerRef.current) {
         try {
           const t = playerRef.current.getCurrentTime();
@@ -221,91 +257,111 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev }) {
         playerRef.current = null;
       }
     };
-  }, [open, bookAbbrev]);
-
-  if (!open) return null;
+  }, []);
 
   const videoId = getYouTubeVideoId(bookAbbrev);
   const bookName = bookFullNames[bookAbbrev] || bookAbbrev;
 
+  // The player container is always rendered so the iframe stays alive.
+  // When modal is closed, we move it offscreen via CSS.
+  // When modal is open, it's positioned normally inside the modal layout.
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Bible Overview Video"
-    >
+    <>
+      {/* Modal overlay — only visible when open */}
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl overflow-hidden rounded-xl border border-gray-700 bg-gray-900 text-gray-200 shadow-2xl flex flex-col"
-        style={{ maxHeight: '90vh' }}
+        onClick={onClose}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Bible Overview Video"
+        style={{ display: open ? '' : 'none' }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-          <h2 className="text-lg font-semibold flex items-center flex-wrap gap-2">
-            <span>{bookName} — Overview</span>
-            <span className="text-sm text-gray-400 font-mono">{formatTime(currentTime)}</span>
-            {videoId && (
-              <>
-                <button
-                  onClick={() => {
-                    if (playerRef.current) {
-                      try {
-                        const t = playerRef.current.getCurrentTime() + 60;
-                        playerRef.current.seekTo(t, true);
-                        setCurrentTime(t);
-                        saveTime(bookAbbrev, t);
-                      } catch {}
-                    }
-                  }}
-                  className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
-                >
-                  +1 minute
-                </button>
-                &nbsp;&nbsp;
-                <button
-                  onClick={() => {
-                    if (playerRef.current) {
-                      try {
-                        const t = playerRef.current.getCurrentTime() + 300;
-                        playerRef.current.seekTo(t, true);
-                        setCurrentTime(t);
-                        saveTime(bookAbbrev, t);
-                      } catch {}
-                    }
-                  }}
-                  className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
-                >
-                  +5 minutes
-                </button>
-              </>
-            )}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white text-xl font-bold leading-none"
-            aria-label="Close"
-          >
-            &times;
-          </button>
-        </div>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-2xl overflow-hidden rounded-xl border border-gray-700 bg-gray-900 text-gray-200 shadow-2xl flex flex-col"
+          style={{ maxHeight: '90vh' }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+            <h2 className="text-lg font-semibold flex items-center flex-wrap gap-2">
+              <span>{bookName} — Overview</span>
+              <span className="text-sm text-gray-400 font-mono">{formatTime(currentTime)}</span>
+              {videoId && (
+                <>
+                  <button
+                    onClick={() => {
+                      if (playerRef.current) {
+                        try {
+                          const t = Math.max(0, playerRef.current.getCurrentTime() - 180);
+                          playerRef.current.seekTo(t, true);
+                          setCurrentTime(t);
+                          saveTime(bookAbbrev, t);
+                        } catch {}
+                      }
+                    }}
+                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                  >
+                    -3 minutes
+                  </button>
+                  &nbsp;&nbsp;
+                  <button
+                    onClick={() => {
+                      if (playerRef.current) {
+                        try {
+                          const t = playerRef.current.getCurrentTime() + 60;
+                          playerRef.current.seekTo(t, true);
+                          setCurrentTime(t);
+                          saveTime(bookAbbrev, t);
+                        } catch {}
+                      }
+                    }}
+                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                  >
+                    +1 minute
+                  </button>
+                  &nbsp;&nbsp;
+                  <button
+                    onClick={() => {
+                      if (playerRef.current) {
+                        try {
+                          const t = playerRef.current.getCurrentTime() + 300;
+                          playerRef.current.seekTo(t, true);
+                          setCurrentTime(t);
+                          saveTime(bookAbbrev, t);
+                        } catch {}
+                      }
+                    }}
+                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                  >
+                    +5 minutes
+                  </button>
+                </>
+              )}
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-white text-xl font-bold leading-none"
+              aria-label="Close"
+            >
+              &times;
+            </button>
+          </div>
 
-        {/* Video */}
-        <div className="p-4">
-          {videoId ? (
-            <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden' }}>
-              <div
-                key={bookAbbrev}
-                ref={containerRef}
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-              />
-            </div>
-          ) : (
-            <p className="text-center text-gray-400 py-8">No overview video available for {bookName}.</p>
-          )}
+          {/* Video */}
+          <div className="p-4">
+            {videoId ? (
+              <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden' }}>
+                <div
+                  ref={containerRef}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                />
+              </div>
+            ) : (
+              <p className="text-center text-gray-400 py-8">No overview video available for {bookName}.</p>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
