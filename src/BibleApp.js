@@ -1703,6 +1703,10 @@ const BibleApp = () => {
   const [isRhymeAudioPlaying, setIsRhymeAudioPlaying] = useState(false);
   const [rhymeAutoPlay, setRhymeAutoPlay] = useState(false);
   const rhymeAutoAdvancingRef = useRef(false);
+  const [showRhymeModal, setShowRhymeModal] = useState(false);
+  const [rhymeModalBook, setRhymeModalBook] = useState('ps');
+  const [rhymeModalChapter, setRhymeModalChapter] = useState(1);
+  const [rhymeRepeat, setRhymeRepeat] = useState(false);
 
   // Language sidebar cycle state: null | 'cant' | 'chin' | 'heb' | 'span' | 'fr'
   const [sidebarLang, setSidebarLang] = useState(null);
@@ -5467,31 +5471,14 @@ const BibleApp = () => {
 
                 {/* Read Full Chapter TTS Button — moved to TTS hidden controls */}
 
-                {/* Rhyme Audio Play/Pause (Psalms & Proverbs) */}
-                {selectedBook && getRhymeAudioUrl((pane2Book || selectedBook).abbrev, pane2Chapter || selectedChapter) && (
-                  <button
-                    onClick={handleRhymeAudioToggle}
-                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-pink-500 text-white hover:bg-pink-600 font-semibold"
-                    title={isRhymeAudioPlaying ? 'Pause Rhyme audio' : 'Play Rhyme audio'}
-                  >
-                    {isRhymeAudioPlaying ? 'Rhyme ‖' : 'Rhyme ▶'}
-                  </button>
-                )}
-                {/* Rhyme auto-play toggle */}
-                {selectedBook && getRhymeAudioUrl((pane2Book || selectedBook).abbrev, pane2Chapter || selectedChapter) && (
-                  <label className="ml-1 inline-flex items-center cursor-pointer" title={rhymeAutoPlay ? 'Auto-play: ON (will advance chapters)' : 'Auto-play: OFF'}>
-                    <div className="relative">
-                      <input
-                        type="checkbox"
-                        checked={rhymeAutoPlay}
-                        onChange={() => setRhymeAutoPlay(prev => !prev)}
-                        className="sr-only"
-                      />
-                      <div className={`w-7 h-4 rounded-full transition-colors ${rhymeAutoPlay ? 'bg-pink-500' : 'bg-gray-300'}`}></div>
-                      <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${rhymeAutoPlay ? 'translate-x-3' : ''}`}></div>
-                    </div>
-                  </label>
-                )}
+                {/* Rhyme Modal Button */}
+                <button
+                  onClick={() => setShowRhymeModal(true)}
+                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-pink-500 text-white hover:bg-pink-600 font-semibold ${isRhymeAudioPlaying ? 'ring-2 ring-white ring-offset-1 ring-offset-pink-500' : ''}`}
+                  title="Open Rhyme audio player"
+                >
+                  {isRhymeAudioPlaying ? 'Rhyme ♪' : 'Rhyme ▶'}
+                </button>
 
                 {/* Story Time audio & extras (detects pane 2 book) */}
                 {storytimeData && selectedBook && (
@@ -9627,9 +9614,11 @@ const BibleApp = () => {
       <audio
         ref={rhymeAudioRef}
         preload="none"
+        loop={rhymeRepeat}
         onPlay={() => setIsRhymeAudioPlaying(true)}
         onPause={() => setIsRhymeAudioPlaying(false)}
         onEnded={() => {
+          if (rhymeRepeat) return;
           if (rhymeAutoPlay) {
             const book = pane2Book || selectedBook;
             const chapter = pane2Chapter || selectedChapter;
@@ -9654,6 +9643,115 @@ const BibleApp = () => {
         }}
         style={{ display: 'none' }}
       />
+
+      {/* Rhyme Audio Modal */}
+      {showRhymeModal && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowRhymeModal(false); }}
+          onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setShowRhymeModal(false); } }}
+        >
+          <div style={{ background: isDarkMode ? '#2a2a2a' : isSepiaMode ? '#f4ecd8' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333' }}>
+                Rhyme Audio
+              </h3>
+              <button
+                onClick={() => setShowRhymeModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: isDarkMode ? '#aaa' : '#888', padding: '0 4px' }}
+              >×</button>
+            </div>
+
+            {/* Book & Chapter selectors */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: isDarkMode ? '#aaa' : isSepiaMode ? '#7a6a4a' : '#666' }}>Book</label>
+                <select
+                  value={rhymeModalBook}
+                  onChange={(e) => { setRhymeModalBook(e.target.value); setRhymeModalChapter(1); }}
+                  style={{ width: '100%', padding: '6px 8px', borderRadius: 8, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, background: isDarkMode ? '#333' : isSepiaMode ? '#efe6d0' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333', fontSize: 14 }}
+                >
+                  <option value="ps">Psalms</option>
+                  <option value="prv">Proverbs</option>
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: isDarkMode ? '#aaa' : isSepiaMode ? '#7a6a4a' : '#666' }}>Chapter</label>
+                <select
+                  value={rhymeModalChapter}
+                  onChange={(e) => setRhymeModalChapter(Number(e.target.value))}
+                  style={{ width: '100%', padding: '6px 8px', borderRadius: 8, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, background: isDarkMode ? '#333' : isSepiaMode ? '#efe6d0' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333', fontSize: 14 }}
+                >
+                  {Array.from({ length: rhymeModalBook === 'ps' ? 150 : 31 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>{i + 1}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Play button */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+              <button
+                onClick={() => {
+                  const url = getRhymeAudioUrl(rhymeModalBook, rhymeModalChapter);
+                  if (!url) return;
+                  const audio = rhymeAudioRef.current;
+                  if (!audio) return;
+                  if (audio.src === url && !audio.paused) {
+                    audio.pause();
+                  } else {
+                    audio.src = url;
+                    audio.play().catch(err => console.warn('Rhyme audio play failed:', err));
+                  }
+                }}
+                style={{ padding: '8px 24px', borderRadius: 8, border: 'none', background: '#ec4899', color: 'white', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
+              >
+                {isRhymeAudioPlaying ? 'Pause' : 'Play'}
+              </button>
+              <button
+                onClick={() => {
+                  handleBookSelect(rhymeModalBook);
+                  setTimeout(() => handleChapterSelect(rhymeModalChapter), 100);
+                }}
+                style={{ padding: '8px 24px', borderRadius: 8, border: 'none', background: isDarkMode ? '#555' : '#6b7280', color: 'white', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
+              >
+                Go
+              </button>
+            </div>
+
+            {/* Audio controls */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 12, marginBottom: 4, color: isDarkMode ? '#aaa' : isSepiaMode ? '#7a6a4a' : '#666' }}>Volume</label>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                defaultValue={rhymeAudioRef.current ? rhymeAudioRef.current.volume : 1}
+                onChange={(e) => { if (rhymeAudioRef.current) rhymeAudioRef.current.volume = Number(e.target.value); }}
+                style={{ width: '100%', accentColor: '#ec4899' }}
+              />
+            </div>
+
+            {/* Repeat toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, color: isDarkMode ? '#ccc' : isSepiaMode ? '#6a5a3a' : '#555' }}>Repeat</span>
+              <label className="inline-flex items-center cursor-pointer">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={rhymeRepeat}
+                    onChange={() => setRhymeRepeat(prev => !prev)}
+                    className="sr-only"
+                  />
+                  <div className={`w-9 h-5 rounded-full transition-colors ${rhymeRepeat ? 'bg-pink-500' : 'bg-gray-300'}`}></div>
+                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${rhymeRepeat ? 'translate-x-4' : ''}`}></div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Story Time Modal - removed, now combined with Search modal below */}
 
