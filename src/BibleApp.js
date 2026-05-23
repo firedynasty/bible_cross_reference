@@ -10188,13 +10188,16 @@ const BibleApp = () => {
                 if (verseMatch && selectedBook) {
                   const ch = parseInt(verseMatch[1]);
                   const vs = parseInt(verseMatch[2]);
-                  setSelectedChapter(ch);
-                  setPrimaryReading({ book: selectedBook, chapter: ch });
+                  const p2Book = pane2Book || selectedBook;
+                  setPane2Book(p2Book);
+                  setPane2Chapter(ch);
                   setShowSearchModal(false);
                   setSearchKeyword('');
                   setTimeout(() => {
-                    const verseEl = document.querySelector(`[data-verse="${vs}"]`) || document.getElementById(`verse-${vs}`);
-                    if (verseEl) verseEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (kjvContentRef.current) {
+                      const verseEl = kjvContentRef.current.querySelector(`[data-verse="${vs}"]`) || kjvContentRef.current.querySelector(`#verse-${vs}`);
+                      if (verseEl) verseEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
                   }, 300);
                   return;
                 }
