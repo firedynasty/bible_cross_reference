@@ -1346,11 +1346,12 @@ const WordsModal = ({ verses, bookName, chapter, totalChapters, bookAbbrev, righ
 
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') { e.stopPropagation(); onClose(); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); shuffle(); }
     };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
-  }, [onClose]);
+  }, [onClose, shuffle]);
 
   const chapterOptions = [];
   for (let i = 1; i <= totalChapters; i++) {
@@ -3271,6 +3272,13 @@ const BibleApp = () => {
         return;
       }
       
+      // 'w' key - toggle Words noun pairs modal
+      if (e.key === 'w' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal) {
+        e.preventDefault();
+        setShowWordsModal(true);
+        return;
+      }
+
       // Removed '[' and ']' key handlers for translation switching
       // 'x' key - scroll down one line at a time in KJV pane (like 'z' but just one line)
       if (e.key === 'x' && kjvContentRef.current) {
@@ -3917,6 +3925,8 @@ const BibleApp = () => {
           setShowCollectionModal(false);
         } else if (showDropboxModal) {
           setShowDropboxModal(false);
+        } else if (showWordsModal) {
+          setShowWordsModal(false);
         } else if (showQuiz2Modal) {
           setShowQuiz2Modal(false);
         } else {
@@ -3998,7 +4008,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showQuiz2Modal, loadStorytimeForCurrent]);
+  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, loadStorytimeForCurrent]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
