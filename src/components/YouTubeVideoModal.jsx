@@ -311,8 +311,8 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, onPlaying
       >
         <div
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-2xl overflow-hidden rounded-xl border border-gray-700 bg-gray-900 text-gray-200 shadow-2xl flex flex-col"
-          style={{ maxHeight: '90vh' }}
+          className="w-full max-w-6xl overflow-hidden rounded-xl border border-gray-700 bg-gray-900 text-gray-200 shadow-2xl flex flex-col"
+          style={{ maxHeight: '95vh', margin: '0 16px' }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
