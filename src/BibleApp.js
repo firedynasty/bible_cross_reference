@@ -3278,9 +3278,9 @@ const BibleApp = () => {
       }
       
       // 'w' key - toggle Words noun pairs modal
-      if (e.key === 'w' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal) {
+      if (e.key === 'w' && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal) {
         e.preventDefault();
-        setShowWordsModal(true);
+        setShowWordsModal(prev => !prev);
         return;
       }
 
@@ -3304,6 +3304,13 @@ const BibleApp = () => {
         const playing = toggleSoaking();
         const btn = document.getElementById('soaking-btn');
         if (btn) btn.textContent = playing ? '⏸ Soaking' : 'Soaking(s)';
+        return;
+      }
+
+      // 'c' key - toggle blank pane 1
+      if (e.key === 'c' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal) {
+        e.preventDefault();
+        setBlankPane1(prev => { const next = !prev; localStorage.setItem('blankPane1', next); return next; });
         return;
       }
 
@@ -5921,9 +5928,9 @@ const BibleApp = () => {
                       <button
                         onClick={() => setBlankPane1(prev => { const next = !prev; localStorage.setItem('blankPane1', next); return next; })}
                         className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${blankPane1 ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
-                        title={blankPane1 ? 'Show pane 1 content' : 'Blank pane 1 (for Cmd+F search)'}
+                        title={blankPane1 ? 'Show pane 1 content (c)' : 'Blank pane 1 for Cmd+F search (c)'}
                       >
-                        clr P1
+                        clr pane 1(c)
                       </button>
                     </>
                   );
@@ -10175,7 +10182,24 @@ const BibleApp = () => {
                   </label>
                 ))}
               </div>
-              <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchKeyword); setSearchKeyword(''); setTimeout(() => { const el = e.target.querySelector('input[type="text"]'); if (el) el.focus(); }, 0); }} style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const verseMatch = searchKeyword.trim().match(/^(\d+):(\d+)$/);
+                if (verseMatch && selectedBook) {
+                  const ch = parseInt(verseMatch[1]);
+                  const vs = parseInt(verseMatch[2]);
+                  setSelectedChapter(ch);
+                  setPrimaryReading({ book: selectedBook, chapter: ch });
+                  setShowSearchModal(false);
+                  setSearchKeyword('');
+                  setTimeout(() => {
+                    const verseEl = document.querySelector(`[data-verse="${vs}"]`) || document.getElementById(`verse-${vs}`);
+                    if (verseEl) verseEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 300);
+                  return;
+                }
+                handleSearch(searchKeyword); setSearchKeyword(''); setTimeout(() => { const el = e.target.querySelector('input[type="text"]'); if (el) el.focus(); }, 0);
+              }} style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
                 <input
                   type="text"
                   value={searchKeyword}
