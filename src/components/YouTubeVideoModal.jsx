@@ -152,6 +152,15 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, onPlaying
   useEffect(() => {
     if (!open) return;
     const handleKey = (e) => {
+      if (e.key === ' ' && playerRef.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          const state = playerRef.current.getPlayerState();
+          if (state === 1) playerRef.current.pauseVideo();
+          else playerRef.current.playVideo();
+        } catch {}
+      }
       if (e.key === '0' && playerRef.current) {
         try {
           playerRef.current.seekTo(0, true);
@@ -301,7 +310,23 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, onPlaying
                     }}
                     className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
                   >
-                    -3 minutes
+                    -3 min
+                  </button>
+                  &nbsp;&nbsp;
+                  <button
+                    onClick={() => {
+                      if (playerRef.current) {
+                        try {
+                          const t = Math.max(0, playerRef.current.getCurrentTime() - 60);
+                          playerRef.current.seekTo(t, true);
+                          setCurrentTime(t);
+                          saveTime(bookAbbrev, t);
+                        } catch {}
+                      }
+                    }}
+                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                  >
+                    -1 min
                   </button>
                   &nbsp;&nbsp;
                   <button
@@ -317,23 +342,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, onPlaying
                     }}
                     className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
                   >
-                    +1 minute
-                  </button>
-                  &nbsp;&nbsp;
-                  <button
-                    onClick={() => {
-                      if (playerRef.current) {
-                        try {
-                          const t = playerRef.current.getCurrentTime() + 300;
-                          playerRef.current.seekTo(t, true);
-                          setCurrentTime(t);
-                          saveTime(bookAbbrev, t);
-                        } catch {}
-                      }
-                    }}
-                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
-                  >
-                    +5 minutes
+                    +1 min
                   </button>
                 </>
               )}
