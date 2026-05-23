@@ -168,6 +168,30 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, onPlaying
           saveTime(bookAbbrevRef.current, 0);
         } catch {}
       }
+      if (e.key === '1' && playerRef.current) {
+        try {
+          const t = Math.max(0, playerRef.current.getCurrentTime() - 180);
+          playerRef.current.seekTo(t, true);
+          setCurrentTime(t);
+          saveTime(bookAbbrevRef.current, t);
+        } catch {}
+      }
+      if (e.key === '2' && playerRef.current) {
+        try {
+          const t = Math.max(0, playerRef.current.getCurrentTime() - 60);
+          playerRef.current.seekTo(t, true);
+          setCurrentTime(t);
+          saveTime(bookAbbrevRef.current, t);
+        } catch {}
+      }
+      if (e.key === '3' && playerRef.current) {
+        try {
+          const t = playerRef.current.getCurrentTime() + 60;
+          playerRef.current.seekTo(t, true);
+          setCurrentTime(t);
+          saveTime(bookAbbrevRef.current, t);
+        } catch {}
+      }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
@@ -310,7 +334,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, onPlaying
                     }}
                     className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
                   >
-                    -3 min
+                    -3min(1)
                   </button>
                   &nbsp;&nbsp;
                   <button
@@ -326,7 +350,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, onPlaying
                     }}
                     className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
                   >
-                    -1 min
+                    -1min(2)
                   </button>
                   &nbsp;&nbsp;
                   <button
@@ -342,7 +366,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, onPlaying
                     }}
                     className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
                   >
-                    +1 min
+                    +1min(3)
                   </button>
                 </>
               )}
