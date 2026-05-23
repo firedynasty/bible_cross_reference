@@ -755,23 +755,23 @@ const NavigationPlaceholder = ({
                 return (
                   <button
                     className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-yellow-200 text-yellow-800 hover:bg-yellow-300"
-                    title="Play/pause freestyle beats (random position)"
+                    title="Play/pause soaking worship"
                     onClick={(e) => {
                       const btn = e.currentTarget;
                       let audio = btn._freestyleAudio;
                       if (!audio) {
-                        audio = new Audio('https://www.dropbox.com/scl/fi/snh3td5yp8yigg30hil70/1-Hour-Of-Freestyle-Rap-Beats-Trap-Beats-Mix-2024-POH5DmNygI0.m4a?rlkey=pggb6ycpylxik1o5yv44uquj7&st=wlelqohf&raw=1');
+                        audio = new Audio('https://www.dropbox.com/scl/fi/hiz6z82rwhpjhr1ip6ipm/QUIET-TIME-WITH-GOD-Soaking-worship-instrumental-Prayer-and-Devotional-OsgkVc-pWv8.mp3?rlkey=w99i60rnicu9asf4ev6vk958a&st=kardpkw1&raw=1');
                         audio.preload = 'auto';
                         btn._freestyleAudio = audio;
                         audio.addEventListener('ended', () => {
-                          btn.textContent = '♪';
+                          btn.textContent = 'Soaking';
                         });
                       }
                       if (!audio.paused) {
                         audio.pause();
-                        btn.textContent = '♪';
+                        btn.textContent = 'Soaking';
                       } else {
-                        const randomTime = Math.random() * 3000; // ~50 min = 3000 sec
+                        const randomTime = Math.random() * 3000;
                         audio.currentTime = randomTime;
                         audio.play().then(() => {
                           btn.textContent = '⏸';
@@ -779,7 +779,7 @@ const NavigationPlaceholder = ({
                       }
                     }}
                   >
-                    ♪
+                    Soaking
                   </button>
                 );
               })()}
@@ -1385,7 +1385,7 @@ const WordsModal = ({ verses, bookName, chapter, totalChapters, bookAbbrev, righ
         onClick={shuffle}
         style={{ marginTop: 18, padding: '8px 22px', fontSize: 16, borderRadius: 6, border: '1px solid #555', background: '#222', color: '#fff', cursor: 'pointer' }}
       >
-        Shuffle
+        Shuffle(→)
       </button>
     </div>
   );
@@ -3276,6 +3276,13 @@ const BibleApp = () => {
       if (e.key === 'w' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal) {
         e.preventDefault();
         setShowWordsModal(true);
+        return;
+      }
+
+      // 'r' key - toggle reading ruler
+      if (e.key === 'r' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal) {
+        e.preventDefault();
+        setReadingGuide(prev => { const next = !prev; localStorage.setItem('readingGuide', next); return next; });
         return;
       }
 
@@ -5675,42 +5682,11 @@ const BibleApp = () => {
 
                 {/* Reading Ruler Toggle Button */}
                 <button
-                  onClick={() => {
-                    if (window.readingRuler) {
-                      window.readingRuler.cleanup();
-                    } else {
-                      const ruler = document.createElement('div');
-                      ruler.id = 'reading-ruler-overlay';
-                      ruler.style.position = 'fixed';
-                      ruler.style.left = '0';
-                      ruler.style.right = '0';
-                      ruler.style.height = '3px';
-                      ruler.style.backgroundColor = 'rgba(255, 165, 0, 0.8)';
-                      ruler.style.pointerEvents = 'none';
-                      ruler.style.zIndex = '99999';
-                      ruler.style.boxShadow = '0 0 10px rgba(255, 165, 0, 0.5), 0 0 20px rgba(255, 165, 0, 0.3)';
-                      document.body.appendChild(ruler);
-                      let isActive = true;
-                      const handleMouseMove = (e) => { if (isActive) { ruler.style.top = `${e.clientY}px`; } };
-                      const handleKeyPress = (e) => {
-                        if (e.key === ' ') { isActive = !isActive; }
-                      };
-                      document.addEventListener('mousemove', handleMouseMove);
-                      document.addEventListener('keydown', handleKeyPress);
-                      window.readingRuler = {
-                        cleanup: () => {
-                          document.removeEventListener('mousemove', handleMouseMove);
-                          document.removeEventListener('keydown', handleKeyPress);
-                          if (ruler.parentNode) { document.body.removeChild(ruler); }
-                          delete window.readingRuler;
-                        }
-                      };
-                    }
-                  }}
-                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-orange-500 text-white hover:bg-orange-600 font-semibold"
-                  title="Toggle reading ruler"
+                  onClick={() => setReadingGuide(prev => { const next = !prev; localStorage.setItem('readingGuide', next); return next; })}
+                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${readingGuide ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
+                  title="Toggle reading ruler (r)"
                 >
-                  📏
+                  📏 (r)
                 </button>
 
                 {/* Collection Modal Button */}
@@ -5925,13 +5901,6 @@ const BibleApp = () => {
                         title={blankPane1 ? 'Show pane 1 content' : 'Blank pane 1 (for Cmd+F search)'}
                       >
                         clr P1
-                      </button>
-                      <button
-                        onClick={() => setReadingGuide(prev => { const next = !prev; localStorage.setItem('readingGuide', next); return next; })}
-                        className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${readingGuide ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
-                        title={readingGuide ? 'Hide reading guide ruler' : 'Show reading guide ruler'}
-                      >
-                        Ruler
                       </button>
                     </>
                   );

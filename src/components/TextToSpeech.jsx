@@ -1260,7 +1260,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showWordsModal ? 'bg-purple-700 text-white' : 'bg-purple-600 text-white hover:bg-purple-700'}`}
         title="Noun pairs from current chapter"
       >
-        Words
+        Words(w)
       </button>
 
       {/* Recite Quiz Button */}
