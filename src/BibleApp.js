@@ -410,6 +410,27 @@ const FirebaseKeySelector = ({ onSelect, onSave, currentBook, currentChapter, cu
 };
 
 // Navigation Placeholder Component
+let _soakingAudio = null;
+function toggleSoaking() {
+  if (!_soakingAudio) {
+    _soakingAudio = new Audio('https://www.dropbox.com/scl/fi/hiz6z82rwhpjhr1ip6ipm/QUIET-TIME-WITH-GOD-Soaking-worship-instrumental-Prayer-and-Devotional-OsgkVc-pWv8.mp3?rlkey=w99i60rnicu9asf4ev6vk958a&st=kardpkw1&raw=1');
+    _soakingAudio.preload = 'auto';
+    _soakingAudio.addEventListener('ended', () => {
+      const btn = document.getElementById('soaking-btn');
+      if (btn) btn.textContent = 'Soaking(s)';
+    });
+  }
+  if (!_soakingAudio.paused) {
+    _soakingAudio.pause();
+    return false;
+  } else {
+    const randomTime = Math.random() * 3000;
+    _soakingAudio.currentTime = randomTime;
+    _soakingAudio.play().catch(() => {});
+    return true;
+  }
+}
+
 const NavigationPlaceholder = ({
   book,
   chapter,
@@ -756,31 +777,14 @@ const NavigationPlaceholder = ({
                 return (
                   <button
                     className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-yellow-200 text-yellow-800 hover:bg-yellow-300"
-                    title="Play/pause soaking worship"
-                    onClick={(e) => {
-                      const btn = e.currentTarget;
-                      let audio = btn._freestyleAudio;
-                      if (!audio) {
-                        audio = new Audio('https://www.dropbox.com/scl/fi/hiz6z82rwhpjhr1ip6ipm/QUIET-TIME-WITH-GOD-Soaking-worship-instrumental-Prayer-and-Devotional-OsgkVc-pWv8.mp3?rlkey=w99i60rnicu9asf4ev6vk958a&st=kardpkw1&raw=1');
-                        audio.preload = 'auto';
-                        btn._freestyleAudio = audio;
-                        audio.addEventListener('ended', () => {
-                          btn.textContent = 'Soaking';
-                        });
-                      }
-                      if (!audio.paused) {
-                        audio.pause();
-                        btn.textContent = 'Soaking';
-                      } else {
-                        const randomTime = Math.random() * 3000;
-                        audio.currentTime = randomTime;
-                        audio.play().then(() => {
-                          btn.textContent = '⏸';
-                        }).catch(() => {});
-                      }
+                    title="Play/pause soaking worship (s)"
+                    id="soaking-btn"
+                    onClick={() => {
+                      const playing = toggleSoaking();
+                      document.getElementById('soaking-btn').textContent = playing ? '⏸ Soaking' : 'Soaking(s)';
                     }}
                   >
-                    Soaking
+                    Soaking(s)
                   </button>
                 );
               })()}
@@ -3288,9 +3292,18 @@ const BibleApp = () => {
       }
 
       // 'y' key - toggle YouTube modal
-      if (e.key === 'y' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal) {
+      if (e.key === 'y' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal) {
         e.preventDefault();
-        setShowYouTubeModal(true);
+        setShowYouTubeModal(prev => !prev);
+        return;
+      }
+
+      // 's' key - toggle soaking worship audio
+      if (e.key === 's' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal) {
+        e.preventDefault();
+        const playing = toggleSoaking();
+        const btn = document.getElementById('soaking-btn');
+        if (btn) btn.textContent = playing ? '⏸ Soaking' : 'Soaking(s)';
         return;
       }
 
@@ -3940,6 +3953,8 @@ const BibleApp = () => {
           setShowCollectionModal(false);
         } else if (showDropboxModal) {
           setShowDropboxModal(false);
+        } else if (showYouTubeModal) {
+          setShowYouTubeModal(false);
         } else if (showWordsModal) {
           setShowWordsModal(false);
         } else if (showQuiz2Modal) {
