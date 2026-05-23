@@ -458,6 +458,8 @@ const NavigationPlaceholder = ({
   showStudyQModal,
   onQuiz,
   showQuizModal,
+  onWords,
+  showWordsModal,
   onQuiz2,
   showQuiz2Modal,
   onBuckets,
@@ -882,6 +884,8 @@ const NavigationPlaceholder = ({
           showStudyQModal={showStudyQModal}
           onQuiz={onQuiz}
           showQuizModal={showQuizModal}
+          onWords={onWords}
+          showWordsModal={showWordsModal}
           onQuiz2={onQuiz2}
           showQuiz2Modal={showQuiz2Modal}
           onBuckets={onBuckets}
@@ -1267,6 +1271,125 @@ const generateCodeChallenge = async (verifier) => {
     .replace(/=+$/, '');
 };
 
+const BIBLE_NOUNS = [
+  'God','Jesus','Christ','Lord','Spirit','Son','Father','Man',
+  'Kingdom','Gospel','Heaven','Faith','Sin','Grace','Love',
+  'Life','Death','Cross','Temple','Sabbath','Prophet','Angel',
+  'Baptism','Repentance','Prayer','Forgiveness','Glory','Power',
+  'Truth','Light','Darkness','Bread','Wine','Water','Fire',
+  'Mountain','Sea','Wilderness','Boat','Crowd','Disciples',
+  'Pharisees','Scribes','Priest','Simon','Peter','James','John',
+  'Andrew','Judas','Pilate','Barabbas','Mary','David','Moses',
+  'Elijah','Isaiah','Satan','Demon','Vineyard','Shepherd','Sheep',
+  'Seed','Harvest','Fig Tree','Tomb','Stone','Sword','Rooster',
+  'Covenant','Commandment','Parable','Miracle','Sign','Voice',
+  'Heart','Soul','Eye','Hand','Blood','Body','Garment','Cloak',
+  'Net','Fish','Loaves','Salt','Lamp','Door','Key','Crown',
+  'Throne','Scripture','Testimony','Mercy','Peace','Joy',
+  'Wisdom','Righteousness','Salvation','Resurrection','Passover',
+  'Church','Apostle','Tongue','Charity','Marriage','Husband','Wife',
+  'Flesh','Law','Circumcision','Abraham','Promise','Blessing',
+  'Freedom','Armor','Helmet','Shield','Breastplate','Psalm',
+  'Refuge','Rock','Fortress','Enemy','Wicked','Righteous'
+];
+
+function extractWordsFromVerses(verses) {
+  if (!verses || !verses.length) return BIBLE_NOUNS.slice();
+  var text = verses.map(v => typeof v === 'string' ? v : (v.text || v.verse || String(v))).join(' ');
+  var found = [];
+  for (var i = 0; i < BIBLE_NOUNS.length; i++) {
+    var re = new RegExp('\\b' + BIBLE_NOUNS[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+    if (re.test(text)) found.push(BIBLE_NOUNS[i]);
+  }
+  if (found.length < 2) found = BIBLE_NOUNS.slice();
+  // Shuffle
+  for (var j = found.length - 1; j > 0; j--) {
+    var k = Math.floor(Math.random() * (j + 1));
+    var tmp = found[j]; found[j] = found[k]; found[k] = tmp;
+  }
+  var pairs = [];
+  var count = Math.min(4, Math.floor(found.length / 2));
+  for (var p = 0; p < count; p++) {
+    pairs.push([found[p * 2], found[p * 2 + 1]]);
+  }
+  return pairs;
+}
+
+const WordsModal = ({ verses, bookName, chapter, totalChapters, bookAbbrev, rightPaneBibleData, bibleData, onClose }) => {
+  const [pairs, setPairs] = useState([]);
+  const [selectedChapter, setSelectedChapter] = useState(chapter);
+  const timerRef = useRef(null);
+
+  const getVersesForChapter = useCallback((ch) => {
+    let v = [];
+    if (rightPaneBibleData && bookAbbrev) {
+      const rpBook = rightPaneBibleData.find(b => b.abbrev === bookAbbrev);
+      if (rpBook && rpBook.chapters[ch - 1]) v = rpBook.chapters[ch - 1];
+    }
+    if (!v.length && bibleData && bookAbbrev) {
+      const bk = bibleData.find(b => b.abbrev === bookAbbrev);
+      if (bk && bk.chapters[ch - 1]) v = bk.chapters[ch - 1];
+    }
+    return v;
+  }, [rightPaneBibleData, bibleData, bookAbbrev]);
+
+  const shuffle = useCallback(() => {
+    const v = getVersesForChapter(selectedChapter);
+    setPairs(extractWordsFromVerses(v));
+  }, [selectedChapter, getVersesForChapter]);
+
+  useEffect(() => {
+    shuffle();
+    timerRef.current = setInterval(shuffle, 10000);
+    return () => clearInterval(timerRef.current);
+  }, [shuffle]);
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  const chapterOptions = [];
+  for (let i = 1; i <= totalChapters; i++) {
+    chapterOptions.push(<option key={i} value={i}>{bookName} {i}</option>);
+  }
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <button
+        onClick={onClose}
+        style={{ position: 'absolute', top: 20, right: 30, fontSize: 36, color: '#fff', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold', lineHeight: 1 }}
+      >
+        &times;
+      </button>
+      <select
+        value={selectedChapter}
+        onChange={(e) => setSelectedChapter(Number(e.target.value))}
+        style={{ width: '80%', maxWidth: 400, padding: '6px 8px', marginBottom: 18, borderRadius: 6, border: '1px solid #555', background: '#222', color: '#fff', fontSize: 14 }}
+      >
+        {chapterOptions}
+      </select>
+      {pairs.map((pair, i) => (
+        <div key={i} style={{ fontSize: 'clamp(28px, 6vw, 52px)', fontWeight: 'bold', color: '#fff', margin: '18px 0', letterSpacing: 2 }}>
+          {pair[0]} <span style={{ color: '#f5c842', margin: '0 12px' }}>&amp;</span> {pair[1]}
+        </div>
+      ))}
+      <button
+        onClick={shuffle}
+        style={{ marginTop: 18, padding: '8px 22px', fontSize: 16, borderRadius: 6, border: '1px solid #555', background: '#222', color: '#fff', cursor: 'pointer' }}
+      >
+        Shuffle
+      </button>
+    </div>
+  );
+};
+
 // Main component
 const BibleApp = () => {
   const [bibleData, setBibleData] = useState(null);
@@ -1610,6 +1733,7 @@ const BibleApp = () => {
   const hyphRef = useRef(null);
   const cursiveGoToBucketRef = useRef(null);
   const cursiveBucketIndexRef = useRef(0);
+  const [showWordsModal, setShowWordsModal] = useState(false);
   const [showQuiz2Modal, setShowQuiz2Modal] = useState(false);
   const [quiz2BucketIndex, setQuiz2BucketIndex] = useState(0);
   const [quiz2RevealCount, setQuiz2RevealCount] = useState(0);
@@ -6003,6 +6127,8 @@ const BibleApp = () => {
                   setShowQuizModal(true);
                 }
               }}
+              showWordsModal={showWordsModal}
+              onWords={() => setShowWordsModal(true)}
               showQuiz2Modal={showQuiz2Modal}
               onQuiz2={() => { window.speechSynthesis && window.speechSynthesis.cancel(); setQuiz2BucketIndex(0); setQuiz2RevealCount(0); setShowQuiz2Modal(true); }}
               showBucketsModal={showBucketsModal}
@@ -9075,6 +9201,47 @@ const BibleApp = () => {
               </div>
             </div>
           </div>
+        );
+      })()}
+
+      {/* Words Noun Pairs Modal */}
+      {showWordsModal && (() => {
+        const wBook = pane2Book || selectedBook;
+        const wChapter = pane2Chapter || selectedChapter;
+        const wBookName = wBook ? (wBook.book || getBookName(wBook.abbrev)) : '';
+
+        let wVerses = [];
+        if (rightPaneBibleData && wBook) {
+          const rpBook = rightPaneBibleData.find(b => b.abbrev === wBook.abbrev);
+          if (rpBook && rpBook.chapters[wChapter - 1]) wVerses = rpBook.chapters[wChapter - 1];
+        }
+        if (!wVerses.length && bibleData && wBook) {
+          const bk = bibleData.find(b => b.abbrev === wBook.abbrev);
+          if (bk && bk.chapters[wChapter - 1]) wVerses = bk.chapters[wChapter - 1];
+        }
+
+        // Get total chapters for dropdown
+        let totalChapters = 0;
+        if (rightPaneBibleData && wBook) {
+          const rpBook = rightPaneBibleData.find(b => b.abbrev === wBook.abbrev);
+          if (rpBook) totalChapters = rpBook.chapters.length;
+        }
+        if (!totalChapters && bibleData && wBook) {
+          const bk = bibleData.find(b => b.abbrev === wBook.abbrev);
+          if (bk) totalChapters = bk.chapters.length;
+        }
+
+        return (
+          <WordsModal
+            verses={wVerses}
+            bookName={wBookName}
+            chapter={wChapter}
+            totalChapters={totalChapters}
+            bookAbbrev={wBook ? wBook.abbrev : ''}
+            rightPaneBibleData={rightPaneBibleData}
+            bibleData={bibleData}
+            onClose={() => setShowWordsModal(false)}
+          />
         );
       })()}
 
