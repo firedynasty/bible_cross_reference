@@ -1178,14 +1178,14 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
 
   return (
     <div className="flex items-center gap-2">
-      {/* Go/Copy mode toggle - always shows "Go" label */}
+      {/* Go/Copy mode toggle - hidden */}
       <button
         onClick={() => {
           const next = chineseAction === 'copy' ? 'go' : 'copy';
           setChineseAction(next);
           localStorage.setItem('bibleAppChineseAction', next);
         }}
-        className={`px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
+        className={`hidden px-2 py-0.5 rounded focus:outline-none flex items-center text-xs ${
           chineseAction === 'go'
             ? 'bg-green-100 text-green-700 hover:bg-green-200'
             : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
@@ -1195,7 +1195,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         Go
       </button>
 
-      {/* Upper - always visible, copies upper half of stored verse */}
+      {/* Upper - hidden */}
       <button
         onClick={async () => {
           const chBook = chineseBibleData ? chineseBibleData.find(b => b.abbrev === currentBook) : null;
@@ -1209,13 +1209,13 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
             }
           }
         }}
-        className="px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200"
+        className="hidden px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200"
         title="Upper: copies first ~20 chars of last selected verse"
       >
         Upper
       </button>
 
-      {/* Lower - always visible, copies lower half of stored verse then advances chapter */}
+      {/* Lower - hidden */}
       <button
         onClick={async () => {
           const chBook = chineseBibleData ? chineseBibleData.find(b => b.abbrev === currentBook) : null;
@@ -1230,7 +1230,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
           }
           if (onNextChapter) onNextChapter();
         }}
-        className="px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-teal-100 text-teal-700 hover:bg-teal-200"
+        className="hidden px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-teal-100 text-teal-700 hover:bg-teal-200"
         title="Lower: copies from char 20 onward of last selected verse"
       >
         Lower

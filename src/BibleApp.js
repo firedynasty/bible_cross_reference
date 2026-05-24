@@ -810,10 +810,10 @@ const NavigationPlaceholder = ({
           );
         })()}
 
-        {/* Grid TTS Read Mode Toggle */}
+        {/* Grid TTS Read Mode Toggle - hidden */}
         <button
           onClick={() => onGridReadModeToggle && onGridReadModeToggle()}
-          className={`ml-2 px-2 py-0.5 rounded focus:outline-none text-xs ${
+          className={`hidden ml-2 px-2 py-0.5 rounded focus:outline-none text-xs ${
             gridReadMode === 'undelimit'
               ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -1464,8 +1464,6 @@ const BibleApp = () => {
   const [lastCrossRef, setLastCrossRef] = useState(null); // { book, chapter, verse, label }
 
   // State for book number input with timeout
-  const [bookNumberInput, setBookNumberInput] = useState('');
-  const bookInputTimeoutRef = useRef(null);
 
   // Bible books order for numeric selection (matches your actual Bible data)
   const bibleBooksCanonical = [
@@ -1487,51 +1485,6 @@ const BibleApp = () => {
     "1 John", "2 John", "3 John", "Jude", "Revelation"
   ];
 
-  // Function to handle book number selection
-  const handleBookNumberInput = (digit) => {
-    // Clear existing timeout first
-    if (bookInputTimeoutRef.current) {
-      clearTimeout(bookInputTimeoutRef.current);
-    }
-    
-    // Use functional state update to ensure we get the latest value
-    setBookNumberInput(prevInput => {
-      const newInput = prevInput + digit;
-      console.log(`Book input: "${newInput}" (added digit: ${digit}) - current state: "${bookNumberInput}"`);
-      
-      // Set new timeout for 1.5 seconds - only this final timeout will execute
-      bookInputTimeoutRef.current = setTimeout(() => {
-        const bookNumber = parseInt(newInput);
-        if (bookNumber > 0 && bookNumber <= bibleBooksCanonical.length) {
-          const targetBookName = bibleBooksCanonical[bookNumber - 1];
-          console.log(`Selecting book ${bookNumber}: ${targetBookName}`);
-          
-          // Find the book in bibleData and select it
-          if (bibleData) {
-            const bookToSelect = bibleData.find(book => {
-              const bookName = book.book || getBookName(book.abbrev);
-              return bookName === targetBookName;
-            });
-            
-            if (bookToSelect) {
-              handleBookSelect(bookToSelect.abbrev);
-              console.log(`✓ Selected book ${bookNumber}: ${targetBookName} via keyboard`);
-            } else {
-              console.warn(`✗ Book "${targetBookName}" not found in bibleData`);
-            }
-          } else {
-            console.warn('✗ bibleData not available');
-          }
-        } else {
-          console.warn(`✗ Invalid book number: ${bookNumber}. Valid range: 1-${bibleBooksCanonical.length}`);
-        }
-        // Reset the input after processing
-        setBookNumberInput('');
-      }, 1500);
-      
-      return newInput;
-    });
-  };
   const [primaryReading, setPrimaryReading] = useState({
     book: null,
     chapter: 1
@@ -3975,13 +3928,18 @@ const BibleApp = () => {
       }
       
       
-      // Numeric keys (0-9) for book selection
-      else if (e.key >= '0' && e.key <= '9') {
+      // Numeric keys (1-9) for pane 2 translation selection (only when no modal is open)
+      else if (e.key >= '1' && e.key <= '9' && !showSearchModal && !showQuizModal && !showQuiz2Modal && !showCollectionModal && !showDropboxModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showWordsModal && !showYouTubeModal) {
         // Allow browser shortcuts like Cmd+1, Cmd+2, etc. for tab switching
         if (e.metaKey || e.ctrlKey) {
           return;
         }
-        handleBookNumberInput(e.key);
+        const index = parseInt(e.key) - 1;
+        if (index < translations.length) {
+          const t = translations[index];
+          setSelectedDropdownTranslation(t.id);
+          try { handleApplySelectedTranslationToPane2(t.id); } catch (err) { console.warn('Error applying translation:', err); }
+        }
         e.preventDefault();
       }
       
@@ -4025,18 +3983,26 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // 'n' key - cycle pane 2 translation
-      else if (e.key === 'n' || e.key === 'N') {
-        try {
-          const currentIndex = translations.findIndex(t => t.id === rightPaneTranslation);
-          const nextIndex = (currentIndex + 1) % translations.length;
-          const finalTranslation = translations[nextIndex].id;
-          setSelectedDropdownTranslation(finalTranslation);
-          setTimeout(() => {
-            try { handleApplySelectedTranslationToPane2(finalTranslation); } catch (error) { console.warn('Error applying translation:', error); }
-          }, 150);
-        } catch (error) {
-          console.warn('Error cycling translation:', error);
+      // 'b' key - go to previous chapter (only when no modal is open)
+      else if ((e.key === 'b' || e.key === 'B') && !showSearchModal && !showQuizModal && !showQuiz2Modal && !showCollectionModal && !showDropboxModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showWordsModal && !showYouTubeModal) {
+        if (selectedBook && selectedChapter > 1) {
+          setSelectedChapter(selectedChapter - 1);
+          setPrimaryReading({ book: selectedBook, chapter: selectedChapter - 1 });
+          setIsViewingCrossRef(false);
+          setPane2Book(null);
+          setPane2Chapter(null);
+          localStorage.removeItem('mobileScrollPosition');
+          setMobileScrollPosition(0);
+          setTimeout(() => { handleHomeReset(); }, 100);
+        }
+        e.preventDefault();
+      }
+      // 'n' key - go to next chapter (only when no modal is open)
+      else if ((e.key === 'n' || e.key === 'N') && !showSearchModal && !showQuizModal && !showQuiz2Modal && !showCollectionModal && !showDropboxModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showWordsModal && !showYouTubeModal) {
+        const nextChapterButtons = Array.from(document.querySelectorAll('button'))
+          .filter(button => button.textContent.includes('Next Chapter'));
+        if (nextChapterButtons.length > 0) {
+          nextChapterButtons[0].click();
         }
         e.preventDefault();
       }
@@ -5596,22 +5562,24 @@ const BibleApp = () => {
                     2:{(() => {
                       const id = rightPaneTranslation;
                       if (!id) return '?';
-                      if (id.includes('kjv')) return 'kjv';
-                      if (id.includes('web')) return 'web';
-                      if (id.includes('cuv')) return 'cuv';
-                      if (id.includes('rvr')) return 'rvr';
-                      if (id.includes('he_heb')) return 'heb';
-                      if (id.includes('apee')) return 'apee';
-                      if (id.includes('bsb')) return 'bsb';
-                      if (id.includes('rhyme')) return 'rhyme';
-                      return id.split('_')[1] || id;
+                      const idx = translations.findIndex(t => t.id === id);
+                      const keyNum = idx >= 0 ? `(${idx + 1})` : '';
+                      if (id.includes('kjv')) return `kjv${keyNum}`;
+                      if (id.includes('web')) return `web${keyNum}`;
+                      if (id.includes('cuv')) return `cuv${keyNum}`;
+                      if (id.includes('rvr')) return `rvr${keyNum}`;
+                      if (id.includes('he_heb')) return `heb${keyNum}`;
+                      if (id.includes('apee')) return `apee${keyNum}`;
+                      if (id.includes('bsb')) return `bsb${keyNum}`;
+                      if (id.includes('rhyme')) return `rhyme${keyNum}`;
+                      return (id.split('_')[1] || id) + keyNum;
                     })()}
                   </button>
                   {showPane2TranslationPicker && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setShowPane2TranslationPicker(false)} />
                       <div className={`absolute left-0 top-full mt-1 z-50 rounded shadow-lg border min-w-[200px] ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
-                        {translations.map(t => (
+                        {translations.map((t, idx) => (
                           <button
                             key={t.id}
                             onClick={() => {
@@ -5623,7 +5591,7 @@ const BibleApp = () => {
                             }}
                             className={`block w-full text-left px-3 py-1.5 text-sm hover:bg-orange-100 ${isDarkMode ? 'text-white hover:bg-gray-700' : 'text-gray-800'} ${t.id === rightPaneTranslation ? 'font-bold bg-orange-50' + (isDarkMode ? ' !bg-gray-700' : '') : ''}`}
                           >
-                            {t.name}
+                            <span className="inline-block w-5 text-orange-500 font-bold">({idx + 1})</span> {t.name}
                           </button>
                         ))}
                       </div>
@@ -7018,7 +6986,7 @@ const BibleApp = () => {
                         onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
                         title={`Next chapter (${p2Chapter + 1})`}
                       >
-                        <svg width="48" height="48" viewBox="0 0 64 64"><path d="M20 8 L44 32 L20 56" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <span style={{ fontSize: 28, fontWeight: 'bold', color: 'rgba(0,0,0,0.7)' }}>n</span>
                       </button>
                     )}
                   </>
