@@ -3260,8 +3260,8 @@ const BibleApp = () => {
         return;
       }
 
-      // 'c' key - toggle blank pane 1
-      if (e.key === 'c' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal) {
+      // 'l' key - toggle blank pane 1
+      if (e.key === 'l' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal) {
         e.preventDefault();
         setBlankPane1(prev => { const next = !prev; localStorage.setItem('blankPane1', next); return next; });
         return;
@@ -3968,13 +3968,7 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // L key - go to Lamentations
-      else if (e.key === 'l' || e.key === 'L') {
-        const book = bibleData?.find(b => b.abbrev === 'lm');
-        if (book) {
-          handleBookSelect('lm');
-        }
-      }
+      // L key - go to Lamentations (removed, 'l' now used for clr pane 1)
       // S key - go to Joshua
       else if (e.key === 's' || e.key === 'S') {
         const book = bibleData?.find(b => b.abbrev === 'js');
@@ -5896,9 +5890,9 @@ const BibleApp = () => {
                       <button
                         onClick={() => setBlankPane1(prev => { const next = !prev; localStorage.setItem('blankPane1', next); return next; })}
                         className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${blankPane1 ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
-                        title={blankPane1 ? 'Show pane 1 content (c)' : 'Blank pane 1 for Cmd+F search (c)'}
+                        title={blankPane1 ? 'Show pane 1 content (l)' : 'Blank pane 1 for Cmd+F search (l)'}
                       >
-                        clr pane 1(c)
+                        clr pane 1(l)
                       </button>
                     </>
                   );
