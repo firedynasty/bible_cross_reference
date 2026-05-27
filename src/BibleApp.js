@@ -629,9 +629,9 @@ const NavigationPlaceholder = ({
         <button
           onClick={() => onRefPrompt && onRefPrompt()}
           className="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-500 text-white hover:bg-blue-600 font-semibold"
-          title="Go to a Bible reference"
+          title="Go to a Bible reference (r)"
         >
-          Ref
+          Ref(r)
         </button>
 
         {/* Syllable toggle for pane 2 */}
@@ -1649,6 +1649,9 @@ const BibleApp = () => {
   // State for Text Paste (in Go to Reference modal)
   const [textPasteContent, setTextPasteContent] = useState('');
   const [textParsedRefs, setTextParsedRefs] = useState([]);
+  const [refRegexMode, setRefRegexMode] = useState(() => {
+    try { return localStorage.getItem('bibleRefRegexMode') || 'parenthesized'; } catch { return 'parenthesized'; }
+  });
   const [refNotes, setRefNotes] = useState(() => localStorage.getItem('bibleRefNotes') || '');
 
   // State for Book Search Modal
@@ -3237,8 +3240,15 @@ const BibleApp = () => {
         return;
       }
 
-      // 'r' key - toggle reading ruler
-      if (e.key === 'r' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal) {
+      // 'r' key - toggle Ref prompt modal
+      if (e.key === 'r' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showRefPrompt) {
+        e.preventDefault();
+        setShowRefPrompt(true);
+        return;
+      }
+
+      // 'u' key - toggle reading ruler
+      if (e.key === 'u' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showRefPrompt) {
         e.preventDefault();
         setReadingGuide(prev => { const next = !prev; localStorage.setItem('readingGuide', next); return next; });
         return;
@@ -3919,6 +3929,8 @@ const BibleApp = () => {
           setShowWordsModal(false);
         } else if (showQuiz2Modal) {
           setShowQuiz2Modal(false);
+        } else if (showRefPrompt) {
+          setShowRefPrompt(false);
         } else {
           // No modal open — open combined Search + Story modal
           loadStorytimeForCurrent();
@@ -4005,7 +4017,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, loadStorytimeForCurrent]);
+  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showRefPrompt, loadStorytimeForCurrent]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
@@ -5676,9 +5688,9 @@ const BibleApp = () => {
                 <button
                   onClick={() => setReadingGuide(prev => { const next = !prev; localStorage.setItem('readingGuide', next); return next; })}
                   className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${readingGuide ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
-                  title="Toggle reading ruler (r)"
+                  title="Toggle reading ruler (u)"
                 >
-                  📏 (r)
+                  📏 (u)
                 </button>
 
                 {/* Collection Modal Button */}
@@ -7769,7 +7781,7 @@ const BibleApp = () => {
 
       {/* Reference Prompt Modal */}
       {showRefPrompt && (() => {
-        const refs = refPromptValue.split(',').map(r => r.trim()).filter(r => r);
+        const refs = refPromptValue.split(/[,;]/).map(r => r.trim()).filter(r => r);
         const validRefs = refs.map(r => ({ raw: r, parsed: parseSingleBibleRef(r) })).filter(r => r.parsed);
         // Helper: add current chapter + valid refs from input to history (replaces existing same book+chapter)
         const addToHistory = () => {
@@ -7875,6 +7887,11 @@ const BibleApp = () => {
               value={refPromptValue}
               onChange={(e) => setRefPromptValue(e.target.value)}
               onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setShowRefPrompt(false);
+                  return;
+                }
                 if (e.key === 'Enter' && refPromptValue.trim()) {
                   const trimmed = refPromptValue.trim();
                   if (/^\d+$/.test(trimmed) && selectedBook) {
@@ -7890,11 +7907,11 @@ const BibleApp = () => {
                   setRefPromptValue('');
                 }
               }}
-              placeholder="e.g. Ps 23, Ps 24, Matt 11:28"
+              placeholder="Ps 23; Matt 11:28, Rom 8:28"
               autoFocus
               style={{
-                width: '100%', padding: '12px', fontSize: '16px', border: `2px solid ${isDarkMode ? '#555' : '#ccc'}`,
-                borderRadius: 8, background: isDarkMode ? '#333' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333',
+                width: '100%', padding: '8px 10px', fontSize: '14px', border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
+                borderRadius: 6, background: isDarkMode ? '#333' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333',
                 boxSizing: 'border-box'
               }}
             />
@@ -7929,9 +7946,9 @@ const BibleApp = () => {
             </div>
 
             {/* Text Paste Area */}
-            <div style={{ marginTop: 16, borderTop: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, paddingTop: 12 }}>
+            <div style={{ marginTop: 10, borderTop: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, paddingTop: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>Paste sermon notes / commentary</span>
+                <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>Paste paragraphs</span>
                 {textPasteContent && (
                   <button
                     onClick={() => { setTextPasteContent(''); setTextParsedRefs([]); }}
@@ -7942,24 +7959,62 @@ const BibleApp = () => {
                 )}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <div style={{ fontSize: 11, color: isDarkMode ? '#666' : '#aaa', fontStyle: 'italic', lineHeight: 1.4 }}>
-                  Paste text — click Find Verses to extract refs to History
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 11, color: isDarkMode ? '#666' : '#aaa', fontStyle: 'italic', lineHeight: 1.4 }}>
+                    Regex:
+                  </span>
+                  <select
+                    value={refRegexMode}
+                    onChange={(e) => { setRefRegexMode(e.target.value); localStorage.setItem('bibleRefRegexMode', e.target.value); }}
+                    style={{
+                      fontSize: 11, padding: '2px 4px', borderRadius: 4,
+                      border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
+                      background: isDarkMode ? '#333' : '#fff',
+                      color: isDarkMode ? '#e0e0e0' : '#333',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="standard">Standard</option>
+                    <option value="parenthesized">Parenthesized (Luke 13:24)</option>
+                  </select>
                 </div>
                 {textPasteContent && (
                   <button
                     onClick={() => {
                       if (!textPasteContent) return;
-                      // Regex to find Bible refs like "Romans 8:28", "2 Corinthians 1:3-4", "Genesis 50:20", "Ps 23"
-                      const refRegex = /\b(\d?\s*(?:Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalms?|Proverbs?|Ecclesiastes|Song of Solomon|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Gen|Exo?d?|Lev|Num|Deut?|Josh?|Judg|Sam|Kgs|Chr|Neh|Est|Ps|Psa|Prov?|Eccl?|Song|Isa|Jer|Lam|Ezek?|Dan|Hos|Oba?|Jon|Mic|Nah|Hab|Zeph?|Hag|Zech?|Mal|Matt?|Mrk|Mk|Luk?|Lk|Joh?|Jn|Rom|Cor|Gal|Eph|Phil?|Php|Col|Thess|Tim|Tit|Phlm|Phm|Heb|Jas|Jam|Pet|Re|Rev))\s+(\d+)(?::(\d+)(?:\s*[-–]\s*(\d+))?)?/gi;
+                      const bookNames = '(?:Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalms?|Proverbs?|Ecclesiastes|Song of Solomon|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Gen|Exo?d?|Lev|Num|Deut?|Josh?|Judg|Sam|Kgs|Chr|Neh|Est|Ps|Psa|Prov?|Eccl?|Song|Isa|Jer|Lam|Ezek?|Dan|Hos|Oba?|Jon|Mic|Nah|Hab|Zeph?|Hag|Zech?|Mal|Matt?|Mrk|Mk|Luk?|Lk|Joh?|Jn|Rom|Cor|Gal|Eph|Phil?|Php|Col|Thess|Tim|Tit|Phlm|Phm|Heb|Jas|Jam|Pet|Re|Rev)';
+                      const singleRefRegex = new RegExp('\\b(\\d?\\s*' + bookNames + ')\\s+(\\d+)(?::(\\d+)(?:\\s*[-–]\\s*(\\d+))?)?', 'gi');
                       const found = [];
                       const seen = new Set();
-                      let m;
-                      while ((m = refRegex.exec(textPasteContent)) !== null) {
-                        const refStr = m[0].replace(/\*\*/g, '').trim();
-                        const parsed = parseSingleBibleRef(refStr);
-                        if (parsed) {
-                          const key = `${parsed.abbrev}_${parsed.chapter}`;
-                          if (!seen.has(refStr)) {
+                      if (refRegexMode === 'parenthesized') {
+                        // Find all parenthesized groups, then split by semicolons to get each ref
+                        const parenRegex = /\(([^)]+)\)/g;
+                        let pm;
+                        while ((pm = parenRegex.exec(textPasteContent)) !== null) {
+                          const inner = pm[1];
+                          const parts = inner.split(';');
+                          for (const part of parts) {
+                            const trimmed = part.replace(/\*\*/g, '').trim();
+                            if (!trimmed) continue;
+                            singleRefRegex.lastIndex = 0;
+                            const rm = singleRefRegex.exec(trimmed);
+                            if (rm) {
+                              const refStr = rm[0].trim();
+                              const parsed = parseSingleBibleRef(refStr);
+                              if (parsed && !seen.has(refStr)) {
+                                seen.add(refStr);
+                                found.push({ raw: refStr, parsed });
+                              }
+                            }
+                          }
+                        }
+                      } else {
+                        // Standard: word-boundary match across entire text
+                        let m;
+                        while ((m = singleRefRegex.exec(textPasteContent)) !== null) {
+                          const refStr = m[0].replace(/\*\*/g, '').trim();
+                          const parsed = parseSingleBibleRef(refStr);
+                          if (parsed && !seen.has(refStr)) {
                             seen.add(refStr);
                             found.push({ raw: refStr, parsed });
                           }
@@ -7988,10 +8043,10 @@ const BibleApp = () => {
                   const refs = parseDropboxVerseFile(val);
                   setTextParsedRefs(refs);
                 }}
-                placeholder={'Paste text with quoted refs, e.g.\n\n"Ephesians 5:25, 33"\n — Husbands are called to love...'}
+                placeholder={'Paste text with refs e.g. "...make every effort (Romans 14:19; 1 Timothy 6:11)..."'}
                 style={{
-                  width: '100%', minHeight: 80, padding: 10, fontSize: 13, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
-                  borderRadius: 8, background: isDarkMode ? '#333' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333',
+                  width: '100%', minHeight: 120, padding: 10, fontSize: 13, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
+                  borderRadius: 6, background: isDarkMode ? '#333' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333',
                   boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4
                 }}
               />
