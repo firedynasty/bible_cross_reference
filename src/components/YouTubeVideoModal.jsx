@@ -338,8 +338,8 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
       >
         <div
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-6xl overflow-hidden rounded-xl border border-gray-700 bg-gray-900 text-gray-200 shadow-2xl flex flex-col"
-          style={{ maxHeight: '95vh', margin: '0 16px' }}
+          className="overflow-hidden rounded-xl border border-gray-700 bg-gray-900 text-gray-200 shadow-2xl flex flex-col"
+          style={{ width: '98vw', height: '96vh' }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
@@ -408,9 +408,9 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
           </div>
 
           {/* Video */}
-          <div className="p-4">
+          <div className="p-2 flex-1 min-h-0">
             {videoId ? (
-              <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden' }}>
+              <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                 <div
                   ref={containerRef}
                   style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
