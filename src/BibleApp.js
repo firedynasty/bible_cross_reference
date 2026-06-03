@@ -10530,7 +10530,7 @@ const BibleApp = () => {
 
       <FurtherReadingModal open={showFiguresModal} onClose={() => setShowFiguresModal(false)} />
       <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
-      <YouTubeVideoModal open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} bookAbbrev={selectedBook?.abbrev} onPlayingChange={setIsYouTubePlaying} />
+      <YouTubeVideoModal open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsYouTubePlaying} />
 
     </div>
   );

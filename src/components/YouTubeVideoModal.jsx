@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import youtubeChapterTimestamps from '../data/youtubeChapterTimestamps';
 
 // Map book abbreviations to YouTube playlist video IDs
 // Playlist: https://www.youtube.com/playlist?list=PLyH3jcNYnj_vee7HfFWgGmcW2E3qdsHLi
@@ -137,7 +138,7 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function YouTubeVideoModal({ open, onClose, bookAbbrev, onPlayingChange }) {
+export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentChapter, onPlayingChange }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [playerReady, setPlayerReady] = useState(false);
   const playerRef = useRef(null);
@@ -145,8 +146,34 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, onPlaying
   const containerRef = useRef(null);
   const bookAbbrevRef = useRef(bookAbbrev);
   const activeBookRef = useRef(null);
+  const chapterSeekDone = useRef(null); // track which chapter we already seeked to
 
   useEffect(() => { bookAbbrevRef.current = bookAbbrev; }, [bookAbbrev]);
+
+  // Seek to chapter timestamp when modal opens with a chapter that has timestamp data
+  // If exact chapter is missing, decrement until we find one
+  useEffect(() => {
+    if (!open || !playerRef.current || !bookAbbrev || !currentChapter) return;
+    const seekKey = `${bookAbbrev}-${currentChapter}`;
+    if (chapterSeekDone.current === seekKey) return;
+    const bookTimestamps = youtubeChapterTimestamps[bookAbbrev];
+    if (!bookTimestamps) return;
+    let ch = currentChapter;
+    while (ch >= 1 && bookTimestamps[ch] == null) { ch--; }
+    if (ch < 1) return;
+    const ts = bookTimestamps[ch];
+    try {
+      playerRef.current.seekTo(ts, true);
+      setCurrentTime(ts);
+      saveTime(bookAbbrev, ts);
+      chapterSeekDone.current = seekKey;
+    } catch {}
+  }, [open, playerReady, bookAbbrev, currentChapter]);
+
+  // Reset chapter seek tracking when modal closes
+  useEffect(() => {
+    if (!open) { chapterSeekDone.current = null; }
+  }, [open]);
 
   // Press 0 to reset video to beginning while modal is open
   useEffect(() => {
@@ -317,7 +344,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, onPlaying
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
             <h2 className="text-lg font-semibold flex items-center flex-wrap gap-2">
-              <span>{bookName} — Overview</span>
+              <span>{bookName}{currentChapter ? ` Ch.${currentChapter}` : ''} — Audio</span>
               <span className="text-sm text-gray-400 font-mono">{formatTime(currentTime)}</span>
               {videoId && (
                 <>
