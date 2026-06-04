@@ -348,22 +348,38 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
               <span className="text-sm text-gray-400 font-mono">{formatTime(currentTime)}</span>
               {videoId && (
                 <>
-                  <button
-                    onClick={() => {
-                      if (playerRef.current) {
-                        try {
-                          const t = Math.max(0, playerRef.current.getCurrentTime() - 180);
-                          playerRef.current.seekTo(t, true);
-                          setCurrentTime(t);
-                          saveTime(bookAbbrev, t);
-                        } catch {}
-                      }
-                    }}
-                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
-                  >
-                    -3min(1)
-                  </button>
-                  &nbsp;&nbsp;
+                  {(() => {
+                    const bookTimestamps = youtubeChapterTimestamps[bookAbbrev];
+                    if (!bookTimestamps) return null;
+                    const chapters = Object.keys(bookTimestamps).map(Number).sort((a, b) => a - b);
+                    return (
+                      <select
+                        className="border border-gray-600 bg-gray-800 text-gray-200 rounded px-1 py-0 text-sm"
+                        style={{minWidth: '40px'}}
+                        value=""
+                        onChange={(e) => {
+                          const ch = parseInt(e.target.value, 10);
+                          if (!ch || !playerRef.current) return;
+                          let targetCh = ch;
+                          while (targetCh >= 1 && bookTimestamps[targetCh] == null) { targetCh--; }
+                          if (targetCh < 1) return;
+                          const ts = bookTimestamps[targetCh];
+                          try {
+                            playerRef.current.seekTo(ts, true);
+                            setCurrentTime(ts);
+                            saveTime(bookAbbrev, ts);
+                            chapterSeekDone.current = `${bookAbbrev}-${ch}`;
+                          } catch {}
+                        }}
+                        title="Jump to chapter timestamp"
+                      >
+                        <option value="" disabled>ch</option>
+                        {chapters.map(ch => (
+                          <option key={ch} value={ch}>{ch}</option>
+                        ))}
+                      </select>
+                    );
+                  })()}
                   <button
                     onClick={() => {
                       if (playerRef.current) {
