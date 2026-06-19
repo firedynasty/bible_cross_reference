@@ -3074,14 +3074,15 @@ const BibleApp = () => {
   // Listen for speakVerseContent events from the pane 2 TTS button
   useEffect(() => {
     const handleSpeakVerseContent = (event) => {
-      const { verseNumber, lang } = event.detail;
+      const { verseNumber, lastVerse, lang } = event.detail;
       if (!verseNumber) return;
+      const readMultiple = lastVerse && lastVerse > verseNumber;
       // Force undelimit mode so it reads the full verse
       const prevMode = gridReadModeRef.current;
       gridReadModeRef.current = 'undelimit';
       if (lang === 'en') {
         window.dispatchEvent(new CustomEvent('speakVerseContentEnglish', {
-          detail: { verseNumber }
+          detail: { verseNumber, readToEnd: readMultiple }
         }));
       } else if (lang === 'cant') {
         speakVerseInGrid(verseNumber, 'cantonese');
@@ -7000,7 +7001,7 @@ const BibleApp = () => {
                           const el = document.getElementById(`right-pane-verse-${i}`);
                           if (!el) break;
                           const elRect = el.getBoundingClientRect();
-                          if (elRect.top >= paneRect.top - 10) {
+                          if (elRect.bottom > paneRect.top + 40) {
                             topVerse = i;
                             break;
                           }
@@ -7013,7 +7014,6 @@ const BibleApp = () => {
                             const offset = nextRect.top - paneRect.top + pane.scrollTop;
                             pane.scrollTo({ top: offset, behavior: 'smooth' });
                           } else if (hasNext) {
-                            // At the last verse, go to next chapter
                             navToChapter(p2Chapter + 1);
                           }
                         }
@@ -7035,13 +7035,23 @@ const BibleApp = () => {
                           const el = document.getElementById(`right-pane-verse-${i}`);
                           if (!el) break;
                           const elRect = el.getBoundingClientRect();
-                          if (elRect.top >= paneRect.top - 10) {
+                          if (elRect.bottom > paneRect.top + 40) {
                             topVerse = i;
                             break;
                           }
                         }
+                        // Check if bottom buttons are visible — if so, read all remaining verses
+                        const bottomBtns = document.getElementById('pane2-bottom-buttons');
+                        const atBottom = bottomBtns && bottomBtns.getBoundingClientRect().top < paneRect.bottom;
+                        let lastVerse = topVerse;
+                        if (atBottom) {
+                          for (let i = topVerse + 1; i <= 200; i++) {
+                            if (!document.getElementById(`right-pane-verse-${i}`)) break;
+                            lastVerse = i;
+                          }
+                        }
                         window.dispatchEvent(new CustomEvent('speakVerseContent', {
-                          detail: { verseNumber: topVerse, lang: sidebarLang || 'en' }
+                          detail: { verseNumber: topVerse, lastVerse: lastVerse, lang: sidebarLang || 'en' }
                         }));
                       }}
                       style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
@@ -7512,7 +7522,7 @@ const BibleApp = () => {
                   </div>
               
               {/* Navigation buttons for KJV panel */}
-                  <div className="mt-10 flex justify-between pb-4">
+                  <div id="pane2-bottom-buttons" className="mt-10 flex justify-between pb-4">
                     <button
                       onClick={handleStorytimeButtonClick}
                       className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"

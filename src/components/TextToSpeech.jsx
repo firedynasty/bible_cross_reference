@@ -1102,9 +1102,12 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   // Listen for speakVerseContent events (English - reads the actual verse text)
   useEffect(() => {
     const handleSpeakVerseContent = (event) => {
-      const { verseNumber } = event.detail;
+      const { verseNumber, readToEnd: shouldReadToEnd } = event.detail;
       if (verseNumber) {
         setSelectedVerse(verseNumber);
+        if (shouldReadToEnd) {
+          setReadToEnd(true);
+        }
         speakVerse(verseNumber);
       }
     };
