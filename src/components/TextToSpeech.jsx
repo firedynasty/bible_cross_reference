@@ -1099,6 +1099,19 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
     };
   }, [speakVerseNumber]);
 
+  // Listen for speakVerseContent events (English - reads the actual verse text)
+  useEffect(() => {
+    const handleSpeakVerseContent = (event) => {
+      const { verseNumber } = event.detail;
+      if (verseNumber) {
+        setSelectedVerse(verseNumber);
+        speakVerse(verseNumber);
+      }
+    };
+    window.addEventListener('speakVerseContentEnglish', handleSpeakVerseContent);
+    return () => window.removeEventListener('speakVerseContentEnglish', handleSpeakVerseContent);
+  }, [speakVerse, setSelectedVerse]);
+
   // Part-by-part reading: split verse by punctuation and read one segment per click
   // Uses refs to avoid stale closure issues with speechSynthesis.cancel() triggering onend
   const speakNextPart = useCallback(() => {

@@ -736,6 +736,7 @@ const NavigationPlaceholder = ({
         {/* Language cycle + open buttons */}
         {(() => {
           const langColors = {
+            en: 'bg-gray-500 hover:bg-gray-600',
             cant: 'bg-amber-500 hover:bg-amber-600',
             chin: 'bg-green-500 hover:bg-green-600',
             heb: 'bg-indigo-500 hover:bg-indigo-600',
@@ -743,7 +744,7 @@ const NavigationPlaceholder = ({
             fr: 'bg-blue-600 hover:bg-blue-700',
           };
           const isOpen = showVerseGrid || showSpanishGrid || showHebrewGrid || showFrenchGrid;
-          const label = sidebarLang || 'cant';
+          const label = sidebarLang || 'en';
           const colorClass = langColors[label];
           return (
             <>
@@ -756,19 +757,13 @@ const NavigationPlaceholder = ({
                 <svg width="22" height="16" viewBox="0 0 68 48" style={{flexShrink:0}}><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61-1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="red"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg>
                 <span style={{fontSize:10,color:'#ccc'}}>(y)</span>
               </button>
+              <span className="ml-2" style={{ fontSize: 16 }}>🔊</span>
               <button
                 onClick={onSidebarLangCycle}
-                className={`ml-2 px-2 py-0.5 rounded focus:outline-none text-xs text-white font-semibold ${colorClass}`}
-                title="Cycle language (cant / chin / heb / span / fr)"
+                className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs text-white font-semibold ${colorClass}`}
+                title="Cycle language (en / cant / chin / heb / span / fr)"
               >
                 {label}
-              </button>
-              <button
-                onClick={onLangToggleOpen}
-                className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${isOpen ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                title={isOpen ? 'Close language sidebar' : 'Open language sidebar'}
-              >
-                {isOpen ? '✕' : '▶'}
               </button>
               {/* Freestyle Beats Toggle */}
               {(() => {
@@ -3075,6 +3070,35 @@ const BibleApp = () => {
     setSpeakingFrenchVerse(null);
     setShowFrenchGrid(false);
   };
+
+  // Listen for speakVerseContent events from the pane 2 TTS button
+  useEffect(() => {
+    const handleSpeakVerseContent = (event) => {
+      const { verseNumber, lang } = event.detail;
+      if (!verseNumber) return;
+      // Force undelimit mode so it reads the full verse
+      const prevMode = gridReadModeRef.current;
+      gridReadModeRef.current = 'undelimit';
+      if (lang === 'en') {
+        window.dispatchEvent(new CustomEvent('speakVerseContentEnglish', {
+          detail: { verseNumber }
+        }));
+      } else if (lang === 'cant') {
+        speakVerseInGrid(verseNumber, 'cantonese');
+      } else if (lang === 'chin') {
+        speakVerseInGrid(verseNumber, 'mandarin');
+      } else if (lang === 'heb') {
+        speakVerseInHebrewGrid(verseNumber);
+      } else if (lang === 'span') {
+        speakVerseInSpanishGrid(verseNumber);
+      } else if (lang === 'fr') {
+        speakVerseInFrenchGrid(verseNumber);
+      }
+      gridReadModeRef.current = prevMode;
+    };
+    window.addEventListener('speakVerseContent', handleSpeakVerseContent);
+    return () => window.removeEventListener('speakVerseContent', handleSpeakVerseContent);
+  }); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Helper function to parse verse filter file
   const parseVerseFilterFile = (fileText) => {
@@ -5508,7 +5532,7 @@ const BibleApp = () => {
 
             {/* Language cycle + open buttons */}
             {(() => {
-              const langOptions = ['cant', 'chin', 'heb', 'span', 'fr'];
+              const langOptions = ['en', 'cant', 'chin', 'heb', 'span', 'fr'];
               const langColors = {
                 cant: 'bg-amber-500 hover:bg-amber-600',
                 chin: 'bg-green-500 hover:bg-green-600',
@@ -6190,7 +6214,7 @@ const BibleApp = () => {
               onBreathe={() => setShowBreatheModal(true)}
               sidebarLang={sidebarLang}
               onSidebarLangCycle={() => {
-                const langOptions = ['cant', 'chin', 'heb', 'span', 'fr'];
+                const langOptions = ['en', 'cant', 'chin', 'heb', 'span', 'fr'];
                 const idx = langOptions.indexOf(sidebarLang);
                 setSidebarLang(langOptions[(idx + 1) % langOptions.length]);
               }}
@@ -6969,32 +6993,64 @@ const BibleApp = () => {
                       onClick={() => {
                         const pane = kjvContentRef.current;
                         if (!pane) return;
-                        const maxScroll = pane.scrollHeight - pane.clientHeight;
-                        const atBottom = maxScroll > 0 && pane.scrollTop >= maxScroll - 5;
-                        if (atBottom && hasNext) {
-                          navToChapter(p2Chapter + 1);
-                          return;
+                        const paneRect = pane.getBoundingClientRect();
+                        // Find the topmost visible verse
+                        let topVerse = null;
+                        for (let i = 1; i <= 200; i++) {
+                          const el = document.getElementById(`right-pane-verse-${i}`);
+                          if (!el) break;
+                          const elRect = el.getBoundingClientRect();
+                          if (elRect.top >= paneRect.top - 10) {
+                            topVerse = i;
+                            break;
+                          }
                         }
-                        pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
+                        // Scroll to the next verse
+                        if (topVerse !== null) {
+                          const nextEl = document.getElementById(`right-pane-verse-${topVerse + 1}`);
+                          if (nextEl) {
+                            const nextRect = nextEl.getBoundingClientRect();
+                            const offset = nextRect.top - paneRect.top + pane.scrollTop;
+                            pane.scrollTo({ top: offset, behavior: 'smooth' });
+                          } else if (hasNext) {
+                            // At the last verse, go to next chapter
+                            navToChapter(p2Chapter + 1);
+                          }
+                        }
                       }}
                       style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
-                      title="Page down"
+                      title="Next verse"
                     >
                       <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
-                    {hasNext && (
-                      <button
-                        onClick={() => navToChapter(p2Chapter + 1)}
-                        style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
-                        title={`Next chapter (${p2Chapter + 1})`}
-                      >
-                        <span style={{ fontSize: 28, fontWeight: 'bold', color: 'rgba(0,0,0,0.7)' }}>n</span>
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        const pane = kjvContentRef.current;
+                        if (!pane) return;
+                        const paneRect = pane.getBoundingClientRect();
+                        let topVerse = 1;
+                        for (let i = 1; i <= 200; i++) {
+                          const el = document.getElementById(`right-pane-verse-${i}`);
+                          if (!el) break;
+                          const elRect = el.getBoundingClientRect();
+                          if (elRect.top >= paneRect.top - 10) {
+                            topVerse = i;
+                            break;
+                          }
+                        }
+                        window.dispatchEvent(new CustomEvent('speakVerseContent', {
+                          detail: { verseNumber: topVerse, lang: sidebarLang || 'en' }
+                        }));
+                      }}
+                      style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
+                      title="Read verse aloud (TTS)"
+                    >
+                      <span style={{ fontSize: 22, color: 'rgba(0,0,0,0.7)' }}>🔊</span>
+                    </button>
                   </>
                 );
               })()}
