@@ -3993,10 +3993,9 @@ const BibleApp = () => {
           setShowBucketsModal(false);
         } else if (showSearchModal) {
           setShowSearchModal(false);
-        } else if (collectionVersePreview) {
-          setCollectionVersePreview(null);
         } else if (showCollectionModal) {
-          setShowCollectionModal(false);
+          if (collectionVersePreview) setCollectionVersePreview(null);
+          else setShowCollectionModal(false);
         } else if (showDropboxModal) {
           setShowDropboxModal(false);
         } else if (showYouTubeModal) {
@@ -8276,29 +8275,62 @@ const BibleApp = () => {
                     }}>
                       {referenceCollections[name].split('\n').map(l => l.trim()).filter(l => l).map((ref, i) => {
                         const isLastClicked = lastCollectionClick.collection === name && lastCollectionClick.ref === ref;
+                        const isPreviewOpen = collectionVersePreview && collectionVersePreview.collection === name && collectionVersePreview.ref === ref;
                         return (
-                          <button
-                            key={i}
-                            onClick={() => {
-                              const text = getVerseTextForRef(ref);
-                              setCollectionVersePreview({ ref, text: text || '(verse not found in current translation)', collection: name });
-                              setLastCollectionClick({ collection: name, ref });
-                              setShowCollectionModal(false);
-                            }}
-                            style={{
-                              display: 'block', width: '100%', padding: '8px 18px', fontSize: 14,
-                              border: 'none', cursor: 'pointer',
-                              textAlign: 'left', fontWeight: isLastClicked ? 700 : 400,
-                              transition: 'background 0.15s',
-                              background: isLastClicked ? (isDarkMode ? '#3a3a2a' : '#fef9c3') : 'transparent',
-                              color: isLastClicked ? (isDarkMode ? '#fde047' : '#854d0e') : (isDarkMode ? '#a0b0ff' : '#3355cc'),
-                              borderLeft: isLastClicked ? '3px solid #eab308' : '3px solid transparent'
-                            }}
-                            onMouseEnter={(e) => { if (!isLastClicked) e.target.style.background = isDarkMode ? '#2a2a4a' : '#e8ecff'; }}
-                            onMouseLeave={(e) => { if (!isLastClicked) e.target.style.background = 'transparent'; }}
-                          >
-                            {ref}
-                          </button>
+                          <div key={i}>
+                            <button
+                              onClick={() => {
+                                if (isPreviewOpen) {
+                                  setCollectionVersePreview(null);
+                                } else {
+                                  const text = getVerseTextForRef(ref);
+                                  setCollectionVersePreview({ ref, text: text || '(verse not found in current translation)', collection: name });
+                                  setLastCollectionClick({ collection: name, ref });
+                                }
+                              }}
+                              style={{
+                                display: 'block', width: '100%', padding: '8px 18px', fontSize: 14,
+                                border: 'none', cursor: 'pointer',
+                                textAlign: 'left', fontWeight: isLastClicked ? 700 : 400,
+                                transition: 'background 0.15s',
+                                background: isLastClicked ? (isDarkMode ? '#3a3a2a' : '#fef9c3') : 'transparent',
+                                color: isLastClicked ? (isDarkMode ? '#fde047' : '#854d0e') : (isDarkMode ? '#a0b0ff' : '#3355cc'),
+                                borderLeft: isLastClicked ? '3px solid #eab308' : '3px solid transparent'
+                              }}
+                              onMouseEnter={(e) => { if (!isLastClicked) e.target.style.background = isDarkMode ? '#2a2a4a' : '#e8ecff'; }}
+                              onMouseLeave={(e) => { if (!isLastClicked) e.target.style.background = 'transparent'; }}
+                            >
+                              {ref}
+                            </button>
+                            {isPreviewOpen && (
+                              <div style={{ padding: '8px 18px 12px' }}>
+                                <div style={{
+                                  fontSize: 14, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : '#333',
+                                  fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic',
+                                  padding: '12px 14px', borderRadius: 8,
+                                  background: isDarkMode ? '#2a2a3a' : '#f8f7ff',
+                                  border: `1px solid ${isDarkMode ? '#3a3a5a' : '#e0e0f0'}`,
+                                  marginBottom: 8
+                                }}>
+                                  {collectionVersePreview.text}
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    navigateToRefWithHighlight(ref);
+                                    setCollectionVersePreview(null);
+                                    setShowCollectionModal(false);
+                                  }}
+                                  style={{
+                                    width: '100%', padding: '8px 16px', fontSize: 13, border: 'none', borderRadius: 8,
+                                    background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white',
+                                    cursor: 'pointer', fontWeight: 700
+                                  }}
+                                >
+                                  Go to {ref}
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         );
                       })}
                     </div>
@@ -8311,64 +8343,6 @@ const BibleApp = () => {
               style={{ marginTop: 16, width: '100%', padding: 12, fontSize: 15, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}
             >
               Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Collection Verse Preview Overlay */}
-      {collectionVersePreview && (
-        <div
-          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', zIndex: 10001, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-          onClick={() => setCollectionVersePreview(null)}
-        >
-          <div
-            style={{ background: isDarkMode ? '#1a1a2e' : '#fff', borderRadius: 16, padding: '32px 28px', width: '90%', maxWidth: 500, maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', position: 'relative', textAlign: 'center' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setCollectionVersePreview(null)}
-              style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 1, color: isDarkMode ? '#aaa' : '#666', fontSize: 20 }}
-              title="Close"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <div style={{ fontSize: 18, fontWeight: 700, color: isDarkMode ? '#a0b0ff' : '#667eea', marginBottom: 16 }}>
-              {collectionVersePreview.ref}
-            </div>
-            <div style={{
-              fontSize: 16, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : '#333',
-              fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic',
-              padding: '16px 12px', borderRadius: 10,
-              background: isDarkMode ? '#2a2a3a' : '#f8f7ff',
-              border: `1px solid ${isDarkMode ? '#3a3a5a' : '#e0e0f0'}`,
-              maxHeight: '40vh', overflow: 'auto'
-            }}>
-              {collectionVersePreview.text}
-            </div>
-            <button
-              onClick={() => {
-                navigateToRefWithHighlight(collectionVersePreview.ref);
-                setCollectionVersePreview(null);
-              }}
-              style={{
-                marginTop: 20, padding: '12px 32px', fontSize: 15, border: 'none', borderRadius: 10,
-                background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white',
-                cursor: 'pointer', fontWeight: 700, letterSpacing: '0.02em',
-                boxShadow: '0 4px 15px rgba(102,126,234,0.4)', transition: 'transform 0.15s, box-shadow 0.15s'
-              }}
-              onMouseEnter={(e) => { e.target.style.transform = 'scale(1.03)'; e.target.style.boxShadow = '0 6px 20px rgba(102,126,234,0.5)'; }}
-              onMouseLeave={(e) => { e.target.style.transform = 'scale(1)'; e.target.style.boxShadow = '0 4px 15px rgba(102,126,234,0.4)'; }}
-            >
-              Go to {collectionVersePreview.ref}
-            </button>
-            <button
-              onClick={() => { setCollectionVersePreview(null); setExpandedCollection(collectionVersePreview.collection); setShowCollectionModal(true); }}
-              style={{ marginTop: 10, display: 'block', width: '100%', padding: 10, fontSize: 13, border: 'none', borderRadius: 8, background: isDarkMode ? '#333' : '#e8e8e8', color: isDarkMode ? '#ccc' : '#555', cursor: 'pointer', fontWeight: 600 }}
-            >
-              Back to Collection
             </button>
           </div>
         </div>
