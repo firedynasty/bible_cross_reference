@@ -1264,7 +1264,35 @@ Psalm 139:13-14
 Amos 9:6
 John 1:3
 Psalm 124:8
-Acts 17:28`
+Acts 17:28`,
+  "Miracles": `Genesis 1:1
+Exodus 17:20
+Exodus 14:21-22
+Deuteronomy 21:34-35
+1 Kings 17:21-22
+1 Kings 18:36-38
+2 Kings 5:14
+1 Chronicles 29:11-12
+Jeremiah 32:17
+Matthew 1:20, 23
+Matthew 11:5
+Luke 8:24
+John 20:31`,
+  "Ask": `Jeremiah 33:3
+Ecclesiastes 11:5
+Proverbs 14:29
+Proverbs 4:7
+Psalm 32:8
+2 Corinthians 4:18
+Ephesians 1:17
+Proverbs 19:21
+1 Thessalonians 5:21-22
+Psalm 119:130
+Matthew 19:26
+Isaiah 55:9
+Isaiah 40:28
+2 Corinthians 10:3
+2 Peter 3:18`
 };
 
 // Dropbox PKCE OAuth helpers
@@ -7110,6 +7138,43 @@ const BibleApp = () => {
                       title="Read verse aloud (TTS)"
                     >
                       <span style={{ fontSize: 22, color: 'rgba(0,0,0,0.7)' }}>🔊</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const pane = kjvContentRef.current;
+                        if (!pane) return;
+                        const paneRect = pane.getBoundingClientRect();
+                        let topVerse = 1;
+                        for (let i = 1; i <= 200; i++) {
+                          const el = document.getElementById(`right-pane-verse-${i}`);
+                          if (!el) break;
+                          const elRect = el.getBoundingClientRect();
+                          if (elRect.bottom > paneRect.top + 40) {
+                            topVerse = i;
+                            break;
+                          }
+                        }
+                        const verseEl = document.getElementById(`right-pane-verse-${topVerse}`);
+                        if (verseEl) {
+                          const p = verseEl.querySelector('p');
+                          if (p) {
+                            const spans = p.querySelectorAll('span');
+                            const textSpan = spans.length >= 2 ? spans[1] : null;
+                            const text = textSpan ? textSpan.textContent.trim() : p.textContent.trim();
+                            navigator.clipboard.writeText(text).then(() => {
+                              const btn = document.getElementById('pane2-copy-btn');
+                              if (btn) { btn.querySelector('span').textContent = '✓'; setTimeout(() => { btn.querySelector('span').textContent = '📋'; }, 1000); }
+                            });
+                          }
+                        }
+                      }}
+                      id="pane2-copy-btn"
+                      style={{ position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = 'translateX(-50%)'; }}
+                      title="Copy verse 1 from pane 2"
+                    >
+                      <span style={{ fontSize: 22, color: 'rgba(0,0,0,0.7)' }}>📋</span>
                     </button>
                   </>
                 );
