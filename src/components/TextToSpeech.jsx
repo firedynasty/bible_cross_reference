@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, us
 import { ChevronDown, ChevronRight, Play, SkipForward } from 'lucide-react';
 import kjvAudioData from '../data/kjvAudio';
 
-const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse, onNextChapter, onQA, showStudyQModal, onQuiz, showQuizModal, onWords, showWordsModal, onQuiz2, showQuiz2Modal, onBuckets, showBucketsModal, onCursive, showCursiveModal, onBreathe, showBreatheModal, showPane2Syllables, onTogglePane2Syllables }, ref) => {
+const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapter, rightPaneTranslation, speechVolume, translations, onTranslationChange, chineseBibleData, lastGridVerse, onNextChapter, onQA, showStudyQModal, onQuiz, showQuizModal, onWords, showWordsModal, onQuiz2, showQuiz2Modal, onBuckets, showBucketsModal, onCursive, showCursiveModal, onBreathe, showBreatheModal, showPane2Syllables, onTogglePane2Syllables, isFeatureVisible }, ref) => {
   const [selectedVerse, setSelectedVerse] = useState(1);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -1253,62 +1253,62 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       </button>
 
       {/* QA button - opens study questions in pane 2 */}
-      <button
+      {(!isFeatureVisible || isFeatureVisible('qa')) && <button
         onClick={() => onQA && onQA()}
         className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showStudyQModal ? 'bg-amber-600 text-white' : 'bg-amber-500 text-white hover:bg-amber-600'}`}
         title="Study discussion questions for current chapter"
       >
         QA
-      </button>
+      </button>}
 
       {/* Fill-in-the-Blank Quiz Button */}
-      <button
+      {(!isFeatureVisible || isFeatureVisible('quiz')) && <button
         onClick={() => onQuiz && onQuiz()}
         className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showQuizModal ? 'bg-rose-600 text-white' : 'bg-rose-500 text-white hover:bg-rose-600'}`}
         title="Fill-in-the-blank quiz for current chapter"
       >
         Quiz
-      </button>
+      </button>}
 
       {/* Words Modal Button */}
-      <button
+      {(!isFeatureVisible || isFeatureVisible('words')) && <button
         onClick={() => onWords && onWords()}
         className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showWordsModal ? 'bg-purple-700 text-white' : 'bg-purple-600 text-white hover:bg-purple-700'}`}
         title="Noun pairs from current chapter"
       >
         Words(w)
-      </button>
+      </button>}
 
       {/* Recite Quiz Button */}
-      <button
+      {(!isFeatureVisible || isFeatureVisible('recite')) && <button
         onClick={() => onQuiz2 && onQuiz2()}
         className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showQuiz2Modal ? 'bg-rose-700 text-white' : 'bg-rose-600 text-white hover:bg-rose-700'}`}
         title="Recite verses from memory and get graded"
       >
         Recite
-      </button>
+      </button>}
 
 
       {/* Cursive Writing Button */}
-      <button
+      {(!isFeatureVisible || isFeatureVisible('cursive')) && <button
         onClick={() => onCursive && onCursive()}
         className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showCursiveModal ? 'bg-amber-700 text-white' : 'bg-amber-600 text-white hover:bg-amber-700'}`}
         title="Cursive writing animation for verses"
       >
         Cursive
-      </button>
+      </button>}
 
       {/* Breathe Button */}
-      <button
+      {(!isFeatureVisible || isFeatureVisible('breathe')) && <button
         onClick={() => onBreathe && onBreathe()}
         className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showBreatheModal ? 'bg-slate-700 text-white' : 'bg-slate-600 text-white hover:bg-slate-700'}`}
         title="Breathing exercise timer"
       >
         br_
-      </button>
+      </button>}
 
       {/* To:TextR link button */}
-      <a
+      {(!isFeatureVisible || isFeatureVisible('goTextR')) && <a
         href="https://vercel-text-to-speech.vercel.app/"
         target="_blank"
         rel="noopener noreferrer"
@@ -1316,43 +1316,43 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         title="Open Text-to-Speech app"
       >
         Go:TextR
-      </a>
+      </a>}
 
       {/* OpenAI API Key button */}
-      <button
+      {(!isFeatureVisible || isFeatureVisible('oaiKey')) && <button
         onClick={handleOaiKey}
         className="px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-gray-500 text-white hover:bg-gray-600"
         title="Set OpenAI API key for TTS"
       >
         Key
-      </button>
+      </button>}
 
       {/* OpenAI TTS Read button (Onyx voice, verse by verse) */}
-      <button
+      {(!isFeatureVisible || isFeatureVisible('oaiRead')) && <button
         onClick={handleOpenAiRead}
         className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${oaiTtsPlaying ? 'bg-red-500 text-white hover:bg-red-600' : oaiTtsLoading ? 'bg-yellow-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
         title={oaiTtsPlaying ? 'Stop reading' : 'Read chapter verse by verse with OpenAI Onyx voice'}
       >
         {oaiTtsLoading ? '...' : oaiTtsPlaying ? 'Stop' : 'Read'}
-      </button>
+      </button>}
 
       {/* KJV Audio Read button */}
-      <button
+      {(!isFeatureVisible || isFeatureVisible('kjvRead')) && <button
         onClick={handleKjvRead}
         className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${kjvPlaying ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-amber-700 text-white hover:bg-amber-800'}`}
         title={kjvPlaying ? 'Stop KJV audio' : 'Play KJV audio for this chapter'}
       >
         {kjvPlaying ? 'Stop' : 'Read:KJV'}
-      </button>
+      </button>}
 
       {/* Chapters to Clipboard button */}
-      <button
+      {(!isFeatureVisible || isFeatureVisible('ttsChpCopy')) && <button
         onClick={() => setShowChaptersClipboardModal(true)}
         className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-blue-500 text-white hover:bg-blue-600"
         title="Copy chapters of current book to clipboard"
       >
         Chp📋
-      </button>
+      </button>}
 
       {/* Chapters to Clipboard Modal */}
       {showChaptersClipboardModal && (

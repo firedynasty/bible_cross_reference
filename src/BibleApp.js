@@ -507,7 +507,8 @@ const NavigationPlaceholder = ({
   showPane2Syllables,
   onTogglePane2Syllables,
   syllabifyText,
-  onRefPrompt
+  onRefPrompt,
+  isFeatureVisible
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -626,25 +627,25 @@ const NavigationPlaceholder = ({
       <div className="flex flex-wrap gap-y-2 items-center bg-blue-50 px-2 py-1 rounded-md text-blue-800 text-sm">
         
         {/* Reference Prompt Button */}
-        <button
+        {isFeatureVisible('ref') && <button
           onClick={() => onRefPrompt && onRefPrompt()}
           className="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-500 text-white hover:bg-blue-600 font-semibold"
           title="Go to a Bible reference (r)"
         >
           Ref(r)
-        </button>
+        </button>}
 
         {/* Syllable toggle for pane 2 */}
-        <button
+        {isFeatureVisible('syllable') && <button
           onClick={() => onTogglePane2Syllables && onTogglePane2Syllables()}
           className={`ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showPane2Syllables ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-indigo-500 text-white hover:bg-indigo-600'}`}
           title={showPane2Syllables ? 'Syllable breaks ON (click to hide)' : 'Show syllable breaks in pane 2'}
         >
           {showPane2Syllables ? 'Syl: ON' : 'Syllable'}
-        </button>
+        </button>}
 
         {/* Dark Mode Toggle Button */}
-        <button
+        {isFeatureVisible('darkMode') && <button
           onClick={() => onDarkModeToggle && onDarkModeToggle()}
           className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
             isDarkMode
@@ -656,7 +657,7 @@ const NavigationPlaceholder = ({
           title={isDarkMode ? "Switch to sepia mode" : isSepiaMode ? "Switch to light mode" : "Switch to dark mode"}
         >
           {isDarkMode ? 'Sepia (d)' : isSepiaMode ? 'Light (d)' : 'Dark (d)'}
-        </button>
+        </button>}
 
         {/* Gloss Toggle Button */}
         <button
@@ -718,20 +719,20 @@ const NavigationPlaceholder = ({
         )}
 
         {/* Font Size Controls */}
-        <button
+        {isFeatureVisible('fontMinus') && <button
           onClick={onFontScaleDown}
           className="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold"
           title="Decrease font size"
         >
           -
-        </button>
-        <button
+        </button>}
+        {isFeatureVisible('fontPlus') && <button
           onClick={onFontScaleUp}
           className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold"
           title="Increase font size"
         >
           +
-        </button>
+        </button>}
 
         {/* Language cycle + open buttons */}
         {(() => {
@@ -748,7 +749,7 @@ const NavigationPlaceholder = ({
           const colorClass = langColors[label];
           return (
             <>
-              <button
+              {isFeatureVisible('youtube') && <button
                 className={`ml-1 rounded focus:outline-none ${isYouTubePlaying ? 'ring-2 ring-white ring-offset-1 ring-offset-red-600' : ''}`}
                 style={{padding:'4px 10px',background:'linear-gradient(45deg,#888,#666)',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px'}}
                 title="Book overview video (y)"
@@ -756,7 +757,8 @@ const NavigationPlaceholder = ({
               >
                 <svg width="22" height="16" viewBox="0 0 68 48" style={{flexShrink:0}}><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61-1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="red"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg>
                 <span style={{fontSize:10,color:'#ccc'}}>(y)</span>
-              </button>
+              </button>}
+              {isFeatureVisible('lang') && <>
               <span className="ml-2" style={{ fontSize: 16 }}>🔊</span>
               <button
                 onClick={onSidebarLangCycle}
@@ -765,8 +767,9 @@ const NavigationPlaceholder = ({
               >
                 {label}
               </button>
+              </>}
               {/* Freestyle Beats Toggle */}
-              {(() => {
+              {isFeatureVisible('soaking') && (() => {
                 const audioRef = React.createRef();
                 // Use a module-level approach via data attribute on the button
                 return (
@@ -783,14 +786,14 @@ const NavigationPlaceholder = ({
                   </button>
                 );
               })()}
-              <button
+              {isFeatureVisible('classical') && <button
                 className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-amber-100 text-amber-900 hover:bg-amber-200"
                 title="Open classical music player"
                 onClick={() => onClassicalMusic && onClassicalMusic()}
               >
                 🎻
-              </button>
-              <button
+              </button>}
+              {isFeatureVisible('classicalPlay') && <button
                 className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${
                   classicalPlaying
                     ? 'bg-red-200 text-red-800 hover:bg-red-300'
@@ -800,7 +803,7 @@ const NavigationPlaceholder = ({
                 onClick={() => onClassicalTogglePlay && onClassicalTogglePlay()}
               >
                 {classicalPlaying ? '⏸' : '▶'}
-              </button>
+              </button>}
             </>
           );
         })()}
@@ -896,6 +899,7 @@ const NavigationPlaceholder = ({
           showBreatheModal={showBreatheModal}
           showPane2Syllables={showPane2Syllables}
           onTogglePane2Syllables={onTogglePane2Syllables}
+          isFeatureVisible={isFeatureVisible}
         />
         
         {/* To Clipboard Button - Hidden */}
@@ -1640,6 +1644,45 @@ const BibleApp = () => {
   const isDarkMode = themeMode === 'dark';
   const isSepiaMode = themeMode === 'sepia';
   
+  // Feature button visibility toggles — all visible by default
+  const allFeatureKeys = [
+    'search', 'rhyme', 'storyAudio', 'chpCopy', 'ruler', 'col', 'hymn', 'prompt',
+    'nltPsalms', 'plan', 'math', 'figures', 'copyPane2', 'toggleCuv', 'togglePsalms',
+    'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
+    'fontPlus', 'youtube', 'lang', 'soaking', 'classical', 'classicalPlay',
+    'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'goTextR', 'oaiKey',
+    'oaiRead', 'kjvRead', 'ttsChpCopy'
+  ];
+  const featureLabels = {
+    search: 'Search & Story', rhyme: 'Rhyme', storyAudio: 'Story ▶/⏸', chpCopy: 'Chp📋',
+    ruler: '📏 Ruler', col: 'Col', hymn: 'Hymn', prompt: 'Prompt',
+    nltPsalms: 'NLT(Ps)', plan: 'Plan', math: 'Math', figures: 'Figures',
+    copyPane2: 'Copy Pane 2', toggleCuv: 'KJV/CUV', togglePsalms: 'Psalms/Prov',
+    toggleRhyme: 'WEB/Rhyme', cyclePane1: '1:cycle', clrPane1: 'clr pane 1',
+    ref: 'Ref(r)', syllable: 'Syllable', darkMode: 'Dark/Light', fontMinus: 'Font -',
+    fontPlus: 'Font +', youtube: 'YouTube', lang: 'Language', soaking: 'Soaking',
+    classical: '🎻 Classical', classicalPlay: 'Classical ▶/⏸',
+    qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
+    breathe: 'br_ (Breathe)', goTextR: 'Go:TextR', oaiKey: 'Key',
+    oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋'
+  };
+  const [visibleFeatures, setVisibleFeatures] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bible-visible-features');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return Object.fromEntries(allFeatureKeys.map(k => [k, true]));
+  });
+  const [showFeatureToggleModal, setShowFeatureToggleModal] = useState(false);
+  const isFeatureVisible = (key) => visibleFeatures[key] !== false;
+  const toggleFeature = (key) => {
+    setVisibleFeatures(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('bible-visible-features', JSON.stringify(next));
+      return next;
+    });
+  };
+
   // State to track speech volume (normal or softer)
   const [speechVolume, setSpeechVolume] = useState('softer');
   
@@ -5609,6 +5652,18 @@ const BibleApp = () => {
               </button>
             )}
 
+            {/* Feature toggle gear button */}
+            <button
+              onClick={() => setShowFeatureToggleModal(true)}
+              className="flex items-center justify-center p-1 rounded-md text-gray-500 hover:bg-gray-100"
+              title="Toggle visible buttons"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.573-1.066z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+
             {/* Language cycle + open buttons */}
             {(() => {
               const langOptions = ['en', 'cant', 'chin', 'heb', 'span', 'fr'];
@@ -5709,14 +5764,14 @@ const BibleApp = () => {
                 </div>
 
                 {/* Book Search + Story Button */}
-                <button
+                {isFeatureVisible('search') && <button
                   onClick={() => { loadStorytimeForCurrent(); setShowSearchModal(true); setSearchStartRef(''); }}
                   className="ml-1 px-3 py-1 rounded focus:outline-none text-sm bg-teal-500 text-white hover:bg-teal-600 font-semibold inline-flex items-center gap-1"
                   title="Search & Story (Esc)"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                   Search & Story
-                </button>
+                </button>}
 
                 {/* WEB / Rhyme toggle */}
                 {/* Next Chapter Button (top bar) - hidden */}
@@ -5724,16 +5779,16 @@ const BibleApp = () => {
                 {/* Read Full Chapter TTS Button — moved to TTS hidden controls */}
 
                 {/* Rhyme Modal Button */}
-                <button
+                {isFeatureVisible('rhyme') && <button
                   onClick={() => setShowRhymeModal(true)}
                   className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-pink-500 text-white hover:bg-pink-600 font-semibold ${isRhymeAudioPlaying ? 'ring-2 ring-white ring-offset-1 ring-offset-pink-500' : ''}`}
                   title="Open Rhyme audio player"
                 >
                   {isRhymeAudioPlaying ? 'Rhyme ♪' : 'Rhyme ▶'}
-                </button>
+                </button>}
 
                 {/* Story Time audio & extras (detects pane 2 book) */}
-                {storytimeData && selectedBook && (
+                {isFeatureVisible('storyAudio') && storytimeData && selectedBook && (
                   <>
                   <button
                     onClick={handleStorytimeAudioToggle}
@@ -5788,22 +5843,22 @@ const BibleApp = () => {
                 )}
 
                 {/* Reading Ruler Toggle Button */}
-                <button
+                {isFeatureVisible('ruler') && <button
                   onClick={() => setReadingGuide(prev => { const next = !prev; localStorage.setItem('readingGuide', next); return next; })}
                   className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${readingGuide ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
                   title="Toggle reading ruler (u)"
                 >
                   📏 (u)
-                </button>
+                </button>}
 
                 {/* Collection Modal Button */}
-                <button
+                {isFeatureVisible('col') && <button
                   onClick={() => { setExpandedCollection(lastCollectionClick.collection); setShowCollectionModal(true); }}
                   className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
                   title="Select a verse collection"
                 >
                   Col
-                </button>
+                </button>}
 
                 {/* Dropbox Highlights Button - hidden */}
                 {false && <button
@@ -5815,7 +5870,7 @@ const BibleApp = () => {
                 </button>}
 
                 {/* Hymn Recommendations Button (always visible) */}
-                {(psalmHymnsData || lukeHymnsData) && (
+                {isFeatureVisible('hymn') && (psalmHymnsData || lukeHymnsData) && (
                   <button
                     onClick={() => setShowHymnModal(true)}
                     className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-rose-500 text-white hover:bg-rose-600 font-semibold"
@@ -5826,7 +5881,7 @@ const BibleApp = () => {
                 )}
 
                 {/* Book Prompt to Clipboard Button */}
-                {promptsData && (
+                {isFeatureVisible('prompt') && promptsData && (
                   <button
                     onClick={handlePromptButtonClick}
                     className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-amber-500 text-white hover:bg-amber-600 font-semibold"
@@ -5836,7 +5891,7 @@ const BibleApp = () => {
                   </button>
                 )}
 
-                <button
+                {isFeatureVisible('nltPsalms') && <button
                   onClick={() => {
                     if (nltPsalmsData) {
                       setNltPsalmsData(null);
@@ -5851,9 +5906,9 @@ const BibleApp = () => {
                   title={nltPsalmsData ? "NLT Psalms active — click to disable" : "Load NLT for Psalms in pane 2"}
                 >
                   NLT(Ps only){nltPsalmsData ? '✓' : ''}
-                </button>
+                </button>}
 
-                <a
+                {isFeatureVisible('plan') && <a
                   href="https://vercel-bible-plan.vercel.app/"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -5861,9 +5916,9 @@ const BibleApp = () => {
                   title="Open Bible Plan"
                 >
                   Plan
-                </a>
+                </a>}
 
-                <a
+                {isFeatureVisible('math') && <a
                   href="https://cdpn.io/pen/debug/vEKYpYB"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -5871,17 +5926,17 @@ const BibleApp = () => {
                   title="Open Math"
                 >
                   Math
-                </a>
+                </a>}
 
-                <button
+                {isFeatureVisible('figures') && <button
                   onClick={() => setShowFiguresModal(true)}
                   className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-teal-500 text-white hover:bg-teal-600 font-semibold inline-block"
                   title="Figures"
                 >
                   Figures
-                </button>
+                </button>}
 
-                <button
+                {isFeatureVisible('copyPane2') && <button
                   onClick={() => {
                     const effectivePane2Chapter = pane2Chapter || selectedChapter;
                     const effectivePane2Abbrev = pane2Book ? pane2Book.abbrev : selectedBook?.abbrev;
@@ -5912,10 +5967,10 @@ const BibleApp = () => {
                   title="Copy pane 2 text to clipboard"
                 >
                   Copy Pane 2
-                </button>
+                </button>}
 
                 {/* KJV / CUV toggle */}
-                <button
+                {isFeatureVisible('toggleCuv') && <button
                   onClick={() => {
                     const next = rightPaneTranslation === 'zh_cuv.json' ? 'en_kjv.json' : 'zh_cuv.json';
                     setRightPaneTranslation(next);
@@ -5930,10 +5985,10 @@ const BibleApp = () => {
                   title="Toggle pane 2 between KJV and CUV"
                 >
                   {rightPaneTranslation === 'zh_cuv.json' ? 'to: KJV' : 'to: CUV'}
-                </button>
+                </button>}
 
                 {/* Toggle navigate to Psalms / Proverbs */}
-                {selectedBook && (
+                {isFeatureVisible('togglePsalms') && selectedBook && (
                   <button
                     onClick={() => {
                       handleBookSelect(selectedBook.abbrev === 'ps' ? 'prv' : 'ps');
@@ -5945,7 +6000,7 @@ const BibleApp = () => {
                   </button>
                 )}
 
-                <button
+                {isFeatureVisible('toggleRhyme') && <button
                   onClick={() => {
                     const next = rightPaneTranslation === 'en_rhyme.json' ? 'en_web.json' : 'en_rhyme.json';
                     setRightPaneTranslation(next);
@@ -5959,7 +6014,7 @@ const BibleApp = () => {
                   title="Toggle pane 2 between WEB and Rhyme"
                 >
                   {rightPaneTranslation === 'en_rhyme.json' ? 'to: WEB' : 'to: Rhyme'}
-                </button>
+                </button>}
 
                 {/* Cycle Pane 1 & 2 Translation Buttons */}
                 {(() => {
@@ -5995,20 +6050,20 @@ const BibleApp = () => {
                   };
                   return (
                     <>
-                      <button
+                      {isFeatureVisible('cyclePane1') && <button
                         onClick={cyclePane1}
                         className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-indigo-500 text-white hover:bg-indigo-600 font-semibold"
                         title="Cycle pane 1 translation"
                       >
                         1:{shortLabel(selectedTranslation)}
-                      </button>
-                      <button
+                      </button>}
+                      {isFeatureVisible('clrPane1') && <button
                         onClick={() => setBlankPane1(prev => { const next = !prev; localStorage.setItem('blankPane1', next); return next; })}
                         className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${blankPane1 ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
                         title={blankPane1 ? 'Show pane 1 content (l)' : 'Blank pane 1 for Cmd+F search (l)'}
                       >
                         clr pane 1(l)
-                      </button>
+                      </button>}
                     </>
                   );
                 })()}
@@ -6331,6 +6386,7 @@ const BibleApp = () => {
               onTogglePane2Syllables={() => setShowPane2Syllables(s => { const next = !s; localStorage.setItem('bible-pane2-syllables', next); return next; })}
               syllabifyText={syllabifyText}
               onRefPrompt={() => setShowRefPrompt(true)}
+              isFeatureVisible={isFeatureVisible}
               onQA={() => {
                 if (!studyQData) {
                   const baseUrl = getBaseUrl();
@@ -8316,6 +8372,76 @@ const BibleApp = () => {
         </div>
         );
       })()}
+
+      {/* Feature Toggle Modal */}
+      {showFeatureToggleModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowFeatureToggleModal(false); }}
+        >
+          <div style={{ background: isDarkMode ? '#2a2a3a' : 'white', borderRadius: 12, padding: 24, maxWidth: 400, width: '90%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: '1.2em', color: isDarkMode ? '#e0e0e0' : '#333' }}>Toggle Buttons</h3>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => {
+                    const allOn = Object.fromEntries(allFeatureKeys.map(k => [k, true]));
+                    setVisibleFeatures(allOn);
+                    localStorage.setItem('bible-visible-features', JSON.stringify(allOn));
+                  }}
+                  style={{ padding: '4px 12px', fontSize: 12, background: '#4ade80', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+                >
+                  All On
+                </button>
+                <button
+                  onClick={() => {
+                    const allOff = Object.fromEntries(allFeatureKeys.map(k => [k, false]));
+                    setVisibleFeatures(allOff);
+                    localStorage.setItem('bible-visible-features', JSON.stringify(allOff));
+                  }}
+                  style={{ padding: '4px 12px', fontSize: 12, background: '#f87171', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+                >
+                  All Off
+                </button>
+                <button onClick={() => setShowFeatureToggleModal(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: isDarkMode ? '#aaa' : '#666' }}>X</button>
+              </div>
+            </div>
+            {/* Navbar buttons section */}
+            <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: isDarkMode ? '#8899bb' : '#667eea', paddingLeft: 4 }}>Navbar</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 16 }}>
+              {allFeatureKeys.filter(k => !['qa','quiz','words','recite','cursive','breathe','goTextR','oaiKey','oaiRead','kjvRead','ttsChpCopy'].includes(k)).map(key => (
+                <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: visibleFeatures[key] !== false ? (isDarkMode ? '#3a3a5a' : '#f0f7ff') : (isDarkMode ? '#1a1a2a' : '#f5f5f5'), border: `1px solid ${visibleFeatures[key] !== false ? '#667eea' : (isDarkMode ? '#444' : '#ddd')}` }}>
+                  <input
+                    type="checkbox"
+                    checked={visibleFeatures[key] !== false}
+                    onChange={() => toggleFeature(key)}
+                    style={{ accentColor: '#667eea' }}
+                  />
+                  <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}>{featureLabels[key] || key}</span>
+                </label>
+              ))}
+            </div>
+
+            {/* Divider */}
+            <div style={{ borderTop: `2px solid ${isDarkMode ? '#555' : '#ddd'}`, marginBottom: 12 }} />
+
+            {/* TTS / Study buttons section */}
+            <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: isDarkMode ? '#bb8899' : '#e06688', paddingLeft: 4 }}>TTS / Study Tools</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              {['qa','quiz','words','recite','cursive','breathe','goTextR','oaiKey','oaiRead','kjvRead','ttsChpCopy'].map(key => (
+                <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: visibleFeatures[key] !== false ? (isDarkMode ? '#4a3a3a' : '#fff0f5') : (isDarkMode ? '#1a1a2a' : '#f5f5f5'), border: `1px solid ${visibleFeatures[key] !== false ? '#e06688' : (isDarkMode ? '#444' : '#ddd')}` }}>
+                  <input
+                    type="checkbox"
+                    checked={visibleFeatures[key] !== false}
+                    onChange={() => toggleFeature(key)}
+                    style={{ accentColor: '#e06688' }}
+                  />
+                  <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}>{featureLabels[key] || key}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Collection Modal */}
       {showCollectionModal && (
