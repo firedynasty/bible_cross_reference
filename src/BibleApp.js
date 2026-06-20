@@ -1245,7 +1245,26 @@ Proverbs 3:13-18
 Proverbs 9:10
 Colossians 2:2-3
 Ecclesiastes 7:12
-Psalm 111:10`
+Psalm 111:10`,
+  "Worship Soak": `Hebrews 3:4
+Romans 1:20
+Jeremiah 32:17
+Numbers 6:24-26
+Genesis 2:3
+Romans 11:36
+Psalm 121:1-2
+Ephesians 2:10
+Genesis 1:27
+Psalm 33:6
+Isaiah 40:28
+Ecclesiastes 3:11
+Psalm 90:2
+Romans 8:19
+Psalm 139:13-14
+Amos 9:6
+John 1:3
+Psalm 124:8
+Acts 17:28`
 };
 
 // Dropbox PKCE OAuth helpers
@@ -1624,6 +1643,7 @@ const BibleApp = () => {
   const [expandedCollection, setExpandedCollection] = useState(null);
   const [highlightedVerses, setHighlightedVerses] = useState([]);
   const [lastCollectionClick, setLastCollectionClick] = useState({ collection: null, ref: null });
+  const [collectionVersePreview, setCollectionVersePreview] = useState(null); // { ref, text, collection }
   const [refPromptValue, setRefPromptValue] = useState('');
   const [refHistory, setRefHistory] = useState(() => {
     try { const s = localStorage.getItem('bibleRefHistory'); return s ? JSON.parse(s) : []; } catch { return []; }
@@ -1987,6 +2007,35 @@ const BibleApp = () => {
         }, 300);
       }
     }
+  }, [bibleData, parseSingleBibleRef]);
+
+  // Look up verse text for a reference string (e.g., "Hebrews 11:1-2")
+  const getVerseTextForRef = useCallback((refStr) => {
+    const parsed = parseSingleBibleRef(refStr);
+    if (!parsed || !bibleData) return null;
+    const book = bibleData.find(b => b.abbrev === parsed.abbrev);
+    if (!book || !book.chapters || !book.chapters[parsed.chapter - 1]) return null;
+    const chapterVerses = book.chapters[parsed.chapter - 1];
+    const verseMatch = refStr.trim().match(/:(\d+)(?:\s*[-–]\s*(\d+))?/);
+    if (!verseMatch) {
+      // Whole chapter reference (e.g., "Psalm 23") - show first few verses
+      const texts = chapterVerses.slice(0, 3).map((v, i) => {
+        const text = typeof v === 'string' ? v : (v.text || v.verse || String(v));
+        return `${i + 1} ${text}`;
+      });
+      return texts.join(' ') + (chapterVerses.length > 3 ? ' ...' : '');
+    }
+    const start = parseInt(verseMatch[1]);
+    const end = verseMatch[2] ? parseInt(verseMatch[2]) : start;
+    const texts = [];
+    for (let v = start; v <= end; v++) {
+      if (chapterVerses[v - 1]) {
+        const verse = chapterVerses[v - 1];
+        const text = typeof verse === 'string' ? verse : (verse.text || verse.verse || String(verse));
+        texts.push(`${v} ${text}`);
+      }
+    }
+    return texts.join(' ') || null;
   }, [bibleData, parseSingleBibleRef]);
 
   // Load a collection by name - navigates to first reference
@@ -3944,6 +3993,8 @@ const BibleApp = () => {
           setShowBucketsModal(false);
         } else if (showSearchModal) {
           setShowSearchModal(false);
+        } else if (collectionVersePreview) {
+          setCollectionVersePreview(null);
         } else if (showCollectionModal) {
           setShowCollectionModal(false);
         } else if (showDropboxModal) {
@@ -4042,7 +4093,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showRefPrompt, loadStorytimeForCurrent]);
+  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showRefPrompt, loadStorytimeForCurrent]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
@@ -8228,7 +8279,12 @@ const BibleApp = () => {
                         return (
                           <button
                             key={i}
-                            onClick={() => { navigateToRefWithHighlight(ref); setLastCollectionClick({ collection: name, ref }); setShowCollectionModal(false); }}
+                            onClick={() => {
+                              const text = getVerseTextForRef(ref);
+                              setCollectionVersePreview({ ref, text: text || '(verse not found in current translation)', collection: name });
+                              setLastCollectionClick({ collection: name, ref });
+                              setShowCollectionModal(false);
+                            }}
                             style={{
                               display: 'block', width: '100%', padding: '8px 18px', fontSize: 14,
                               border: 'none', cursor: 'pointer',
@@ -8255,6 +8311,64 @@ const BibleApp = () => {
               style={{ marginTop: 16, width: '100%', padding: 12, fontSize: 15, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}
             >
               Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Collection Verse Preview Overlay */}
+      {collectionVersePreview && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.7)', zIndex: 10001, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          onClick={() => setCollectionVersePreview(null)}
+        >
+          <div
+            style={{ background: isDarkMode ? '#1a1a2e' : '#fff', borderRadius: 16, padding: '32px 28px', width: '90%', maxWidth: 500, maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', position: 'relative', textAlign: 'center' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setCollectionVersePreview(null)}
+              style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 1, color: isDarkMode ? '#aaa' : '#666', fontSize: 20 }}
+              title="Close"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div style={{ fontSize: 18, fontWeight: 700, color: isDarkMode ? '#a0b0ff' : '#667eea', marginBottom: 16 }}>
+              {collectionVersePreview.ref}
+            </div>
+            <div style={{
+              fontSize: 16, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : '#333',
+              fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic',
+              padding: '16px 12px', borderRadius: 10,
+              background: isDarkMode ? '#2a2a3a' : '#f8f7ff',
+              border: `1px solid ${isDarkMode ? '#3a3a5a' : '#e0e0f0'}`,
+              maxHeight: '40vh', overflow: 'auto'
+            }}>
+              {collectionVersePreview.text}
+            </div>
+            <button
+              onClick={() => {
+                navigateToRefWithHighlight(collectionVersePreview.ref);
+                setCollectionVersePreview(null);
+              }}
+              style={{
+                marginTop: 20, padding: '12px 32px', fontSize: 15, border: 'none', borderRadius: 10,
+                background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white',
+                cursor: 'pointer', fontWeight: 700, letterSpacing: '0.02em',
+                boxShadow: '0 4px 15px rgba(102,126,234,0.4)', transition: 'transform 0.15s, box-shadow 0.15s'
+              }}
+              onMouseEnter={(e) => { e.target.style.transform = 'scale(1.03)'; e.target.style.boxShadow = '0 6px 20px rgba(102,126,234,0.5)'; }}
+              onMouseLeave={(e) => { e.target.style.transform = 'scale(1)'; e.target.style.boxShadow = '0 4px 15px rgba(102,126,234,0.4)'; }}
+            >
+              Go to {collectionVersePreview.ref}
+            </button>
+            <button
+              onClick={() => { setCollectionVersePreview(null); setExpandedCollection(collectionVersePreview.collection); setShowCollectionModal(true); }}
+              style={{ marginTop: 10, display: 'block', width: '100%', padding: 10, fontSize: 13, border: 'none', borderRadius: 8, background: isDarkMode ? '#333' : '#e8e8e8', color: isDarkMode ? '#ccc' : '#555', cursor: 'pointer', fontWeight: 600 }}
+            >
+              Back to Collection
             </button>
           </div>
         </div>
