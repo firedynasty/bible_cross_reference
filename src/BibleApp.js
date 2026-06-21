@@ -1655,7 +1655,7 @@ const BibleApp = () => {
   ];
   const featureLabels = {
     search: 'Search & Story', rhyme: 'Rhyme', storyAudio: 'Story ▶/⏸', chpCopy: 'Chp📋',
-    ruler: '📏 Ruler', col: 'Col', hymn: 'Hymn', prompt: 'Prompt',
+    ruler: '📏 Ruler', col: 'Groupings', hymn: 'Hymn', prompt: 'Prompt',
     nltPsalms: 'NLT(Ps)', plan: 'Plan', math: 'Math', figures: 'Figures',
     copyPane2: 'Copy Pane 2', toggleCuv: 'KJV/CUV', togglePsalms: 'Psalms/Prov',
     toggleRhyme: 'WEB/Rhyme', cyclePane1: '1:cycle', clrPane1: 'clr pane 1',
@@ -5857,7 +5857,7 @@ const BibleApp = () => {
                   className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-500 text-white hover:bg-purple-600 font-semibold"
                   title="Select a verse collection"
                 >
-                  Col
+                  Groupings
                 </button>}
 
                 {/* Dropbox Highlights Button - hidden */}
