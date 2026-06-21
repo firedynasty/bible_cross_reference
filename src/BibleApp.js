@@ -7127,29 +7127,51 @@ const BibleApp = () => {
                     <button
                       onClick={() => {
                         const pane = kjvContentRef.current;
+                        console.log('[NextVerse] pane:', !!pane, 'p2Book:', p2Book?.abbrev, 'p2Chapter:', p2Chapter, 'hasNext:', hasNext);
                         if (!pane) return;
                         const paneRect = pane.getBoundingClientRect();
-                        // Find the topmost visible verse
+                        console.log('[NextVerse] paneRect top:', paneRect.top, 'bottom:', paneRect.bottom);
+                        // Find the topmost visible verse and collect all verse numbers
                         let topVerse = null;
+                        const allVerseNums = [];
                         for (let i = 1; i <= 200; i++) {
                           const el = document.getElementById(`right-pane-verse-${i}`);
-                          if (!el) break;
-                          const elRect = el.getBoundingClientRect();
-                          if (elRect.bottom > paneRect.top + 40) {
-                            topVerse = i;
-                            break;
+                          if (!el) { if (allVerseNums.length > 0 && i - allVerseNums[allVerseNums.length - 1] > 5) break; continue; }
+                          allVerseNums.push(i);
+                          if (topVerse === null) {
+                            const elRect = el.getBoundingClientRect();
+                            if (elRect.top >= paneRect.top - 5) {
+                              topVerse = i;
+                            }
                           }
                         }
-                        // Scroll to the next verse
+                        console.log('[NextVerse] allVerseNums:', allVerseNums.length, 'topVerse:', topVerse);
+                        // Check if bottom buttons are visible — require 2 clicks to advance
+                        const bottomBtns = document.getElementById('pane2-bottom-buttons');
+                        const atBottom = bottomBtns && bottomBtns.getBoundingClientRect().top < paneRect.bottom;
+                        if (atBottom && hasNext) {
+                          if (!pane._nextVerseBottomClicks) pane._nextVerseBottomClicks = 0;
+                          pane._nextVerseBottomClicks += 1;
+                          if (pane._nextVerseBottomClicks >= 3) {
+                            pane._nextVerseBottomClicks = 0;
+                            navToChapter(p2Chapter + 1);
+                          }
+                          return;
+                        }
+                        if (pane._nextVerseBottomClicks) pane._nextVerseBottomClicks = 0;
                         if (topVerse !== null) {
-                          const nextEl = document.getElementById(`right-pane-verse-${topVerse + 1}`);
-                          if (nextEl) {
+                          // Find the next verse number that exists after topVerse
+                          const nextVerseNum = allVerseNums.find(n => n > topVerse);
+                          if (nextVerseNum) {
+                            const nextEl = document.getElementById(`right-pane-verse-${nextVerseNum}`);
                             const nextRect = nextEl.getBoundingClientRect();
                             const offset = nextRect.top - paneRect.top + pane.scrollTop;
                             pane.scrollTo({ top: offset, behavior: 'smooth' });
                           } else if (hasNext) {
                             navToChapter(p2Chapter + 1);
                           }
+                        } else if (hasNext) {
+                          navToChapter(p2Chapter + 1);
                         }
                       }}
                       style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
