@@ -7273,6 +7273,59 @@ const BibleApp = () => {
                   </>
                 );
               })()}
+              {/* Pane 2 copy button — mobile only */}
+              {isMobileView && !isTabletView && selectedBook && (
+                <button
+                  onClick={() => {
+                    const pane = kjvContentRef.current;
+                    if (!pane) return;
+                    const paneRect = pane.getBoundingClientRect();
+                    let topVerse = 1;
+                    for (let i = 1; i <= 200; i++) {
+                      const el = document.getElementById(`right-pane-verse-${i}`);
+                      if (!el) break;
+                      const elRect = el.getBoundingClientRect();
+                      if (elRect.bottom > paneRect.top + 40) {
+                        topVerse = i;
+                        break;
+                      }
+                    }
+                    const bottomBtns = document.getElementById('pane2-bottom-buttons');
+                    const atBottom = bottomBtns && bottomBtns.getBoundingClientRect().top < paneRect.bottom;
+                    let lastVerse = topVerse;
+                    if (atBottom) {
+                      for (let i = topVerse + 1; i <= 200; i++) {
+                        if (!document.getElementById(`right-pane-verse-${i}`)) break;
+                        lastVerse = i;
+                      }
+                    }
+                    const texts = [];
+                    for (let v = topVerse; v <= lastVerse; v++) {
+                      const verseEl = document.getElementById(`right-pane-verse-${v}`);
+                      if (verseEl) {
+                        const p = verseEl.querySelector('p');
+                        if (p) {
+                          const spans = p.querySelectorAll('span');
+                          const textSpan = spans.length >= 2 ? spans[1] : null;
+                          const text = textSpan ? textSpan.textContent.trim() : p.textContent.trim();
+                          if (text) texts.push(text);
+                        }
+                      }
+                    }
+                    if (texts.length) {
+                      navigator.clipboard.writeText(texts.join('\n')).then(() => {
+                        const btn = document.getElementById('pane2-copy-btn-mobile');
+                        if (btn) { btn.querySelector('span').textContent = '✓'; setTimeout(() => { btn.querySelector('span').textContent = '📋'; }, 1000); }
+                      });
+                    }
+                  }}
+                  id="pane2-copy-btn-mobile"
+                  style={{ position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                  title="Copy verse from pane 2"
+                >
+                  <span style={{ fontSize: 22, color: 'rgba(0,0,0,0.7)' }}>📋</span>
+                </button>
+              )}
               {/* KJV Bible Text Display */}
               <div
                 ref={kjvContentRef}
