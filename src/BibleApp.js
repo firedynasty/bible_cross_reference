@@ -1967,7 +1967,7 @@ const BibleApp = () => {
       '1thess': '1ts', '1 thess': '1ts', '2thess': '2ts', '2 thess': '2ts',
       '1tim': '1tm', '1 tim': '1tm', '2tim': '2tm', '2 tim': '2tm',
       'tit': 'tt', 'phlm': 'phm', 'heb': 'hb',
-      'jas': 'jm', 'jam': 'jm',
+      'jas': 'jm', 'jam': 'jm', 'james': 'jm',
       '1pet': '1pe', '1 pet': '1pe', '2pet': '2pe', '2 pet': '2pe',
       '1jn': '1jo', '1 jn': '1jo', '2jn': '2jo', '2 jn': '2jo', '3jn': '3jo', '3 jn': '3jo',
       'rev': 're', 'revelations': 're'
@@ -8251,6 +8251,7 @@ const BibleApp = () => {
                   >
                     <option value="standard">Standard</option>
                     <option value="parenthesized">Parenthesized (Luke 13:24)</option>
+                    <option value="logos">Logos Wilson</option>
                   </select>
                 </div>
                 {textPasteContent && (
@@ -8261,7 +8262,45 @@ const BibleApp = () => {
                       const singleRefRegex = new RegExp('\\b(\\d?\\s*' + bookNames + ')\\s+(\\d+)(?::(\\d+)(?:\\s*[-–]\\s*(\\d+))?)?', 'gi');
                       const found = [];
                       const seen = new Set();
-                      if (refRegexMode === 'parenthesized') {
+                      if (refRegexMode === 'logos') {
+                        // Logos Wilson Commentary format: line-by-line, implied book carries forward
+                        // e.g. "Judg. 9:26 1 b\n2 Kings 18:19 1 f\nJob 4:6 2 a\n18:14 1 g"
+                        // Trailing codes like "1 b", "2 a" are sense/sub-sense annotations to strip
+                        const lines = textPasteContent.split('\n');
+                        let lastBook = '';
+                        const logosBookRegex = /^(\d?\s*[A-Za-z]+\.?(?:\s+of\s+[A-Za-z]+)?)\s+(\d+):(\d+)/;
+                        const contRegex = /^(\d+):(\d+)/;
+                        for (const line of lines) {
+                          const trimmedLine = line.trim();
+                          if (!trimmedLine) continue;
+                          let bookPart = '';
+                          let chapter = '';
+                          let verse = '';
+                          const fullMatch = trimmedLine.match(logosBookRegex);
+                          if (fullMatch) {
+                            bookPart = fullMatch[1].replace(/\.$/, '').trim();
+                            chapter = fullMatch[2];
+                            verse = fullMatch[3];
+                            lastBook = bookPart;
+                          } else {
+                            const contMatch = trimmedLine.match(contRegex);
+                            if (contMatch && lastBook) {
+                              bookPart = lastBook;
+                              chapter = contMatch[1];
+                              verse = contMatch[2];
+                            } else continue;
+                          }
+                          const refStr = `${bookPart} ${chapter}:${verse}`;
+                          const parsed = parseSingleBibleRef(refStr);
+                          if (parsed) {
+                            const key = `${parsed.abbrev}_${parsed.chapter}`;
+                            if (!seen.has(key)) {
+                              seen.add(key);
+                              found.push({ raw: refStr, parsed });
+                            }
+                          }
+                        }
+                      } else if (refRegexMode === 'parenthesized') {
                         // Find all parenthesized groups, then split by semicolons to get each ref
                         const parenRegex = /\(([^)]+)\)/g;
                         let pm;
