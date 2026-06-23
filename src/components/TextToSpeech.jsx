@@ -723,7 +723,10 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         const nextVerse = verseNumber + 1;
         setSelectedVerse(nextVerse);
         setShouldContinueAfterCurrent(false); // Reset the flag
-        
+
+        // Scroll pane 2 to the next verse so TTS button won't re-read the same verse
+        window.dispatchEvent(new CustomEvent('ttsScrollNextVerse'));
+
         // Check if we should continue reading more verses (for 5-verse reading)
         setVersesLeftToRead(prev => {
           const remaining = prev - 1;
@@ -733,7 +736,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
           }
           return Math.max(0, remaining);
         });
-        
+
         // If Read2End or DelayRead is enabled, continue reading the next verse
         if (readToEndRef.current || delayReadRef.current || shouldContinueRef.current) {
           // Use 7-second delay for DelayRead mode, otherwise small delay

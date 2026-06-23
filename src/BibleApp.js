@@ -1715,6 +1715,7 @@ const BibleApp = () => {
   const [highlightedVerses, setHighlightedVerses] = useState([]);
   const [lastCollectionClick, setLastCollectionClick] = useState({ collection: null, ref: null });
   const [collectionVersePreview, setCollectionVersePreview] = useState(null); // { ref, text, collection }
+  const [collectionFontSize, setCollectionFontSize] = useState(16);
   const [refPromptValue, setRefPromptValue] = useState('');
   const [refHistory, setRefHistory] = useState(() => {
     try { const s = localStorage.getItem('bibleRefHistory'); return s ? JSON.parse(s) : []; } catch { return []; }
@@ -3220,6 +3221,40 @@ const BibleApp = () => {
     window.addEventListener('speakVerseContent', handleSpeakVerseContent);
     return () => window.removeEventListener('speakVerseContent', handleSpeakVerseContent);
   }); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // After TTS finishes reading, scroll pane 2 down one verse so the next TTS click reads the next verse
+  useEffect(() => {
+    const handleTtsScrollNext = () => {
+      const pane = kjvContentRef.current;
+      if (!pane) return;
+      const paneRect = pane.getBoundingClientRect();
+      // Find all verse elements
+      const allVerseNums = [];
+      let topVerse = null;
+      for (let i = 1; i <= 200; i++) {
+        const el = document.getElementById(`right-pane-verse-${i}`);
+        if (!el) { if (allVerseNums.length > 0 && i - allVerseNums[allVerseNums.length - 1] > 5) break; continue; }
+        allVerseNums.push(i);
+        if (topVerse === null) {
+          const elRect = el.getBoundingClientRect();
+          if (elRect.top >= paneRect.top - 5) {
+            topVerse = i;
+          }
+        }
+      }
+      if (topVerse !== null) {
+        const nextVerseNum = allVerseNums.find(n => n > topVerse);
+        if (nextVerseNum) {
+          const nextEl = document.getElementById(`right-pane-verse-${nextVerseNum}`);
+          const nextRect = nextEl.getBoundingClientRect();
+          const offset = nextRect.top - paneRect.top + pane.scrollTop;
+          pane.scrollTo({ top: offset, behavior: 'smooth' });
+        }
+      }
+    };
+    window.addEventListener('ttsScrollNextVerse', handleTtsScrollNext);
+    return () => window.removeEventListener('ttsScrollNextVerse', handleTtsScrollNext);
+  }, []);
 
   // Helper function to parse verse filter file
   const parseVerseFilterFile = (fileText) => {
@@ -8573,14 +8608,26 @@ const BibleApp = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <h3 style={{ margin: '0 0 16px', fontSize: '1.2em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>Select a Collection</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, margin: '0 0 16px' }}>
+              <button
+                onClick={() => setCollectionFontSize(s => Math.max(10, s - 2))}
+                title="Decrease font size"
+                style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+              >−</button>
+              <h3 style={{ margin: 0, fontSize: '1.2em', color: isDarkMode ? '#e0e0e0' : '#333' }}>Select a Collection</h3>
+              <button
+                onClick={() => setCollectionFontSize(s => Math.min(30, s + 2))}
+                title="Increase font size"
+                style={{ width: 32, height: 32, fontSize: 18, fontWeight: 700, border: 'none', borderRadius: 8, cursor: 'pointer', background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333' }}
+              >+</button>
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {Object.keys(referenceCollections).map((name) => (
                 <div key={name}>
                   <button
                     onClick={() => setExpandedCollection(expandedCollection === name ? null : name)}
                     style={{
-                      width: '100%', padding: '14px 18px', fontSize: 16, border: `2px solid ${expandedCollection === name ? '#667eea' : (isDarkMode ? '#444' : '#e0e0e0')}`,
+                      width: '100%', padding: '14px 18px', fontSize: collectionFontSize, border: `2px solid ${expandedCollection === name ? '#667eea' : (isDarkMode ? '#444' : '#e0e0e0')}`,
                       borderRadius: expandedCollection === name ? '10px 10px 0 0' : 10, background: expandedCollection === name ? (isDarkMode ? '#3a3a5a' : '#f0f2ff') : (isDarkMode ? '#333' : 'white'), cursor: 'pointer',
                       textAlign: 'left', color: isDarkMode ? '#e0e0e0' : '#333', fontWeight: 600,
                       transition: 'all 0.2s', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
@@ -8610,7 +8657,7 @@ const BibleApp = () => {
                                 }
                               }}
                               style={{
-                                display: 'block', width: '100%', padding: '8px 18px', fontSize: 14,
+                                display: 'block', width: '100%', padding: '8px 18px', fontSize: collectionFontSize - 2,
                                 border: 'none', cursor: 'pointer',
                                 textAlign: 'left', fontWeight: isLastClicked ? 700 : 400,
                                 transition: 'background 0.15s',
@@ -8626,7 +8673,7 @@ const BibleApp = () => {
                             {isPreviewOpen && (
                               <div style={{ padding: '8px 18px 12px' }}>
                                 <div style={{
-                                  fontSize: 14, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : '#333',
+                                  fontSize: collectionFontSize - 2, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : '#333',
                                   fontFamily: 'Georgia, "Times New Roman", serif', fontStyle: 'italic',
                                   padding: '12px 14px', borderRadius: 8,
                                   background: isDarkMode ? '#2a2a3a' : '#f8f7ff',
