@@ -1650,7 +1650,7 @@ const BibleApp = () => {
     'nltPsalms', 'plan', 'math', 'figures', 'copyPane2', 'toggleCuv', 'togglePsalms',
     'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
     'fontPlus', 'youtube', 'lang', 'soaking', 'classical', 'classicalPlay',
-    'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'goTextR', 'oaiKey',
+    'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'goTextR', 'oaiKey',
     'oaiRead', 'kjvRead', 'ttsChpCopy'
   ];
   const featureLabels = {
@@ -1663,7 +1663,7 @@ const BibleApp = () => {
     fontPlus: 'Font +', youtube: 'YouTube', lang: 'Language', soaking: 'Soaking',
     classical: '🎻 Classical', classicalPlay: 'Classical ▶/⏸',
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
-    breathe: 'br_ (Breathe)', goTextR: 'Go:TextR', oaiKey: 'Key',
+    breathe: 'br_ (Breathe)', repeat: 'Repeat', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋'
   };
   const [visibleFeatures, setVisibleFeatures] = useState(() => {
@@ -1817,6 +1817,11 @@ const BibleApp = () => {
 
   // State for Breathe Modal
   const [showBreatheModal, setShowBreatheModal] = useState(false);
+
+  // State for Repeat Modal (paste text and have it read aloud)
+  const [showRepeatModal, setShowRepeatModal] = useState(false);
+  const [repeatText, setRepeatText] = useState('');
+  const [repeatSpeaking, setRepeatSpeaking] = useState(false);
 
   // State for Strong's concordance
   const [strongsIndex, setStrongsIndex] = useState(null);
@@ -5895,6 +5900,15 @@ const BibleApp = () => {
                   Groupings
                 </button>}
 
+                {/* Repeat Modal Button */}
+                {isFeatureVisible('repeat') && <button
+                  onClick={() => setShowRepeatModal(true)}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-teal-500 text-white hover:bg-teal-600 font-semibold"
+                  title="Paste text and have it read aloud"
+                >
+                  Repeat
+                </button>}
+
                 {/* Dropbox Highlights Button - hidden */}
                 {false && <button
                   onClick={handleDbxClick}
@@ -8557,7 +8571,7 @@ const BibleApp = () => {
             {/* Navbar buttons section */}
             <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: isDarkMode ? '#8899bb' : '#667eea', paddingLeft: 4 }}>Navbar</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 16 }}>
-              {allFeatureKeys.filter(k => !['qa','quiz','words','recite','cursive','breathe','goTextR','oaiKey','oaiRead','kjvRead','ttsChpCopy'].includes(k)).map(key => (
+              {allFeatureKeys.filter(k => !['qa','quiz','words','recite','cursive','breathe','repeat','goTextR','oaiKey','oaiRead','kjvRead','ttsChpCopy'].includes(k)).map(key => (
                 <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: visibleFeatures[key] !== false ? (isDarkMode ? '#3a3a5a' : '#f0f7ff') : (isDarkMode ? '#1a1a2a' : '#f5f5f5'), border: `1px solid ${visibleFeatures[key] !== false ? '#667eea' : (isDarkMode ? '#444' : '#ddd')}` }}>
                   <input
                     type="checkbox"
@@ -8576,7 +8590,7 @@ const BibleApp = () => {
             {/* TTS / Study buttons section */}
             <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: isDarkMode ? '#bb8899' : '#e06688', paddingLeft: 4 }}>TTS / Study Tools</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              {['qa','quiz','words','recite','cursive','breathe','goTextR','oaiKey','oaiRead','kjvRead','ttsChpCopy'].map(key => (
+              {['qa','quiz','words','recite','cursive','breathe','repeat','goTextR','oaiKey','oaiRead','kjvRead','ttsChpCopy'].map(key => (
                 <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: visibleFeatures[key] !== false ? (isDarkMode ? '#4a3a3a' : '#fff0f5') : (isDarkMode ? '#1a1a2a' : '#f5f5f5'), border: `1px solid ${visibleFeatures[key] !== false ? '#e06688' : (isDarkMode ? '#444' : '#ddd')}` }}>
                   <input
                     type="checkbox"
@@ -8712,6 +8726,100 @@ const BibleApp = () => {
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Repeat Modal */}
+      {showRepeatModal && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          onClick={(e) => { if (e.target === e.currentTarget) { if (repeatSpeaking) { speechSynthesis.cancel(); setRepeatSpeaking(false); } setShowRepeatModal(false); } }}
+        >
+          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '95%', maxWidth: 600, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', position: 'relative' }}>
+            <button
+              onClick={() => { if (repeatSpeaking) { speechSynthesis.cancel(); setRepeatSpeaking(false); } setShowRepeatModal(false); }}
+              style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 1, color: isDarkMode ? '#aaa' : '#666', fontSize: 20 }}
+              title="Close"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <h3 style={{ margin: '0 0 16px', fontSize: '1.2em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>Repeat</h3>
+
+            {/* Paste from clipboard buttons */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <button
+                onClick={async () => {
+                  try {
+                    const clip = await navigator.clipboard.readText();
+                    setRepeatText(clip);
+                  } catch (e) { console.error('Clipboard read failed', e); }
+                }}
+                style={{ flex: 1, padding: '10px 16px', fontSize: 14, border: 'none', borderRadius: 8, background: isDarkMode ? '#2a2a3a' : '#eef2ff', color: isDarkMode ? '#a5b4fc' : '#4338ca', cursor: 'pointer', fontWeight: 600 }}
+              >
+                📋 Paste (New)
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const clip = await navigator.clipboard.readText();
+                    setRepeatText(prev => prev ? prev + '\n' + clip : clip);
+                  } catch (e) { console.error('Clipboard read failed', e); }
+                }}
+                style={{ flex: 1, padding: '10px 16px', fontSize: 14, border: 'none', borderRadius: 8, background: isDarkMode ? '#3a3a2a' : '#fef3c7', color: isDarkMode ? '#fcd34d' : '#92400e', cursor: 'pointer', fontWeight: 600 }}
+              >
+                📋 Paste (Append)
+              </button>
+            </div>
+
+            {/* Textarea */}
+            <textarea
+              value={repeatText}
+              onChange={(e) => setRepeatText(e.target.value)}
+              placeholder="Paste or type text here to have it read aloud..."
+              style={{
+                width: '100%', minHeight: 200, flex: 1, padding: 14, fontSize: 15, lineHeight: 1.7,
+                border: `2px solid ${isDarkMode ? '#444' : '#ddd'}`, borderRadius: 10,
+                background: isDarkMode ? '#1a1a2a' : '#fafafa', color: isDarkMode ? '#e0e0e0' : '#333',
+                resize: 'vertical', fontFamily: 'Georgia, "Times New Roman", serif',
+                outline: 'none', boxSizing: 'border-box'
+              }}
+            />
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button
+                onClick={() => {
+                  if (repeatSpeaking) {
+                    speechSynthesis.cancel();
+                    setRepeatSpeaking(false);
+                    return;
+                  }
+                  const text = repeatText.trim();
+                  if (!text) return;
+                  const utterance = new SpeechSynthesisUtterance(text);
+                  utterance.onend = () => setRepeatSpeaking(false);
+                  utterance.onerror = () => setRepeatSpeaking(false);
+                  setRepeatSpeaking(true);
+                  speechSynthesis.speak(utterance);
+                }}
+                style={{
+                  flex: 1, padding: '12px 16px', fontSize: 15, border: 'none', borderRadius: 8,
+                  background: repeatSpeaking ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #667eea, #764ba2)',
+                  color: 'white', cursor: 'pointer', fontWeight: 700
+                }}
+              >
+                {repeatSpeaking ? '⏹ Stop' : '🔊 Read Aloud'}
+              </button>
+              <button
+                onClick={() => { setRepeatText(''); if (repeatSpeaking) { speechSynthesis.cancel(); setRepeatSpeaking(false); } }}
+                style={{ padding: '12px 16px', fontSize: 15, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Clear
+              </button>
+            </div>
           </div>
         </div>
       )}
