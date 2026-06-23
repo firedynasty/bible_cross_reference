@@ -1650,7 +1650,7 @@ const BibleApp = () => {
     'nltPsalms', 'plan', 'math', 'figures', 'copyPane2', 'toggleCuv', 'togglePsalms',
     'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
     'fontPlus', 'youtube', 'lang', 'soaking', 'classical', 'classicalPlay',
-    'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'goTextR', 'oaiKey',
+    'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'snippets', 'goTextR', 'oaiKey',
     'oaiRead', 'kjvRead', 'ttsChpCopy'
   ];
   const featureLabels = {
@@ -1663,7 +1663,7 @@ const BibleApp = () => {
     fontPlus: 'Font +', youtube: 'YouTube', lang: 'Language', soaking: 'Soaking',
     classical: '🎻 Classical', classicalPlay: 'Classical ▶/⏸',
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
-    breathe: 'br_ (Breathe)', repeat: 'Repeat', goTextR: 'Go:TextR', oaiKey: 'Key',
+    breathe: 'br_ (Breathe)', repeat: 'Repeat', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋'
   };
   const [visibleFeatures, setVisibleFeatures] = useState(() => {
@@ -1822,6 +1822,17 @@ const BibleApp = () => {
   const [showRepeatModal, setShowRepeatModal] = useState(false);
   const [repeatText, setRepeatText] = useState('');
   const [repeatSpeaking, setRepeatSpeaking] = useState(false);
+
+  // State for Snippets Modal (save & copy text snippets)
+  const [showSnippetsModal, setShowSnippetsModal] = useState(false);
+  const [snippetInput, setSnippetInput] = useState('');
+  const [savedSnippets, setSavedSnippets] = useState(() => {
+    try { const s = localStorage.getItem('saved-snippets'); return s ? JSON.parse(s) : []; } catch { return []; }
+  });
+  const [snippetCopiedIdx, setSnippetCopiedIdx] = useState(null);
+  useEffect(() => {
+    try { localStorage.setItem('saved-snippets', JSON.stringify(savedSnippets)); } catch {}
+  }, [savedSnippets]);
 
   // State for Strong's concordance
   const [strongsIndex, setStrongsIndex] = useState(null);
@@ -5909,6 +5920,15 @@ const BibleApp = () => {
                   Repeat
                 </button>}
 
+                {/* Snippets Modal Button */}
+                {isFeatureVisible('snippets') && <button
+                  onClick={() => setShowSnippetsModal(true)}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-indigo-500 text-white hover:bg-indigo-600 font-semibold"
+                  title="Save and copy text snippets"
+                >
+                  Snippets
+                </button>}
+
                 {/* Dropbox Highlights Button - hidden */}
                 {false && <button
                   onClick={handleDbxClick}
@@ -8819,6 +8839,117 @@ const BibleApp = () => {
               >
                 Clear
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Snippets Modal */}
+      {showSnippetsModal && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowSnippetsModal(false); }}
+        >
+          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '95%', maxWidth: 600, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', position: 'relative' }}>
+            <button
+              onClick={() => setShowSnippetsModal(false)}
+              style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 1, color: isDarkMode ? '#aaa' : '#666', fontSize: 20 }}
+              title="Close"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <h3 style={{ margin: '0 0 16px', fontSize: '1.2em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>Snippets</h3>
+
+            {/* Input area */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <button
+                onClick={async () => {
+                  try {
+                    const clip = await navigator.clipboard.readText();
+                    setSnippetInput(clip);
+                  } catch (e) { console.error('Clipboard read failed', e); }
+                }}
+                style={{ padding: '8px 14px', fontSize: 13, border: 'none', borderRadius: 8, background: isDarkMode ? '#2a2a3a' : '#eef2ff', color: isDarkMode ? '#a5b4fc' : '#4338ca', cursor: 'pointer', fontWeight: 600 }}
+              >
+                📋 Paste
+              </button>
+              <button
+                onClick={() => {
+                  const text = snippetInput.trim();
+                  if (!text) return;
+                  if (savedSnippets.some(s => s.text === text)) return;
+                  const label = text.length > 60 ? text.slice(0, 60) + '...' : text;
+                  setSavedSnippets(prev => [{ text, label, savedAt: Date.now() }, ...prev]);
+                  setSnippetInput('');
+                }}
+                style={{ padding: '8px 14px', fontSize: 13, border: 'none', borderRadius: 8, background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer', fontWeight: 700 }}
+              >
+                Save
+              </button>
+            </div>
+            <textarea
+              value={snippetInput}
+              onChange={(e) => setSnippetInput(e.target.value)}
+              placeholder="Type or paste text to save as a snippet..."
+              style={{
+                width: '100%', minHeight: 80, padding: 12, fontSize: 14, lineHeight: 1.6,
+                border: `2px solid ${isDarkMode ? '#444' : '#ddd'}`, borderRadius: 10,
+                background: isDarkMode ? '#1a1a2a' : '#fafafa', color: isDarkMode ? '#e0e0e0' : '#333',
+                resize: 'vertical', fontFamily: 'Georgia, "Times New Roman", serif',
+                outline: 'none', boxSizing: 'border-box'
+              }}
+            />
+
+            {/* Saved snippets list */}
+            {savedSnippets.length > 0 && (
+              <div style={{ marginTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: isDarkMode ? '#aaa' : '#888' }}>{savedSnippets.length} saved snippet{savedSnippets.length !== 1 ? 's' : ''}</span>
+                <button
+                  onClick={() => setSavedSnippets([])}
+                  style={{ padding: '4px 10px', fontSize: 12, border: 'none', borderRadius: 6, background: isDarkMode ? '#442222' : '#fee2e2', color: isDarkMode ? '#f87171' : '#dc2626', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Clear All
+                </button>
+              </div>
+            )}
+            <div style={{ marginTop: 8, overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {savedSnippets.map((snippet, i) => (
+                <div
+                  key={snippet.savedAt}
+                  onClick={() => {
+                    navigator.clipboard.writeText(snippet.text).then(() => {
+                      setSnippetCopiedIdx(i);
+                      setTimeout(() => setSnippetCopiedIdx(null), 1200);
+                    });
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 14px', fontSize: 14,
+                    border: `1px solid ${snippetCopiedIdx === i ? '#22c55e' : (isDarkMode ? '#444' : '#e0e0e0')}`,
+                    borderRadius: 8, background: snippetCopiedIdx === i ? (isDarkMode ? '#1a2e1a' : '#f0fdf4') : (isDarkMode ? '#333' : '#fafbff'),
+                    cursor: 'pointer', textAlign: 'left', transition: 'border-color 0.2s, background 0.2s'
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontWeight: 600, color: snippetCopiedIdx === i ? '#22c55e' : '#667eea', fontSize: 13 }}>
+                      {snippetCopiedIdx === i ? 'Copied!' : snippet.label}
+                    </span>
+                    {snippet.text.length > 60 && snippetCopiedIdx !== i && (
+                      <span style={{ display: 'block', fontSize: 12, color: isDarkMode ? '#aaa' : '#888', marginTop: 3, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        {snippet.text.slice(0, 120)}{snippet.text.length > 120 ? '...' : ''}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSavedSnippets(prev => prev.filter((_, idx) => idx !== i)); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDarkMode ? '#888' : '#aaa', fontSize: 16, padding: '0 4px', lineHeight: 1, flexShrink: 0 }}
+                    title="Delete snippet"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         </div>
