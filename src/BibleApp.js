@@ -7342,59 +7342,7 @@ const BibleApp = () => {
                   </>
                 );
               })()}
-              {/* Pane 2 copy button — mobile only */}
-              {isMobileView && !isTabletView && selectedBook && (
-                <button
-                  onClick={() => {
-                    const pane = kjvContentRef.current;
-                    if (!pane) return;
-                    const paneRect = pane.getBoundingClientRect();
-                    let topVerse = 1;
-                    for (let i = 1; i <= 200; i++) {
-                      const el = document.getElementById(`right-pane-verse-${i}`);
-                      if (!el) break;
-                      const elRect = el.getBoundingClientRect();
-                      if (elRect.bottom > paneRect.top + 40) {
-                        topVerse = i;
-                        break;
-                      }
-                    }
-                    const bottomBtns = document.getElementById('pane2-bottom-buttons');
-                    const atBottom = bottomBtns && bottomBtns.getBoundingClientRect().top < paneRect.bottom;
-                    let lastVerse = topVerse;
-                    if (atBottom) {
-                      for (let i = topVerse + 1; i <= 200; i++) {
-                        if (!document.getElementById(`right-pane-verse-${i}`)) break;
-                        lastVerse = i;
-                      }
-                    }
-                    const texts = [];
-                    for (let v = topVerse; v <= lastVerse; v++) {
-                      const verseEl = document.getElementById(`right-pane-verse-${v}`);
-                      if (verseEl) {
-                        const p = verseEl.querySelector('p');
-                        if (p) {
-                          const spans = p.querySelectorAll('span');
-                          const textSpan = spans.length >= 2 ? spans[1] : null;
-                          const text = textSpan ? textSpan.textContent.trim() : p.textContent.trim();
-                          if (text) texts.push(text);
-                        }
-                      }
-                    }
-                    if (texts.length) {
-                      navigator.clipboard.writeText(texts.join('\n')).then(() => {
-                        const btn = document.getElementById('pane2-copy-btn-mobile');
-                        if (btn) { const orig = btn.innerHTML; btn.innerHTML = '<span style="font-size:22px;color:rgba(0,0,0,0.7)">✓</span>'; setTimeout(() => { btn.innerHTML = orig; }, 1000); }
-                      });
-                    }
-                  }}
-                  id="pane2-copy-btn-mobile"
-                  style={{ position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
-                  title="Copy verse from pane 2"
-                >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                </button>
-              )}
+              {/* Pane 2 copy button moved inside scrollable div */}
               {/* KJV Bible Text Display */}
               <div
                 ref={kjvContentRef}
@@ -7463,6 +7411,59 @@ const BibleApp = () => {
                     title="Read verse aloud (TTS)"
                   >
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                  </button>
+                )}
+                {/* Copy button — mobile only, top center */}
+                {isMobileView && !isTabletView && selectedBook && (
+                  <button
+                    onClick={() => {
+                      const pane = kjvContentRef.current;
+                      if (!pane) return;
+                      const paneRect = pane.getBoundingClientRect();
+                      let topVerse = 1;
+                      for (let i = 1; i <= 200; i++) {
+                        const el = document.getElementById(`right-pane-verse-${i}`);
+                        if (!el) break;
+                        const elRect = el.getBoundingClientRect();
+                        if (elRect.bottom > paneRect.top + 40) {
+                          topVerse = i;
+                          break;
+                        }
+                      }
+                      const bottomBtns = document.getElementById('pane2-bottom-buttons');
+                      const atBottom = bottomBtns && bottomBtns.getBoundingClientRect().top < paneRect.bottom;
+                      let lastVerse = topVerse;
+                      if (atBottom) {
+                        for (let i = topVerse + 1; i <= 200; i++) {
+                          if (!document.getElementById(`right-pane-verse-${i}`)) break;
+                          lastVerse = i;
+                        }
+                      }
+                      const texts = [];
+                      for (let v = topVerse; v <= lastVerse; v++) {
+                        const verseEl = document.getElementById(`right-pane-verse-${v}`);
+                        if (verseEl) {
+                          const p = verseEl.querySelector('p');
+                          if (p) {
+                            const spans = p.querySelectorAll('span');
+                            const textSpan = spans.length >= 2 ? spans[1] : null;
+                            const text = textSpan ? textSpan.textContent.trim() : p.textContent.trim();
+                            if (text) texts.push(text);
+                          }
+                        }
+                      }
+                      if (texts.length) {
+                        navigator.clipboard.writeText(texts.join('\n')).then(() => {
+                          const btn = document.getElementById('pane2-copy-btn-mobile');
+                          if (btn) { const orig = btn.innerHTML; btn.innerHTML = '<span style="font-size:22px;color:rgba(0,0,0,0.7)">✓</span>'; setTimeout(() => { btn.innerHTML = orig; }, 1000); }
+                        });
+                      }
+                    }}
+                    id="pane2-copy-btn-mobile"
+                    style={{ position: 'sticky', top: 6, left: '50%', transform: 'translateX(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48 }}
+                    title="Copy verse from pane 2"
+                  >
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                   </button>
                 )}
                 {/* Page-down buttons — mobile only, left + right */}
