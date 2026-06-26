@@ -1945,6 +1945,9 @@ const BibleApp = () => {
   const frenchPartIndexRef = useRef(0);
   const frenchPartVerseKeyRef = useRef(null);
 
+  // State for Pane verse TTS (click verse number to read aloud)
+  const [speakingPaneVerse, setSpeakingPaneVerse] = useState(null); // verseNumber currently speaking
+
   // Parse a single Bible reference string like "Psalm 23:4" or "Matthew 11:28-30"
   const parseSingleBibleRef = useCallback((refStr) => {
     const bookNameToAbbrev = {
@@ -2853,6 +2856,39 @@ const BibleApp = () => {
   const handleRhymeAudioToggleRef = useRef(handleRhymeAudioToggle);
   useEffect(() => { handleRhymeAudioToggleRef.current = handleRhymeAudioToggle; }, [handleRhymeAudioToggle]);
 
+  // TTS handler for clicking a verse number to read the verse aloud
+  const handleVerseTts = useCallback((verseNumber, verseText) => {
+    // If already speaking this verse, stop it
+    if (speakingPaneVerse === verseNumber) {
+      window.speechSynthesis.cancel();
+      setSpeakingPaneVerse(null);
+      return;
+    }
+    // Strip any HTML-like tags and Strong's numbers for cleaner speech
+    const cleanText = verseText
+      .replace(/<[^>]*>/g, '')
+      .replace(/\{[^}]*\}/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!cleanText) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'en-US';
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      let voice = voices.find(v => v.lang === 'en-US' && v.name.includes('Google'));
+      if (!voice) voice = voices.find(v => v.lang === 'en-US' && (v.name.includes('Enhanced') || v.name.includes('Premium')));
+      if (!voice) voice = voices.find(v => v.lang === 'en-US');
+      if (voice) utterance.voice = voice;
+    }
+    utterance.onend = () => setSpeakingPaneVerse(null);
+    utterance.onerror = () => setSpeakingPaneVerse(null);
+    setSpeakingPaneVerse(verseNumber);
+    window.speechSynthesis.speak(utterance);
+  }, [speakingPaneVerse]);
+
   // Stop audio whenever the active pane 2 book/chapter changes
   useEffect(() => {
     const audio = storytimeAudioRef.current;
@@ -2865,6 +2901,11 @@ const BibleApp = () => {
       storytimeTtsRef.current = false;
     }
     setIsStorytimeAudioPlaying(false);
+    // Cancel pane verse TTS
+    if (speakingPaneVerse !== null) {
+      window.speechSynthesis.cancel();
+      setSpeakingPaneVerse(null);
+    }
     // Skip stopping rhyme audio when auto-advancing chapters
     if (rhymeAutoAdvancingRef.current) {
       rhymeAutoAdvancingRef.current = false;
@@ -6696,7 +6737,11 @@ const BibleApp = () => {
                             style={{ fontSize: `${fontScale * 1.125}rem`, ...(highlightedVerses.includes(item.verseNumber) ? { borderLeft: '4px solid #eab308' } : {}) }}
                           >
                             <p className="flex">
-                              <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                              <span
+                                title="Read verse aloud (TTS)"
+                                onClick={(e) => { e.stopPropagation(); handleVerseTts(item.verseNumber, item.text); }}
+                                className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${speakingPaneVerse === item.verseNumber ? (isDarkMode ? 'text-green-400' : 'text-green-600') : (isDarkMode ? 'text-blue-400' : 'text-blue-600')}`}
+                              >
                                 {item.verseNumber}
                               </span>
                               <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' && item.type === 'primary' ? renderWithStrongs(item.text, showGlosses) : renderWithGlosses(item.type === 'secondary' && showPane2Syllables ? syllabifyText(item.text) : item.text, showGlosses)}</span>
@@ -7040,9 +7085,12 @@ const BibleApp = () => {
                         style={{ fontSize: `${fontScale * 1.125}rem` }}
                       >
                         <p className="flex">
-                          <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
+                          <span
+                            title="Read verse aloud (TTS)"
+                            onClick={(e) => { e.stopPropagation(); handleVerseTts(verseNumber, verse); }}
+                            className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${speakingPaneVerse === verseNumber ? (isDarkMode ? 'text-green-400' : 'text-green-600') : (isDarkMode ? 'text-blue-400' : 'text-blue-600')}`}
+                          >{verseNumber}</span>
                           <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(verse, showGlosses)}</span>
-                          
                         </p>
 
                         {/* Cross-references — always visible */}
@@ -7871,7 +7919,11 @@ const BibleApp = () => {
                                 style={{ fontSize: `${fontScale * 1.125}rem` }}
                               >
                                 <p className="flex">
-                                  <span className={`font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{verseNumber}</span>
+                                  <span
+                                    title="Read verse aloud (TTS)"
+                                    onClick={(e) => { e.stopPropagation(); handleVerseTts(verseNumber, verse); }}
+                                    className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${speakingPaneVerse === verseNumber ? (isDarkMode ? 'text-green-400' : 'text-green-600') : (isDarkMode ? 'text-blue-400' : 'text-blue-600')}`}
+                                  >{verseNumber}</span>
                                   <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(showPane2Syllables ? syllabifyText(verse) : verse, showGlosses)}</span>
                                 </p>
                               </div>
