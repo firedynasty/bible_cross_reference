@@ -1296,7 +1296,27 @@ Matthew 19:26
 Isaiah 55:9
 Isaiah 40:28
 2 Corinthians 10:3
-2 Peter 3:18`
+2 Peter 3:18`,
+  "Love and Calling": `Numbers 6:24-26
+Proverbs 4:18
+Psalm 147:3
+Psalm 138:3
+Lamentations 3:25
+Psalm 33:12
+Psalm 122:6
+Psalm 48:1
+Isaiah 44:21
+Psalm 100:5
+Psalm 146:5
+Isaiah 60:1
+Psalm 115:12
+Deuteronomy 7:9
+Psalm 145:9
+Isaiah 54:10
+Exodus 23:25
+1 Thessalonians 5:24
+3 John 1:2
+Psalm 147:3`
 };
 
 // Dropbox PKCE OAuth helpers
