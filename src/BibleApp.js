@@ -1316,7 +1316,30 @@ Isaiah 54:10
 Exodus 23:25
 1 Thessalonians 5:24
 3 John 1:2
-Psalm 147:3`
+Psalm 147:3`,
+  "Obey": `1 Corinthians 6:19-20
+Proverbs 3:7
+Ecclesiastes 11:10
+Proverbs 13:12
+Ephesians 5:15-16
+Proverbs 27:19
+2 Corinthians 5:7
+Colossians 3:23-24
+Proverbs 21:21
+Mark 8:36
+Psalm 73:26
+1 Peter 3:10
+Ecclesiastes 3:1
+Psalm 31:3
+Proverbs 4:23
+Psalm 25:4
+Romans 12:2
+Psalm 37:7
+Psalm 23:6
+Proverbs 13:3
+Ecclesiastes 7:10
+John 7:38
+Proverbs 10:17`
 };
 
 // Dropbox PKCE OAuth helpers
