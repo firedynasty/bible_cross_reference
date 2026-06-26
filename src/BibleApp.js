@@ -6932,21 +6932,6 @@ const BibleApp = () => {
                       pane1.scrollTop = Math.min(maxScroll, pane1.scrollTop + pane1.clientHeight * 0.9);
                     }
                   }}
-                  style={{ position: 'sticky', top: '50%', left: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'left' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = ''; }}
-                  title="Page down"
-                >
-                  <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </button>
-                <button
-                  onClick={() => {
-                    const pane1 = chapterContentRef.current;
-                    if (pane1) {
-                      const maxScroll = pane1.scrollHeight - pane1.clientHeight;
-                      pane1.scrollTop = Math.min(maxScroll, pane1.scrollTop + pane1.clientHeight * 0.9);
-                    }
-                  }}
                   style={{ position: 'sticky', top: '50%', right: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'right' }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'scale(1.1)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = ''; }}
