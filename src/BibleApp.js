@@ -1947,6 +1947,9 @@ const BibleApp = () => {
 
   // State for Pane verse TTS (click verse number to read aloud)
   const [speakingPaneVerse, setSpeakingPaneVerse] = useState(null); // verseNumber currently speaking
+  const [verseTtsCanto, setVerseTtsCanto] = useState(() => {
+    try { return localStorage.getItem('bible-verse-tts-canto') === 'true'; } catch { return false; }
+  });
 
   // Parse a single Bible reference string like "Psalm 23:4" or "Matthew 11:28-30"
   const parseSingleBibleRef = useCallback((refStr) => {
@@ -2857,7 +2860,7 @@ const BibleApp = () => {
   useEffect(() => { handleRhymeAudioToggleRef.current = handleRhymeAudioToggle; }, [handleRhymeAudioToggle]);
 
   // TTS handler for clicking a verse number to read the verse aloud
-  const handleVerseTts = useCallback((verseNumber, verseText) => {
+  const handleVerseTts = useCallback((verseNumber, verseText, translationId) => {
     // If already speaking this verse, stop it
     if (speakingPaneVerse === verseNumber) {
       window.speechSynthesis.cancel();
@@ -2872,22 +2875,42 @@ const BibleApp = () => {
       .trim();
     if (!cleanText) return;
     window.speechSynthesis.cancel();
+
+    // Determine language from translation
+    let langCode = 'en-US';
+    let rate = 1;
+    if (translationId && translationId.startsWith('zh_')) {
+      langCode = verseTtsCanto ? 'zh-HK' : 'zh-CN';
+      rate = 0.8;
+    } else if (translationId && translationId.startsWith('es_')) {
+      langCode = 'es-ES';
+      rate = 0.9;
+    } else if (translationId && translationId.startsWith('he_')) {
+      langCode = 'he-IL';
+      rate = 0.8;
+    } else if (translationId && translationId.startsWith('fr_')) {
+      langCode = 'fr-FR';
+      rate = 0.9;
+    }
+
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'en-US';
-    utterance.rate = 1;
+    utterance.lang = langCode;
+    utterance.rate = rate;
     utterance.pitch = 1;
     const voices = window.speechSynthesis.getVoices();
     if (voices.length > 0) {
-      let voice = voices.find(v => v.lang === 'en-US' && v.name.includes('Google'));
-      if (!voice) voice = voices.find(v => v.lang === 'en-US' && (v.name.includes('Enhanced') || v.name.includes('Premium')));
-      if (!voice) voice = voices.find(v => v.lang === 'en-US');
+      let voice = voices.find(v => v.lang === langCode && v.name.includes('Google'));
+      if (!voice) voice = voices.find(v => v.lang === langCode && (v.name.includes('Enhanced') || v.name.includes('Premium')));
+      if (!voice) voice = voices.find(v => v.lang === langCode);
+      if (!voice && langCode === 'zh-HK') voice = voices.find(v => v.lang === 'yue' || v.lang === 'yue-HK' || v.lang.startsWith('yue'));
+      if (!voice && langCode.startsWith('zh')) voice = voices.find(v => v.lang.startsWith('zh'));
       if (voice) utterance.voice = voice;
     }
     utterance.onend = () => setSpeakingPaneVerse(null);
     utterance.onerror = () => setSpeakingPaneVerse(null);
     setSpeakingPaneVerse(verseNumber);
     window.speechSynthesis.speak(utterance);
-  }, [speakingPaneVerse]);
+  }, [speakingPaneVerse, verseTtsCanto]);
 
   // Stop audio whenever the active pane 2 book/chapter changes
   useEffect(() => {
@@ -6739,7 +6762,7 @@ const BibleApp = () => {
                             <p className="flex">
                               <span
                                 title="Read verse aloud (TTS)"
-                                onClick={(e) => { e.stopPropagation(); handleVerseTts(item.verseNumber, item.text); }}
+                                onClick={(e) => { e.stopPropagation(); handleVerseTts(item.verseNumber, item.text, item.type === 'primary' ? selectedTranslation : rightPaneTranslation); }}
                                 className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${speakingPaneVerse === item.verseNumber ? (isDarkMode ? 'text-green-400' : 'text-green-600') : (isDarkMode ? 'text-blue-400' : 'text-blue-600')}`}
                               >
                                 {item.verseNumber}
@@ -7087,7 +7110,7 @@ const BibleApp = () => {
                         <p className="flex">
                           <span
                             title="Read verse aloud (TTS)"
-                            onClick={(e) => { e.stopPropagation(); handleVerseTts(verseNumber, verse); }}
+                            onClick={(e) => { e.stopPropagation(); handleVerseTts(verseNumber, verse, selectedTranslation); }}
                             className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${speakingPaneVerse === verseNumber ? (isDarkMode ? 'text-green-400' : 'text-green-600') : (isDarkMode ? 'text-blue-400' : 'text-blue-600')}`}
                           >{verseNumber}</span>
                           <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(verse, showGlosses)}</span>
@@ -7921,7 +7944,7 @@ const BibleApp = () => {
                                 <p className="flex">
                                   <span
                                     title="Read verse aloud (TTS)"
-                                    onClick={(e) => { e.stopPropagation(); handleVerseTts(verseNumber, verse); }}
+                                    onClick={(e) => { e.stopPropagation(); handleVerseTts(verseNumber, verse, rightPaneTranslation); }}
                                     className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${speakingPaneVerse === verseNumber ? (isDarkMode ? 'text-green-400' : 'text-green-600') : (isDarkMode ? 'text-blue-400' : 'text-blue-600')}`}
                                   >{verseNumber}</span>
                                   <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(showPane2Syllables ? syllabifyText(verse) : verse, showGlosses)}</span>
@@ -8713,6 +8736,25 @@ const BibleApp = () => {
                 </label>
               ))}
             </div>
+
+            {/* Divider */}
+            <div style={{ borderTop: `2px solid ${isDarkMode ? '#555' : '#ddd'}`, marginTop: 12, marginBottom: 12 }} />
+
+            {/* Verse TTS Settings */}
+            <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: isDarkMode ? '#88bb99' : '#48a868', paddingLeft: 4 }}>Verse TTS</div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: verseTtsCanto ? (isDarkMode ? '#3a4a3a' : '#f0fff5') : (isDarkMode ? '#1a1a2a' : '#f5f5f5'), border: `1px solid ${verseTtsCanto ? '#48a868' : (isDarkMode ? '#444' : '#ddd')}` }}>
+              <input
+                type="checkbox"
+                checked={verseTtsCanto}
+                onChange={() => {
+                  const next = !verseTtsCanto;
+                  setVerseTtsCanto(next);
+                  localStorage.setItem('bible-verse-tts-canto', String(next));
+                }}
+                style={{ accentColor: '#48a868' }}
+              />
+              <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}>Cantonese (CUV)</span>
+            </label>
           </div>
         </div>
       )}
