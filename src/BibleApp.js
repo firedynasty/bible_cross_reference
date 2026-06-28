@@ -7555,6 +7555,14 @@ const BibleApp = () => {
                         navigator.clipboard.writeText(texts.join('\n')).then(() => {
                           const btn = document.getElementById('pane2-copy-btn-mobile');
                           if (btn) { const orig = btn.innerHTML; btn.innerHTML = '<span style="font-size:22px;color:rgba(0,0,0,0.7)">✓</span>'; setTimeout(() => { btn.innerHTML = orig; }, 1000); }
+                          // Scroll to next verse after copying
+                          const nextVerseEl = document.getElementById(`right-pane-verse-${lastVerse + 1}`);
+                          if (nextVerseEl && pane) {
+                            const freshPaneRect = pane.getBoundingClientRect();
+                            const nextRect = nextVerseEl.getBoundingClientRect();
+                            const offset = nextRect.top - freshPaneRect.top + pane.scrollTop;
+                            pane.scrollTo({ top: offset, behavior: 'smooth' });
+                          }
                         });
                       }
                     }}
