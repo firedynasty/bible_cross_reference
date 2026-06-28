@@ -1693,7 +1693,7 @@ const BibleApp = () => {
     'nltPsalms', 'plan', 'math', 'figures', 'copyPane2', 'toggleCuv', 'togglePsalms',
     'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
     'fontPlus', 'youtube', 'lang', 'soaking', 'classical', 'classicalPlay',
-    'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'snippets', 'goTextR', 'oaiKey',
+    'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
     'oaiRead', 'kjvRead', 'ttsChpCopy'
   ];
   const featureLabels = {
@@ -1706,7 +1706,7 @@ const BibleApp = () => {
     fontPlus: 'Font +', youtube: 'YouTube', lang: 'Language', soaking: 'Soaking',
     classical: '🎻 Classical', classicalPlay: 'Classical ▶/⏸',
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
-    breathe: 'br_ (Breathe)', repeat: 'Repeat', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
+    breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋'
   };
   const [visibleFeatures, setVisibleFeatures] = useState(() => {
@@ -1865,6 +1865,11 @@ const BibleApp = () => {
   const [showRepeatModal, setShowRepeatModal] = useState(false);
   const [repeatText, setRepeatText] = useState('');
   const [repeatSpeaking, setRepeatSpeaking] = useState(false);
+
+  // State for Pane 1 Verse Modal (show pane 1 translation of last copied pane 2 verses)
+  const [showPane1VerseModal, setShowPane1VerseModal] = useState(false);
+  const [lastCopiedVerseRange, setLastCopiedVerseRange] = useState(null); // { topVerse, lastVerse }
+  const [pane1VerseSpeaking, setPane1VerseSpeaking] = useState(false);
 
   // State for Snippets Modal (save & copy text snippets)
   const [showSnippetsModal, setShowSnippetsModal] = useState(false);
@@ -6027,6 +6032,15 @@ const BibleApp = () => {
                   Repeat
                 </button>}
 
+                {/* Pane 1 Verse Modal Button */}
+                {isFeatureVisible('pane1Verse') && <button
+                  onClick={() => setShowPane1VerseModal(true)}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-cyan-500 text-white hover:bg-cyan-600 font-semibold"
+                  title="Show pane 1 translation of last copied pane 2 verses"
+                >
+                  P1 Verse
+                </button>}
+
                 {/* Snippets Modal Button */}
                 {isFeatureVisible('snippets') && <button
                   onClick={() => setShowSnippetsModal(true)}
@@ -7552,6 +7566,7 @@ const BibleApp = () => {
                         }
                       }
                       if (texts.length) {
+                        setLastCopiedVerseRange({ topVerse, lastVerse });
                         navigator.clipboard.writeText(texts.join('\n')).then(() => {
                           const btn = document.getElementById('pane2-copy-btn-mobile');
                           if (btn) { const orig = btn.innerHTML; btn.innerHTML = '<span style="font-size:22px;color:rgba(0,0,0,0.7)">✓</span>'; setTimeout(() => { btn.innerHTML = orig; }, 1000); }
@@ -9012,6 +9027,98 @@ const BibleApp = () => {
           </div>
         </div>
       )}
+
+      {/* Pane 1 Verse Modal */}
+      {showPane1VerseModal && (() => {
+        const effectiveBook = pane2Book || selectedBook;
+        const effectiveChapter = pane2Chapter || selectedChapter;
+        const bookAbbrevP1 = effectiveBook?.abbrev;
+        let p1Verses = [];
+        if (bibleData && bookAbbrevP1) {
+          const bk = bibleData.find(b => b.abbrev === bookAbbrevP1);
+          if (bk && bk.chapters[effectiveChapter - 1]) p1Verses = bk.chapters[effectiveChapter - 1];
+        }
+        const range = lastCopiedVerseRange;
+        const topV = range ? range.topVerse : 1;
+        const lastV = range ? range.lastVerse : p1Verses.length;
+        const displayVerses = p1Verses.slice(topV - 1, lastV);
+        const bookName = effectiveBook ? (effectiveBook.book || getBookName(effectiveBook.abbrev)) : '';
+        const translationLabel = getTranslationShortName(selectedTranslation);
+        const headerText = `${bookName} ${effectiveChapter}:${topV}${lastV > topV ? '-' + lastV : ''} (${translationLabel})`;
+        const fullText = headerText + '\n\n' + displayVerses.map((v, i) => `${topV + i} ${v}`).join('\n');
+
+        return (
+          <div
+            style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            onClick={(e) => { if (e.target === e.currentTarget) { if (pane1VerseSpeaking) { speechSynthesis.cancel(); setPane1VerseSpeaking(false); } setShowPane1VerseModal(false); } }}
+          >
+            <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '95%', maxWidth: 600, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', position: 'relative' }}>
+              <button
+                onClick={() => { if (pane1VerseSpeaking) { speechSynthesis.cancel(); setPane1VerseSpeaking(false); } setShowPane1VerseModal(false); }}
+                style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 1, color: isDarkMode ? '#aaa' : '#666', fontSize: 20 }}
+                title="Close"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <h3 style={{ margin: '0 0 16px', fontSize: '1.2em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>{headerText}</h3>
+
+              {!range && (
+                <p style={{ color: isDarkMode ? '#aaa' : '#888', textAlign: 'center', marginBottom: 12, fontSize: 13 }}>
+                  No verses copied yet. Use the copy button on pane 2 first.
+                </p>
+              )}
+
+              <div style={{
+                flex: 1, overflowY: 'auto', padding: 14, fontSize: 15, lineHeight: 1.7,
+                border: `2px solid ${isDarkMode ? '#444' : '#ddd'}`, borderRadius: 10,
+                background: isDarkMode ? '#1a1a2a' : '#fafafa', color: isDarkMode ? '#e0e0e0' : '#333',
+                fontFamily: 'Georgia, "Times New Roman", serif', minHeight: 150
+              }}>
+                {displayVerses.map((v, i) => (
+                  <p key={i} style={{ margin: '4px 0' }}>
+                    <span style={{ color: isDarkMode ? '#888' : '#999', fontSize: 12, marginRight: 6 }}>{topV + i}</span>
+                    {v}
+                  </p>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <button
+                  onClick={() => {
+                    if (pane1VerseSpeaking) {
+                      speechSynthesis.cancel();
+                      setPane1VerseSpeaking(false);
+                      return;
+                    }
+                    const text = displayVerses.join(' ').trim();
+                    if (!text) return;
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.onend = () => setPane1VerseSpeaking(false);
+                    utterance.onerror = () => setPane1VerseSpeaking(false);
+                    setPane1VerseSpeaking(true);
+                    speechSynthesis.speak(utterance);
+                  }}
+                  style={{
+                    flex: 1, padding: '12px 16px', fontSize: 15, border: 'none', borderRadius: 8,
+                    background: pane1VerseSpeaking ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #06b6d4, #0891b2)',
+                    color: 'white', cursor: 'pointer', fontWeight: 700
+                  }}
+                >
+                  {pane1VerseSpeaking ? '⏹ Stop' : '🔊 Read Aloud'}
+                </button>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(fullText); }}
+                  style={{ padding: '12px 16px', fontSize: 15, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  📋 Copy
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Snippets Modal */}
       {showSnippetsModal && (
