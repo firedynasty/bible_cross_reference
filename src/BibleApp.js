@@ -5827,6 +5827,11 @@ const BibleApp = () => {
               </svg>
             </button>
 
+            {/* Current book name next to gear */}
+            {selectedBook && (
+              <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{selectedBook.book || getBookName(selectedBook.abbrev)}</span>
+            )}
+
             {/* Language cycle + open buttons */}
             {(() => {
               const langOptions = ['en', 'cant', 'chin', 'heb', 'span', 'fr'];
@@ -8478,7 +8483,7 @@ const BibleApp = () => {
                   setRefPromptValue('');
                 }
               }}
-              placeholder="Ps 23; Matt 11:28, Rom 8:28"
+              placeholder="Ps 23; Matt 11:28 (multi-line: paste below)"
               autoFocus
               style={{
                 width: '100%', padding: '8px 10px', fontSize: '14px', border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
