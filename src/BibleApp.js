@@ -1821,6 +1821,7 @@ const BibleApp = () => {
   const [cursiveClipboardBuckets, setCursiveClipboardBuckets] = useState(null);
   const [cursiveSource, setCursiveSource] = useState(() => localStorage.getItem('cursive-source') || 'pane2'); // 'story' or 'pane2'
   const [cursiveAuto, setCursiveAuto] = useState(() => localStorage.getItem('cursive-auto') === 'true');
+  const [cursiveSlow, setCursiveSlow] = useState(() => localStorage.getItem('cursive-slow') === 'true');
   const cursiveAutoRef = useRef(false);
   cursiveAutoRef.current = cursiveAuto;
   const [cursiveSyllables] = useState(true);
@@ -9662,7 +9663,7 @@ const BibleApp = () => {
 
       {/* Cursive Writing Modal */}
       {showCursiveModal && (() => {
-        const LINES_PER_BUCKET = 2;
+        const LINES_PER_BUCKET = 1;
         const p2Book = pane2Book || selectedBook;
         const p2Chapter = pane2Chapter || selectedChapter;
         const p2BookName = p2Book ? (p2Book.book || getBookName(p2Book.abbrev)) : '';
@@ -9712,8 +9713,10 @@ const BibleApp = () => {
         if (clampedIdx !== cursiveBucketIndex) setCursiveBucketIndex(clampedIdx);
         const bucketText = buckets[clampedIdx] || '';
 
-        const fadeMs = [700, 500, 350, 220, 120][cursiveSpeed - 1];
-        const delayMs = [600, 420, 280, 170, 90][cursiveSpeed - 1];
+        const baseFadeMs = [700, 500, 350, 220, 120][cursiveSpeed - 1];
+        const baseDelayMs = [600, 420, 280, 170, 90][cursiveSpeed - 1];
+        const fadeMs = cursiveSlow ? Math.round(baseFadeMs * 1.8) : baseFadeMs;
+        const delayMs = cursiveSlow ? Math.round(baseDelayMs * 1.8) : baseDelayMs;
 
         const cleanMarkdown = (text) => {
           let t = text;
@@ -9912,6 +9915,13 @@ const BibleApp = () => {
                     title="Increase font size"
                   >
                     A+
+                  </button>
+                  <button
+                    onClick={() => { const v = !cursiveSlow; setCursiveSlow(v); localStorage.setItem('cursive-slow', v); }}
+                    style={{ padding: '8px 12px', borderRadius: 6, border: 'none', background: cursiveSlow ? '#e65100' : '#ccc', color: cursiveSlow ? '#fff' : '#666', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', lineHeight: 1 }}
+                    title="Toggle slower animation speed (1.8x slower)"
+                  >
+                    Slow
                   </button>
                   <button
                     onClick={() => { const v = !cursiveAuto; setCursiveAuto(v); localStorage.setItem('cursive-auto', v); }}
