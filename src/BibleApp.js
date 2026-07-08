@@ -1820,6 +1820,9 @@ const BibleApp = () => {
   const [cursiveInput, setCursiveInput] = useState('');
   const [cursiveClipboardBuckets, setCursiveClipboardBuckets] = useState(null);
   const [cursiveSource, setCursiveSource] = useState(() => localStorage.getItem('cursive-source') || 'pane2'); // 'story' or 'pane2'
+  const [cursiveAuto, setCursiveAuto] = useState(() => localStorage.getItem('cursive-auto') === 'true');
+  const cursiveAutoRef = useRef(false);
+  cursiveAutoRef.current = cursiveAuto;
   const [cursiveSyllables] = useState(true);
   const [showPane2Syllables, setShowPane2Syllables] = useState(() => localStorage.getItem('bible-pane2-syllables') === 'true');
   const hyphRef = useRef(null);
@@ -6475,9 +6478,14 @@ const BibleApp = () => {
               }}
               showCursiveModal={showCursiveModal}
               onCursive={() => {
-                setCursiveBucketIndex(-1);
+                setCursiveBucketIndex(0);
                 const savedSource = localStorage.getItem('cursive-source') || 'pane2';
                 setCursiveSource(savedSource);
+                // Auto-trigger Write animation after modal renders
+                setTimeout(() => {
+                  const writeBtn = document.querySelector('.cursive-write-btn');
+                  if (writeBtn) writeBtn.click();
+                }, 600);
                 if (savedSource === 'story' && storytimeData) {
                   const activeBook = pane2Book || selectedBook;
                   const activeChapter = pane2Chapter || selectedChapter;
@@ -9654,7 +9662,7 @@ const BibleApp = () => {
 
       {/* Cursive Writing Modal */}
       {showCursiveModal && (() => {
-        const LINES_PER_BUCKET = 4;
+        const LINES_PER_BUCKET = 2;
         const p2Book = pane2Book || selectedBook;
         const p2Chapter = pane2Chapter || selectedChapter;
         const p2BookName = p2Book ? (p2Book.book || getBookName(p2Book.abbrev)) : '';
@@ -9811,198 +9819,61 @@ const BibleApp = () => {
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ position: 'absolute', top: 10, right: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
-                <button
-                  onClick={() => {
-                    const newSource = 'pane2';
-                    setCursiveSource(newSource); localStorage.setItem('cursive-source', newSource);
-                    setCursiveClipboardBuckets(null);
-                    setCursiveBucketIndex(-1);
-                    if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-                    const outputText = document.querySelector('.cursive-output-text');
-                    const outputScroll = document.querySelector('.cursive-output-scroll');
-                    if (outputText) outputText.innerHTML = '';
-                    if (outputScroll) outputScroll.scrollTop = 0;
-                  }}
-                  data-cursive-source="pane2"
-                  style={{ background: cursiveSource === 'pane2' ? '#8b4513' : 'transparent', color: cursiveSource === 'pane2' ? 'white' : '#8b4513', border: '1px solid #8b4513', borderRadius: 4, cursor: 'pointer', fontSize: '0.7rem', padding: '2px 8px', fontWeight: 'bold' }}
-                >
-                  Pane 2 [
-                </button>
-                <button
-                  onClick={() => {
-                    if (!storytimeData || !p2Book) return;
-                    const bookName = abbrevToBookName[p2Book.abbrev] || p2Book.abbrev;
-                    const key = `${bookName} ${p2Chapter}`;
-                    const story = storytimeData[key];
-                    if (!story) return; // no story available, stay on pane2
-                    const newSource = 'story';
-                    setCursiveSource(newSource); localStorage.setItem('cursive-source', newSource);
-                    // Chunk story into buckets
-                    let t = story;
-                    t = t.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
-                    t = t.replace(/^#{1,6}\s+/gm, '');
-                    t = t.replace(/\*\*\*(.+?)\*\*\*/g, '$1');
-                    t = t.replace(/\*\*(.+?)\*\*/g, '$1');
-                    t = t.replace(/__(.+?)__/g, '$1');
-                    t = t.replace(/\*(.+?)\*/g, '$1');
-                    t = t.replace(/_(.+?)_/g, '$1');
-                    t = t.replace(/`([^`]+)`/g, '$1');
-                    t = t.replace(/^>\s?/gm, '');
-                    t = t.replace(/^[-*]{3,}\s*$/gm, '');
-                    t = t.replace(/^\|.*\|$/gm, '');
-                    t = t.replace(/^[-|:\s]+$/gm, '');
-                    t = t.replace(/^[-*+]\s+/gm, '');
-                    t = t.replace(/^\d+\.\s+/gm, '');
-                    t = t.replace(/\n{3,}/g, '\n\n');
-                    const cleaned = t.trim();
-                    const clean = cleaned.replace(/\s+/g, ' ').trim();
-                    if (!clean) return;
-                    let out;
-                    const hasAtMarkers = /(?:^|\n)\s*@\S/.test(cleaned);
-                    if (hasAtMarkers) {
-                      out = cleaned.split(/\n(?=\s*@\S)/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
-                    } else {
-                      out = [];
-                      const MAX = 500;
-                      let i = 0;
-                      while (i < clean.length) {
-                        if (clean.length - i <= MAX) { out.push(clean.slice(i).trim()); break; }
-                        let end = i + MAX;
-                        const slice = clean.slice(i, end);
-                        const sentEnd = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('! '), slice.lastIndexOf('? '));
-                        if (sentEnd > MAX / 2) { end = i + sentEnd + 1; } else {
-                          const sp = clean.lastIndexOf(' ', end);
-                          if (sp > i + MAX / 2) end = sp;
-                        }
-                        out.push(clean.slice(i, end).trim());
-                        i = end;
-                      }
-                    }
-                    setCursiveClipboardBuckets(out);
-                    setCursiveBucketIndex(-1);
-                    if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-                    const outputText = document.querySelector('.cursive-output-text');
-                    const outputScroll = document.querySelector('.cursive-output-scroll');
-                    if (outputText) outputText.innerHTML = '';
-                    if (outputScroll) outputScroll.scrollTop = 0;
-                  }}
-                  data-cursive-source="story"
-                  style={{ background: cursiveSource === 'story' ? '#7c3aed' : 'transparent', color: cursiveSource === 'story' ? 'white' : '#7c3aed', border: '1px solid #7c3aed', borderRadius: 4, cursor: 'pointer', fontSize: '0.7rem', padding: '2px 8px', fontWeight: 'bold', opacity: (storytimeData && p2Book && storytimeData[`${abbrevToBookName[p2Book.abbrev] || p2Book.abbrev} ${p2Chapter}`]) ? 1 : 0.4 }}
-                >
-                  Story ]
-                </button>
-                <button
-                  onClick={handleStorytimeAudioToggle}
-                  style={{ background: isStorytimeAudioPlaying ? '#fee2e2' : '#dcfce7', color: isStorytimeAudioPlaying ? '#991b1b' : '#166534', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.7rem', padding: '2px 8px', fontWeight: 'bold' }}
-                  title={isStorytimeAudioPlaying ? 'Pause Story Time audio' : 'Play Story Time audio'}
-                >
-                  {isStorytimeAudioPlaying ? '⏸' : '▶'}
-                </button>
-                <button
-                  onClick={() => {
-                    const activeBook = p2Book;
-                    const activeChapter = p2Chapter;
-                    if (!activeBook) return;
-                    const maxChapters = activeBook.chapters ? activeBook.chapters.length : 999;
-                    let nextBook = activeBook;
-                    let nextChap = activeChapter + 1;
-                    if (nextChap > maxChapters) {
-                      const idx = bibleData.findIndex(b => b.abbrev === activeBook.abbrev);
-                      if (idx === -1 || idx >= bibleData.length - 1) return;
-                      nextBook = bibleData[idx + 1];
-                      nextChap = 1;
-                    }
-                    if (nextBook.abbrev !== activeBook.abbrev) setSelectedBook(nextBook);
-                    handleChapterSelect(nextChap, true);
-                    // If in story mode, reload story for new chapter
-                    if (cursiveSource === 'story' && storytimeData) {
-                      const bookName = abbrevToBookName[nextBook.abbrev] || nextBook.abbrev;
-                      const key = `${bookName} ${nextChap}`;
-                      const story = storytimeData[key];
-                      if (story) {
-                        let t2 = story;
-                        t2 = t2.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
-                        t2 = t2.replace(/^#{1,6}\s+/gm, '');
-                        t2 = t2.replace(/\*\*\*(.+?)\*\*\*/g, '$1');
-                        t2 = t2.replace(/\*\*(.+?)\*\*/g, '$1');
-                        t2 = t2.replace(/__(.+?)__/g, '$1');
-                        t2 = t2.replace(/\*(.+?)\*/g, '$1');
-                        t2 = t2.replace(/_(.+?)_/g, '$1');
-                        t2 = t2.replace(/`([^`]+)`/g, '$1');
-                        t2 = t2.replace(/^>\s?/gm, '');
-                        t2 = t2.replace(/^[-*]{3,}\s*$/gm, '');
-                        t2 = t2.replace(/^\|.*\|$/gm, '');
-                        t2 = t2.replace(/^[-|:\s]+$/gm, '');
-                        t2 = t2.replace(/^[-*+]\s+/gm, '');
-                        t2 = t2.replace(/^\d+\.\s+/gm, '');
-                        t2 = t2.replace(/\n{3,}/g, '\n\n');
-                        const cleaned2 = t2.trim();
-                        const clean2 = cleaned2.replace(/\s+/g, ' ').trim();
-                        if (clean2) {
-                          let out2;
-                          const hasAt2 = /(?:^|\n)\s*@\S/.test(cleaned2);
-                          if (hasAt2) {
-                            out2 = cleaned2.split(/\n(?=\s*@\S)/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
-                          } else {
-                            out2 = [];
-                            const MAX2 = 500;
-                            let j = 0;
-                            while (j < clean2.length) {
-                              if (clean2.length - j <= MAX2) { out2.push(clean2.slice(j).trim()); break; }
-                              let end2 = j + MAX2;
-                              const slice2 = clean2.slice(j, end2);
-                              const sentEnd2 = Math.max(slice2.lastIndexOf('. '), slice2.lastIndexOf('! '), slice2.lastIndexOf('? '));
-                              if (sentEnd2 > MAX2 / 2) { end2 = j + sentEnd2 + 1; } else {
-                                const sp2 = clean2.lastIndexOf(' ', end2);
-                                if (sp2 > j + MAX2 / 2) end2 = sp2;
-                              }
-                              out2.push(clean2.slice(j, end2).trim());
-                              j = end2;
-                            }
-                          }
-                          setCursiveClipboardBuckets(out2);
-                        }
-                      } else {
-                        // No story for next chapter, switch to pane2
-                        setCursiveClipboardBuckets(null);
-                        setCursiveSource('pane2'); localStorage.setItem('cursive-source', 'pane2');
-                      }
-                    } else {
-                      setCursiveClipboardBuckets(null);
-                    }
-                    setCursiveBucketIndex(-1);
-                    if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-                    const outputText = document.querySelector('.cursive-output-text');
-                    const outputScroll = document.querySelector('.cursive-output-scroll');
-                    if (outputText) outputText.innerHTML = '';
-                    if (outputScroll) outputScroll.scrollTop = 0;
-                  }}
-                  data-cursive-next="true"
-                  style={{ background: '#8b4513', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.7rem', color: 'white', padding: '2px 8px', fontWeight: 'bold' }}
-                  title="Next chapter"
-                >
-                  Next . &gt;
-                </button>
+              {/* Hidden next-chapter button for programmatic triggering */}
+              <button
+                data-cursive-next="true"
+                onClick={() => {
+                  const activeBook = p2Book;
+                  const activeChapter = p2Chapter;
+                  if (!activeBook) return;
+                  const maxChapters = activeBook.chapters ? activeBook.chapters.length : 999;
+                  let nextBook = activeBook;
+                  let nextChap = activeChapter + 1;
+                  if (nextChap > maxChapters) {
+                    const idx = bibleData.findIndex(b => b.abbrev === activeBook.abbrev);
+                    if (idx === -1 || idx >= bibleData.length - 1) return;
+                    nextBook = bibleData[idx + 1];
+                    nextChap = 1;
+                  }
+                  if (nextBook.abbrev !== activeBook.abbrev) setSelectedBook(nextBook);
+                  handleChapterSelect(nextChap, true);
+                  setCursiveClipboardBuckets(null);
+                  setCursiveBucketIndex(0);
+                  if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
+                  const outputText = document.querySelector('.cursive-output-text');
+                  const outputScroll = document.querySelector('.cursive-output-scroll');
+                  if (outputText) outputText.innerHTML = '';
+                  if (outputScroll) outputScroll.scrollTop = 0;
+                  setTimeout(() => {
+                    const writeBtn = document.querySelector('.cursive-write-btn');
+                    if (writeBtn) writeBtn.click();
+                  }, 800);
+                }}
+                style={{ display: 'none' }}
+              >
+                Next chapter
+              </button>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <h2 style={{ fontFamily: "'Alex Brush', cursive", fontSize: '2.2rem', color: '#8b4513', textAlign: 'center', margin: 0, letterSpacing: '0.02em', flex: 1 }}>
+                  {`${p2BookName} ${p2Chapter}`}
+                </h2>
                 <button
                   onClick={() => setShowCursiveModal(false)}
-                  style={{ background: 'none', border: 'none', fontSize: 24, color: '#8b4513', cursor: 'pointer', lineHeight: 1, marginLeft: 2 }}
+                  style={{ background: 'none', border: 'none', fontSize: 24, color: '#8b4513', cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}
                 >&times;</button>
               </div>
-
-              <h2 style={{ fontFamily: "'Alex Brush', cursive", fontSize: '2.2rem', color: '#8b4513', textAlign: 'center', margin: '0 0 2px', letterSpacing: '0.02em' }}>
-                {isClipboardMode ? 'Clipboard' : `${p2BookName} ${p2Chapter}`} — Cursive
-              </h2>
               <p style={{ fontSize: '0.82rem', fontStyle: 'italic', color: '#c8956c', letterSpacing: '0.12em', textAlign: 'center', margin: '0 0 12px' }}>
                 animate your verses in ink
               </p>
 
+              <style>{`.cursive-output-scroll::-webkit-scrollbar { display: none; }`}</style>
               {/* Output area */}
               <div style={{ position: 'relative', flex: 1, marginBottom: 12, borderBottom: '1.5px solid #c9b99a', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 48, background: 'linear-gradient(to bottom, #f5f0e8, transparent)', pointerEvents: 'none', zIndex: 2 }} />
                 <div
                   className="cursive-output-scroll"
-                  style={{ height: '100%', overflowY: 'auto', padding: '48px 1.2rem 1rem' }}
+                  style={{ height: '100%', overflowY: 'auto', padding: '48px 1.2rem 1rem', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
                 >
                   <div
                     className="cursive-output-text"
@@ -10011,271 +9882,150 @@ const BibleApp = () => {
                 </div>
               </div>
 
-              {/* Controls */}
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', flexShrink: 0 }}>
-                {/* Bucket selector */}
-                <div style={{ flex: 1, minWidth: 160 }}>
-                  <label style={{ display: 'block', fontSize: '0.72rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c8956c', marginBottom: 4 }}>
-                    {clampedIdx === -1 ? `${p2BookName} ${p2Chapter}` : `Bucket ${clampedIdx + 1} / ${buckets.length}`}
-                  </label>
-                  <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 4 }}>
-                    <button
-                      onClick={() => goToBucket(-1)}
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: 4,
-                        border: 'none',
-                        fontSize: 12,
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        color: '#fff',
-                        background: clampedIdx === -1
-                          ? 'linear-gradient(45deg, #8b4513, #a0522d)'
-                          : 'linear-gradient(45deg, #888, #666)',
-                        boxShadow: clampedIdx === -1 ? '0 0 0 2px #c8956c' : 'none'
-                      }}
-                    >
-                      0
-                    </button>
-                    {buckets.map((_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => goToBucket(idx)}
-                        style={{
-                          padding: '3px 8px',
-                          borderRadius: 4,
-                          border: 'none',
-                          fontSize: 12,
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          color: '#fff',
-                          background: idx === clampedIdx
-                            ? 'linear-gradient(45deg, #8b4513, #a0522d)'
-                            : 'linear-gradient(45deg, #4caf50, #45a049)',
-                          boxShadow: idx === clampedIdx ? '0 0 0 2px #c8956c' : 'none'
-                        }}
-                      >
-                        {idx + 1}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: 4, alignItems: 'stretch' }}>
-                    <select
-                      value={cursiveBucketIndex}
-                      onChange={(e) => goToBucket(parseInt(e.target.value))}
-                      style={{ flex: 1, padding: 6, border: '1px solid #c9b99a', borderRadius: 2, background: isDarkMode ? '#1a1a2e' : 'rgba(255,255,255,0.7)', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, color: isDarkMode ? '#fff' : '#1a1209' }}
-                    >
-                      <option value={-1}>0. {p2BookName} {p2Chapter}</option>
-                      {bucketLabels.map((label, idx) => (
-                        <option key={idx} value={idx}>{label}</option>
-                      ))}
-                    </select>
-                    {cursiveBucketIndex < buckets.length - 1 && (
-                      <button
-                        onClick={() => {
-                          const scrollEl = document.querySelector('.cursive-output-scroll');
-                          if (scrollEl) {
-                            const maxScroll = scrollEl.scrollHeight - scrollEl.clientHeight;
-                            const atBottom = maxScroll <= 0 || scrollEl.scrollTop >= maxScroll - 5;
-                            if (!atBottom) {
-                              scrollEl.scrollTop = Math.min(maxScroll, scrollEl.scrollTop + scrollEl.clientHeight * 0.9);
-                              return;
-                            }
-                          }
-                          goToBucket(cursiveBucketIndex + 1);
-                        }}
-                        title="Next bucket"
-                        style={{ padding: '0 8px', border: '1px solid #c9b99a', borderRadius: 2, background: '#8b4513', color: '#f5f0e8', fontSize: 12, lineHeight: 1, cursor: 'pointer' }}
-                      >▼</button>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    autoFocus
-                    value={cursiveInput}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v.includes(',')) {
-                        setCursiveInput(v);
-                        return;
-                      }
-                      const matches = v.match(/\d+/g);
-                      if (matches && matches.length > 0) {
-                        const n = parseInt(matches[matches.length - 1], 10);
-                        if (!isNaN(n) && n >= 1 && n <= buckets.length) {
-                          e.target.value = '';
-                          setCursiveInput('');
-                          goToBucket(n - 1);
-                          return;
-                        }
-                      }
-                      setCursiveInput(v);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        // handled by global keydown; stopPropagation prevents double-fire
-                      } else if (e.key === 'Enter') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (cursiveInput.includes(',')) {
-                          const nums = cursiveInput.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= buckets.length);
-                          if (nums.length > 0) {
-                            const combined = nums.map(n => buckets[n - 1]).join('\n\n');
-                            navigator.clipboard.writeText(combined).then(() => {
-                              setCursiveInput('Copied ' + nums.join(',') + '!');
-                              setTimeout(() => setCursiveInput(''), 1200);
-                            });
-                            return;
-                          }
-                        }
-                        const matches = cursiveInput.match(/\d+/g);
-                        if (matches && matches.length > 0) {
-                          const n = parseInt(matches[matches.length - 1], 10);
-                          if (!isNaN(n) && n >= 1 && n <= buckets.length) {
-                            goToBucket(n - 1);
-                          }
-                        }
-                        setCursiveInput('');
-                      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Home' || e.key === 'End') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const scroll = document.querySelector('.cursive-output-scroll');
-                        if (scroll) {
-                            const pageHeight = scroll.clientHeight * 0.9;
-                          const toTop = e.key === 'ArrowUp' || e.key === 'Home';
-                          scroll.scrollBy({ top: toTop ? -pageHeight : pageHeight, behavior: 'smooth' });
-                        }
-                      }
-                    }}
-                    placeholder={`Type 1–${buckets.length || 1} to jump`}
-                    style={{ width: '100%', marginTop: 4, padding: 6, border: '1px solid #c9b99a', borderRadius: 2, background: isDarkMode ? '#1a1a2e' : 'rgba(255,255,255,0.7)', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, color: isDarkMode ? '#fff' : '#1a1209' }}
-                  />
-                </div>
+              {/* Controls - simplified */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+                {/* Bucket dropdown */}
+                <select
+                  value={clampedIdx}
+                  onChange={(e) => goToBucket(parseInt(e.target.value))}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #c9b99a', background: '#8b4513', color: '#f5f0e8', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  {buckets.map((_, idx) => (
+                    <option key={idx} value={idx}>
+                      {`Verses ${idx * LINES_PER_BUCKET + 1}–${Math.min((idx + 1) * LINES_PER_BUCKET, p2Verses.length)}  (${idx + 1} / ${buckets.length})`}
+                    </option>
+                  ))}
+                </select>
 
-                {/* Sliders */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 130 }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c8956c' }}>
-                      <span>Speed</span><span>{cursiveSpeed}</span>
-                    </div>
-                    <input type="range" min="1" max="5" value={cursiveSpeed}
-                      onChange={(e) => { const v = parseInt(e.target.value); setCursiveSpeed(v); localStorage.setItem('cursive-speed', v); }}
-                      style={{ width: '100%', accentColor: '#8b4513', cursor: 'pointer' }} />
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c8956c' }}>
-                      <span>Size</span><span>{cursiveSize}</span>
-                    </div>
-                    <input type="range" min="28" max="80" value={cursiveSize}
-                      onChange={(e) => { const v = parseInt(e.target.value); setCursiveSize(v); localStorage.setItem('cursive-size', v); }}
-                      style={{ width: '100%', accentColor: '#8b4513', cursor: 'pointer' }} />
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c8956c' }}>
-                      <span>Reveal</span><span>{cursiveReveal}%</span>
-                    </div>
-                    <input type="range" min="0" max="100" value={cursiveReveal}
-                      onChange={(e) => { const v = parseInt(e.target.value); setCursiveReveal(v); localStorage.setItem('cursive-reveal', v); }}
-                      style={{ width: '100%', accentColor: '#8b4513', cursor: 'pointer' }} />
-                  </div>
-                </div>
-
-                {/* Buttons */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 100 }}>
+                {/* Font size + Auto + Next buttons */}
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
                   <button
-                    className="cursive-write-btn"
-                    onClick={() => {
-                      const outputText = document.querySelector('.cursive-output-text');
-                      const outputScroll = document.querySelector('.cursive-output-scroll');
-                      if (!outputText || !bucketText.trim()) return;
-
-                      // Stop any existing animation
-                      if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-          
-                      outputText.innerHTML = '';
-                      if (outputScroll) outputScroll.scrollTop = 0;
-
-                      outputText.style.fontSize = cursiveSize + 'px';
-                      const syllabifyWord = (w) => {
-                        if (!cursiveSyllables || !hyphRef.current) return w;
-                        const m = w.match(/^(\W*)(.*?)(\W*)$/);
-                        if (!m) return w;
-                        const [, lead, core, trail] = m;
-                        if (!core) return w;
-                        return lead + hyphRef.current.hyphenate(core).join('\u00B7') + trail;
-                      };
-                      const words = bucketText.split(/\s+/).filter(Boolean);
-                      const revealCount = Math.floor(words.length * cursiveReveal / 100);
-                      const spans = words.map((word, i) => {
-                        const sp = document.createElement('span');
-                        sp.style.cssText = i < revealCount
-                          ? `display:inline;opacity:1`
-                          : `display:inline;opacity:0;transition:opacity ${fadeMs}ms ease`;
-                        const display = syllabifyWord(word);
-                        sp.textContent = i < words.length - 1 ? display + ' ' : display;
-                        outputText.appendChild(sp);
-                        return sp;
-                      });
-
-                      // If fully revealed, no animation needed
-                      if (revealCount >= words.length) return;
-
-                      let i = revealCount;
-                      function next() {
-                        if (i >= spans.length) { window._cursiveTimer = null; return; }
-                        spans[i].style.opacity = '1';
-                        if (outputScroll) {
-                          const nearBottom = outputScroll.scrollHeight - outputScroll.scrollTop - outputScroll.clientHeight < 80;
-                          if (nearBottom) outputScroll.scrollTop = outputScroll.scrollHeight;
-                        }
-                        i++;
-                        window._cursiveTimer = setTimeout(next, delayMs);
-                      }
-                      next();
-                    }}
-                    style={{ padding: '6px 12px', border: '1.5px solid #8b4513', borderRadius: 2, background: '#8b4513', color: '#f5f0e8', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '0.9rem', letterSpacing: '0.1em', cursor: 'pointer' }}
+                    onClick={() => { const v = Math.max(28, cursiveSize - 4); setCursiveSize(v); localStorage.setItem('cursive-size', v); }}
+                    style={{ padding: '8px 12px', borderRadius: 6, border: 'none', background: '#c9b99a', color: '#1a1209', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', lineHeight: 1 }}
+                    title="Decrease font size"
                   >
-                    Write
+                    A-
+                  </button>
+                  <button
+                    onClick={() => { const v = Math.min(80, cursiveSize + 4); setCursiveSize(v); localStorage.setItem('cursive-size', v); }}
+                    style={{ padding: '8px 12px', borderRadius: 6, border: 'none', background: '#c9b99a', color: '#1a1209', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', lineHeight: 1 }}
+                    title="Increase font size"
+                  >
+                    A+
+                  </button>
+                  <button
+                    onClick={() => { const v = !cursiveAuto; setCursiveAuto(v); localStorage.setItem('cursive-auto', v); }}
+                    style={{ padding: '8px 12px', borderRadius: 6, border: 'none', background: cursiveAuto ? '#4caf50' : '#ccc', color: cursiveAuto ? '#fff' : '#666', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', lineHeight: 1 }}
+                    title="Auto-advance to next bucket when animation finishes"
+                  >
+                    Auto
                   </button>
                   <button
                     onClick={() => {
-                      if (isClipboardMode) { doPaste(); return; }
-                      if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-          
+                      if (clampedIdx < buckets.length - 1) {
+                        goToBucket(clampedIdx + 1);
+                      }
                     }}
-                    title={isClipboardMode ? 'Re-read clipboard into buckets' : 'Stop animation'}
-                    style={{ padding: '6px 12px', border: '1.5px solid #8b4513', borderRadius: 2, background: 'transparent', color: '#8b4513', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '0.9rem', letterSpacing: '0.1em', cursor: 'pointer' }}
+                    disabled={clampedIdx >= buckets.length - 1}
+                    style={{ flex: 1, maxWidth: 200, padding: '10px 16px', borderRadius: 6, border: 'none', background: clampedIdx < buckets.length - 1 ? '#8b4513' : '#ccc', color: '#f5f0e8', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '1rem', fontWeight: 'bold', letterSpacing: '0.1em', cursor: clampedIdx < buckets.length - 1 ? 'pointer' : 'default' }}
                   >
-                    {isClipboardMode ? 'Repaste' : 'Stop'}
+                    Next
                   </button>
                   <button
                     onClick={() => {
-                      if (isClipboardMode) {
-                        setCursiveClipboardBuckets(null);
-                        setCursiveBucketIndex(-1);
-                        if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-            
-                        const outputText = document.querySelector('.cursive-output-text');
-                        const outputScroll = document.querySelector('.cursive-output-scroll');
-                        if (outputText) outputText.innerHTML = '';
-                        if (outputScroll) outputScroll.scrollTop = 0;
-                      } else {
-                        doPaste();
-                      }
+                      const nextChapBtn = document.querySelector('[data-cursive-next="true"]');
+                      if (nextChapBtn) nextChapBtn.click();
                     }}
-                    style={{ padding: '6px 12px', border: '1.5px solid #8b4513', borderRadius: 2, background: isClipboardMode ? '#8b4513' : 'transparent', color: isClipboardMode ? '#f5f0e8' : '#8b4513', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '0.9rem', letterSpacing: '0.1em', cursor: 'pointer' }}
-                    title={isClipboardMode ? 'Return to chapter verses' : 'Paste clipboard, split into 500-char buckets'}
+                    style={{ flex: 1, maxWidth: 200, padding: '10px 16px', borderRadius: 6, border: 'none', background: '#4caf50', color: '#fff', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '1rem', fontWeight: 'bold', letterSpacing: '0.1em', cursor: 'pointer' }}
                   >
-                    {isClipboardMode ? 'Unpaste' : 'Paste'}
+                    Next &gt;
                   </button>
                 </div>
               </div>
 
-              <div style={{ marginTop: 8, fontSize: 11, color: '#c8956c', textAlign: 'center' }}>
-                Type a bucket # to jump &nbsp;|&nbsp; Type 1,2,3 + Enter to copy those buckets (add a comma first) &nbsp;|&nbsp; Spacebar scrolls to bottom
-              </div>
+              {/* Hidden Write button for programmatic triggering */}
+              <button
+                className="cursive-write-btn"
+                onClick={() => {
+                  const outputText = document.querySelector('.cursive-output-text');
+                  const outputScroll = document.querySelector('.cursive-output-scroll');
+                  if (!outputText || !bucketText.trim()) return;
+
+                  if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
+
+                  outputText.innerHTML = '';
+                  if (outputScroll) outputScroll.scrollTop = 0;
+
+                  outputText.style.fontSize = cursiveSize + 'px';
+                  const syllabifyWord = (w) => {
+                    if (!cursiveSyllables || !hyphRef.current) return w;
+                    const m = w.match(/^(\W*)(.*?)(\W*)$/);
+                    if (!m) return w;
+                    const [, lead, core, trail] = m;
+                    if (!core) return w;
+                    return lead + hyphRef.current.hyphenate(core).join('\u00B7') + trail;
+                  };
+                  const words = bucketText.split(/\s+/).filter(Boolean);
+                  const revealCount = Math.floor(words.length * cursiveReveal / 100);
+                  const spans = words.map((word, i) => {
+                    const sp = document.createElement('span');
+                    sp.style.cssText = i < revealCount
+                      ? `display:inline;opacity:1`
+                      : `display:inline;opacity:0;transition:opacity ${fadeMs}ms ease`;
+                    const display = syllabifyWord(word);
+                    sp.textContent = i < words.length - 1 ? display + ' ' : display;
+                    outputText.appendChild(sp);
+                    return sp;
+                  });
+
+                  if (revealCount >= words.length) return;
+
+                  if (revealCount >= words.length && cursiveAutoRef.current) {
+                    // Fully revealed and auto mode — advance after a short pause
+                    window._cursiveTimer = setTimeout(() => {
+                      window._cursiveTimer = null;
+                      const ref = cursiveGoToBucketRef.current;
+                      const idx = cursiveBucketIndexRef.current;
+                      if (ref) {
+                        if (idx < buckets.length - 1) { ref(idx + 1); }
+                        else { const btn = document.querySelector('[data-cursive-next="true"]'); if (btn) btn.click(); }
+                      }
+                    }, 1500);
+                    return;
+                  }
+
+                  let i = revealCount;
+                  function next() {
+                    if (i >= spans.length) {
+                      window._cursiveTimer = null;
+                      // Auto-advance to next bucket when animation finishes
+                      if (cursiveAutoRef.current) {
+                        window._cursiveTimer = setTimeout(() => {
+                          window._cursiveTimer = null;
+                          const ref = cursiveGoToBucketRef.current;
+                          const idx = cursiveBucketIndexRef.current;
+                          if (ref) {
+                            if (idx < buckets.length - 1) { ref(idx + 1); }
+                            else { const btn = document.querySelector('[data-cursive-next="true"]'); if (btn) btn.click(); }
+                          }
+                        }, 1500);
+                      }
+                      return;
+                    }
+                    spans[i].style.opacity = '1';
+                    if (outputScroll) {
+                      const nearBottom = outputScroll.scrollHeight - outputScroll.scrollTop - outputScroll.clientHeight < 80;
+                      if (nearBottom) outputScroll.scrollTop = outputScroll.scrollHeight;
+                    }
+                    i++;
+                    window._cursiveTimer = setTimeout(next, delayMs);
+                  }
+                  next();
+                }}
+                style={{ display: 'none' }}
+              >
+                Write
+              </button>
             </div>
           </div>
         );
