@@ -1822,8 +1822,11 @@ const BibleApp = () => {
   const [cursiveSource, setCursiveSource] = useState(() => localStorage.getItem('cursive-source') || 'pane2'); // 'story' or 'pane2'
   const [cursiveAuto, setCursiveAuto] = useState(() => localStorage.getItem('cursive-auto') === 'true');
   const [cursiveSlow, setCursiveSlow] = useState(() => localStorage.getItem('cursive-slow') === 'true');
+  const [cursiveRepeat, setCursiveRepeat] = useState(() => localStorage.getItem('cursive-repeat') === 'true');
   const cursiveAutoRef = useRef(false);
   cursiveAutoRef.current = cursiveAuto;
+  const cursiveRepeatRef = useRef(false);
+  cursiveRepeatRef.current = cursiveRepeat;
   const [cursiveSyllables] = useState(true);
   const [showPane2Syllables, setShowPane2Syllables] = useState(() => localStorage.getItem('bible-pane2-syllables') === 'true');
   const hyphRef = useRef(null);
@@ -9809,7 +9812,6 @@ const BibleApp = () => {
         return (
           <div
             style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-            onClick={(e) => { if (e.target === e.currentTarget) setShowCursiveModal(false); }}
           >
             <div
               style={{
@@ -9930,6 +9932,26 @@ const BibleApp = () => {
                   >
                     Auto
                   </button>
+                  <label title="Repeat current bucket animation instead of advancing" style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold', color: '#8b4513' }}>
+                    <input
+                      type="checkbox"
+                      checked={cursiveRepeat}
+                      onChange={(e) => { setCursiveRepeat(e.target.checked); localStorage.setItem('cursive-repeat', e.target.checked); }}
+                      style={{ accentColor: '#8b4513', width: 16, height: 16, cursor: 'pointer' }}
+                    />
+                    Repeat
+                  </label>
+                  <button
+                    onClick={() => {
+                      if (clampedIdx > 0) {
+                        goToBucket(clampedIdx - 1);
+                      }
+                    }}
+                    disabled={clampedIdx <= 0}
+                    style={{ flex: 1, maxWidth: 200, padding: '10px 16px', borderRadius: 6, border: 'none', background: clampedIdx > 0 ? '#8b4513' : '#ccc', color: '#f5f0e8', fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '1rem', fontWeight: 'bold', letterSpacing: '0.1em', cursor: clampedIdx > 0 ? 'pointer' : 'default' }}
+                  >
+                    Prev
+                  </button>
                   <button
                     onClick={() => {
                       if (clampedIdx < buckets.length - 1) {
@@ -10008,15 +10030,20 @@ const BibleApp = () => {
                   function next() {
                     if (i >= spans.length) {
                       window._cursiveTimer = null;
-                      // Auto-advance to next bucket when animation finishes
+                      // Auto-advance or repeat when animation finishes
                       if (cursiveAutoRef.current) {
                         window._cursiveTimer = setTimeout(() => {
                           window._cursiveTimer = null;
-                          const ref = cursiveGoToBucketRef.current;
-                          const idx = cursiveBucketIndexRef.current;
-                          if (ref) {
-                            if (idx < buckets.length - 1) { ref(idx + 1); }
-                            else { const btn = document.querySelector('[data-cursive-next="true"]'); if (btn) btn.click(); }
+                          if (cursiveRepeatRef.current) {
+                            const writeBtn = document.querySelector('.cursive-write-btn');
+                            if (writeBtn) writeBtn.click();
+                          } else {
+                            const ref = cursiveGoToBucketRef.current;
+                            const idx = cursiveBucketIndexRef.current;
+                            if (ref) {
+                              if (idx < buckets.length - 1) { ref(idx + 1); }
+                              else { const btn = document.querySelector('[data-cursive-next="true"]'); if (btn) btn.click(); }
+                            }
                           }
                         }, 1500);
                       }
