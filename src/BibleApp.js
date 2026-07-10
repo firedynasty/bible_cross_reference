@@ -9811,15 +9811,15 @@ const BibleApp = () => {
 
         return (
           <div
-            style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            style={{ position: 'fixed', top: 0, right: 0, width: '50%', height: '100%', zIndex: 10000, display: 'flex', flexDirection: 'column' }}
           >
             <div
               style={{
                 background: '#f5f0e8',
                 backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, #c9b99a 31px, #c9b99a 32px)',
-                borderRadius: 12, padding: 24, width: '92%', maxWidth: 860, height: '88vh',
+                borderRadius: 0, padding: 24, width: '100%', height: '100%',
                 display: 'flex', flexDirection: 'column',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+                boxShadow: '-4px 0 20px rgba(0,0,0,0.3)',
                 position: 'relative'
               }}
               onClick={(e) => e.stopPropagation()}
