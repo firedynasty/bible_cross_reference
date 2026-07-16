@@ -645,6 +645,15 @@ const NavigationPlaceholder = ({
           ch:v
         </button>}
 
+        {/* Search NIV - opens search-niv.netlify.app in new tab */}
+        {isFeatureVisible('searchNiv') && <button
+          onClick={() => window.open('https://search-niv.netlify.app/', '_blank')}
+          className="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs bg-purple-600 text-white hover:bg-purple-700 font-semibold"
+          title="Open search-niv.netlify.app"
+        >
+          search-.com
+        </button>}
+
         {/* Syllable toggle for pane 2 */}
         {isFeatureVisible('syllable') && <button
           onClick={() => onTogglePane2Syllables && onTogglePane2Syllables()}
@@ -1704,7 +1713,7 @@ const BibleApp = () => {
     'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
     'fontPlus', 'youtube', 'lang', 'soaking', 'classical', 'classicalPlay',
     'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
-    'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef'
+    'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv'
   ];
   const featureLabels = {
     search: 'Search & Story', rhyme: 'Rhyme', storyAudio: 'Story ▶/⏸', chpCopy: 'Chp📋',
@@ -1717,7 +1726,7 @@ const BibleApp = () => {
     classical: '🎻 Classical', classicalPlay: 'Classical ▶/⏸',
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
-    oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v'
+    oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com'
   };
   const [visibleFeatures, setVisibleFeatures] = useState(() => {
     try {
