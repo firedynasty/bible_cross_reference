@@ -508,6 +508,7 @@ const NavigationPlaceholder = ({
   onTogglePane2Syllables,
   syllabifyText,
   onRefPrompt,
+  onClipboardRef,
   isFeatureVisible
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
@@ -633,6 +634,15 @@ const NavigationPlaceholder = ({
           title="Go to a Bible reference (r)"
         >
           Ref(r)
+        </button>}
+
+        {/* Clipboard ch:v Button - reads clipboard for chapter:verse and navigates */}
+        {isFeatureVisible('clipboardRef') && <button
+          onClick={() => onClipboardRef && onClipboardRef()}
+          className="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs bg-green-600 text-white hover:bg-green-700 font-semibold"
+          title="Read clipboard for chapter:verse and go to that verse"
+        >
+          ch:v
         </button>}
 
         {/* Syllable toggle for pane 2 */}
@@ -1694,7 +1704,7 @@ const BibleApp = () => {
     'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
     'fontPlus', 'youtube', 'lang', 'soaking', 'classical', 'classicalPlay',
     'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
-    'oaiRead', 'kjvRead', 'ttsChpCopy'
+    'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef'
   ];
   const featureLabels = {
     search: 'Search & Story', rhyme: 'Rhyme', storyAudio: 'Story ▶/⏸', chpCopy: 'Chp📋',
@@ -1707,7 +1717,7 @@ const BibleApp = () => {
     classical: '🎻 Classical', classicalPlay: 'Classical ▶/⏸',
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
-    oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋'
+    oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v'
   };
   const [visibleFeatures, setVisibleFeatures] = useState(() => {
     try {
@@ -6593,6 +6603,18 @@ const BibleApp = () => {
               onTogglePane2Syllables={() => setShowPane2Syllables(s => { const next = !s; localStorage.setItem('bible-pane2-syllables', next); return next; })}
               syllabifyText={syllabifyText}
               onRefPrompt={() => setShowRefPrompt(true)}
+              onClipboardRef={async () => {
+                try {
+                  const text = (await navigator.clipboard.readText()).trim();
+                  const m = text.match(/^(\d+):(\d+)$/);
+                  if (!m) { alert(`Clipboard "${text}" is not in ch:v format (e.g. 3:2)`); return; }
+                  if (!selectedBook) { alert('No book selected'); return; }
+                  const bookName = selectedBook.book || getBookName(selectedBook.abbrev);
+                  navigateToRefWithHighlight(`${bookName} ${text}`);
+                } catch (e) {
+                  alert('Could not read clipboard. Make sure you have copied a ch:v reference.');
+                }
+              }}
               isFeatureVisible={isFeatureVisible}
               onQA={() => {
                 if (!studyQData) {
