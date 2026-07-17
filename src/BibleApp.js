@@ -8885,11 +8885,11 @@ const BibleApp = () => {
             <button
               onClick={async () => {
                 try {
-                  const res = await fetch(`${getBaseUrl()}/shortcuts_explanation.txt`);
-                  const text = await res.text();
-                  setShortcutsContent(text);
+                  const res = await fetch(`${getBaseUrl()}/shortcuts_explanation.json`);
+                  const data = await res.json();
+                  setShortcutsContent(data.content);
                 } catch (e) {
-                  setShortcutsContent('Could not load shortcuts_explanation.txt');
+                  setShortcutsContent('Could not load shortcuts_explanation.json');
                 }
                 setShowShortcutsModal(true);
               }}
