@@ -4034,14 +4034,10 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // 'v' key - click Firebase Load button
+      // 'v' key - trigger ch:v clipboard navigation
       else if (e.key === 'v' || e.key === 'V') {
-        // Find the Firebase Load button by its title
-        const loadButton = document.querySelector('button[title="Load from selected position"]');
-        if (loadButton) {
-          loadButton.click();
-          console.log("v key pressed - clicked Firebase Load button");
-        }
+        const chvButton = document.querySelector('button[title="Read clipboard for chapter:verse and go to that verse"]');
+        if (chvButton) chvButton.click();
         e.preventDefault();
       }
 
