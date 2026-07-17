@@ -654,6 +654,15 @@ const NavigationPlaceholder = ({
           search-.com
         </button>}
 
+        {/* Pane 2 Only - hides pane 1 for full-width pane 2 */}
+        {isFeatureVisible('pane2Only') && <button
+          onClick={() => onPane2OnlyToggle && onPane2OnlyToggle()}
+          className={`ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showPane2Only ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
+          title={showPane2Only ? 'Showing pane 2 only — click to restore split view' : 'Show pane 2 only (hide pane 1)'}
+        >
+          {showPane2Only ? 'P2:ON' : 'P2 Only'}
+        </button>}
+
         {/* Syllable toggle for pane 2 */}
         {isFeatureVisible('syllable') && <button
           onClick={() => onTogglePane2Syllables && onTogglePane2Syllables()}
@@ -1713,7 +1722,7 @@ const BibleApp = () => {
     'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
     'fontPlus', 'youtube', 'lang', 'soaking', 'classical', 'classicalPlay',
     'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
-    'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv'
+    'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only'
   ];
   const featureLabels = {
     search: 'Search & Story', rhyme: 'Rhyme', storyAudio: 'Story ▶/⏸', chpCopy: 'Chp📋',
@@ -1726,7 +1735,8 @@ const BibleApp = () => {
     classical: '🎻 Classical', classicalPlay: 'Classical ▶/⏸',
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
-    oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com'
+    oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com',
+    pane2Only: 'P2 Only'
   };
   const [visibleFeatures, setVisibleFeatures] = useState(() => {
     try {
