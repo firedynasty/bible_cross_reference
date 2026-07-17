@@ -1,0 +1,52 @@
+========================================
+KEYBOARD SHORTCUTS
+========================================
+
+r         Open Bible reference prompt (Ref button)
+v         Trigger ch:v clipboard navigation
+/         Toggle Read-to-end mode
+p         Page down pane 1 (or advance chapter at bottom)
+Arrow keys  Scroll / navigate verses
+
+
+========================================
+ch:v BUTTON (green)
+========================================
+
+Purpose:
+  Reads the clipboard for a chapter:verse reference (e.g. "3:2")
+  and navigates the current book to that verse.
+
+Workflow:
+  1. In another app, copy a reference in the format   chapter:verse
+     Example: copy the text  3:2
+  2. Click the ch:v button (or press 'v') in the Bible app
+  3. The app navigates to that verse in the current book
+
+Pane 2 click shortcut:
+  Clicking anywhere in pane 2 (not on a button or link) also
+  triggers ch:v automatically.
+
+  Safeguards:
+  - If the clipboard is not in ch:v format, nothing happens (silent).
+  - If the clipboard hasn't changed since the last navigation,
+    nothing happens — prevents accidental repeat jumps.
+
+Format required:
+  chapter:verse   e.g.  3:2   or   12:14
+  Book is taken from whichever book is currently selected.
+
+
+========================================
+P2 Only (P2:ON) BUTTON — orange
+========================================
+
+  Hides pane 1 so pane 2 fills the full width.
+  Click again (when showing P2:ON) to restore the split view.
+
+
+========================================
+search-.com BUTTON — purple
+========================================
+
+  Opens search-niv.netlify.app in a new tab for NIV word search.

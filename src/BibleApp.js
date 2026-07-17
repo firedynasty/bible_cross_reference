@@ -1656,6 +1656,8 @@ const BibleApp = () => {
   const pane2BottomClickCount = useRef(0);
   // Timestamp of last chapter advance — blocks page-down for 500ms after change
   const pane2ChapterChangedAt = useRef(0);
+  // Last clipboard value used for ch:v pane click — prevents re-navigating on repeat clicks
+  const lastPaneClickClipboardRef = useRef(null);
 
   // Grid TTS read mode: 'delimit' (part-by-part click) or 'undelimit' (auto-read all parts with pauses)
   const [gridReadMode, setGridReadMode] = useState(() => localStorage.getItem('bibleAppGridReadMode') || 'delimit');
@@ -1746,6 +1748,8 @@ const BibleApp = () => {
     return Object.fromEntries(allFeatureKeys.map(k => [k, true]));
   });
   const [showFeatureToggleModal, setShowFeatureToggleModal] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [shortcutsContent, setShortcutsContent] = useState('');
   const isFeatureVisible = (key) => visibleFeatures[key] !== false;
   const toggleFeature = (key) => {
     setVisibleFeatures(prev => {
@@ -7523,15 +7527,19 @@ const BibleApp = () => {
               <div
                 ref={kjvContentRef}
                 className={`flex-1 p-8 overflow-y-auto ${isDarkMode ? 'bg-gray-900 text-white scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : 'bg-white'}`}
-                onClick={(event) => {
-                  if (showPane2Only) {
-                    if (event.target.tagName === 'A' || event.target.tagName === 'BUTTON' || event.target.closest('button') || event.target.closest('a') || event.target.closest('select')) return;
-                    const pane = kjvContentRef.current;
-                    if (!pane) return;
-                    const pageHeight = pane.clientHeight * 0.9;
-                    pane.scrollTop = Math.min(pane.scrollHeight - pane.clientHeight, pane.scrollTop + pageHeight);
-                  } else {
-                    handlePaneClick(event, 'right');
+                onClick={async (event) => {
+                  if (event.target.tagName === 'A' || event.target.tagName === 'BUTTON' || event.target.closest('button') || event.target.closest('a') || event.target.closest('select')) return;
+                  try {
+                    const text = (await navigator.clipboard.readText()).trim();
+                    const m = text.match(/^(\d+):(\d+)$/);
+                    if (!m) return; // silently ignore non-ch:v clipboard content
+                    if (text === lastPaneClickClipboardRef.current) return; // same ref as last click, already navigated
+                    if (!selectedBook) return;
+                    lastPaneClickClipboardRef.current = text;
+                    const bookName = selectedBook.book || getBookName(selectedBook.abbrev);
+                    navigateToRefWithHighlight(`${bookName} ${text}`);
+                  } catch (e) {
+                    // silently ignore clipboard read failures
                   }
                 }}
                 style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a', cursor: 'default', scrollbarColor: '#c4b89a #f4ecd8' } : isDarkMode ? { cursor: 'default', scrollbarColor: '#555 #1a1a2e' } : { cursor: 'default' }}
@@ -8869,6 +8877,43 @@ const BibleApp = () => {
               />
               <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}>Cantonese (CUV)</span>
             </label>
+
+            {/* Divider */}
+            <div style={{ borderTop: `2px solid ${isDarkMode ? '#555' : '#ddd'}`, marginTop: 12, marginBottom: 12 }} />
+
+            {/* Shortcuts button */}
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch(`${getBaseUrl()}/shortcuts_explanation.txt`);
+                  const text = await res.text();
+                  setShortcutsContent(text);
+                } catch (e) {
+                  setShortcutsContent('Could not load shortcuts_explanation.txt');
+                }
+                setShowShortcutsModal(true);
+              }}
+              style={{ width: '100%', padding: '8px 0', background: isDarkMode ? '#3a3a5a' : '#667eea', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
+            >
+              Shortcuts
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Shortcuts Modal */}
+      {showShortcutsModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowShortcutsModal(false); }}
+        >
+          <div style={{ background: isDarkMode ? '#2a2a3a' : 'white', borderRadius: 12, padding: 24, width: '90%', maxWidth: 560, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333' }}>Shortcuts</h3>
+              <button onClick={() => setShowShortcutsModal(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: isDarkMode ? '#aaa' : '#666' }}>X</button>
+            </div>
+            <pre style={{ flex: 1, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'monospace', fontSize: 13, lineHeight: 1.6, color: isDarkMode ? '#d0d0e0' : '#333', margin: 0, background: isDarkMode ? '#1a1a2a' : '#f7f7f7', borderRadius: 8, padding: 16 }}>
+              {shortcutsContent}
+            </pre>
           </div>
         </div>
       )}
