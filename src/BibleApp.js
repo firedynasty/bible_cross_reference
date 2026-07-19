@@ -2707,9 +2707,9 @@ const BibleApp = () => {
   // Effect to detect mobile and tablet screen sizes and handle sidebar visibility
   useEffect(() => {
     const checkDeviceView = () => {
-      // Device width breakpoints
-      const isMobile = window.innerWidth < 768; // Standard Tailwind md breakpoint
-      const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024; // Between md and lg breakpoints (iPad, Surface)
+      // Device width breakpoints — switch to single-pane when window is under 70% of screen width
+      const isMobile = window.innerWidth < window.screen.width * 0.7;
+      const isTablet = window.innerWidth >= window.screen.width * 0.7 && window.innerWidth < window.screen.width * 0.9;
       
       // Set tablet state
       setIsTabletView(isTablet);
@@ -7050,24 +7050,7 @@ const BibleApp = () => {
             onClick={(event) => handlePaneClick(event, 'left')}
             style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a', cursor: 'default', scrollbarColor: '#c4b89a #f4ecd8' } : isDarkMode ? { cursor: 'default', scrollbarColor: '#555 #1a1a2e' } : { cursor: 'default' }}
           >
-            {/* Pane 1 page-down button — desktop/tablet only */}
-            {(!isMobileView || isTabletView) && selectedBook && selectedChapter > 0 && (
-              <button
-                onClick={() => {
-                  const pane1 = chapterContentRef.current;
-                  if (pane1) {
-                    const maxScroll = pane1.scrollHeight - pane1.clientHeight;
-                    pane1.scrollTop = Math.min(maxScroll, pane1.scrollTop + pane1.clientHeight * 0.9);
-                  }
-                }}
-                style={{ position: 'sticky', top: '50%', left: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'left' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = ''; }}
-                title="Page down"
-              >
-                <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
-            )}
+            {/* Pane 1 page-down button — hidden */}
             {/* Pane toggle button — mobile only, top left */}
             {isMobileView && !isTabletView && selectedBook && selectedChapter > 0 && (
               <button
@@ -7088,10 +7071,10 @@ const BibleApp = () => {
               <>
                 <button
                   onClick={() => {
-                    const pane1 = chapterContentRef.current;
-                    if (pane1) {
-                      const maxScroll = pane1.scrollHeight - pane1.clientHeight;
-                      pane1.scrollTop = Math.min(maxScroll, pane1.scrollTop + pane1.clientHeight * 0.9);
+                    const pane = kjvContentRef.current;
+                    if (pane) {
+                      const maxScroll = pane.scrollHeight - pane.clientHeight;
+                      pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
                     }
                   }}
                   style={{ position: 'sticky', top: '50%', right: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'right' }}
@@ -7434,57 +7417,15 @@ const BibleApp = () => {
                     <button
                       onClick={() => {
                         const pane = kjvContentRef.current;
-                        console.log('[NextVerse] pane:', !!pane, 'p2Book:', p2Book?.abbrev, 'p2Chapter:', p2Chapter, 'hasNext:', hasNext);
-                        if (!pane) return;
-                        const paneRect = pane.getBoundingClientRect();
-                        console.log('[NextVerse] paneRect top:', paneRect.top, 'bottom:', paneRect.bottom);
-                        // Find the topmost visible verse and collect all verse numbers
-                        let topVerse = null;
-                        const allVerseNums = [];
-                        for (let i = 1; i <= 200; i++) {
-                          const el = document.getElementById(`right-pane-verse-${i}`);
-                          if (!el) { if (allVerseNums.length > 0 && i - allVerseNums[allVerseNums.length - 1] > 5) break; continue; }
-                          allVerseNums.push(i);
-                          if (topVerse === null) {
-                            const elRect = el.getBoundingClientRect();
-                            if (elRect.top >= paneRect.top - 5) {
-                              topVerse = i;
-                            }
-                          }
-                        }
-                        console.log('[NextVerse] allVerseNums:', allVerseNums.length, 'topVerse:', topVerse);
-                        // Check if bottom buttons are visible — require 2 clicks to advance
-                        const bottomBtns = document.getElementById('pane2-bottom-buttons');
-                        const atBottom = bottomBtns && bottomBtns.getBoundingClientRect().top < paneRect.bottom;
-                        if (atBottom && hasNext) {
-                          if (!pane._nextVerseBottomClicks) pane._nextVerseBottomClicks = 0;
-                          pane._nextVerseBottomClicks += 1;
-                          if (pane._nextVerseBottomClicks >= 3) {
-                            pane._nextVerseBottomClicks = 0;
-                            navToChapter(p2Chapter + 1);
-                          }
-                          return;
-                        }
-                        if (pane._nextVerseBottomClicks) pane._nextVerseBottomClicks = 0;
-                        if (topVerse !== null) {
-                          // Find the next verse number that exists after topVerse
-                          const nextVerseNum = allVerseNums.find(n => n > topVerse);
-                          if (nextVerseNum) {
-                            const nextEl = document.getElementById(`right-pane-verse-${nextVerseNum}`);
-                            const nextRect = nextEl.getBoundingClientRect();
-                            const offset = nextRect.top - paneRect.top + pane.scrollTop;
-                            pane.scrollTo({ top: offset, behavior: 'smooth' });
-                          } else if (hasNext) {
-                            navToChapter(p2Chapter + 1);
-                          }
-                        } else if (hasNext) {
-                          navToChapter(p2Chapter + 1);
+                        if (pane) {
+                          const maxScroll = pane.scrollHeight - pane.clientHeight;
+                          pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
                         }
                       }}
                       style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
-                      title="Next verse"
+                      title="Page down"
                     >
                       <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
