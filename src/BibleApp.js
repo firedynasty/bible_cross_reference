@@ -1641,6 +1641,7 @@ const BibleApp = () => {
   const [blankPane1, setBlankPane1] = useState(() => localStorage.getItem('blankPane1') === 'true');
   // Reading guide — horizontal ruler line following mouse
   const [readingGuide, setReadingGuide] = useState(() => localStorage.getItem('readingGuide') === 'true');
+  const [rulerHeight, setRulerHeight] = useState(() => parseInt(localStorage.getItem('rulerHeight') || '3', 10));
   const readingGuideRef = useRef(null);
   useEffect(() => {
     if (!readingGuide) return;
@@ -4424,6 +4425,34 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
+      // Cmd+C (or Ctrl+C) - trigger TTS for top visible verse in pane 2, only when no text is selected
+      else if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
+        const selection = window.getSelection();
+        if (selection && selection.toString().length > 0) return; // let native copy work
+        const pane = kjvContentRef.current;
+        if (!pane) return;
+        const paneRect = pane.getBoundingClientRect();
+        let topVerse = 1;
+        for (let i = 1; i <= 200; i++) {
+          const el = document.getElementById(`right-pane-verse-${i}`);
+          if (!el) break;
+          const elRect = el.getBoundingClientRect();
+          if (elRect.bottom > paneRect.top + 40) { topVerse = i; break; }
+        }
+        const bottomBtns = document.getElementById('pane2-bottom-buttons');
+        const atBottom = bottomBtns && bottomBtns.getBoundingClientRect().top < paneRect.bottom;
+        let lastVerse = topVerse;
+        if (atBottom) {
+          for (let i = topVerse + 1; i <= 200; i++) {
+            if (!document.getElementById(`right-pane-verse-${i}`)) break;
+            lastVerse = i;
+          }
+        }
+        window.dispatchEvent(new CustomEvent('speakVerseContent', {
+          detail: { verseNumber: topVerse, lastVerse: lastVerse, lang: sidebarLang || 'en' }
+        }));
+        e.preventDefault();
+      }
     };
     
     window.addEventListener('keydown', handleKeyDown);
@@ -5840,7 +5869,7 @@ const BibleApp = () => {
         <div
           ref={readingGuideRef}
           style={{
-            position: 'fixed', left: 0, right: 0, height: 3,
+            position: 'fixed', left: 0, right: 0, height: rulerHeight,
             background: 'rgba(255, 165, 0, 0.7)',
             boxShadow: '0 0 10px rgba(255, 165, 0, 0.5)',
             pointerEvents: 'none', zIndex: 9999,
@@ -6113,14 +6142,26 @@ const BibleApp = () => {
                   </>
                 )}
 
-                {/* Reading Ruler Toggle Button */}
-                {isFeatureVisible('ruler') && <button
-                  onClick={() => setReadingGuide(prev => { const next = !prev; localStorage.setItem('readingGuide', next); return next; })}
-                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${readingGuide ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
-                  title="Toggle reading ruler (u)"
-                >
-                  📏 (u)
-                </button>}
+                {/* Reading Ruler Toggle Button + Size Adjuster */}
+                {isFeatureVisible('ruler') && <>
+                  <button
+                    onClick={() => setReadingGuide(prev => { const next = !prev; localStorage.setItem('readingGuide', next); return next; })}
+                    className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${readingGuide ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
+                    title="Toggle reading ruler (u)"
+                  >
+                    📏 (u)
+                  </button>
+                  <button
+                    onClick={() => setRulerHeight(h => { const next = Math.max(1, h - 1); localStorage.setItem('rulerHeight', next); return next; })}
+                    className="px-1.5 py-0.5 rounded focus:outline-none text-xs font-semibold bg-orange-200 text-orange-800 hover:bg-orange-300"
+                    title="Decrease ruler height"
+                  >−</button>
+                  <button
+                    onClick={() => setRulerHeight(h => { const next = Math.min(40, h + 1); localStorage.setItem('rulerHeight', next); return next; })}
+                    className="px-1.5 py-0.5 rounded focus:outline-none text-xs font-semibold bg-orange-200 text-orange-800 hover:bg-orange-300"
+                    title="Increase ruler height"
+                  >+</button>
+                </>}
 
                 {/* Collection Modal Button */}
                 {isFeatureVisible('col') && <button
