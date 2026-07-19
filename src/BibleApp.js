@@ -2039,6 +2039,30 @@ const BibleApp = () => {
     try { return localStorage.getItem('bible-verse-tts-canto') === 'true'; } catch { return false; }
   });
 
+  // TTS selection tooltip
+  const TTS_TOOLTIP_LANGS = [
+    { key: 'A', label: 'A 粵', lang: 'zh-HK', title: 'Cantonese' },
+    { key: 'M', label: 'M 普', lang: 'zh-CN', title: 'Mandarin'  },
+    { key: 'E', label: 'E En', lang: 'en-US', title: 'English'   },
+    { key: 'P', label: 'P Es', lang: 'es-ES', title: 'Spanish'   },
+    { key: 'K', label: 'K 한', lang: 'ko-KR', title: 'Korean'    },
+    { key: 'F', label: 'F Fr', lang: 'fr-FR', title: 'French'    },
+  ];
+  const TTS_TOOLTIP_STORAGE = 'bible-tts-tooltip-visible';
+  const [ttsTooltip, setTtsTooltip] = useState(null); // { x, y, text } or null
+  const [ttsSettingsOpen, setTtsSettingsOpen] = useState(false);
+  const [ttsVisibleLangs, setTtsVisibleLangs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(TTS_TOOLTIP_STORAGE)) || {}; } catch { return {}; }
+  });
+  const isTtsLangVisible = (key) => !(key in ttsVisibleLangs) || ttsVisibleLangs[key];
+  const toggleTtsLang = (key) => {
+    setTtsVisibleLangs(prev => {
+      const next = { ...prev, [key]: !isTtsLangVisible(key) };
+      try { localStorage.setItem(TTS_TOOLTIP_STORAGE, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
   // Parse a single Bible reference string like "Psalm 23:4" or "Matthew 11:28-30"
   const parseSingleBibleRef = useCallback((refStr) => {
     const bookNameToAbbrev = {
@@ -2999,6 +3023,49 @@ const BibleApp = () => {
     setSpeakingPaneVerse(verseNumber);
     window.speechSynthesis.speak(utterance);
   }, [speakingPaneVerse, verseTtsCanto]);
+
+  // TTS tooltip: speak selected text in a given language
+  const speakSelectedText = useCallback((text, lang) => {
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = lang;
+    const rate = lang.startsWith('zh') || lang.startsWith('he') ? 0.8 : lang.startsWith('es') || lang.startsWith('fr') ? 0.9 : 1;
+    utt.rate = rate;
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      let v = voices.find(vv => vv.lang === lang && vv.name.includes('Google'));
+      if (!v) v = voices.find(vv => vv.lang === lang && (vv.name.includes('Enhanced') || vv.name.includes('Premium')));
+      if (!v) v = voices.find(vv => vv.lang === lang);
+      if (!v && lang === 'zh-HK') v = voices.find(vv => vv.lang.startsWith('yue'));
+      if (!v && lang.startsWith('zh')) v = voices.find(vv => vv.lang.startsWith('zh'));
+      if (v) utt.voice = v;
+    }
+    window.speechSynthesis.speak(utt);
+  }, []);
+
+  // TTS tooltip: show on mouseup when text is selected
+  useEffect(() => {
+    const onMouseUp = (e) => {
+      if (e.target.closest && e.target.closest('#bible-tts-tooltip')) return;
+      setTimeout(() => {
+        const sel = window.getSelection();
+        const text = sel ? sel.toString().trim() : '';
+        if (!text) { setTtsTooltip(null); setTtsSettingsOpen(false); return; }
+        setTtsTooltip({ x: e.clientX, y: e.clientY, text });
+      }, 10);
+    };
+    const onMouseDown = (e) => {
+      if (e.target.closest && e.target.closest('#bible-tts-tooltip')) return;
+      setTtsTooltip(null);
+      setTtsSettingsOpen(false);
+    };
+    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('mousedown', onMouseDown);
+    return () => {
+      document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('mousedown', onMouseDown);
+    };
+  }, []);
 
   // Stop audio whenever the active pane 2 book/chapter changes
   useEffect(() => {
@@ -11451,6 +11518,76 @@ const BibleApp = () => {
       <FurtherReadingModal open={showFiguresModal} onClose={() => setShowFiguresModal(false)} />
       <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
       <YouTubeVideoModal open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsYouTubePlaying} />
+
+      {/* TTS selection tooltip */}
+      {ttsTooltip && (
+        <div
+          id="bible-tts-tooltip"
+          style={{
+            position: 'fixed',
+            left: Math.min(ttsTooltip.x, window.innerWidth - 220),
+            top: Math.max(ttsTooltip.y - 48, 8),
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            background: '#1a1a2e',
+            border: '1px solid #7ec8e3',
+            borderRadius: 8,
+            padding: '4px 6px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {TTS_TOOLTIP_LANGS.filter(l => isTtsLangVisible(l.key)).map(l => (
+            <button
+              key={l.key}
+              title={l.title}
+              onMouseDown={(e) => { e.preventDefault(); speakSelectedText(ttsTooltip.text, l.lang); setTtsTooltip(null); }}
+              style={{
+                border: 'none', borderRadius: 6, cursor: 'pointer',
+                padding: '4px 8px', fontSize: 12, fontWeight: 700,
+                background: '#2a2a4a', color: '#eee',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#7ec8e3'}
+              onMouseLeave={e => e.currentTarget.style.background = '#2a2a4a'}
+            >
+              {l.label}
+            </button>
+          ))}
+          {/* Gear / settings */}
+          <button
+            title="Choose visible languages"
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setTtsSettingsOpen(o => !o); }}
+            style={{ border: 'none', background: 'none', color: '#888', cursor: 'pointer', fontSize: 13, padding: '4px 4px' }}
+          >⚙</button>
+
+          {/* Settings panel */}
+          {ttsSettingsOpen && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, marginTop: 6,
+              background: '#1a1a2e', border: '1px solid #7ec8e3', borderRadius: 10,
+              padding: '12px 14px', boxShadow: '0 8px 28px rgba(0,0,0,0.6)', minWidth: 190, zIndex: 1,
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ color: '#7ec8e3', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>TTS Buttons</span>
+                <button onMouseDown={(e) => { e.preventDefault(); setTtsSettingsOpen(false); }} style={{ background: 'none', border: 'none', color: '#888', fontSize: 16, cursor: 'pointer' }}>×</button>
+              </div>
+              {TTS_TOOLTIP_LANGS.map(l => (
+                <label key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', cursor: 'pointer', color: '#ddd', fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={isTtsLangVisible(l.key)}
+                    onChange={() => toggleTtsLang(l.key)}
+                    style={{ cursor: 'pointer', accentColor: '#7ec8e3' }}
+                  />
+                  {l.label} — {l.title}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
     </div>
   );
