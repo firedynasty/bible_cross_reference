@@ -4193,17 +4193,6 @@ const BibleApp = () => {
         window.dispatchEvent(event);
         e.preventDefault();
       }
-      // Enter key - play Rhyme audio (Psalms only)
-      else if (e.key === 'Enter') {
-        if (showQuiz2Modal) return;
-        const activeBook = pane2BookRef.current || selectedBookRef.current;
-        const activeChapter = pane2ChapterRef.current || selectedChapterRef.current;
-        const rhymeUrl = activeBook ? getRhymeAudioUrl(activeBook.abbrev, activeChapter) : null;
-        if (rhymeUrl) {
-          handleRhymeAudioToggleRef.current();
-        }
-        e.preventDefault();
-      }
       // Apostrophe (') key - speak the current book and chapter (moved from Shift+5)
       else if (e.key === "'" || e.key === "'") {
         console.log('i key pressed - speaking book and chapter');
