@@ -141,6 +141,8 @@ function formatTime(seconds) {
 export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentChapter, onPlayingChange }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [playerReady, setPlayerReady] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [volume, setVolume] = useState(100);
   const playerRef = useRef(null);
   const intervalRef = useRef(null);
   const containerRef = useRef(null);
@@ -217,6 +219,42 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
           playerRef.current.seekTo(t, true);
           setCurrentTime(t);
           saveTime(bookAbbrevRef.current, t);
+        } catch {}
+      }
+      if (e.key === ',' && playerRef.current) {
+        try {
+          const rates = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+          const cur = playerRef.current.getPlaybackRate();
+          const idx = rates.indexOf(cur);
+          const next = rates[Math.max(0, idx - 1)];
+          playerRef.current.setPlaybackRate(next);
+          setPlaybackRate(next);
+        } catch {}
+      }
+      if (e.key === '.' && playerRef.current) {
+        try {
+          const rates = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+          const cur = playerRef.current.getPlaybackRate();
+          const idx = rates.indexOf(cur);
+          const next = rates[Math.min(rates.length - 1, idx + 1)];
+          playerRef.current.setPlaybackRate(next);
+          setPlaybackRate(next);
+        } catch {}
+      }
+      if (e.key === '-' && playerRef.current) {
+        try {
+          const cur = playerRef.current.getVolume();
+          const next = Math.max(0, cur - 10);
+          playerRef.current.setVolume(next);
+          setVolume(next);
+        } catch {}
+      }
+      if ((e.key === '+' || e.key === '=') && playerRef.current) {
+        try {
+          const cur = playerRef.current.getVolume();
+          const next = Math.min(100, cur + 10);
+          playerRef.current.setVolume(next);
+          setVolume(next);
         } catch {}
       }
     };
@@ -410,6 +448,78 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
                     className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
                   >
                     +1min(3)
+                  </button>
+                  &nbsp;&nbsp;
+                  <button
+                    onClick={() => {
+                      if (playerRef.current) {
+                        try {
+                          const cur = playerRef.current.getVolume();
+                          const next = Math.max(0, cur - 10);
+                          playerRef.current.setVolume(next);
+                          setVolume(next);
+                        } catch {}
+                      }
+                    }}
+                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                    title="Volume down (-)"
+                  >
+                    vol-
+                  </button>
+                  <span className="text-xs text-gray-400 px-1">{volume}%</span>
+                  <button
+                    onClick={() => {
+                      if (playerRef.current) {
+                        try {
+                          const cur = playerRef.current.getVolume();
+                          const next = Math.min(100, cur + 10);
+                          playerRef.current.setVolume(next);
+                          setVolume(next);
+                        } catch {}
+                      }
+                    }}
+                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                    title="Volume up (+)"
+                  >
+                    vol+
+                  </button>
+                  &nbsp;&nbsp;
+                  <button
+                    onClick={() => {
+                      if (playerRef.current) {
+                        try {
+                          const rates = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+                          const cur = playerRef.current.getPlaybackRate();
+                          const idx = rates.indexOf(cur);
+                          const next = rates[Math.max(0, idx - 1)];
+                          playerRef.current.setPlaybackRate(next);
+                          setPlaybackRate(next);
+                        } catch {}
+                      }
+                    }}
+                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                    title="Speed down (,)"
+                  >
+                    &lt;spd
+                  </button>
+                  <span className="text-xs text-gray-400 px-1">{playbackRate}x</span>
+                  <button
+                    onClick={() => {
+                      if (playerRef.current) {
+                        try {
+                          const rates = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+                          const cur = playerRef.current.getPlaybackRate();
+                          const idx = rates.indexOf(cur);
+                          const next = rates[Math.min(rates.length - 1, idx + 1)];
+                          playerRef.current.setPlaybackRate(next);
+                          setPlaybackRate(next);
+                        } catch {}
+                      }
+                    }}
+                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                    title="Speed up (.)"
+                  >
+                    spd&gt;
                   </button>
                 </>
               )}

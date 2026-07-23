@@ -3740,7 +3740,7 @@ const BibleApp = () => {
         }
       }
       // Up Arrow - scroll up one line at a time in KJV pane (opposite of 'x' key)
-      else if ((e.key === 'ArrowUp' || e.key === '-') && kjvContentRef.current && !showQuiz2Modal) {
+      else if ((e.key === 'ArrowUp' || e.key === '-') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal) {
         
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
