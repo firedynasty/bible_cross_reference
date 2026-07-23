@@ -11488,7 +11488,7 @@ const BibleApp = () => {
 
       <FurtherReadingModal open={showFiguresModal} onClose={() => setShowFiguresModal(false)} />
       <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
-      <YouTubeVideoModal open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsYouTubePlaying} />
+      <YouTubeVideoModal open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsYouTubePlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} />
 
       {/* TTS selection tooltip */}
       {ttsTooltip && (

@@ -138,7 +138,7 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentChapter, onPlayingChange }) {
+export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentChapter, onPlayingChange, onChapterChange }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [playerReady, setPlayerReady] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -149,8 +149,12 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
   const bookAbbrevRef = useRef(bookAbbrev);
   const activeBookRef = useRef(null);
   const chapterSeekDone = useRef(null); // track which chapter we already seeked to
+  const currentChapterRef = useRef(currentChapter);
+  const onChapterChangeRef = useRef(onChapterChange);
 
   useEffect(() => { bookAbbrevRef.current = bookAbbrev; }, [bookAbbrev]);
+  useEffect(() => { currentChapterRef.current = currentChapter; }, [currentChapter]);
+  useEffect(() => { onChapterChangeRef.current = onChapterChange; }, [onChapterChange]);
 
   // Seek to chapter timestamp when modal opens with a chapter that has timestamp data
   // If exact chapter is missing, decrement until we find one
@@ -164,6 +168,19 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
     while (ch >= 1 && bookTimestamps[ch] == null) { ch--; }
     if (ch < 1) return;
     const ts = bookTimestamps[ch];
+    try {
+      // Skip the seek if the video is already inside this chapter's time range
+      // (avoids rewinding when the reading pane auto-followed the video here)
+      const curT = playerRef.current.getCurrentTime();
+      const later = Object.keys(bookTimestamps).map(Number)
+        .filter(n => n > ch && bookTimestamps[n] != null)
+        .sort((a, b) => a - b);
+      const rangeEnd = later.length > 0 ? bookTimestamps[later[0]] : Infinity;
+      if (curT >= ts && curT < rangeEnd) {
+        chapterSeekDone.current = seekKey;
+        return;
+      }
+    } catch {}
     try {
       playerRef.current.seekTo(ts, true);
       setCurrentTime(ts);
@@ -316,13 +333,36 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
             intervalRef.current = setInterval(() => {
               if (destroyed) return;
               try {
+                // Do nothing while paused — the timer wakes 1x/sec but performs
+                // zero work unless the video is actually playing
+                if (player.getPlayerState() !== YT.PlayerState.PLAYING) return;
                 const t = player.getCurrentTime();
                 if (t > 0) {
                   setCurrentTime(t);
                   saveTime(bookAbbrevRef.current, t);
                 }
+                // Auto-follow: when the video time crosses a chapter
+                // timestamp, tell the parent to navigate the reading
+                // pane to that chapter.
+                const tsMap = youtubeChapterTimestamps[bookAbbrevRef.current];
+                if (tsMap) {
+                  const chapters = Object.keys(tsMap).map(Number)
+                    .filter(n => tsMap[n] != null)
+                    .sort((a, b) => a - b);
+                  let chapterAtTime = 1;
+                  for (const c of chapters) {
+                    if (t >= tsMap[c]) chapterAtTime = c;
+                    else break;
+                  }
+                  if (chapterAtTime !== currentChapterRef.current) {
+                    // Mark as already-seeked so the seek effect doesn't
+                    // rewind the video when the parent's chapter prop updates
+                    chapterSeekDone.current = `${bookAbbrevRef.current}-${chapterAtTime}`;
+                    if (onChapterChangeRef.current) onChapterChangeRef.current(chapterAtTime);
+                  }
+                }
               } catch {}
-            }, 5000);
+            }, 1000);
           },
           onStateChange: (event) => {
             if (event.data === YT.PlayerState.PLAYING) {
