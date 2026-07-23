@@ -146,6 +146,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
   const playerRef = useRef(null);
   const intervalRef = useRef(null);
   const containerRef = useRef(null);
+  const headerRef = useRef(null);
   const bookAbbrevRef = useRef(bookAbbrev);
   const activeBookRef = useRef(null);
   const chapterSeekDone = useRef(null); // track which chapter we already seeked to
@@ -192,6 +193,16 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
   // Reset chapter seek tracking when modal closes
   useEffect(() => {
     if (!open) { chapterSeekDone.current = null; }
+  }, [open]);
+
+  // Focus the header when the modal opens so the window-level keyboard
+  // shortcuts (volume/speed) work immediately without clicking
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => {
+      if (headerRef.current) headerRef.current.focus();
+    }, 0);
+    return () => clearTimeout(t);
   }, [open]);
 
   // Press 0 to reset video to beginning while modal is open
@@ -421,7 +432,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-            <h2 className="text-lg font-semibold flex items-center flex-wrap gap-2">
+            <h2 ref={headerRef} tabIndex={-1} className="text-lg font-semibold flex items-center flex-wrap gap-2 focus:outline-none">
               <span>{bookName}{currentChapter ? ` Ch.${currentChapter}` : ''} — Audio</span>
               <span className="text-sm text-gray-400 font-mono">{formatTime(currentTime)}</span>
               {videoId && (

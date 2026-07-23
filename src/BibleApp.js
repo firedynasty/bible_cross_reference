@@ -747,20 +747,21 @@ const NavigationPlaceholder = ({
         )}
 
         {/* Font Size Controls */}
-        {isFeatureVisible('fontMinus') && <button
-          onClick={onFontScaleDown}
-          className="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold"
-          title="Decrease font size"
-        >
-          -
-        </button>}
-        {isFeatureVisible('fontPlus') && <button
-          onClick={onFontScaleUp}
-          className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold"
-          title="Increase font size"
-        >
-          +
-        </button>}
+        {(isFeatureVisible('fontMinus') || isFeatureVisible('fontPlus')) && (
+          <span className="ml-2 flex items-center gap-0.5">
+            <span className="text-xs text-gray-500 mr-0.5">font:</span>
+            {isFeatureVisible('fontMinus') && <button
+              onClick={onFontScaleDown}
+              className="px-2 py-0.5 rounded focus:outline-none text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold"
+              title="Decrease font size"
+            >-</button>}
+            {isFeatureVisible('fontPlus') && <button
+              onClick={onFontScaleUp}
+              className="px-2 py-0.5 rounded focus:outline-none text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold"
+              title="Increase font size"
+            >+</button>}
+          </span>
+        )}
 
         {/* Language cycle + open buttons */}
         {(() => {
@@ -6123,25 +6124,26 @@ const BibleApp = () => {
                 )}
 
                 {/* Reading Ruler Toggle Button + Size Adjuster */}
-                {isFeatureVisible('ruler') && <>
+                {isFeatureVisible('ruler') && <span className="ml-1 flex items-center gap-0.5">
                   <button
                     onClick={() => setReadingGuide(prev => { const next = !prev; localStorage.setItem('readingGuide', next); return next; })}
-                    className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${readingGuide ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
+                    className={`px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${readingGuide ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
                     title="Toggle reading ruler (u)"
                   >
                     📏 (u)
                   </button>
+                  <span className="text-xs text-gray-500 mx-0.5">:</span>
                   <button
                     onClick={() => setRulerHeight(h => { const next = Math.max(1, h - 1); localStorage.setItem('rulerHeight', next); return next; })}
                     className="px-1.5 py-0.5 rounded focus:outline-none text-xs font-semibold bg-orange-200 text-orange-800 hover:bg-orange-300"
                     title="Decrease ruler height"
-                  >−</button>
+                  >− (u)</button>
                   <button
                     onClick={() => setRulerHeight(h => { const next = Math.min(40, h + 1); localStorage.setItem('rulerHeight', next); return next; })}
                     className="px-1.5 py-0.5 rounded focus:outline-none text-xs font-semibold bg-orange-200 text-orange-800 hover:bg-orange-300"
                     title="Increase ruler height"
                   >+</button>
-                </>}
+                </span>}
 
                 {/* Collection Modal Button */}
                 {isFeatureVisible('col') && <button
@@ -8544,69 +8546,6 @@ const BibleApp = () => {
                 </div>
               </div>
             )}
-            <input
-              type="text"
-              value={refPromptValue}
-              onChange={(e) => setRefPromptValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  e.preventDefault();
-                  setShowRefPrompt(false);
-                  return;
-                }
-                if (e.key === 'Enter' && refPromptValue.trim()) {
-                  const trimmed = refPromptValue.trim();
-                  if (/^\d+$/.test(trimmed) && selectedBook) {
-                    const ch = parseInt(trimmed);
-                    if (ch >= 1 && ch <= selectedBook.chapters.length) {
-                      handleChapterSelect(ch, true);
-                      setShowRefPrompt(false);
-                      setRefPromptValue('');
-                      return;
-                    }
-                  }
-                  addToHistory();
-                  setRefPromptValue('');
-                }
-              }}
-              placeholder="Ps 23; Matt 11:28 (multi-line: paste below)"
-              autoFocus
-              style={{
-                width: '100%', padding: '8px 10px', fontSize: '14px', border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
-                borderRadius: 6, background: isDarkMode ? '#333' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333',
-                boxSizing: 'border-box'
-              }}
-            />
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button
-                onClick={() => {
-                  if (refPromptValue.trim()) {
-                    const trimmed = refPromptValue.trim();
-                    if (/^\d+$/.test(trimmed) && selectedBook) {
-                      const ch = parseInt(trimmed);
-                      if (ch >= 1 && ch <= selectedBook.chapters.length) {
-                        handleChapterSelect(ch, true);
-                        setShowRefPrompt(false);
-                        setRefPromptValue('');
-                        return;
-                      }
-                    }
-                    addToHistory();
-                    setRefPromptValue('');
-                  }
-                }}
-                style={{ flex: 1, padding: '12px', fontSize: 15, border: 'none', borderRadius: 8, background: '#007bff', color: 'white', cursor: 'pointer', fontWeight: 600 }}
-              >
-                Save
-              </button>
-              <button
-                onClick={() => { setShowRefPrompt(false); setRefPromptValue(''); }}
-                style={{ flex: 1, padding: '12px', fontSize: 15, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}
-              >
-                Cancel
-              </button>
-            </div>
-
             {/* Text Paste Area */}
             <div style={{ marginTop: 10, borderTop: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, paddingTop: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
@@ -8856,17 +8795,27 @@ const BibleApp = () => {
             {/* Navbar buttons section */}
             <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: isDarkMode ? '#8899bb' : '#667eea', paddingLeft: 4 }}>Navbar</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 16 }}>
-              {allFeatureKeys.filter(k => !['qa','quiz','words','recite','cursive','breathe','repeat','goTextR','oaiKey','oaiRead','kjvRead','ttsChpCopy'].includes(k)).map(key => (
-                <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: visibleFeatures[key] !== false ? (isDarkMode ? '#3a3a5a' : '#f0f7ff') : (isDarkMode ? '#1a1a2a' : '#f5f5f5'), border: `1px solid ${visibleFeatures[key] !== false ? '#667eea' : (isDarkMode ? '#444' : '#ddd')}` }}>
-                  <input
-                    type="checkbox"
-                    checked={visibleFeatures[key] !== false}
-                    onChange={() => toggleFeature(key)}
-                    style={{ accentColor: '#667eea' }}
-                  />
-                  <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}>{featureLabels[key] || key}</span>
-                </label>
-              ))}
+              {(() => {
+                const excludedKeys = ['qa','quiz','words','recite','cursive','breathe','repeat','goTextR','oaiKey','oaiRead','kjvRead','ttsChpCopy','fontPlus'];
+                const fontPairOn = visibleFeatures['fontMinus'] !== false && visibleFeatures['fontPlus'] !== false;
+                return allFeatureKeys.filter(k => !excludedKeys.includes(k)).map(key => {
+                  if (key === 'fontMinus') {
+                    return (
+                      <label key="font-pair" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: fontPairOn ? (isDarkMode ? '#3a3a5a' : '#f0f7ff') : (isDarkMode ? '#1a1a2a' : '#f5f5f5'), border: `1px solid ${fontPairOn ? '#667eea' : (isDarkMode ? '#444' : '#ddd')}` }}
+                        onClick={() => { const next = !fontPairOn; setVisibleFeatures(prev => { const updated = { ...prev, fontMinus: next, fontPlus: next }; localStorage.setItem('bible-visible-features', JSON.stringify(updated)); return updated; }); }}>
+                        <input type="checkbox" checked={fontPairOn} onChange={() => {}} style={{ accentColor: '#667eea' }} />
+                        <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}><span style={{ color: isDarkMode ? '#aaa' : '#777' }}>font:</span> − +</span>
+                      </label>
+                    );
+                  }
+                  return (
+                    <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: visibleFeatures[key] !== false ? (isDarkMode ? '#3a3a5a' : '#f0f7ff') : (isDarkMode ? '#1a1a2a' : '#f5f5f5'), border: `1px solid ${visibleFeatures[key] !== false ? '#667eea' : (isDarkMode ? '#444' : '#ddd')}` }}>
+                      <input type="checkbox" checked={visibleFeatures[key] !== false} onChange={() => toggleFeature(key)} style={{ accentColor: '#667eea' }} />
+                      <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}>{featureLabels[key] || key}</span>
+                    </label>
+                  );
+                });
+              })()}
             </div>
 
             {/* Divider */}
