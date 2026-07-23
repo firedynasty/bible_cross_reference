@@ -3686,13 +3686,6 @@ const BibleApp = () => {
         return;
       }
 
-      // 'l' key - toggle blank pane 1
-      if (e.key === 'l' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal) {
-        e.preventDefault();
-        setBlankPane1(prev => { const next = !prev; localStorage.setItem('blankPane1', next); return next; });
-        return;
-      }
-
       // Removed '[' and ']' key handlers for translation switching
       // 'x' key - scroll down one line at a time in KJV pane (like 'z' but just one line)
       if (e.key === 'x' && kjvContentRef.current) {
@@ -4382,7 +4375,6 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // L key - go to Lamentations (removed, 'l' now used for clr pane 1)
       // S key - go to Joshua
       else if (e.key === 's' || e.key === 'S') {
         const book = bibleData?.find(b => b.abbrev === 'js');
@@ -5907,7 +5899,6 @@ const BibleApp = () => {
                     'Acts': '(i)',
                     'Romans': '(j)',
                     'Hebrews': '(k)',
-                    'Lamentations': '(l)',
                     'Colossians': '(c)'
                   };
                   return keyMappings[bookName] ? `${index + 1}. ${bookName} ${keyMappings[bookName]}` : `${index + 1}. ${bookName}`;
@@ -6388,9 +6379,9 @@ const BibleApp = () => {
                       {isFeatureVisible('clrPane1') && <button
                         onClick={() => setBlankPane1(prev => { const next = !prev; localStorage.setItem('blankPane1', next); return next; })}
                         className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${blankPane1 ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
-                        title={blankPane1 ? 'Show pane 1 content (l)' : 'Blank pane 1 for Cmd+F search (l)'}
+                        title={blankPane1 ? 'Show pane 1 content' : 'Blank pane 1 for Cmd+F search'}
                       >
-                        clr pane 1(l)
+                        clr pane 1
                       </button>}
                     </>
                   );
