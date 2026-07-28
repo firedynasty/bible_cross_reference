@@ -509,7 +509,9 @@ const NavigationPlaceholder = ({
   syllabifyText,
   onRefPrompt,
   onClipboardRef,
-  isFeatureVisible
+  isFeatureVisible,
+  showScriptureWriting,
+  onScriptureWritingToggle
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -661,6 +663,15 @@ const NavigationPlaceholder = ({
           title={showPane2Only ? 'Showing pane 2 only — click to restore split view' : 'Show pane 2 only (hide pane 1)'}
         >
           {showPane2Only ? 'P2:ON' : 'P2 Only'}
+        </button>}
+
+        {/* Scripture Writing toggle */}
+        {isFeatureVisible('scriptureWriting') && <button
+          onClick={() => onScriptureWritingToggle && onScriptureWritingToggle()}
+          className={`ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showScriptureWriting ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-indigo-500 text-white hover:bg-indigo-600'}`}
+          title={showScriptureWriting ? 'Hide scripture writing panel' : 'Show scripture writing panel'}
+        >
+          {showScriptureWriting ? 'Write:ON' : 'Write'}
         </button>}
 
         {/* Syllable toggle for pane 2 */}
@@ -1726,7 +1737,7 @@ const BibleApp = () => {
     'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
     'fontPlus', 'youtube', 'lang', 'soaking', 'classical', 'classicalPlay',
     'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
-    'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only'
+    'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting'
   ];
   const featureLabels = {
     search: 'Search & Story', rhyme: 'Rhyme', storyAudio: 'Story ▶/⏸', chpCopy: 'Chp📋',
@@ -1740,14 +1751,20 @@ const BibleApp = () => {
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com',
-    pane2Only: 'P2 Only'
+    pane2Only: 'P2 Only', scriptureWriting: 'Scripture Writing'
   };
   const [visibleFeatures, setVisibleFeatures] = useState(() => {
     try {
       const saved = localStorage.getItem('bible-visible-features');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.scriptureWriting === undefined) parsed.scriptureWriting = false;
+        return parsed;
+      }
     } catch (e) {}
-    return Object.fromEntries(allFeatureKeys.map(k => [k, true]));
+    const defaults = Object.fromEntries(allFeatureKeys.map(k => [k, true]));
+    defaults.scriptureWriting = false;
+    return defaults;
   });
   const [showFeatureToggleModal, setShowFeatureToggleModal] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
@@ -1760,6 +1777,18 @@ const BibleApp = () => {
       return next;
     });
   };
+
+  // Scripture writing textarea text, open state, font size, and left margin
+  const [scriptureText, setScriptureText] = useState(() => {
+    try { return localStorage.getItem('scripture-writing-text') || ''; } catch (e) { return ''; }
+  });
+  const [showScriptureWriting, setShowScriptureWriting] = useState(false);
+  const [scriptureFontSize, setScriptureFontSize] = useState(() => {
+    try { return parseFloat(localStorage.getItem('scripture-font-size')) || 15; } catch (e) { return 15; }
+  });
+  const [scriptureMargin, setScriptureMargin] = useState(() => {
+    try { return parseFloat(localStorage.getItem('scripture-margin')) || 0; } catch (e) { return 0; }
+  });
 
   // State to track speech volume (normal or softer)
   const [speechVolume, setSpeechVolume] = useState('softer');
@@ -6725,6 +6754,8 @@ const BibleApp = () => {
                 }
               }}
               isFeatureVisible={isFeatureVisible}
+              showScriptureWriting={showScriptureWriting}
+              onScriptureWritingToggle={() => setShowScriptureWriting(v => !v)}
               onQA={() => {
                 if (!studyQData) {
                   const baseUrl = getBaseUrl();
@@ -8759,6 +8790,102 @@ const BibleApp = () => {
         </div>
         );
       })()}
+
+      {/* Scripture Writing — fixed floating panel at bottom of screen */}
+      {isFeatureVisible('scriptureWriting') && showScriptureWriting && (
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9000, boxShadow: '0 -4px 24px rgba(0,0,0,0.18)', background: isDarkMode ? '#1a1a2e' : isSepiaMode ? '#f4ecd8' : '#ffffff', borderTop: `2px solid ${isDarkMode ? '#4f46e5' : isSepiaMode ? '#c4b89a' : '#6366f1'}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px 4px', borderBottom: `1px solid ${isDarkMode ? '#374151' : isSepiaMode ? '#d4c4a0' : '#e5e7eb'}` }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: isDarkMode ? '#a5b4fc' : isSepiaMode ? '#7a6a4a' : '#6366f1', letterSpacing: '0.03em' }}>Scripture Writing</span>
+              <span style={{ fontSize: 10, color: isDarkMode ? '#6b7280' : '#9ca3af' }}>tab to scroll</span>
+            </span>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              {/* Font size controls */}
+              <button
+                onClick={() => { const n = Math.max(10, scriptureFontSize - 1); setScriptureFontSize(n); try { localStorage.setItem('scripture-font-size', n); } catch (e) {} }}
+                style={{ fontSize: 13, fontWeight: 700, color: isDarkMode ? '#9ca3af' : '#6b7280', background: 'none', border: `1px solid ${isDarkMode ? '#374151' : '#d1d5db'}`, cursor: 'pointer', padding: '1px 7px', borderRadius: 3, lineHeight: 1.4 }}
+                title="Decrease font size"
+              >A−</button>
+              <span style={{ fontSize: 11, color: isDarkMode ? '#6b7280' : '#9ca3af', minWidth: 24, textAlign: 'center' }}>{scriptureFontSize}</span>
+              <button
+                onClick={() => { const n = Math.min(32, scriptureFontSize + 1); setScriptureFontSize(n); try { localStorage.setItem('scripture-font-size', n); } catch (e) {} }}
+                style={{ fontSize: 13, fontWeight: 700, color: isDarkMode ? '#9ca3af' : '#6b7280', background: 'none', border: `1px solid ${isDarkMode ? '#374151' : '#d1d5db'}`, cursor: 'pointer', padding: '1px 7px', borderRadius: 3, lineHeight: 1.4 }}
+                title="Increase font size"
+              >A+</button>
+              {/* Left margin controls */}
+              <button
+                onClick={() => { const n = Math.max(0, scriptureMargin - 10); setScriptureMargin(n); try { localStorage.setItem('scripture-margin', n); } catch (e) {} }}
+                style={{ fontSize: 11, color: isDarkMode ? '#9ca3af' : '#6b7280', background: 'none', border: `1px solid ${isDarkMode ? '#374151' : '#d1d5db'}`, cursor: 'pointer', padding: '1px 7px', borderRadius: 3, lineHeight: 1.4, fontFamily: 'monospace' }}
+                title="Decrease left margin"
+              >←</button>
+              <span style={{ fontSize: 11, color: isDarkMode ? '#6b7280' : '#9ca3af', minWidth: 28, textAlign: 'center' }}>{scriptureMargin}%</span>
+              <button
+                onClick={() => { const n = Math.min(70, scriptureMargin + 10); setScriptureMargin(n); try { localStorage.setItem('scripture-margin', n); } catch (e) {} }}
+                style={{ fontSize: 11, color: isDarkMode ? '#9ca3af' : '#6b7280', background: 'none', border: `1px solid ${isDarkMode ? '#374151' : '#d1d5db'}`, cursor: 'pointer', padding: '1px 7px', borderRadius: 3, lineHeight: 1.4, fontFamily: 'monospace' }}
+                title="Increase left margin (push text right)"
+              >→</button>
+              {/* Copy, Clear and close */}
+              <button
+                onClick={() => { try { navigator.clipboard.writeText(scriptureText); } catch (e) {} }}
+                style={{ fontSize: 11, color: isDarkMode ? '#9ca3af' : '#6b7280', background: 'none', border: `1px solid ${isDarkMode ? '#374151' : '#d1d5db'}`, cursor: 'pointer', padding: '2px 8px', borderRadius: 3 }}
+                title="Copy text to clipboard"
+              >Copy</button>
+              <button
+                onClick={() => { setScriptureText(''); try { localStorage.removeItem('scripture-writing-text'); } catch (e) {} }}
+                style={{ fontSize: 11, color: isDarkMode ? '#9ca3af' : '#6b7280', background: 'none', border: `1px solid ${isDarkMode ? '#374151' : '#d1d5db'}`, cursor: 'pointer', padding: '2px 8px', borderRadius: 3 }}
+              >Clear</button>
+              <button
+                onClick={() => setShowScriptureWriting(false)}
+                style={{ fontSize: 14, fontWeight: 700, color: isDarkMode ? '#9ca3af' : '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}
+                title="Close"
+              >✕</button>
+            </div>
+          </div>
+          <textarea
+            value={scriptureText}
+            onChange={(e) => { const v = e.target.value; setScriptureText(v); try { localStorage.setItem('scripture-writing-text', v); } catch (e) {} }}
+            onKeyDown={(e) => {
+              if (e.key === 'Tab') {
+                e.preventDefault();
+                const pane = kjvContentRef.current;
+                if (!pane) return;
+                const paneRect = pane.getBoundingClientRect();
+                let topVerse = 1;
+                for (let i = 1; i <= 200; i++) {
+                  const el = document.getElementById(`right-pane-verse-${i}`);
+                  if (!el) break;
+                  if (el.getBoundingClientRect().bottom > paneRect.top + 10) { topVerse = i; break; }
+                }
+                const targetEl = document.getElementById(`right-pane-verse-${topVerse + 3}`);
+                if (targetEl) {
+                  pane.scrollTo({ top: targetEl.getBoundingClientRect().top - paneRect.top + pane.scrollTop - 10, behavior: 'smooth' });
+                } else {
+                  pane.scrollTop = Math.min(pane.scrollHeight - pane.clientHeight, pane.scrollTop + 80);
+                }
+              }
+            }}
+            placeholder="Write scripture here..."
+            style={{
+              width: '100%',
+              height: 160,
+              resize: 'vertical',
+              paddingTop: 10,
+              paddingBottom: 10,
+              paddingRight: 14,
+              paddingLeft: `calc(${scriptureMargin}% + 14px)`,
+              fontSize: scriptureFontSize,
+              lineHeight: 1.6,
+              background: isDarkMode ? '#111827' : isSepiaMode ? '#fdf6e3' : '#f9fafb',
+              color: isDarkMode ? '#e5e7eb' : isSepiaMode ? '#5a5a5a' : '#111827',
+              border: 'none',
+              outline: 'none',
+              fontFamily: 'inherit',
+              boxSizing: 'border-box',
+              display: 'block',
+            }}
+          />
+        </div>
+      )}
 
       {/* Feature Toggle Modal */}
       {showFeatureToggleModal && (
