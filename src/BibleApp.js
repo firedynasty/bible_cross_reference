@@ -5,6 +5,7 @@ import TextToSpeech from './components/TextToSpeech';
 import FurtherReadingModal from './components/FurtherReadingModal';
 import ClassicalMusicModal from './components/ClassicalMusicModal';
 import YouTubeVideoModal from './components/YouTubeVideoModal';
+import OutlineModal from './components/OutlineModal';
 import { getStorytimeAudioUrl } from './data/storytimeAudio';
 import { getRhymeAudioUrl } from './data/rhymeAudio';
 
@@ -1737,7 +1738,7 @@ const BibleApp = () => {
     'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
     'fontPlus', 'youtube', 'lang', 'soaking', 'classical', 'classicalPlay',
     'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
-    'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting'
+    'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting', 'outline'
   ];
   const featureLabels = {
     search: 'Search & Story', rhyme: 'Rhyme', storyAudio: 'Story ▶/⏸', chpCopy: 'Chp📋',
@@ -1751,7 +1752,7 @@ const BibleApp = () => {
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com',
-    pane2Only: 'P2 Only', scriptureWriting: 'Scripture Writing'
+    pane2Only: 'P2 Only', scriptureWriting: 'Scripture Writing', outline: 'Outline(o)'
   };
   const [visibleFeatures, setVisibleFeatures] = useState(() => {
     try {
@@ -1931,6 +1932,9 @@ const BibleApp = () => {
 
   // State for Breathe Modal
   const [showBreatheModal, setShowBreatheModal] = useState(false);
+
+  // State for Outline Modal
+  const [showOutlineModal, setShowOutlineModal] = useState(false);
 
   // State for Repeat Modal (paste text and have it read aloud)
   const [showRepeatModal, setShowRepeatModal] = useState(false);
@@ -3674,6 +3678,12 @@ const BibleApp = () => {
         setShowBreatheModal(false);
         return;
       }
+      // Outline modal: Escape to close
+      if (showOutlineModal && e.key === 'Escape') {
+        e.preventDefault();
+        setShowOutlineModal(false);
+        return;
+      }
       // Prevent keycode handling when user is typing in input fields or select dropdowns
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
         return;
@@ -3704,6 +3714,13 @@ const BibleApp = () => {
       if (e.key === 'y' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal) {
         e.preventDefault();
         setShowYouTubeModal(prev => !prev);
+        return;
+      }
+
+      // 'o' key - toggle Outline modal
+      if (e.key === 'o' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal) {
+        e.preventDefault();
+        setShowOutlineModal(prev => !prev);
         return;
       }
 
@@ -4469,7 +4486,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showRefPrompt, loadStorytimeForCurrent]);
+  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showRefPrompt, loadStorytimeForCurrent, showOutlineModal]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
@@ -6208,6 +6225,15 @@ const BibleApp = () => {
                   title="Save and copy text snippets"
                 >
                   Snippets
+                </button>}
+
+                {/* Outline Modal Button */}
+                {isFeatureVisible('outline') && <button
+                  onClick={() => setShowOutlineModal(prev => !prev)}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-amber-700 text-white hover:bg-amber-800 font-semibold"
+                  title="Sentence outline of current chapter (o)"
+                >
+                  Outline(o)
                 </button>}
 
                 {/* Dropbox Highlights Button - hidden */}
@@ -11556,6 +11582,36 @@ const BibleApp = () => {
       <FurtherReadingModal open={showFiguresModal} onClose={() => setShowFiguresModal(false)} />
       <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
       <YouTubeVideoModal open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsYouTubePlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} />
+
+      {/* Outline Modal */}
+      {showOutlineModal && (() => {
+        const oBook = pane2Book || selectedBook;
+        const oChapter = pane2Chapter || selectedChapter;
+        const oBookName = oBook ? (oBook.book || oBook.abbrev) : '';
+        const oTotalChapters = oBook ? oBook.chapters.length : 0;
+        let oVerses = [];
+        if (rightPaneBibleData && oBook) {
+          const rpBook = rightPaneBibleData.find(b => b.abbrev === oBook.abbrev);
+          if (rpBook && rpBook.chapters[oChapter - 1]) oVerses = rpBook.chapters[oChapter - 1];
+        }
+        if (!oVerses.length && bibleData && oBook) {
+          const bk = bibleData.find(b => b.abbrev === oBook.abbrev);
+          if (bk && bk.chapters[oChapter - 1]) oVerses = bk.chapters[oChapter - 1];
+        }
+        return (
+          <OutlineModal
+            verses={oVerses}
+            bookName={oBookName}
+            chapter={oChapter}
+            totalChapters={oTotalChapters}
+            onPrevChapter={() => { if (oChapter > 1) handleChapterSelect(oChapter - 1); }}
+            onNextChapter={() => { if (oChapter < oTotalChapters) handleChapterSelect(oChapter + 1); }}
+            isDarkMode={isDarkMode}
+            kjvContentRef={kjvContentRef}
+            onClose={() => setShowOutlineModal(false)}
+          />
+        );
+      })()}
 
       {/* TTS selection tooltip */}
       {ttsTooltip && (
