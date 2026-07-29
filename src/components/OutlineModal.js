@@ -245,6 +245,26 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
     }
   }
 
+  function handleModalKeyDown(e) {
+    if (e.key === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      const sel = window.getSelection();
+      const text = sel ? sel.toString().trim() : '';
+      if (!text) return;
+      e.preventDefault();
+      window.speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = 'en-US';
+      const voices = window.speechSynthesis.getVoices();
+      const voice =
+        voices.find(v => v.lang.startsWith('en') && v.name.includes('Google')) ||
+        voices.find(v => v.lang.startsWith('en-US') && (v.name.includes('Enhanced') || v.name.includes('Premium'))) ||
+        voices.find(v => v.lang.startsWith('en-US')) ||
+        voices.find(v => v.lang.startsWith('en')) || null;
+      if (voice) utt.voice = voice;
+      window.speechSynthesis.speak(utt);
+    }
+  }
+
   function handleCopy() {
     if (!writeValue) return;
     try {
@@ -263,6 +283,8 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
       <div
         style={{ background: bg, color: textColor, borderRadius: 10, width: '92%', maxWidth: 820, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', fontFamily: "Georgia, 'Times New Roman', serif", overflow: 'hidden' }}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={handleModalKeyDown}
+        tabIndex={-1}
       >
         {/* Header */}
         <div style={{ padding: '14px 20px', borderBottom: `1px solid ${borderColor}`, display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
