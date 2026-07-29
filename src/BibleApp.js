@@ -689,10 +689,8 @@ const NavigationPlaceholder = ({
           onClick={() => onDarkModeToggle && onDarkModeToggle()}
           className={`ml-2 px-2 py-0.5 rounded focus:outline-none ${
             isDarkMode
-              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-              : isSepiaMode
-                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                : 'bg-gray-700 text-white hover:bg-gray-800'
+              ? 'bg-white text-gray-900 hover:bg-gray-100'
+              : 'bg-gray-700 text-white hover:bg-gray-800'
           }`}
           title={isDarkMode ? "Switch to sepia mode" : isSepiaMode ? "Switch to light mode" : "Switch to dark mode"}
         >
@@ -1935,6 +1933,8 @@ const BibleApp = () => {
 
   // State for Outline Modal
   const [showOutlineModal, setShowOutlineModal] = useState(false);
+  const [outlinesData, setOutlinesData] = useState(null);
+  const [outlinesLoaded, setOutlinesLoaded] = useState(false);
 
   // State for Repeat Modal (paste text and have it read aloud)
   const [showRepeatModal, setShowRepeatModal] = useState(false);
@@ -2461,6 +2461,18 @@ const BibleApp = () => {
     };
     loadLukeHymns();
   }, []);
+
+  // Load outlines JSON lazily on first Outline modal open
+  useEffect(() => {
+    if (showOutlineModal && !outlinesLoaded) {
+      setOutlinesLoaded(true);
+      const baseUrl = getBaseUrl();
+      fetch(`${baseUrl}/outlines.json`)
+        .then(r => r.json())
+        .then(data => setOutlinesData(data))
+        .catch(() => {});
+    }
+  }, [showOutlineModal, outlinesLoaded]);
 
   // Load verse filters JSON on startup
   useEffect(() => {
@@ -11609,6 +11621,7 @@ const BibleApp = () => {
             isDarkMode={isDarkMode}
             kjvContentRef={kjvContentRef}
             onClose={() => setShowOutlineModal(false)}
+            precomputedOutline={outlinesData?.[oBook?.abbrev]?.[String(oChapter)]}
           />
         );
       })()}

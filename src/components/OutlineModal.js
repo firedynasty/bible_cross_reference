@@ -173,11 +173,14 @@ const TAG_STYLES = {
   restatement:   { bg: '#eceae4', color: '#6b675c' },
 };
 
+const INDENT_TAGS = new Set(['qualification', 'consequence', 'contrast']);
+
 // ── React tree renderer ──────────────────────────────────────────────────────
 function OutlineNodeEl({ node, showTags }) {
   const ts = node.tag ? TAG_STYLES[node.tag] : null;
+  const extraIndent = node.tag && INDENT_TAGS.has(node.tag) ? 16 : 0;
   return (
-    <li style={{ margin: '4px 0', lineHeight: 1.55, position: 'relative', paddingLeft: 16 }}>
+    <li style={{ margin: '4px 0', lineHeight: 1.55, position: 'relative', paddingLeft: 16, marginLeft: extraIndent }}>
       <span style={{ position: 'absolute', left: 0, top: '0.65em', width: 5, height: 5, borderRadius: '50%', background: '#b9b2a2', display: 'inline-block' }} />
       {node.text}
       {showTags && node.tag && ts && (
@@ -196,9 +199,40 @@ function OutlineNodeEl({ node, showTags }) {
   );
 }
 
+// ── AI outline parser ────────────────────────────────────────────────────────
+function parseAIOutline(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  const roots = [];
+  const stack = []; // [{node, depth}]
+
+  for (const line of lines) {
+    const spaces = (line.match(/^(\s*)/) || ['', ''])[1].length;
+    const depth = Math.floor(spaces / 2);
+    const m = line.trim().match(/^-\s+(\S+)\s+\[([^\]]+)\]\s+(.*)/);
+    if (!m) continue;
+    const [, addr, rawTag, text] = m;
+    // strip compound claim prefix for display tag
+    const tag = rawTag === '--' ? null : rawTag.replace(/^claim\+/, '');
+    const node = new OutlineNode(`${addr}  ${text}`, tag);
+
+    if (depth === 0) {
+      roots.push(node);
+      stack.length = 0;
+      stack.push({ node, depth: 0 });
+    } else {
+      while (stack.length > 0 && stack[stack.length - 1].depth >= depth) stack.pop();
+      const parent = stack.length > 0 ? stack[stack.length - 1].node : null;
+      if (parent) parent.children.push(node); else roots.push(node);
+      stack.push({ node, depth });
+    }
+  }
+  return roots;
+}
+
 // ── Main Modal ───────────────────────────────────────────────────────────────
-export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, kjvContentRef }) {
+export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, kjvContentRef, precomputedOutline }) {
   const [showTags, setShowTags] = useState(false);
+  const [useAI, setUseAI] = useState(true);
   const [fz, setFz] = useState(() => {
     try { return parseFloat(localStorage.getItem('outline-fz')) || 1.0; } catch (e) { return 1.0; }
   });
@@ -217,7 +251,14 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
       .filter(p => p);
   }, [verses]);
 
-  const roots = useMemo(() => outlineChapter(paragraphs), [paragraphs]);
+  const aiRoots = useMemo(() => {
+    if (!precomputedOutline?.outline) return null;
+    return parseAIOutline(precomputedOutline.outline);
+  }, [precomputedOutline]);
+
+  const autoRoots = useMemo(() => outlineChapter(paragraphs), [paragraphs]);
+
+  const roots = (useAI && aiRoots) ? aiRoots : autoRoots;
 
   const bg = isDarkMode ? '#1a1c20' : '#faf8f3';
   const textColor = isDarkMode ? '#e8e4db' : '#2b2b2b';
@@ -233,10 +274,10 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
   function handleWriteKeyDown(e) {
     if (e.key === 'ArrowRight') {
       e.preventDefault();
-      if (chapter < totalChapters) onNextChapter();
+      if (chapter < totalChapters) { onNextChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      if (chapter > 1) onPrevChapter();
+      if (chapter > 1) { onPrevChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }
     } else if (e.key === 'Tab') {
       e.preventDefault();
       const el = treeRef.current;
@@ -277,11 +318,11 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
 
   return (
     <div
-      style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: overlayBg, zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: 40, paddingBottom: 40, overflowY: 'auto' }}
+      style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: overlayBg, zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: 16, paddingBottom: 16, overflowY: 'auto' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        style={{ background: bg, color: textColor, borderRadius: 10, width: '92%', maxWidth: 820, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', fontFamily: "Georgia, 'Times New Roman', serif", overflow: 'hidden' }}
+        style={{ background: bg, color: textColor, borderRadius: 10, width: '92%', maxWidth: 820, maxHeight: '96vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', fontFamily: "Georgia, 'Times New Roman', serif", overflow: 'hidden' }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleModalKeyDown}
         tabIndex={-1}
@@ -289,10 +330,17 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
         {/* Header */}
         <div style={{ padding: '14px 20px', borderBottom: `1px solid ${borderColor}`, display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
           <span style={{ fontFamily: 'monospace', fontSize: 12, color: accentColor, fontWeight: 700, letterSpacing: '0.05em' }}>OUTLINE</span>
+          {aiRoots && (
+            <button
+              onClick={() => setUseAI(v => !v)}
+              style={{ fontFamily: 'monospace', fontSize: 10, padding: '2px 7px', borderRadius: 9, border: 'none', cursor: 'pointer', background: useAI ? accentColor : (isDarkMode ? '#3a3a4a' : '#e3e0d8'), color: useAI ? '#fff' : (isDarkMode ? '#aaa' : '#666'), fontWeight: 700, letterSpacing: '0.04em' }}
+              title={useAI ? 'Showing AI outline — click for auto' : 'Showing auto outline — click for AI'}
+            >{useAI ? 'AI' : 'AUTO'}</button>
+          )}
           {/* Prev / chapter title / Next */}
-          <button onClick={onPrevChapter} disabled={chapter <= 1} style={navBtnStyle(chapter <= 1)}>‹</button>
-          <span style={{ fontWeight: 700, fontSize: 15, color: textColor, minWidth: 90, textAlign: 'center' }}>{bookName} {chapter}</span>
-          <button onClick={onNextChapter} disabled={chapter >= totalChapters} style={navBtnStyle(chapter >= totalChapters)}>›</button>
+          <button onClick={() => { onPrevChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }} disabled={chapter <= 1} style={navBtnStyle(chapter <= 1)}>‹</button>
+          <span style={{ fontWeight: 700, fontSize: 15, color: textColor }}>{bookName} {chapter}</span>
+          <button onClick={() => { onNextChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }} disabled={chapter >= totalChapters} style={navBtnStyle(chapter >= totalChapters)}>›</button>
 
           {/* Write input — ← → navigate chapters, Tab scrolls pane */}
           <input
@@ -323,16 +371,27 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
         </div>
 
         {/* Tree */}
-        <div ref={treeRef} style={{ overflowY: 'auto', padding: '18px 28px 32px', fontSize: `${fz}rem` }}>
-          {roots.length === 0 ? (
-            <p style={{ color: '#888', fontStyle: 'italic' }}>No verses to outline.</p>
-          ) : (
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-              {roots.map((node, i) => (
-                <OutlineNodeEl key={i} node={node} showTags={showTags} />
-              ))}
-            </ul>
-          )}
+        <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div ref={treeRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 28px 32px', fontSize: `${fz}rem` }}>
+            {roots.length === 0 ? (
+              <p style={{ color: '#888', fontStyle: 'italic' }}>No verses to outline.</p>
+            ) : (
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                {roots.map((node, i) => (
+                  <OutlineNodeEl key={i} node={node} showTags={showTags} />
+                ))}
+              </ul>
+            )}
+          </div>
+          <button
+            title="Page down"
+            onClick={() => treeRef.current?.scrollBy({ top: treeRef.current.clientHeight - 60, behavior: 'smooth' })}
+            style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgb(0,0,0)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.45'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '0.15'}
+          >
+            <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
         </div>
       </div>
     </div>
