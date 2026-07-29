@@ -11667,6 +11667,24 @@ const BibleApp = () => {
                 <span style={{ color: '#7ec8e3', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>TTS Buttons</span>
                 <button onMouseDown={(e) => { e.preventDefault(); setTtsSettingsOpen(false); }} style={{ background: 'none', border: 'none', color: '#888', fontSize: 16, cursor: 'pointer' }}>×</button>
               </div>
+              {/* Select all / Deselect all */}
+              {(() => {
+                const allVisible = TTS_TOOLTIP_LANGS.every(l => isTtsLangVisible(l.key));
+                return (
+                  <button
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const next = {};
+                      TTS_TOOLTIP_LANGS.forEach(l => { next[l.key] = !allVisible; });
+                      try { localStorage.setItem(TTS_TOOLTIP_STORAGE, JSON.stringify(next)); } catch {}
+                      setTtsVisibleLangs(next);
+                    }}
+                    style={{ display: 'block', width: '100%', marginBottom: 8, padding: '4px 0', background: 'none', border: '1px solid #444', borderRadius: 5, color: '#aaa', fontSize: 11, cursor: 'pointer', textAlign: 'center' }}
+                  >
+                    {allVisible ? 'Deselect All' : 'Select All'}
+                  </button>
+                );
+              })()}
               {TTS_TOOLTIP_LANGS.map(l => (
                 <label key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', cursor: 'pointer', color: '#ddd', fontSize: 13 }}>
                   <input
