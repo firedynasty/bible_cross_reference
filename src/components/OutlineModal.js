@@ -372,7 +372,7 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
 
         {/* Tree */}
         <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          <div ref={treeRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 28px 32px', fontSize: `${fz}rem` }}>
+          <div ref={treeRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 28px 32px', fontSize: `${fz}rem`, textAlign: 'left' }}>
             {roots.length === 0 ? (
               <p style={{ color: '#888', fontStyle: 'italic' }}>No verses to outline.</p>
             ) : (
