@@ -31,14 +31,14 @@ const classicalAlbums = [
       [5291, "Brandenburg concerto No. 5 in D Major, BWV 1050: II. Affettuoso (Live)", "Orchestra da Camera Fiorentina, Giuseppe Lanzetta"],
       [5628, "Brandenburg Concerto No. 4 in G Major, BWV 1049: I. Allegro", "Orchestra da Camera del Conservatorio di Mantova, Paolo Ghidoni"],
       [6044, "Harpsichord Concerto No. 1 in D Minor, BWV 1052: I. Allegro", "Budapest Scoring Symphonic Orchestra, Peter Illenyi"],
-      [6485, "Concerto for Oboe d\'amore, Strings and Continuo in A Major, BWV 1055: I. Allegro moderato", "L\'Ensemble Instrumental de France, Maurice Bourgue"],
+      [6485, "Concerto for Oboe d'amore, Strings and Continuo in A Major, BWV 1055: I. Allegro moderato", "L'Ensemble Instrumental de France, Maurice Bourgue"],
       [6775, "French Suite No. 5 in G Major, BWV 816: V. Bourr�e", ""],
       [6865, "VI. Gigue", "Vadim Chaimovich"],
       [6993, "IV. Anglaise", "Vadim Chaimovich"],
       [7093, "Cello Suite No. 3 in C Major, BWV 1009: II. Allemande", "Massimiliano Martinelli"],
       [7337, "Cello Suite No. 6 in D Major, BWV 1012: I. Pr�lude", "Massimiliano Martinelli"],
       [7694, "Cello Suite No. 1 in G Major, BWV 1007: III. Courante", "Massimiliano Martinelli"],
-      [7845, "Concerto for Oboe d\'amore, Strings and Continuo in A Major, BWV 1055: III. Allegro ma non tanto", "L\'Ensemble Instrumental de France, Maurice Bourgue"],
+      [7845, "Concerto for Oboe d'amore, Strings and Continuo in A Major, BWV 1055: III. Allegro ma non tanto", "L'Ensemble Instrumental de France, Maurice Bourgue"],
       [8139, "Brandenburg Concerto No. 2 in F Major, BWV 1047: I. Allegro", "Orchestra da Camera del Conservatorio di Mantova, Paolo Ghidoni"],
     ],
   },
@@ -92,6 +92,26 @@ const classicalAlbums = [
       [479, "beautiful", ""],
       [840, "beautiful", ""],
     ],
+  },
+  {
+    title: "Bible - 1 John",
+    url: "https://www.dropbox.com/scl/fi/q88ri7fq5uiy6kiv3pfsh/1john_no_indent.mp3?rlkey=twx6inklr8f0z7xfg11i8c5do&raw=1",
+    tracks: [],
+  },
+  {
+    title: "Bible - Galatians",
+    url: "https://www.dropbox.com/scl/fi/c9mg65ynx8ciomg9exz5f/galatians_no_indent.mp3?rlkey=3bw5gsmyhrcxb4ne1wdlzsg67&raw=1",
+    tracks: [],
+  },
+  {
+    title: "Bible - Hebrews",
+    url: "https://www.dropbox.com/scl/fi/vp0g5k2mhjx7c5mp0mc8p/hebrews_no_indent.mp3?rlkey=m490gkfrt86yw329do08gwmud&st=54drbvus&raw=1",
+    tracks: [],
+  },
+  {
+    title: "Bible - Romans",
+    url: "https://www.dropbox.com/scl/fi/i4pqzqrgcc33r4s648spf/romans_no_indent.mp3?rlkey=jq1qjitzzcfsborvy2042lja7&st=ibb8lwyz&raw=1",
+    tracks: [],
   },
 ];
 

@@ -1746,7 +1746,7 @@ const BibleApp = () => {
     toggleRhyme: 'WEB/Rhyme', cyclePane1: '1:cycle', clrPane1: 'clr pane 1',
     ref: 'Ref(r)', syllable: 'Syllable', darkMode: 'Dark/Light', fontMinus: 'Font -',
     fontPlus: 'Font +', youtube: 'YouTube', lang: 'Language', soaking: 'Soaking',
-    classical: '🎻 Classical', classicalPlay: 'Classical ▶/⏸',
+    classical: '🎻 Classical-Scriptures', classicalPlay: 'Fast ▶/⏸',
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com',
