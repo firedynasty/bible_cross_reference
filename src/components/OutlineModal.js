@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 
 // ── Sentence machinery ──────────────────────────────────────────────────────
 const ABBR_MARK = '\x01';
@@ -230,7 +230,7 @@ function parseAIOutline(text) {
 }
 
 // ── Main Modal ───────────────────────────────────────────────────────────────
-export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, kjvContentRef, precomputedOutline }) {
+export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, kjvContentRef, precomputedOutline, suppressEscape }) {
   const [showTags, setShowTags] = useState(false);
   const [useAI, setUseAI] = useState(true);
   const [fz, setFz] = useState(() => {
@@ -239,6 +239,26 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
   const [writeValue, setWriteValue] = useState('');
   const [copied, setCopied] = useState(false);
   const treeRef = useRef(null);
+
+  // Keyboard navigation: Escape closes, ArrowLeft/Right navigate chapters
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'Escape' && !suppressEscape) {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      // Arrow chapter nav — skip when the write input has focus (it handles its own)
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === 'ArrowLeft') {
+        if (chapter > 1) { e.preventDefault(); onPrevChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }
+      } else if (e.key === 'ArrowRight') {
+        if (chapter < totalChapters) { e.preventDefault(); onNextChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose, suppressEscape, chapter, totalChapters, onPrevChapter, onNextChapter]);
 
   // Build one "paragraph" per verse — no verse numbers
   const paragraphs = useMemo(() => {

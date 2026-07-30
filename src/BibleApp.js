@@ -1816,6 +1816,8 @@ const BibleApp = () => {
 
   // State for reference prompt and collection modal
   const [showRefPrompt, setShowRefPrompt] = useState(false);
+  const [showBookNavModal, setShowBookNavModal] = useState(false);
+  const [bookNavInput, setBookNavInput] = useState('');
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [expandedCollection, setExpandedCollection] = useState(null);
   const [highlightedVerses, setHighlightedVerses] = useState([]);
@@ -3715,6 +3717,14 @@ const BibleApp = () => {
         return;
       }
 
+      // Backtick - open book navigation modal
+      if (e.key === '`' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showRefPrompt && !showBookNavModal) {
+        e.preventDefault();
+        setBookNavInput('');
+        setShowBookNavModal(true);
+        return;
+      }
+
       // 'u' key - toggle reading ruler
       if (e.key === 'u' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showRefPrompt) {
         e.preventDefault();
@@ -4213,16 +4223,16 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // Left Arrow - go to previous chapter (skip when Recite modal is open)
+      // Left Arrow - go to previous chapter (skip when Recite or Outline modal is open)
       else if (e.key === 'ArrowLeft') {
-        if (showQuiz2Modal) return;
+        if (showQuiz2Modal || showOutlineModal) return;
         const prevBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Previous Chapter'));
         if (prevBtn) prevBtn.click();
         e.preventDefault();
       }
-      // Right Arrow - go to next chapter (skip when Recite modal is open)
+      // Right Arrow - go to next chapter (skip when Recite or Outline modal is open)
       else if (e.key === 'ArrowRight') {
-        if (showQuiz2Modal) return;
+        if (showQuiz2Modal || showOutlineModal) return;
         const nextBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Next Chapter'));
         if (nextBtn) nextBtn.click();
         e.preventDefault();
@@ -4385,6 +4395,9 @@ const BibleApp = () => {
           setShowQuiz2Modal(false);
         } else if (showRefPrompt) {
           setShowRefPrompt(false);
+        } else if (showBookNavModal) {
+          setShowBookNavModal(false);
+          setBookNavInput('');
         } else {
           // No modal open — open combined Search + Story modal
           loadStorytimeForCurrent();
@@ -4409,39 +4422,6 @@ const BibleApp = () => {
         e.preventDefault();
       }
       
-      // Direct book navigation keys
-      // A key - go to Genesis
-      else if (e.key === 'a' || e.key === 'A') {
-        const book = bibleData?.find(b => b.abbrev === 'gn');
-        if (book) {
-          handleBookSelect('gn');
-        }
-        e.preventDefault();
-      }
-      // I key - go to Acts
-      else if (e.key === 'i' || e.key === 'I') {
-        const book = bibleData?.find(b => b.abbrev === 'ac');
-        if (book) {
-          handleBookSelect('ac');
-        }
-        e.preventDefault();
-      }
-      // K key - go to Hebrews
-      else if (e.key === 'k' || e.key === 'K') {
-        const book = bibleData?.find(b => b.abbrev === 'hb');
-        if (book) {
-          handleBookSelect('hb');
-        }
-        e.preventDefault();
-      }
-      // S key - go to Joshua
-      else if (e.key === 's' || e.key === 'S') {
-        const book = bibleData?.find(b => b.abbrev === 'js');
-        if (book) {
-          handleBookSelect('js');
-        }
-        e.preventDefault();
-      }
       // 'b' key - go to previous chapter (only when no modal is open)
       else if ((e.key === 'b' || e.key === 'B') && !showSearchModal && !showQuizModal && !showQuiz2Modal && !showCollectionModal && !showDropboxModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showWordsModal && !showYouTubeModal) {
         if (selectedBook && selectedChapter > 1) {
@@ -4498,7 +4478,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showRefPrompt, loadStorytimeForCurrent, showOutlineModal]);
+  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showRefPrompt, showBookNavModal, loadStorytimeForCurrent, showOutlineModal]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
@@ -9049,7 +9029,7 @@ const BibleApp = () => {
         <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)' }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowShortcutsModal(false); }}
         >
-          <div style={{ background: isDarkMode ? '#2a2a3a' : 'white', borderRadius: 12, padding: 24, width: '90%', maxWidth: 560, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: isDarkMode ? '#2a2a3a' : 'white', borderRadius: 12, padding: 24, width: '90%', maxWidth: 600, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.3)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333' }}>Shortcuts</h3>
               <button onClick={() => setShowShortcutsModal(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: isDarkMode ? '#aaa' : '#666' }}>X</button>
@@ -11591,6 +11571,160 @@ const BibleApp = () => {
         );
       })()}
 
+      {/* Book Navigation Modal (backtick) */}
+      {showBookNavModal && (() => {
+        const bookNavCodes = {
+          // Numbered books
+          '1c': '1ch',  '1co': '1co',
+          '2c': '2ch',  '2co': '2co',
+          '1j': '1jo',  '2j': '2jo',  '3j': '3jo',
+          '1k': '1kgs', '2k': '2kgs',
+          '1p': '1pe',  '2p': '2pe',
+          '1s': '1sm',  '2s': '2sm',
+          '1t': '1ts',  '1th': '1ts', '1ti': '1tm',
+          '2t': '2ts',  '2th': '2ts', '2ti': '2tm',
+          // A: Acts (bare), Amos
+          'a': 'act', 'ac': 'act', 'am': 'am',
+          // C: Colossians
+          'c': 'cl',
+          // D: Daniel (bare), Deuteronomy
+          'd': 'dn', 'de': 'dt',
+          // E: Ecclesiastes (bare), Ephesians, Esther, Exodus, Ezekiel, Ezra
+          'e': 'ec', 'ep': 'eph', 'es': 'et', 'ex': 'ex', 'ez': 'ez', 'ezr': 'ezr',
+          // G: Galatians (bare), Genesis
+          'g': 'gl', 'ge': 'gn',
+          // H: Habakkuk (bare+hab), Haggai, Hebrews, Hosea
+          'h': 'hk', 'ha': 'hg', 'hab': 'hk', 'he': 'hb', 'ho': 'ho',
+          // I: Isaiah
+          'i': 'is',
+          // J: James (bare+ja), Jeremiah, Job, Joel, John, Jonah, Joshua, Jude, Judges
+          'j': 'jm', 'ja': 'jm', 'je': 'jr',
+          'jo': 'job', 'joe': 'jl', 'joh': 'jo',
+          'jon': 'jn', 'jos': 'js',
+          'jude': 'jd', 'judg': 'jud',
+          // L: Leviticus (bare), Lamentations, Luke
+          'l': 'lv', 'la': 'lm', 'lu': 'lk',
+          // M: Malachi (bare+ma+mal), Mark, Matthew (mat+mt), Micah
+          'm': 'ml', 'ma': 'ml', 'mal': 'ml', 'mar': 'mk', 'mat': 'mt', 'mt': 'mt', 'mi': 'mi',
+          // N: Nahum (bare+na), Nehemiah, Numbers
+          'n': 'na', 'na': 'na', 'ne': 'ne', 'nu': 'nm',
+          // O: Obadiah
+          'o': 'ob',
+          // P: Philemon (bare+ph+phi+phil), Philippians (phili), Proverbs, Psalms
+          'p': 'phm', 'ph': 'phm', 'phi': 'phm', 'phil': 'phm', 'phili': 'ph',
+          'pr': 'prv', 'ps': 'ps',
+          // R: Revelation (bare), Romans, Ruth
+          'r': 're', 'ro': 'rm', 'ru': 'rt',
+          // S: Song of Songs
+          's': 'so',
+          // T: Titus
+          't': 'tt',
+          // Z: Zechariah (bare+ze+zec), Zephaniah
+          'z': 'zc', 'ze': 'zc', 'zec': 'zc', 'zep': 'zp',
+        };
+        const codeList = [
+          // Old Testament
+          ['Ge', 'Genesis'], ['Ex', 'Exodus'], ['L', 'Leviticus'], ['Nu', 'Numbers'], ['De', 'Deuteronomy'],
+          ['Jos', 'Joshua'], ['Judg', 'Judges'], ['Ru', 'Ruth'], ['1S', '1 Samuel'], ['2S', '2 Samuel'],
+          ['1K', '1 Kings'], ['2K', '2 Kings'], ['1C', '1 Chronicles'], ['2C', '2 Chronicles'],
+          ['Ezr', 'Ezra'], ['Ne', 'Nehemiah'], ['Es', 'Esther'], ['Jo', 'Job'], ['Ps', 'Psalms'], ['Pr', 'Proverbs'],
+          ['E', 'Ecclesiastes'], ['S', 'Song of Songs'], ['I', 'Isaiah'], ['Je', 'Jeremiah'], ['La', 'Lamentations'],
+          ['Ez', 'Ezekiel'], ['D', 'Daniel'], ['Ho', 'Hosea'], ['Joe', 'Joel'], ['Am', 'Amos'],
+          ['O', 'Obadiah'], ['Jon', 'Jonah'], ['Mi', 'Micah'], ['N', 'Nahum'], ['H', 'Habakkuk'],
+          ['Zep', 'Zephaniah'], ['Ha', 'Haggai'], ['Z', 'Zechariah'], ['Mal', 'Malachi'],
+          // New Testament
+          ['Mt', 'Matthew'], ['Mar', 'Mark'], ['Lu', 'Luke'], ['Joh', 'John'],
+          ['Ac', 'Acts'], ['Ro', 'Romans'], ['1Co', '1 Corinthians'], ['2Co', '2 Corinthians'],
+          ['G', 'Galatians'], ['Ep', 'Ephesians'], ['Phili', 'Philippians'], ['C', 'Colossians'],
+          ['1Th', '1 Thessalonians'], ['2Th', '2 Thessalonians'], ['1Ti', '1 Timothy'], ['2Ti', '2 Timothy'],
+          ['T', 'Titus'], ['P', 'Philemon'], ['He', 'Hebrews'],
+          ['J', 'James'], ['1P', '1 Peter'], ['2P', '2 Peter'],
+          ['1J', '1 John'], ['2J', '2 John'], ['3J', '3 John'],
+          ['Jude', 'Jude'], ['R', 'Revelation'],
+        ];
+        const input = bookNavInput.trim().toLowerCase();
+        const close = () => { setShowBookNavModal(false); setBookNavInput(''); };
+
+        // Pure number → go to that chapter in the current book
+        const pureNumber = /^\d+$/.test(input) ? parseInt(input) : null;
+
+        // Otherwise split into book-part + optional trailing chapter number
+        // e.g. "he 2", "he2", "1co 3" → bookPart + chapterNum
+        const chapterMatch = pureNumber === null ? input.match(/^(.*?)\s*(\d+)$/) : null;
+        const bookPart = chapterMatch ? chapterMatch[1].trim() : input;
+        const chapterNum = chapterMatch ? parseInt(chapterMatch[2]) : 1;
+
+        // Longest-prefix match on bookPart
+        let matchedAbbrev = null;
+        for (let len = bookPart.length; len >= 1; len--) {
+          const prefix = bookPart.slice(0, len);
+          if (bookNavCodes[prefix]) { matchedAbbrev = bookNavCodes[prefix]; break; }
+        }
+        const matchedBook = matchedAbbrev && bibleData?.find(b => b.abbrev === matchedAbbrev);
+
+        // Label shown below the input
+        const validPureChapter = pureNumber !== null && selectedBook && pureNumber >= 1 && pureNumber <= selectedBook.chapters.length;
+        const validBookChapter = matchedBook && (chapterNum < 1 || chapterNum > matchedBook.chapters.length) ? false : !!matchedBook;
+        const displayLabel = pureNumber !== null
+          ? (validPureChapter ? `→ ${getBookName(selectedBook.abbrev)} ${pureNumber}` : input.length > 0 ? 'No match' : '')
+          : matchedBook
+            ? `→ ${getBookName(matchedAbbrev)}${chapterNum > 1 ? ` ${chapterNum}` : ''}`
+            : input.length > 0 ? 'No match' : '';
+        const displayOk = pureNumber !== null ? validPureChapter : !!matchedBook && (chapterNum >= 1 && chapterNum <= (matchedBook?.chapters?.length || 999));
+
+        const handleNavigate = () => {
+          if (pureNumber !== null) {
+            if (validPureChapter) { handleChapterSelect(pureNumber); close(); }
+            return;
+          }
+          if (matchedBook) {
+            handleBookSelect(matchedAbbrev); // sets chapter to 1
+            if (chapterNum > 1 && chapterNum <= matchedBook.chapters.length) {
+              // Override chapter; React batches these with the above setState calls
+              setSelectedChapter(chapterNum);
+              setPrimaryReading({ book: matchedBook, chapter: chapterNum });
+            }
+            close();
+          }
+        };
+        return (
+          <div
+            style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10001, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+            onClick={(e) => { if (e.target === e.currentTarget) { setShowBookNavModal(false); setBookNavInput(''); } }}
+          >
+            <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: 320, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <h3 style={{ margin: '0 0 12px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>Go to Book</h3>
+              <input
+                autoFocus
+                value={bookNavInput}
+                onChange={e => setBookNavInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { handleNavigate(); e.preventDefault(); }
+                  if (e.key === 'Escape') { setShowBookNavModal(false); setBookNavInput(''); e.preventDefault(); }
+                  e.stopPropagation();
+                }}
+                placeholder="Type code (e.g. G, Je, Ps…)"
+                style={{ width: '100%', padding: '8px 12px', fontSize: 16, borderRadius: 8, border: `1px solid ${isDarkMode ? '#555' : '#ddd'}`, background: isDarkMode ? '#1e1e1e' : '#f9f9f9', color: isDarkMode ? '#e0e0e0' : '#333', boxSizing: 'border-box', outline: 'none' }}
+              />
+              <div style={{ marginTop: 8, minHeight: 28, textAlign: 'center', fontSize: 15, fontWeight: 600, color: displayOk ? (isDarkMode ? '#86efac' : '#16a34a') : (input.length > 0 ? (isDarkMode ? '#f87171' : '#dc2626') : (isDarkMode ? '#666' : '#aaa')) }}>
+                {displayLabel}
+              </div>
+              <details style={{ marginTop: 12 }}>
+                <summary style={{ fontSize: 11, color: isDarkMode ? '#888' : '#999', cursor: 'pointer', userSelect: 'none' }}>Show codes</summary>
+                <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 16px', fontSize: 11 }}>
+                  {codeList.map(([code, book]) => (
+                    <div key={code} style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
+                      <span style={{ fontWeight: 700, color: isDarkMode ? '#93c5fd' : '#1d4ed8', minWidth: 28 }}>{code}</span>
+                      <span style={{ color: isDarkMode ? '#ccc' : '#555' }}>{book}</span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            </div>
+          </div>
+        );
+      })()}
+
       <FurtherReadingModal open={showFiguresModal} onClose={() => setShowFiguresModal(false)} />
       <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
       <YouTubeVideoModal open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsYouTubePlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} />
@@ -11622,6 +11756,7 @@ const BibleApp = () => {
             kjvContentRef={kjvContentRef}
             onClose={() => setShowOutlineModal(false)}
             precomputedOutline={outlinesData?.[oBook?.abbrev]?.[String(oChapter)]}
+            suppressEscape={showBookNavModal}
           />
         );
       })()}
