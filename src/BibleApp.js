@@ -490,6 +490,8 @@ const NavigationPlaceholder = ({
   showCursiveModal,
   onBreathe,
   showBreatheModal,
+  onNotes,
+  showNotesModal,
   sidebarLang,
   onSidebarLangCycle,
   onLangToggleOpen,
@@ -638,6 +640,15 @@ const NavigationPlaceholder = ({
         >
           Ref(r)
         </button>}
+
+        {/* Notes Button */}
+        <button
+          onClick={() => onNotes && onNotes()}
+          className={`ml-2 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showNotesModal ? 'bg-amber-600 text-white' : 'bg-amber-500 text-white hover:bg-amber-600'}`}
+          title="Open notes (synced to Dropbox)"
+        >
+          Notes
+        </button>
 
         {/* Clipboard ch:v Button - reads clipboard for chapter:verse and navigates */}
         {isFeatureVisible('clipboardRef') && <button
@@ -1841,6 +1852,14 @@ const BibleApp = () => {
   const [dropboxView, setDropboxView] = useState('files'); // 'files' | 'content'
   const [dropboxFolderPath, setDropboxFolderPath] = useState('');
 
+  // State for Notes Modal
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [notesText, setNotesText] = useState('');
+  const [notesStatus, setNotesStatus] = useState('');
+  const [notesSaving, setNotesSaving] = useState(false);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [notesSaveConfirm, setNotesSaveConfirm] = useState(false);
+
   // State for Text Paste (in Go to Reference modal)
   const [textPasteContent, setTextPasteContent] = useState('');
   const [textParsedRefs, setTextParsedRefs] = useState([]);
@@ -2388,6 +2407,67 @@ const BibleApp = () => {
       loadDropboxFolder('/blob_vercel_replacement/bible');
     }
   }, [dropboxAccessToken, loadDropboxFolder]);
+
+  // Notes: load from Dropbox /vercel/bible_app/notes.txt
+  const NOTES_PATH = '/vercel/bible_app/notes.txt';
+
+  const loadNotes = useCallback(async (token) => {
+    const tok = token || dropboxAccessToken;
+    if (!tok) return;
+    setNotesLoading(true);
+    setNotesStatus('Loading…');
+    try {
+      const r = await fetch('https://content.dropboxapi.com/2/files/download', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${tok}`,
+          'Dropbox-API-Arg': JSON.stringify({ path: NOTES_PATH }),
+        },
+      });
+      if (r.status === 409) { setNotesStatus(''); return; } // file doesn't exist yet
+      if (r.status === 401) { setDropboxAccessToken(null); setNotesStatus('Session expired — sign in again'); return; }
+      if (!r.ok) throw new Error('Download failed (' + r.status + ')');
+      const text = await r.text();
+      setNotesText(text);
+      setNotesStatus('');
+    } catch (e) {
+      setNotesStatus('Error loading: ' + e.message);
+    } finally {
+      setNotesLoading(false);
+    }
+  }, [dropboxAccessToken]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const saveNotes = useCallback(async () => {
+    if (!dropboxAccessToken) return;
+    setNotesSaving(true);
+    setNotesStatus('Saving…');
+    try {
+      const r = await fetch('https://content.dropboxapi.com/2/files/upload', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${dropboxAccessToken}`,
+          'Dropbox-API-Arg': JSON.stringify({ path: NOTES_PATH, mode: { '.tag': 'overwrite' }, mute: true }),
+          'Content-Type': 'application/octet-stream',
+        },
+        body: notesText,
+      });
+      if (r.status === 401) { setDropboxAccessToken(null); setNotesStatus('Session expired — sign in again'); return; }
+      if (!r.ok) throw new Error('Upload failed (' + r.status + ')');
+      setNotesStatus('Saved ✓');
+      setTimeout(() => setNotesStatus(''), 2500);
+    } catch (e) {
+      setNotesStatus('Error saving: ' + e.message);
+    } finally {
+      setNotesSaving(false);
+    }
+  }, [dropboxAccessToken, notesText]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleNotesOpen = useCallback(async () => {
+    setShowNotesModal(true);
+    if (dropboxAccessToken) {
+      await loadNotes();
+    }
+  }, [dropboxAccessToken, loadNotes]);
 
   // State to track scroll position for mobile view during translation changes
   // eslint-disable-next-line no-unused-vars
@@ -4387,6 +4467,8 @@ const BibleApp = () => {
           else setShowCollectionModal(false);
         } else if (showDropboxModal) {
           setShowDropboxModal(false);
+        } else if (showNotesModal) {
+          setShowNotesModal(false);
         } else if (showYouTubeModal) {
           setShowYouTubeModal(false);
         } else if (showWordsModal) {
@@ -6719,6 +6801,8 @@ const BibleApp = () => {
               }}
               showBreatheModal={showBreatheModal}
               onBreathe={() => setShowBreatheModal(true)}
+              onNotes={handleNotesOpen}
+              showNotesModal={showNotesModal}
               sidebarLang={sidebarLang}
               onSidebarLangCycle={() => {
                 const langOptions = ['en', 'cant', 'chin', 'heb', 'span', 'fr'];
@@ -9573,6 +9657,113 @@ const BibleApp = () => {
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Notes Modal */}
+      {showNotesModal && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowNotesModal(false); }}
+        >
+          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 600, height: '75vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', position: 'relative' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexShrink: 0 }}>
+              <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333' }}>Notes</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {notesStatus && (
+                  <span style={{ fontSize: 12, color: notesStatus.includes('Error') ? '#e53e3e' : isDarkMode ? '#aaa' : '#888' }}>{notesStatus}</span>
+                )}
+                <button
+                  onClick={() => setShowNotesModal(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDarkMode ? '#aaa' : '#666', fontSize: 20, padding: '0 4px', lineHeight: 1 }}
+                  title="Close"
+                >✕</button>
+              </div>
+            </div>
+
+            {!dropboxAccessToken ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, flex: 1, justifyContent: 'center' }}>
+                <p style={{ color: isDarkMode ? '#aaa' : '#666', fontSize: 14, textAlign: 'center', margin: 0 }}>Sign in to Dropbox to load and save your notes.</p>
+                <button
+                  onClick={handleDropboxSignIn}
+                  style={{ padding: '10px 24px', fontSize: 14, border: 'none', borderRadius: 8, background: '#0061fe', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Sign In to Dropbox
+                </button>
+              </div>
+            ) : (
+              <>
+                <textarea
+                  value={notesText}
+                  onChange={(e) => setNotesText(e.target.value)}
+                  disabled={notesLoading}
+                  placeholder="Write your notes here…"
+                  style={{
+                    flex: 1, resize: 'none', border: `1px solid ${isDarkMode ? '#444' : '#ddd'}`,
+                    borderRadius: 8, padding: '10px 12px', fontSize: 14, lineHeight: 1.6,
+                    background: isDarkMode ? '#1e1e1e' : '#fafafa', color: isDarkMode ? '#e0e0e0' : '#222',
+                    fontFamily: 'inherit', outline: 'none', marginBottom: 12,
+                  }}
+                />
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                  <button
+                    onClick={() => loadNotes()}
+                    disabled={notesLoading || notesSaving}
+                    style={{
+                      flex: 1, padding: '10px 0', fontSize: 15, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
+                      borderRadius: 8, background: isDarkMode ? '#333' : '#f5f5f5',
+                      color: isDarkMode ? '#ddd' : '#333', cursor: notesLoading ? 'default' : 'pointer', fontWeight: 600,
+                    }}
+                  >
+                    {notesLoading ? 'Loading…' : '↓ Load'}
+                  </button>
+                  <button
+                    onClick={() => setNotesSaveConfirm(true)}
+                    disabled={notesSaving || notesLoading}
+                    style={{
+                      flex: 2, padding: '10px 0', fontSize: 15, border: 'none', borderRadius: 8,
+                      background: notesSaving ? (isDarkMode ? '#555' : '#ccc') : '#d97706',
+                      color: 'white', cursor: notesSaving ? 'default' : 'pointer', fontWeight: 600,
+                    }}
+                  >
+                    {notesSaving ? 'Saving…' : '↑ Save to Dropbox'}
+                  </button>
+                </div>
+
+                {/* Save confirmation overlay */}
+                {notesSaveConfirm && (
+                  <div style={{
+                    position: 'absolute', inset: 0, borderRadius: 16,
+                    background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10,
+                  }}>
+                    <div style={{
+                      background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 12, padding: '24px 28px',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.4)', textAlign: 'center', maxWidth: 280,
+                    }}>
+                      <p style={{ margin: '0 0 18px', fontSize: 15, color: isDarkMode ? '#e0e0e0' : '#333', lineHeight: 1.5 }}>
+                        Overwrite <strong>notes.txt</strong> on Dropbox?
+                      </p>
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button
+                          onClick={() => setNotesSaveConfirm(false)}
+                          style={{ flex: 1, padding: '9px 0', fontSize: 14, borderRadius: 8, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, background: isDarkMode ? '#333' : '#f5f5f5', color: isDarkMode ? '#ddd' : '#333', cursor: 'pointer', fontWeight: 600 }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => { setNotesSaveConfirm(false); saveNotes(); }}
+                          style={{ flex: 1, padding: '9px 0', fontSize: 14, borderRadius: 8, border: 'none', background: '#d97706', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
