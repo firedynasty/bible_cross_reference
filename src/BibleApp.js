@@ -2103,6 +2103,8 @@ const BibleApp = () => {
     { key: 'P', label: 'P Es', lang: 'es-ES', title: 'Spanish'   },
     { key: 'K', label: 'K 한', lang: 'ko-KR', title: 'Korean'    },
     { key: 'F', label: 'F Fr', lang: 'fr-FR', title: 'French'    },
+    { key: 'G', label: 'G Ελ', lang: 'el-GR', title: 'Greek'    },
+    { key: 'H', label: 'H עב', lang: 'he-IL', title: 'Hebrew'   },
   ];
   const TTS_TOOLTIP_STORAGE = 'bible-tts-tooltip-visible';
   const [ttsTooltip, setTtsTooltip] = useState(null); // { x, y, text } or null
@@ -4478,10 +4480,6 @@ const BibleApp = () => {
         } else if (showBookNavModal) {
           setShowBookNavModal(false);
           setBookNavInput('');
-        } else {
-          // No modal open — open combined Search + Story modal
-          loadStorytimeForCurrent();
-          setShowSearchModal(true); setSearchStartRef('');
         }
         e.preventDefault();
       }
