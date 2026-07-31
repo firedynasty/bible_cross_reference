@@ -2462,12 +2462,9 @@ const BibleApp = () => {
     }
   }, [dropboxAccessToken, notesText]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleNotesOpen = useCallback(async () => {
+  const handleNotesOpen = useCallback(() => {
     setShowNotesModal(true);
-    if (dropboxAccessToken) {
-      await loadNotes();
-    }
-  }, [dropboxAccessToken, loadNotes]);
+  }, []);
 
   // State to track scroll position for mobile view during translation changes
   // eslint-disable-next-line no-unused-vars
