@@ -3790,12 +3790,7 @@ const BibleApp = () => {
         return;
       }
 
-      // 'r' key - toggle Ref prompt modal
-      if (e.key === 'r' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showRefPrompt) {
-        e.preventDefault();
-        setShowRefPrompt(true);
-        return;
-      }
+
 
       // Backtick - open book navigation modal
       if (e.key === '`' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showRefPrompt && !showBookNavModal) {
@@ -4073,68 +4068,25 @@ const BibleApp = () => {
         e.preventDefault();
       }
       
-      // 'e' key - go to next chapter (same as ';' key)
+      // 'e' key - advance by +10 chapters
       else if (e.key === 'e' || e.key === 'E' || e.keyCode === 69) {
-        console.log("e key pressed for Next Chapter");
-        console.log("Current state:", { 
-          selectedBook: selectedBook?.abbrev, 
-          selectedChapter, 
-          totalChapters: selectedBook?.chapters.length 
-        });
-
-        // Simplified approach: directly find and click the Next Chapter button
         const nextChapterButtons = Array.from(document.querySelectorAll('button'))
           .filter(button => button.textContent.includes('Next Chapter'));
-
-        console.log("Found Next Chapter buttons:", nextChapterButtons.length);
-
         if (nextChapterButtons.length > 0) {
-          console.log("Found Next Chapter button, clicking it");
-          console.log("Current React state before button click:", {
-            selectedBook: selectedBook?.abbrev,
-            selectedChapter: selectedChapter
-          });
-          nextChapterButtons[0].click();
-          
-          // Check state after a delay to see if it updated
-          setTimeout(() => {
-            console.log("React state 200ms after button click:", {
-              selectedBook: selectedBook?.abbrev,
-              selectedChapter: selectedChapter
-            });
-          }, 200);
-        } else {
-          console.log("No Next Chapter button found - this means we're at the last chapter");
-          console.log("Doing nothing (not advancing to next book or Genesis)");
-        }
-
-        e.preventDefault();
-      }
-      
-      // 'r' key - advance by +10 chapters by clicking Next Chapter button 10 times
-      else if (e.key === 'r' || e.key === 'R' || e.keyCode === 82) {
-        console.log("r key pressed for +10 chapters");
-        
-        // Find the Next Chapter button
-        const nextChapterButtons = Array.from(document.querySelectorAll('button'))
-          .filter(button => button.textContent.includes('Next Chapter'));
-          
-        if (nextChapterButtons.length > 0) {
-          console.log("Found Next Chapter button, clicking it 10 times");
-          
-          // Click the button 10 times with small delays
           for (let i = 0; i < 10; i++) {
             setTimeout(() => {
-              if (nextChapterButtons[0]) {
-                nextChapterButtons[0].click();
-                console.log(`Clicked Next Chapter button ${i + 1}/10`);
-              }
-            }, i * 100); // 100ms delay between clicks
+              if (nextChapterButtons[0]) nextChapterButtons[0].click();
+            }, i * 100);
           }
-        } else {
-          console.log("No Next Chapter button found");
         }
-        
+        e.preventDefault();
+      }
+
+      // 'r' key - read highlighted/selected text in English
+      else if (e.key === 'r' || e.key === 'R' || e.keyCode === 82) {
+        const sel = window.getSelection();
+        const text = sel ? sel.toString().trim() : '';
+        if (text) speakSelectedText(text, 'en-US');
         e.preventDefault();
       }
       // 'd' key - toggle dark mode
@@ -4300,6 +4252,18 @@ const BibleApp = () => {
         if (loadButton) {
           loadButton.click();
           console.log("i key pressed - clicked Load prompt button");
+        }
+        e.preventDefault();
+      }
+      // 'j' key - read highlighted text in first visible TTS tooltip language
+      else if (e.key === 'j' || e.key === 'J') {
+        const sel = window.getSelection();
+        const text = sel ? sel.toString().trim() : '';
+        if (text) {
+          let visMap = {};
+          try { visMap = JSON.parse(localStorage.getItem('bible-tts-tooltip-visible')) || {}; } catch {}
+          const firstVisible = TTS_TOOLTIP_LANGS.find(l => !(l.key in visMap) || visMap[l.key]);
+          if (firstVisible) speakSelectedText(text, firstVisible.lang);
         }
         e.preventDefault();
       }
@@ -9080,6 +9044,20 @@ const BibleApp = () => {
               />
               <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}>Cantonese (CUV)</span>
             </label>
+
+            {/* Divider */}
+            <div style={{ borderTop: `2px solid ${isDarkMode ? '#555' : '#ddd'}`, marginTop: 12, marginBottom: 12 }} />
+
+            {/* TTS Tooltip Language Visibility */}
+            <div style={{ marginBottom: 8, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: isDarkMode ? '#88aabb' : '#3388aa', paddingLeft: 4 }}>Verse TTS Tooltip Languages</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 4 }}>
+              {TTS_TOOLTIP_LANGS.map(l => (
+                <label key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: isTtsLangVisible(l.key) ? (isDarkMode ? '#3a3a5a' : '#f0f7ff') : (isDarkMode ? '#1a1a2a' : '#f5f5f5'), border: `1px solid ${isTtsLangVisible(l.key) ? '#3388aa' : (isDarkMode ? '#444' : '#ddd')}` }}>
+                  <input type="checkbox" checked={isTtsLangVisible(l.key)} onChange={() => toggleTtsLang(l.key)} style={{ accentColor: '#3388aa' }} />
+                  <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}>{l.label} {l.title}</span>
+                </label>
+              ))}
+            </div>
 
             {/* Divider */}
             <div style={{ borderTop: `2px solid ${isDarkMode ? '#555' : '#ddd'}`, marginTop: 12, marginBottom: 12 }} />
