@@ -1854,7 +1854,7 @@ const BibleApp = () => {
 
   // State for Notes Modal
   const [showNotesModal, setShowNotesModal] = useState(false);
-  const [notesText, setNotesText] = useState('');
+  const [notesText, setNotesText] = useState(() => { try { return localStorage.getItem('bibleNotesText') || ''; } catch { return ''; } });
   const [notesStatus, setNotesStatus] = useState('');
   const [notesSaving, setNotesSaving] = useState(false);
   const [notesLoading, setNotesLoading] = useState(false);
@@ -2429,6 +2429,7 @@ const BibleApp = () => {
       if (!r.ok) throw new Error('Download failed (' + r.status + ')');
       const text = await r.text();
       setNotesText(text);
+      try { localStorage.setItem('bibleNotesText', text); } catch {}
       setNotesStatus('');
     } catch (e) {
       setNotesStatus('Error loading: ' + e.message);
@@ -9694,7 +9695,7 @@ const BibleApp = () => {
               <>
                 <textarea
                   value={notesText}
-                  onChange={(e) => setNotesText(e.target.value)}
+                  onChange={(e) => { const v = e.target.value; setNotesText(v); try { localStorage.setItem('bibleNotesText', v); } catch {} }}
                   disabled={notesLoading}
                   placeholder="Write your notes here…"
                   style={{
