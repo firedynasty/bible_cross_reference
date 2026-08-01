@@ -11920,8 +11920,8 @@ const BibleApp = () => {
         );
       })()}
 
-      {/* TTS selection tooltip */}
-      {ttsTooltip && (
+      {/* TTS selection tooltip — hidden if no language is visible */}
+      {ttsTooltip && TTS_TOOLTIP_LANGS.some(l => isTtsLangVisible(l.key)) && (
         <div
           id="bible-tts-tooltip"
           style={{
