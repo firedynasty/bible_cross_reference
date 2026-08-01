@@ -636,9 +636,9 @@ const NavigationPlaceholder = ({
         {isFeatureVisible('ref') && <button
           onClick={() => onRefPrompt && onRefPrompt()}
           className="ml-2 px-2 py-0.5 rounded focus:outline-none text-xs bg-blue-500 text-white hover:bg-blue-600 font-semibold"
-          title="Go to a Bible reference (r)"
+          title="Go to a Bible reference (e)"
         >
-          Ref(r)
+          Ref(e)
         </button>}
 
         {/* Notes Button */}
@@ -1755,7 +1755,7 @@ const BibleApp = () => {
     nltPsalms: 'NLT(Ps)', plan: 'Plan', math: 'Math', figures: 'Figures',
     copyPane2: 'Copy Pane 2', toggleCuv: 'KJV/CUV', togglePsalms: 'Psalms/Prov',
     toggleRhyme: 'WEB/Rhyme', cyclePane1: '1:cycle', clrPane1: 'clr pane 1',
-    ref: 'Ref(r)', syllable: 'Syllable', darkMode: 'Dark/Light', fontMinus: 'Font -',
+    ref: 'Ref(e)', syllable: 'Syllable', darkMode: 'Dark/Light', fontMinus: 'Font -',
     fontPlus: 'Font +', youtube: 'YouTube', lang: 'Language', soaking: 'Soaking',
     classical: '🎻 Classical-Scriptures', classicalPlay: 'Fast ▶/⏸',
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
@@ -4068,16 +4068,10 @@ const BibleApp = () => {
         e.preventDefault();
       }
       
-      // 'e' key - advance by +10 chapters
+      // 'e' key - open Ref prompt modal
       else if (e.key === 'e' || e.key === 'E' || e.keyCode === 69) {
-        const nextChapterButtons = Array.from(document.querySelectorAll('button'))
-          .filter(button => button.textContent.includes('Next Chapter'));
-        if (nextChapterButtons.length > 0) {
-          for (let i = 0; i < 10; i++) {
-            setTimeout(() => {
-              if (nextChapterButtons[0]) nextChapterButtons[0].click();
-            }, i * 100);
-          }
+        if (!showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showRefPrompt) {
+          setShowRefPrompt(true);
         }
         e.preventDefault();
       }
