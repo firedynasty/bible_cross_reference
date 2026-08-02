@@ -3072,7 +3072,7 @@ const BibleApp = () => {
       utterance.onerror = () => { storytimeTtsRef.current = false; setIsStorytimeAudioPlaying(false); };
       storytimeTtsRef.current = true;
       setIsStorytimeAudioPlaying(true);
-      window.speechSynthesis.speak(utterance);
+      setTimeout(() => window.speechSynthesis.speak(utterance), 50);
     }
   }, [pane2Book, pane2Chapter, selectedBook, selectedChapter, storytimeData]);
 
@@ -3150,7 +3150,7 @@ const BibleApp = () => {
     utterance.onend = () => setSpeakingPaneVerse(null);
     utterance.onerror = () => setSpeakingPaneVerse(null);
     setSpeakingPaneVerse(verseNumber);
-    window.speechSynthesis.speak(utterance);
+    setTimeout(() => window.speechSynthesis.speak(utterance), 50);
   }, [speakingPaneVerse, verseTtsCanto]);
 
   // TTS tooltip: speak selected text in a given language
@@ -3169,7 +3169,8 @@ const BibleApp = () => {
       if (!v && lang.startsWith('zh')) v = voices.find(vv => vv.lang.startsWith('zh'));
       if (v) utt.voice = v;
     }
-    window.speechSynthesis.speak(utt);
+    // Chrome bug: speechSynthesis can get stuck in "speaking" state; delay after cancel() to clear it
+    setTimeout(() => window.speechSynthesis.speak(utt), 50);
   }, []);
 
   // TTS tooltip: show on mouseup when text is selected
