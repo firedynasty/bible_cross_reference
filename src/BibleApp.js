@@ -7543,38 +7543,17 @@ const BibleApp = () => {
                     <button
                       onClick={() => {
                         const pane = kjvContentRef.current;
-                        if (!pane) return;
-                        const paneRect = pane.getBoundingClientRect();
-                        let topVerse = 1;
-                        for (let i = 1; i <= 200; i++) {
-                          const el = document.getElementById(`right-pane-verse-${i}`);
-                          if (!el) break;
-                          const elRect = el.getBoundingClientRect();
-                          if (elRect.bottom > paneRect.top + 40) {
-                            topVerse = i;
-                            break;
-                          }
+                        if (pane) {
+                          const maxScroll = pane.scrollHeight - pane.clientHeight;
+                          pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
                         }
-                        // Check if bottom buttons are visible — if so, read all remaining verses
-                        const bottomBtns = document.getElementById('pane2-bottom-buttons');
-                        const atBottom = bottomBtns && bottomBtns.getBoundingClientRect().top < paneRect.bottom;
-                        let lastVerse = topVerse;
-                        if (atBottom) {
-                          for (let i = topVerse + 1; i <= 200; i++) {
-                            if (!document.getElementById(`right-pane-verse-${i}`)) break;
-                            lastVerse = i;
-                          }
-                        }
-                        window.dispatchEvent(new CustomEvent('speakVerseContent', {
-                          detail: { verseNumber: topVerse, lastVerse: lastVerse, lang: sidebarLang || 'en' }
-                        }));
                       }}
                       style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
-                      title="Read verse aloud (TTS)"
+                      title="Page down"
                     >
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                      <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
                     <button
                       onClick={() => {
