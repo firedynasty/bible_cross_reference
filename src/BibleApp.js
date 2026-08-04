@@ -507,6 +507,8 @@ const NavigationPlaceholder = ({
   classicalPlaying,
   onYouTubeVideo,
   isYouTubePlaying,
+  onDramatizedVideo,
+  isDramatizedPlaying,
   showPane2Syllables,
   onTogglePane2Syllables,
   syllabifyText,
@@ -807,6 +809,15 @@ const NavigationPlaceholder = ({
               >
                 <svg width="22" height="16" viewBox="0 0 68 48" style={{flexShrink:0}}><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61-1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="red"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg>
                 <span style={{fontSize:10,color:'#ccc'}}>(y)</span>
+              </button>}
+              {isFeatureVisible('youtubeDramatized') && <button
+                className={`ml-1 rounded focus:outline-none ${isDramatizedPlaying ? 'ring-2 ring-white ring-offset-1 ring-offset-red-600' : ''}`}
+                style={{padding:'4px 10px',background:'linear-gradient(45deg,#7b6,#5a5)',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px'}}
+                title="Dramatized audio (NKJV)"
+                onClick={() => onDramatizedVideo && onDramatizedVideo()}
+              >
+                <svg width="22" height="16" viewBox="0 0 68 48" style={{flexShrink:0}}><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61-1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="#c00"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg>
+                <span style={{fontSize:10,color:'#dfd'}}>drm</span>
               </button>}
               {isFeatureVisible('lang') && <>
               <span className="ml-2" style={{ fontSize: 16 }}>🔊</span>
@@ -1549,6 +1560,8 @@ const BibleApp = () => {
   const classicalRef = useRef(null);
   const [showYouTubeModal, setShowYouTubeModal] = useState(false);
   const [isYouTubePlaying, setIsYouTubePlaying] = useState(false);
+  const [showDramatizedModal, setShowDramatizedModal] = useState(false);
+  const [isDramatizedPlaying, setIsDramatizedPlaying] = useState(false);
   const [pendingBookSelection, setPendingBookSelection] = useState(null);
   const pendingBookRef = useRef(null);
   const [crossReferences, setCrossReferences] = useState({});
@@ -1745,7 +1758,7 @@ const BibleApp = () => {
     'search', 'rhyme', 'storyAudio', 'chpCopy', 'ruler', 'col', 'hymn', 'prompt',
     'nltPsalms', 'plan', 'math', 'figures', 'copyPane2', 'toggleCuv', 'togglePsalms',
     'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
-    'fontPlus', 'youtube', 'lang', 'soaking', 'classical', 'classicalPlay',
+    'fontPlus', 'youtube', 'youtubeDramatized', 'lang', 'soaking', 'classical', 'classicalPlay',
     'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
     'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting', 'outline'
   ];
@@ -1756,7 +1769,7 @@ const BibleApp = () => {
     copyPane2: 'Copy Pane 2', toggleCuv: 'KJV/CUV', togglePsalms: 'Psalms/Prov',
     toggleRhyme: 'WEB/Rhyme', cyclePane1: '1:cycle', clrPane1: 'clr pane 1',
     ref: 'Ref(e)', syllable: 'Syllable', darkMode: 'Dark/Light', fontMinus: 'Font -',
-    fontPlus: 'Font +', youtube: 'YouTube', lang: 'Language', soaking: 'Soaking',
+    fontPlus: 'Font +', youtube: 'YouTube', youtubeDramatized: 'Dramatized', lang: 'Language', soaking: 'Soaking',
     classical: '🎻 Classical-Scriptures', classicalPlay: 'Fast ▶/⏸',
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
@@ -4430,6 +4443,8 @@ const BibleApp = () => {
           setShowNotesModal(false);
         } else if (showYouTubeModal) {
           setShowYouTubeModal(false);
+        } else if (showDramatizedModal) {
+          setShowDramatizedModal(false);
         } else if (showWordsModal) {
           setShowWordsModal(false);
         } else if (showQuiz2Modal) {
@@ -4515,7 +4530,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showRefPrompt, showBookNavModal, loadStorytimeForCurrent, showOutlineModal]);
+  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showDramatizedModal, showRefPrompt, showBookNavModal, loadStorytimeForCurrent, showOutlineModal]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
@@ -6794,6 +6809,8 @@ const BibleApp = () => {
               classicalPlaying={classicalPlaying}
               onYouTubeVideo={() => setShowYouTubeModal(true)}
               isYouTubePlaying={isYouTubePlaying}
+              onDramatizedVideo={() => setShowDramatizedModal(true)}
+              isDramatizedPlaying={isDramatizedPlaying}
               showPane2Syllables={showPane2Syllables}
               onTogglePane2Syllables={() => setShowPane2Syllables(s => { const next = !s; localStorage.setItem('bible-pane2-syllables', next); return next; })}
               syllabifyText={syllabifyText}
@@ -11867,6 +11884,7 @@ const BibleApp = () => {
       <FurtherReadingModal open={showFiguresModal} onClose={() => setShowFiguresModal(false)} />
       <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
       <YouTubeVideoModal open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsYouTubePlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} />
+      <YouTubeVideoModal isDramatized open={showDramatizedModal} onClose={() => setShowDramatizedModal(false)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsDramatizedPlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} />
 
       {/* Outline Modal */}
       {showOutlineModal && (() => {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import youtubeChapterTimestamps from '../data/youtubeChapterTimestamps';
+import dramatizedChapterTimestamps from '../data/dramatizedChapterTimestamps';
 
 // Map book abbreviations to YouTube playlist video IDs
 // Playlist: https://www.youtube.com/playlist?list=PLyH3jcNYnj_vee7HfFWgGmcW2E3qdsHLi
@@ -95,6 +96,91 @@ export function getYouTubeVideoId(bookAbbrev) {
   return bookVideoIds[bookAbbrev] || null;
 }
 
+// Dramatized NKJV audio video IDs (one per book)
+const dramatizedBookVideoIds = {
+  'gn': 'rzZMD9DGFik', 'ge': 'rzZMD9DGFik',
+  'ex': 'jykSZuVgVgM',
+  'lv': 'Z8GG5ULjaSo',
+  'nm': 'Y2yjAhRfsl0',
+  'dt': 'CbU1b8AQB2w',
+  'js': 'RUnT_xMzxKw',
+  'jud': 'tynF9rwHnGE',
+  'rt': '7zArUEmxkuM',
+  '1sm': 'boXKa-aEoBM',
+  '2sm': 'O-6lHBOOZPc',
+  '1kgs': 'pu_m74aTY2s',
+  '2kgs': 'zlM_nGPeSS8',
+  '1ch': '2uEsQ3ny6vU',
+  '2ch': 'zr-qtkwphJ4',
+  'ezr': 'ruqmepz2BcI',
+  'ne': 'z3vSY5Q73T4',
+  'et': '-oM-YtW9Odg',
+  'job': 'F36gLSvCycg',
+  'ps': 'NCX8Z_lpcqs',
+  'prv': 'NfdS7jOMNpk',
+  'ec': 'iU4MkVC0hRQ',
+  'so': 'HbA0uibnzVo',
+  'is': '14Mv5O6dWlE',
+  'jr': 'DdqKQq91Ci8',
+  'lm': '8ES_PeP0Zn0',
+  'ez': '-vUiUQKaJa0',
+  'dn': 'nZy0j7iHDVQ',
+  'ho': 'NFKTOszV9pE',
+  'jl': 'pO5WONPQkFE',
+  'am': 'zaGZyZ5wZsA',
+  'ob': 'Vzvr8d868cY',
+  'jn': 'Dq0XZrTn1qs',
+  'mi': '9zh_14bb-Qo',
+  'na': 'zPzB6dk6xtA',
+  'hk': 'f74F0T-dELA',
+  'zp': '91ZgdqW55zI',
+  'hg': 'jYKR1ndBspg',
+  'zc': 'SlI22bU6nxE',
+  'ml': 'g4zokwrffSc',
+  'mt': 'fDhuHunaTRM',
+  'mk': 'mY66M9mkNmg',
+  'lk': '6TZ5Pz4HT-A',
+  'jo': 'cNtVcooYKb4',
+  'act': 'qjNpW6tUh8c',
+  'rm': 'e2qa2XeVtPs',
+  '1co': 'ygOiOrfuyMw',
+  '2co': 'JVgYhR6U1_8',
+  'gl': '85oixsXb6xU',
+  'eph': 'D30bKhL7nZw',
+  'ph': '0jk75xUFx9U',
+  'cl': 'FqhI_bxPgFo',
+  '1ts': '895TGhOfr0Y',
+  '2ts': 'yq2MAJcuH2w',
+  '1tm': '3kBUrm6QXdQ',
+  '2tm': 'E-FCL7hImmo',
+  'tt': 'Oq4cVPKWVF4',
+  'phm': 'xbu1ZFbrIds',
+  'hb': '_cMSDTAXpNI',
+  'jm': 'TOHhMWgW90g',
+  '1pe': 'K1yiy8IeUWA',
+  '2pe': 'mRRBsmI6mqo',
+  '1jo': 'Ed4s8VOKnrQ',
+  '2jo': '7vb5jJsfpkc',
+  '3jo': '5ewI9UCLxpo',
+  'jd': 'ZV6e2oK_pxk',
+  're': 'DEa-a1JTccc',
+};
+
+// Some dramatized videos contain multiple books; these offsets mark where
+// the book starts within the video (from the &t= parameter in the source URL).
+const dramatizedBookOffsets = {
+  '1kgs': 7282, '1ch': 143, 'so': 42, 'dn': 981,
+  'ho': 29, 'jl': 109, 'am': 141, 'ob': 12, 'zp': 13,
+};
+
+export function getDramatizedYouTubeVideoId(bookAbbrev) {
+  return dramatizedBookVideoIds[bookAbbrev] || null;
+}
+
+export function getDramatizedBookOffset(bookAbbrev) {
+  return dramatizedBookOffsets[bookAbbrev] || 0;
+}
+
 // --- YouTube IFrame API loader ---
 let ytApiPromise = null;
 function loadYTApi() {
@@ -112,19 +198,20 @@ function loadYTApi() {
 
 // --- localStorage helpers ---
 const STORAGE_KEY = 'youtube-video-times';
+const DRAMATIZED_STORAGE_KEY = 'youtube-dramatized-video-times';
 
-function getSavedTime(bookAbbrev) {
+function getSavedTime(bookAbbrev, storageKey = STORAGE_KEY) {
   try {
-    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    const data = JSON.parse(localStorage.getItem(storageKey) || '{}');
     return data[bookAbbrev] || 0;
   } catch { return 0; }
 }
 
-function saveTime(bookAbbrev, seconds) {
+function saveTime(bookAbbrev, seconds, storageKey = STORAGE_KEY) {
   try {
-    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    const data = JSON.parse(localStorage.getItem(storageKey) || '{}');
     data[bookAbbrev] = seconds;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(storageKey, JSON.stringify(data));
   } catch {}
 }
 
@@ -138,7 +225,7 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentChapter, onPlayingChange, onChapterChange }) {
+export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentChapter, onPlayingChange, onChapterChange, isDramatized = false }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [playerReady, setPlayerReady] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -152,10 +239,22 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
   const chapterSeekDone = useRef(null); // track which chapter we already seeked to
   const currentChapterRef = useRef(currentChapter);
   const onChapterChangeRef = useRef(onChapterChange);
+  const isDramatizedRef = useRef(isDramatized);
+  const storageKeyRef = useRef(isDramatized ? DRAMATIZED_STORAGE_KEY : STORAGE_KEY);
+  // Offset (seconds) for books that start partway into their video
+  const bookOffset = isDramatized ? getDramatizedBookOffset(bookAbbrev) : 0;
+  const bookOffsetRef = useRef(bookOffset);
 
   useEffect(() => { bookAbbrevRef.current = bookAbbrev; }, [bookAbbrev]);
   useEffect(() => { currentChapterRef.current = currentChapter; }, [currentChapter]);
   useEffect(() => { onChapterChangeRef.current = onChapterChange; }, [onChapterChange]);
+  useEffect(() => {
+    isDramatizedRef.current = isDramatized;
+    storageKeyRef.current = isDramatized ? DRAMATIZED_STORAGE_KEY : STORAGE_KEY;
+  }, [isDramatized]);
+  useEffect(() => {
+    bookOffsetRef.current = isDramatized ? getDramatizedBookOffset(bookAbbrev) : 0;
+  }, [isDramatized, bookAbbrev]);
 
   // Seek to chapter timestamp when modal opens with a chapter that has timestamp data
   // If exact chapter is missing, decrement until we find one
@@ -163,12 +262,14 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
     if (!open || !playerRef.current || !bookAbbrev || !currentChapter) return;
     const seekKey = `${bookAbbrev}-${currentChapter}`;
     if (chapterSeekDone.current === seekKey) return;
-    const bookTimestamps = youtubeChapterTimestamps[bookAbbrev];
+    const tsData = isDramatized ? dramatizedChapterTimestamps : youtubeChapterTimestamps;
+    const bookTimestamps = tsData[bookAbbrev];
     if (!bookTimestamps) return;
     let ch = currentChapter;
     while (ch >= 1 && bookTimestamps[ch] == null) { ch--; }
     if (ch < 1) return;
-    const ts = bookTimestamps[ch];
+    const offset = bookOffsetRef.current;
+    const ts = bookTimestamps[ch] + offset;
     try {
       // Skip the seek if the video is already inside this chapter's time range
       // (avoids rewinding when the reading pane auto-followed the video here)
@@ -176,7 +277,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
       const later = Object.keys(bookTimestamps).map(Number)
         .filter(n => n > ch && bookTimestamps[n] != null)
         .sort((a, b) => a - b);
-      const rangeEnd = later.length > 0 ? bookTimestamps[later[0]] : Infinity;
+      const rangeEnd = later.length > 0 ? bookTimestamps[later[0]] + offset : Infinity;
       if (curT >= ts && curT < rangeEnd) {
         chapterSeekDone.current = seekKey;
         return;
@@ -185,10 +286,10 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
     try {
       playerRef.current.seekTo(ts, true);
       setCurrentTime(ts);
-      saveTime(bookAbbrev, ts);
+      saveTime(bookAbbrev, ts, storageKeyRef.current);
       chapterSeekDone.current = seekKey;
     } catch {}
-  }, [open, playerReady, bookAbbrev, currentChapter]);
+  }, [open, playerReady, bookAbbrev, currentChapter, isDramatized]);
 
   // Reset chapter seek tracking when modal closes
   useEffect(() => {
@@ -222,7 +323,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
         try {
           playerRef.current.seekTo(0, true);
           setCurrentTime(0);
-          saveTime(bookAbbrevRef.current, 0);
+          saveTime(bookAbbrevRef.current, 0, storageKeyRef.current);
         } catch {}
       }
       if (e.key === '1' && playerRef.current) {
@@ -230,7 +331,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
           const t = Math.max(0, playerRef.current.getCurrentTime() - 180);
           playerRef.current.seekTo(t, true);
           setCurrentTime(t);
-          saveTime(bookAbbrevRef.current, t);
+          saveTime(bookAbbrevRef.current, t, storageKeyRef.current);
         } catch {}
       }
       if (e.key === '2' && playerRef.current) {
@@ -238,7 +339,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
           const t = Math.max(0, playerRef.current.getCurrentTime() - 60);
           playerRef.current.seekTo(t, true);
           setCurrentTime(t);
-          saveTime(bookAbbrevRef.current, t);
+          saveTime(bookAbbrevRef.current, t, storageKeyRef.current);
         } catch {}
       }
       if (e.key === '3' && playerRef.current) {
@@ -246,7 +347,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
           const t = playerRef.current.getCurrentTime() + 60;
           playerRef.current.seekTo(t, true);
           setCurrentTime(t);
-          saveTime(bookAbbrevRef.current, t);
+          saveTime(bookAbbrevRef.current, t, storageKeyRef.current);
         } catch {}
       }
       if (e.key === ',' && playerRef.current) {
@@ -300,7 +401,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
       if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
       try {
         const t = playerRef.current.getCurrentTime();
-        if (t > 0) saveTime(activeBookRef.current, t);
+        if (t > 0) saveTime(activeBookRef.current, t, storageKeyRef.current);
         playerRef.current.destroy();
       } catch {}
       playerRef.current = null;
@@ -316,11 +417,11 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
     if (!open || !bookAbbrev) return;
     if (playerRef.current) return; // already have a player
 
-    const videoId = getYouTubeVideoId(bookAbbrev);
+    const videoId = isDramatized ? getDramatizedYouTubeVideoId(bookAbbrev) : getYouTubeVideoId(bookAbbrev);
     if (!videoId) return;
     if (!containerRef.current) return;
 
-    const savedTime = getSavedTime(bookAbbrev);
+    const savedTime = getSavedTime(bookAbbrev, storageKeyRef.current) || bookOffsetRef.current;
     setCurrentTime(savedTime);
 
     let destroyed = false;
@@ -350,19 +451,22 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
                 const t = player.getCurrentTime();
                 if (t > 0) {
                   setCurrentTime(t);
-                  saveTime(bookAbbrevRef.current, t);
+                  saveTime(bookAbbrevRef.current, t, storageKeyRef.current);
                 }
                 // Auto-follow: when the video time crosses a chapter
                 // timestamp, tell the parent to navigate the reading
                 // pane to that chapter.
-                const tsMap = youtubeChapterTimestamps[bookAbbrevRef.current];
+                const tsData = isDramatizedRef.current ? dramatizedChapterTimestamps : youtubeChapterTimestamps;
+                const tsMap = tsData[bookAbbrevRef.current];
                 if (tsMap) {
+                  const off = bookOffsetRef.current;
+                  const tAdj = t - off; // compare against offset-relative timestamps
                   const chapters = Object.keys(tsMap).map(Number)
                     .filter(n => tsMap[n] != null)
                     .sort((a, b) => a - b);
                   let chapterAtTime = 1;
                   for (const c of chapters) {
-                    if (t >= tsMap[c]) chapterAtTime = c;
+                    if (tAdj >= tsMap[c]) chapterAtTime = c;
                     else break;
                   }
                   if (chapterAtTime !== currentChapterRef.current) {
@@ -381,7 +485,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
             } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.BUFFERING) {
               if (onPlayingChange) onPlayingChange(false);
             } else if (event.data === YT.PlayerState.ENDED) {
-              saveTime(bookAbbrevRef.current, 0);
+              saveTime(bookAbbrevRef.current, 0, storageKeyRef.current);
               setCurrentTime(0);
               if (onPlayingChange) onPlayingChange(false);
             }
@@ -400,7 +504,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
       if (playerRef.current) {
         try {
           const t = playerRef.current.getCurrentTime();
-          if (t > 0) saveTime(bookAbbrevRef.current, t);
+          if (t > 0) saveTime(bookAbbrevRef.current, t, storageKeyRef.current);
           playerRef.current.destroy();
         } catch {}
         playerRef.current = null;
@@ -408,7 +512,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
     };
   }, []);
 
-  const videoId = getYouTubeVideoId(bookAbbrev);
+  const videoId = isDramatized ? getDramatizedYouTubeVideoId(bookAbbrev) : getYouTubeVideoId(bookAbbrev);
   const bookName = bookFullNames[bookAbbrev] || bookAbbrev;
 
   // The player container is always rendered so the iframe stays alive.
@@ -433,12 +537,13 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
             <h2 ref={headerRef} tabIndex={-1} className="text-lg font-semibold flex items-center flex-wrap gap-2 focus:outline-none">
-              <span>{bookName}{currentChapter ? ` Ch.${currentChapter}` : ''} — Audio</span>
+              <span>{bookName}{currentChapter ? ` Ch.${currentChapter}` : ''} — {isDramatized ? 'Dramatized' : 'Audio'}</span>
               <span className="text-sm text-gray-400 font-mono">{formatTime(currentTime)}</span>
               {videoId && (
                 <>
                   {(() => {
-                    const bookTimestamps = youtubeChapterTimestamps[bookAbbrev];
+                    const tsData = isDramatized ? dramatizedChapterTimestamps : youtubeChapterTimestamps;
+                    const bookTimestamps = tsData[bookAbbrev];
                     if (!bookTimestamps) return null;
                     const chapters = Object.keys(bookTimestamps).map(Number).sort((a, b) => a - b);
                     return (
@@ -452,11 +557,11 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
                           let targetCh = ch;
                           while (targetCh >= 1 && bookTimestamps[targetCh] == null) { targetCh--; }
                           if (targetCh < 1) return;
-                          const ts = bookTimestamps[targetCh];
+                          const ts = bookTimestamps[targetCh] + bookOffsetRef.current;
                           try {
                             playerRef.current.seekTo(ts, true);
                             setCurrentTime(ts);
-                            saveTime(bookAbbrev, ts);
+                            saveTime(bookAbbrev, ts, storageKeyRef.current);
                             chapterSeekDone.current = `${bookAbbrev}-${ch}`;
                           } catch {}
                         }}
@@ -476,7 +581,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
                           const t = Math.max(0, playerRef.current.getCurrentTime() - 60);
                           playerRef.current.seekTo(t, true);
                           setCurrentTime(t);
-                          saveTime(bookAbbrev, t);
+                          saveTime(bookAbbrev, t, storageKeyRef.current);
                         } catch {}
                       }
                     }}
@@ -492,7 +597,7 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
                           const t = playerRef.current.getCurrentTime() + 60;
                           playerRef.current.seekTo(t, true);
                           setCurrentTime(t);
-                          saveTime(bookAbbrev, t);
+                          saveTime(bookAbbrev, t, storageKeyRef.current);
                         } catch {}
                       }
                     }}
