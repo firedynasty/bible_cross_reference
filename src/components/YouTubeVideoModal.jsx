@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import youtubeChapterTimestamps from '../data/youtubeChapterTimestamps';
 import dramatizedChapterTimestamps from '../data/dramatizedChapterTimestamps';
 
@@ -225,12 +225,13 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentChapter, onPlayingChange, onChapterChange, isDramatized = false }) {
+const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose, bookAbbrev, currentChapter, onPlayingChange, onChapterChange, isDramatized = false }, ref) {
   const [currentTime, setCurrentTime] = useState(0);
   const [playerReady, setPlayerReady] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(100);
   const playerRef = useRef(null);
+  const pendingPlayRef = useRef(false);
   const intervalRef = useRef(null);
   const containerRef = useRef(null);
   const headerRef = useRef(null);
@@ -442,6 +443,10 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
             if (destroyed) return;
             playerRef.current = player;
             setPlayerReady(true);
+            if (pendingPlayRef.current) {
+              pendingPlayRef.current = false;
+              try { player.playVideo(); } catch {}
+            }
             intervalRef.current = setInterval(() => {
               if (destroyed) return;
               try {
@@ -511,6 +516,20 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
       }
     };
   }, []);
+
+  useImperativeHandle(ref, () => ({
+    togglePlayPause: () => {
+      if (!playerRef.current) {
+        pendingPlayRef.current = true; // auto-play when player becomes ready
+        return;
+      }
+      try {
+        const state = playerRef.current.getPlayerState();
+        if (state === 1) playerRef.current.pauseVideo();
+        else playerRef.current.playVideo();
+      } catch {}
+    },
+  }));
 
   const videoId = isDramatized ? getDramatizedYouTubeVideoId(bookAbbrev) : getYouTubeVideoId(bookAbbrev);
   const bookName = bookFullNames[bookAbbrev] || bookAbbrev;
@@ -706,4 +725,6 @@ export default function YouTubeVideoModal({ open, onClose, bookAbbrev, currentCh
       </div>
     </>
   );
-}
+});
+
+export default YouTubeVideoModal;

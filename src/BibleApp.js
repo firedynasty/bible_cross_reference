@@ -508,6 +508,7 @@ const NavigationPlaceholder = ({
   onYouTubeVideo,
   isYouTubePlaying,
   onDramatizedVideo,
+  onDramatizedTogglePlay,
   isDramatizedPlaying,
   showPane2Syllables,
   onTogglePane2Syllables,
@@ -818,6 +819,18 @@ const NavigationPlaceholder = ({
               >
                 <svg width="22" height="16" viewBox="0 0 68 48" style={{flexShrink:0}}><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61-1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="#c00"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg>
                 <span style={{fontSize:10,color:'#dfd'}}>drm</span>
+              </button>}
+              {isFeatureVisible('youtubeDramatized') && <button
+                className="rounded focus:outline-none"
+                style={{padding:'4px 8px',background:'linear-gradient(45deg,#7b6,#5a5)',cursor:'pointer',display:'flex',alignItems:'center'}}
+                title={isDramatizedPlaying ? 'Pause dramatized audio' : 'Play dramatized audio'}
+                onClick={() => onDramatizedTogglePlay && onDramatizedTogglePlay()}
+              >
+                {isDramatizedPlaying ? (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="white"><rect x="2" y="1" width="4" height="12" rx="1"/><rect x="8" y="1" width="4" height="12" rx="1"/></svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="white"><polygon points="2,1 13,7 2,13"/></svg>
+                )}
               </button>}
               {isFeatureVisible('lang') && <>
               <span className="ml-2" style={{ fontSize: 16 }}>🔊</span>
@@ -1562,6 +1575,7 @@ const BibleApp = () => {
   const [isYouTubePlaying, setIsYouTubePlaying] = useState(false);
   const [showDramatizedModal, setShowDramatizedModal] = useState(false);
   const [isDramatizedPlaying, setIsDramatizedPlaying] = useState(false);
+  const dramatizedModalRef = useRef(null);
   const [pendingBookSelection, setPendingBookSelection] = useState(null);
   const pendingBookRef = useRef(null);
   const [crossReferences, setCrossReferences] = useState({});
@@ -6810,6 +6824,9 @@ const BibleApp = () => {
               onYouTubeVideo={() => setShowYouTubeModal(true)}
               isYouTubePlaying={isYouTubePlaying}
               onDramatizedVideo={() => setShowDramatizedModal(true)}
+              onDramatizedTogglePlay={() => {
+                if (dramatizedModalRef.current) dramatizedModalRef.current.togglePlayPause();
+              }}
               isDramatizedPlaying={isDramatizedPlaying}
               showPane2Syllables={showPane2Syllables}
               onTogglePane2Syllables={() => setShowPane2Syllables(s => { const next = !s; localStorage.setItem('bible-pane2-syllables', next); return next; })}
@@ -11884,7 +11901,7 @@ const BibleApp = () => {
       <FurtherReadingModal open={showFiguresModal} onClose={() => setShowFiguresModal(false)} />
       <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
       <YouTubeVideoModal open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsYouTubePlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} />
-      <YouTubeVideoModal isDramatized open={showDramatizedModal} onClose={() => setShowDramatizedModal(false)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsDramatizedPlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} />
+      <YouTubeVideoModal ref={dramatizedModalRef} isDramatized open={showDramatizedModal} onClose={() => setShowDramatizedModal(false)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsDramatizedPlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} />
 
       {/* Outline Modal */}
       {showOutlineModal && (() => {
