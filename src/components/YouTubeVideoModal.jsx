@@ -230,6 +230,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
   const [playerReady, setPlayerReady] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(100);
+  const [autoInit, setAutoInit] = useState(false);
   const playerRef = useRef(null);
   const pendingPlayRef = useRef(false);
   const intervalRef = useRef(null);
@@ -413,9 +414,10 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
     activeBookRef.current = bookAbbrev;
   }, [bookAbbrev]);
 
-  // Create player when modal first opens (and player doesn't exist yet)
+  // Create player when modal first opens (and player doesn't exist yet),
+  // or when autoInit is triggered by the external play button.
   useEffect(() => {
-    if (!open || !bookAbbrev) return;
+    if ((!open && !autoInit) || !bookAbbrev) return;
     if (playerRef.current) return; // already have a player
 
     const videoId = isDramatized ? getDramatizedYouTubeVideoId(bookAbbrev) : getYouTubeVideoId(bookAbbrev);
@@ -445,6 +447,23 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
             setPlayerReady(true);
             if (pendingPlayRef.current) {
               pendingPlayRef.current = false;
+              // Seek to the current chapter's timestamp before playing,
+              // so the external play button starts at the right chapter.
+              const tsData = isDramatizedRef.current ? dramatizedChapterTimestamps : youtubeChapterTimestamps;
+              const bookTimestamps = tsData[bookAbbrevRef.current];
+              if (bookTimestamps && currentChapterRef.current) {
+                let ch = currentChapterRef.current;
+                while (ch >= 1 && bookTimestamps[ch] == null) { ch--; }
+                if (ch >= 1) {
+                  const ts = bookTimestamps[ch] + bookOffsetRef.current;
+                  try {
+                    player.seekTo(ts, true);
+                    setCurrentTime(ts);
+                    saveTime(bookAbbrevRef.current, ts, storageKeyRef.current);
+                    chapterSeekDone.current = `${bookAbbrevRef.current}-${currentChapterRef.current}`;
+                  } catch {}
+                }
+              }
               try { player.playVideo(); } catch {}
             }
             intervalRef.current = setInterval(() => {
@@ -500,7 +519,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
     });
 
     return () => { destroyed = true; };
-  }, [open, bookAbbrev]);
+  }, [open, autoInit, bookAbbrev]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -521,6 +540,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
     togglePlayPause: () => {
       if (!playerRef.current) {
         pendingPlayRef.current = true; // auto-play when player becomes ready
+        setAutoInit(true); // create the player even without opening the modal
         return;
       }
       try {
