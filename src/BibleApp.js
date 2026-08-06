@@ -1898,6 +1898,7 @@ const BibleApp = () => {
   // State for Book Search Modal
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showPane2TranslationPicker, setShowPane2TranslationPicker] = useState(false);
+  const [showPane1TranslationPicker, setShowPane1TranslationPicker] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLastInfo, setSearchLastInfo] = useState('');
@@ -6484,13 +6485,36 @@ const BibleApp = () => {
                   };
                   return (
                     <>
-                      {isFeatureVisible('cyclePane1') && <button
-                        onClick={cyclePane1}
-                        className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-indigo-500 text-white hover:bg-indigo-600 font-semibold"
-                        title="Cycle pane 1 translation"
-                      >
-                        1:{shortLabel(selectedTranslation)}
-                      </button>}
+                      {isFeatureVisible('cyclePane1') && (
+                        <div className="relative">
+                          <button
+                            onClick={() => setShowPane1TranslationPicker(prev => !prev)}
+                            className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-indigo-500 text-white hover:bg-indigo-600 font-semibold"
+                            title="Pick pane 1 translation"
+                          >
+                            1:{shortLabel(selectedTranslation)}
+                          </button>
+                          {showPane1TranslationPicker && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setShowPane1TranslationPicker(false)} />
+                              <div className={`absolute left-0 top-full mt-1 z-50 rounded shadow-lg border min-w-[200px] ${isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
+                                {translations.map((t, idx) => (
+                                  <button
+                                    key={t.id}
+                                    onClick={() => {
+                                      try { handleApplySelectedTranslationToPane1(t.id); } catch (e) { console.warn('Error applying translation:', e); }
+                                      setShowPane1TranslationPicker(false);
+                                    }}
+                                    className={`block w-full text-left px-3 py-1.5 text-sm hover:bg-indigo-100 ${isDarkMode ? 'text-white hover:bg-gray-700' : 'text-gray-800'} ${t.id === selectedTranslation ? 'font-bold bg-indigo-50' + (isDarkMode ? ' !bg-gray-700' : '') : ''}`}
+                                  >
+                                    <span className="inline-block w-5 text-indigo-500 font-bold">({idx + 1})</span> {t.name}
+                                  </button>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
                       {isFeatureVisible('clrPane1') && <button
                         onClick={() => setBlankPane1(prev => { const next = !prev; localStorage.setItem('blankPane1', next); return next; })}
                         className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${blankPane1 ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-400 text-white hover:bg-gray-500'}`}
