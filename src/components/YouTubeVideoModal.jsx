@@ -618,6 +618,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                             setCurrentTime(ts);
                             saveTime(bookAbbrev, ts, storageKeyRef.current);
                             chapterSeekDone.current = `${bookAbbrev}-${ch}`;
+                            if (onChapterChangeRef.current) onChapterChangeRef.current(ch);
                           } catch {}
                         }}
                         title="Jump to chapter timestamp"
