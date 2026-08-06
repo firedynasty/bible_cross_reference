@@ -7419,7 +7419,7 @@ const BibleApp = () => {
                             <p className="flex">
                               <span
                                 title="Read verse aloud (TTS)"
-                                onClick={(e) => { e.stopPropagation(); handleVerseTts(verseNumber, verse, selectedTranslation); }}
+                                onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`${getBookName(selectedBook.abbrev)} ${selectedChapter - 1}:${verseNumber} ${verse}`).catch(() => {}); handleVerseTts(verseNumber, verse, selectedTranslation); }}
                                 className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}
                               >{verseNumber}</span>
                               <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(verse, showGlosses)}</span>
@@ -7499,7 +7499,7 @@ const BibleApp = () => {
                         <p className="flex">
                           <span
                             title="Read verse aloud (TTS)"
-                            onClick={(e) => { e.stopPropagation(); handleVerseTts(verseNumber, verse, selectedTranslation); }}
+                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`${getBookName(selectedBook.abbrev)} ${selectedChapter}:${verseNumber} ${verse}`).catch(() => {}); handleVerseTts(verseNumber, verse, selectedTranslation); }}
                             className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${speakingPaneVerse === verseNumber ? (isDarkMode ? 'text-green-400' : 'text-green-600') : (isDarkMode ? 'text-blue-400' : 'text-blue-600')}`}
                           >{verseNumber}</span>
                           <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(verse, showGlosses)}</span>
