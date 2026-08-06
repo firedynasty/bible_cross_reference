@@ -579,6 +579,13 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
             <h2 ref={headerRef} tabIndex={-1} className="text-lg font-semibold flex items-center flex-wrap gap-2 focus:outline-none">
               <span>{bookName}{currentChapter ? ` Ch.${currentChapter}` : ''} — {isDramatized ? 'Dramatized' : 'Audio'}</span>
               <span className="text-sm text-gray-400 font-mono">{formatTime(currentTime)}</span>
+              <button
+                onClick={() => navigator.clipboard.writeText(String(Math.floor(currentTime))).catch(() => {})}
+                className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                title={`Copy current position as seconds (${Math.floor(currentTime)}s)`}
+              >
+                copy s
+              </button>
               {videoId && (
                 <>
                   {(() => {
