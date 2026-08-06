@@ -225,7 +225,7 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose, bookAbbrev, currentChapter, onPlayingChange, onChapterChange, isDramatized = false }, ref) {
+const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose, onOpen, bookAbbrev, currentChapter, onPlayingChange, onChapterChange, isDramatized = false }, ref) {
   const [currentTime, setCurrentTime] = useState(0);
   const [playerReady, setPlayerReady] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -539,8 +539,9 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
   useImperativeHandle(ref, () => ({
     togglePlayPause: () => {
       if (!playerRef.current) {
-        pendingPlayRef.current = true; // auto-play when player becomes ready
-        setAutoInit(true); // create the player even without opening the modal
+        // No player yet — open the modal so the iframe can load, then auto-play
+        pendingPlayRef.current = true;
+        if (onOpen) onOpen();
         return;
       }
       try {
