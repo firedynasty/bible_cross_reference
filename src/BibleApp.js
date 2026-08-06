@@ -7114,7 +7114,7 @@ const BibleApp = () => {
                                   return (
                                   <button
                                     key={i}
-                                    onClick={() => handleCrossRefNavigate(ref)}
+                                    onClick={() => { const bgBook = (abbrevToBookName[ref.book] || getBookName(ref.book)).replace(/ /g, '%20'); window.open(`https://www.biblegateway.com/passage/?search=${bgBook}%20${ref.chapter}&version=WEB#v${ref.verse}`, '_blank'); }}
                                     className={`mr-2 ${
                                       isPentateuch || isIsaiah
                                         ? 'hover:opacity-80'
@@ -7423,7 +7423,7 @@ const BibleApp = () => {
                               return (
                               <button
                                 key={i}
-                                onClick={() => handleCrossRefNavigate(ref)}
+                                onClick={() => { const bgBook = (abbrevToBookName[ref.book] || getBookName(ref.book)).replace(/ /g, '%20'); window.open(`https://www.biblegateway.com/passage/?search=${bgBook}%20${ref.chapter}&version=WEB#v${ref.verse}`, '_blank'); }}
                                 className={`mr-2 ${
                                   isPentateuch || isIsaiah
                                     ? 'hover:opacity-80'
@@ -8197,9 +8197,9 @@ const BibleApp = () => {
                               >
                                 <p className="flex">
                                   <span
-                                    title="Read verse aloud (TTS)"
-                                    onClick={(e) => { e.stopPropagation(); handleVerseTts(verseNumber, verse, rightPaneTranslation); }}
-                                    className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${speakingPaneVerse === verseNumber ? (isDarkMode ? 'text-green-400' : 'text-green-600') : (isDarkMode ? 'text-blue-400' : 'text-blue-600')}`}
+                                    title="Scroll Pane 1 to verse"
+                                    onClick={(e) => { e.stopPropagation(); const el = chapterContentRef.current?.querySelector(`#verse-${verseNumber}`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                                    className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}
                                   >{verseNumber}</span>
                                   <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(showPane2Syllables ? syllabifyText(verse) : verse, showGlosses)}</span>
                                 </p>
