@@ -8729,6 +8729,27 @@ const BibleApp = () => {
         >
           <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 450, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>Go to Reference</h3>
+            {/* Inline-typed ref pills — shown above history */}
+            {textParsedRefs.length > 0 && (
+              <div style={{ marginBottom: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {textParsedRefs.map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { navigateToRefWithHighlight(item.ref); setShowRefPrompt(false); }}
+                    style={{
+                      padding: '5px 10px', fontSize: 12, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 6,
+                      cursor: 'pointer', fontWeight: 600,
+                      background: isDarkMode ? '#383838' : '#f0f4ff',
+                      color: isDarkMode ? '#93c5fd' : '#1d4ed8',
+                      transition: 'background 0.15s'
+                    }}
+                    title={`Go to ${item.ref}`}
+                  >
+                    {item.ref}
+                  </button>
+                ))}
+              </div>
+            )}
             {/* Persistent history buttons above input */}
             {refHistory.length > 0 && (
               <div style={{ marginBottom: 10 }}>
@@ -8929,9 +8950,30 @@ const BibleApp = () => {
                 onChange={(e) => {
                   const val = e.target.value;
                   setTextPasteContent(val);
-                  // Parse quoted verse references
-                  const refs = parseDropboxVerseFile(val);
-                  setTextParsedRefs(refs);
+                  // Parse quoted verse references (Dropbox style)
+                  const quotedRefs = parseDropboxVerseFile(val);
+                  // Also parse plain refs ("Romans 10") and bare chapter numbers ("10" → current book)
+                  const tokens = val.split(/[,;\n]+/).map(t => t.trim()).filter(t => t);
+                  const inlineRefs = [];
+                  const seen = new Set();
+                  for (const token of tokens) {
+                    const parsed = parseSingleBibleRef(token);
+                    if (parsed) {
+                      const key = `${parsed.abbrev}_${parsed.chapter}`;
+                      if (!seen.has(key)) {
+                        seen.add(key);
+                        inlineRefs.push({ ref: `${getBookName(parsed.abbrev)} ${parsed.chapter}` });
+                      }
+                    } else if (/^\d+$/.test(token) && selectedBook) {
+                      const chapter = parseInt(token);
+                      const key = `${selectedBook.abbrev}_${chapter}`;
+                      if (!seen.has(key)) {
+                        seen.add(key);
+                        inlineRefs.push({ ref: `${getBookName(selectedBook.abbrev)} ${chapter}` });
+                      }
+                    }
+                  }
+                  setTextParsedRefs(inlineRefs.length > 0 ? inlineRefs : quotedRefs);
                 }}
                 placeholder={'Paste text with refs e.g. "...make every effort (Romans 14:19; 1 Timothy 6:11)..."'}
                 style={{
@@ -8940,30 +8982,6 @@ const BibleApp = () => {
                   boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4
                 }}
               />
-              {textParsedRefs.length > 0 && (
-                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
-                  {textParsedRefs.map((item, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { navigateToRefWithHighlight(item.ref); setShowRefPrompt(false); }}
-                      style={{
-                        display: 'block', width: '100%', padding: '8px 12px', fontSize: 13,
-                        border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 6,
-                        background: isDarkMode ? '#333' : '#fafbff', cursor: 'pointer',
-                        textAlign: 'left', color: isDarkMode ? '#e0e0e0' : '#333',
-                        transition: 'background 0.15s'
-                      }}
-                    >
-                      <span style={{ fontWeight: 600, color: '#667eea' }}>{item.ref}</span>
-                      {item.description && (
-                        <span style={{ display: 'block', fontSize: 11, color: isDarkMode ? '#aaa' : '#888', marginTop: 2 }}>
-                          {item.description.length > 100 ? item.description.slice(0, 100) + '...' : item.description}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Personal Notes Area */}
