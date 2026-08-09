@@ -7214,12 +7214,49 @@ const BibleApp = () => {
             <>
           {/* Bible Text Display */}
           <div
-            ref={chapterContentRef}
-            className={`${showPane2Only ? 'hidden' : isMobileView && !isTabletView && showKJVOnMobile ? 'hidden' : isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : 'bg-white'} relative`}
-            onClick={(event) => handlePaneClick(event, 'left')}
-            style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a', cursor: 'default', scrollbarColor: '#c4b89a #f4ecd8' } : isDarkMode ? { cursor: 'default', scrollbarColor: '#555 #1a1a2e' } : { cursor: 'default' }}
+            className={`${showPane2Only ? 'hidden' : isMobileView && !isTabletView && showKJVOnMobile ? 'hidden' : isMobileView && !isTabletView ? 'w-full' : isTabletView ? 'w-1/2' : 'w-1/2'} flex flex-col relative`}
           >
-            {/* Pane 1 page-down button — hidden */}
+            {/* Pane 1 page-down buttons — desktop/tablet only */}
+            {(!isMobileView || isTabletView) && selectedBook && selectedChapter > 0 && (
+              <>
+                <button
+                  onClick={() => {
+                    const pane = chapterContentRef.current;
+                    if (pane) {
+                      const maxScroll = pane.scrollHeight - pane.clientHeight;
+                      pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
+                    }
+                  }}
+                  style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
+                  title="Page down"
+                >
+                  <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+                <button
+                  onClick={() => {
+                    const pane = chapterContentRef.current;
+                    if (pane) {
+                      const maxScroll = pane.scrollHeight - pane.clientHeight;
+                      pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
+                    }
+                  }}
+                  style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
+                  title="Page down"
+                >
+                  <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+              </>
+            )}
+            <div
+              ref={chapterContentRef}
+              className={`overflow-y-auto p-4 md:p-8 ${isDarkMode ? 'bg-gray-900 text-white scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : 'bg-white'} relative flex-1`}
+              onClick={(event) => handlePaneClick(event, 'left')}
+              style={isSepiaMode ? { backgroundColor: '#f4ecd8', color: '#5a5a5a', cursor: 'default', scrollbarColor: '#c4b89a #f4ecd8' } : isDarkMode ? { cursor: 'default', scrollbarColor: '#555 #1a1a2e' } : { cursor: 'default' }}
+            >
             {/* Pane toggle button — mobile only, top left */}
             {isMobileView && !isTabletView && selectedBook && selectedChapter > 0 && (
               <button
@@ -7632,8 +7669,9 @@ const BibleApp = () => {
                 </div>
               </div>
             )}
+            </div>
           </div>
-          
+
           {/* Right Pane Bible Panel - Toggle visibility on mobile, always show on tablet and desktop */}
           {(showPane2Only || !isMobileView || isTabletView || showKJVOnMobile) && (
             <div className={`${showPane2Only ? 'w-full' : isMobileView && !isTabletView ? 'w-full' : 'w-1/2'} ${showPane2Only ? '' : 'border-l'} ${isDarkMode ? 'border-gray-700 bg-gray-800' : isSepiaMode ? 'border-gray-300' : 'border-gray-200 bg-gray-50'} flex flex-col relative`} style={isSepiaMode ? { backgroundColor: '#f4ecd8' } : {}}>
