@@ -83,6 +83,41 @@ function isDefinition(sentence) {
   return true;
 }
 
+// ── Flat (news) mode ─────────────────────────────────────────────────────────
+const FLAT_INDENT_RULES = [
+  ['evidence', /^(because|for\b|since\b|after all|the reason|in fact|as a matter of fact|the fact (?:is|remains)|we know|it is a fact|that is (?:the reason|why we know))/i],
+  ['example',  /^(for example|for instance|take |think of |consider |suppose, for example)/i],
+  ['contrast', /^((?:so )?far from|but|however|yet\b|nevertheless|none the less|nonetheless|still\b|on the other hand|on the contrary|whereas|while\b(?!\s+it\s+is\s+true)|conversely|in contrast|at the same time)/i],
+];
+
+function flatTagSentence(s) {
+  const stripped = stripOpener(s);
+  for (const [tag, rx] of FLAT_INDENT_RULES) {
+    if (rx.test(stripped)) return tag;
+  }
+  return null;
+}
+
+function flatChapter(paragraphs) {
+  const roots = [];
+  let lastRoot = null;
+  for (const para of paragraphs) {
+    if (roots.length > 0) roots.push(new OutlineNode('', 'spacer'));
+    const sents = splitSentences(para);
+    for (const s of sents) {
+      const tag = flatTagSentence(s);
+      if (tag && lastRoot) {
+        lastRoot.children.push(new OutlineNode(s, tag));
+      } else {
+        const node = new OutlineNode(s);
+        roots.push(node);
+        lastRoot = node;
+      }
+    }
+  }
+  return roots;
+}
+
 // ── Theology tagger ─────────────────────────────────────────────────────────
 const TAG_RULES = [
   ['concession', /^(of course|no doubt|doubtless|admittedly|it is true|certainly|to be sure|i know|i admit|you may (?:say|think|ask|object|feel)|some (?:people|one|of you) (?:may |might |will )?(?:say|think|ask|object|feel)|it may be (?:said|thought|urged|objected)|we (?:may|might) be told|it is (?:often|sometimes) (?:said|thought))/i],
@@ -177,6 +212,9 @@ const INDENT_TAGS = new Set(['qualification', 'consequence', 'contrast']);
 
 // ── React tree renderer ──────────────────────────────────────────────────────
 function OutlineNodeEl({ node, showTags }) {
+  if (node.tag === 'spacer') {
+    return <li style={{ listStyle: 'none', margin: '10px 0 2px', minHeight: 10 }} aria-hidden="true" />;
+  }
   const ts = node.tag ? TAG_STYLES[node.tag] : null;
   const extraIndent = node.tag && INDENT_TAGS.has(node.tag) ? 16 : 0;
   return (
@@ -230,9 +268,10 @@ function parseAIOutline(text) {
 }
 
 // ── Main Modal ───────────────────────────────────────────────────────────────
-export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, kjvContentRef, precomputedOutline, suppressEscape }) {
+export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, isSepiaMode, kjvContentRef, precomputedOutline, suppressEscape }) {
   const [showTags, setShowTags] = useState(false);
   const [useAI, setUseAI] = useState(true);
+  const [flatMode, setFlatMode] = useState(true);
   const [fz, setFz] = useState(() => {
     try { return parseFloat(localStorage.getItem('outline-fz')) || 1.0; } catch (e) { return 1.0; }
   });
@@ -277,8 +316,9 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
   }, [precomputedOutline]);
 
   const autoRoots = useMemo(() => outlineChapter(paragraphs), [paragraphs]);
+  const flatRoots = useMemo(() => flatChapter(paragraphs), [paragraphs]);
 
-  const roots = (useAI && aiRoots) ? aiRoots : autoRoots;
+  const roots = flatMode ? flatRoots : ((useAI && aiRoots) ? aiRoots : autoRoots);
 
   const bg = isDarkMode ? '#1a1c20' : '#faf8f3';
   const textColor = isDarkMode ? '#e8e4db' : '#2b2b2b';
@@ -350,13 +390,18 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
         {/* Header */}
         <div style={{ padding: '14px 20px', borderBottom: `1px solid ${borderColor}`, display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
           <span style={{ fontFamily: 'monospace', fontSize: 12, color: accentColor, fontWeight: 700, letterSpacing: '0.05em' }}>OUTLINE</span>
-          {aiRoots && (
+          {aiRoots && !flatMode && (
             <button
               onClick={() => setUseAI(v => !v)}
               style={{ fontFamily: 'monospace', fontSize: 10, padding: '2px 7px', borderRadius: 9, border: 'none', cursor: 'pointer', background: useAI ? accentColor : (isDarkMode ? '#3a3a4a' : '#e3e0d8'), color: useAI ? '#fff' : (isDarkMode ? '#aaa' : '#666'), fontWeight: 700, letterSpacing: '0.04em' }}
               title={useAI ? 'Showing AI outline — click for auto' : 'Showing auto outline — click for AI'}
             >{useAI ? 'AI' : 'AUTO'}</button>
           )}
+          <button
+            onClick={() => setFlatMode(v => !v)}
+            style={{ fontFamily: 'monospace', fontSize: 10, padding: '2px 7px', borderRadius: 9, border: 'none', cursor: 'pointer', background: flatMode ? '#374151' : (isDarkMode ? '#3a3a4a' : isSepiaMode ? '#c8b89a' : '#e3e0d8'), color: flatMode ? '#fff' : (isDarkMode ? '#aaa' : isSepiaMode ? '#5a4a35' : '#666'), fontWeight: 700, letterSpacing: '0.04em' }}
+            title={flatMode ? 'Flat bullets — click for outline' : 'Outline — click for flat bullets'}
+          >{flatMode ? 'FLAT ON' : 'FLAT'}</button>
           {/* Prev / chapter title / Next */}
           <button onClick={() => { onPrevChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }} disabled={chapter <= 1} style={navBtnStyle(chapter <= 1)}>‹</button>
           <span style={{ fontWeight: 700, fontSize: 15, color: textColor }}>{bookName} {chapter}</span>

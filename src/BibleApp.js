@@ -6036,7 +6036,8 @@ const BibleApp = () => {
             {/* Feature toggle gear button */}
             <button
               onClick={() => setShowFeatureToggleModal(true)}
-              className="flex items-center justify-center p-1 rounded-md text-gray-500 hover:bg-gray-100"
+              className="flex items-center justify-center p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+              style={{ color: isDarkMode ? '#cbd5e1' : '#6b7280' }}
               title="Toggle visible buttons"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -12132,6 +12133,7 @@ const BibleApp = () => {
             onPrevChapter={() => { if (oChapter > 1) handleChapterSelect(oChapter - 1); }}
             onNextChapter={() => { if (oChapter < oTotalChapters) handleChapterSelect(oChapter + 1); }}
             isDarkMode={isDarkMode}
+            isSepiaMode={isSepiaMode}
             kjvContentRef={kjvContentRef}
             onClose={() => setShowOutlineModal(false)}
             precomputedOutline={outlinesData?.[oBook?.abbrev]?.[String(oChapter)]}
