@@ -276,8 +276,9 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
     try { return parseFloat(localStorage.getItem('outline-fz')) || 1.0; } catch (e) { return 1.0; }
   });
   const [writeValue, setWriteValue] = useState('');
-  const [copied, setCopied] = useState(false);
+
   const treeRef = useRef(null);
+  const inputRef = useRef(null);
 
   // Keyboard navigation: Escape closes, ArrowLeft/Right navigate chapters
   useEffect(() => {
@@ -346,11 +347,6 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
       e.preventDefault(); e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation();
       const el = treeRef.current;
       if (el) el.scrollBy({ top: -(el.clientHeight - 60), behavior: 'smooth' });
-    } else if (e.key === 'Tab') {
-      e.preventDefault();
-      const el = treeRef.current;
-      if (!el) return;
-      el.scrollBy({ top: el.clientHeight - 60, behavior: 'smooth' });
     } else if (e.key === 'Enter') {
       const semiIdx = writeValue.lastIndexOf(';');
       if (semiIdx === -1 || !onNavigateRef) return;
@@ -390,16 +386,6 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
     }
   }
 
-  function handleCopy() {
-    if (!writeValue) return;
-    try {
-      navigator.clipboard.writeText(writeValue).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
-      });
-    } catch (e) {}
-  }
-
   return (
     <div
       style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: overlayBg, zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: 16, paddingBottom: 16, overflowY: 'auto' }}
@@ -433,11 +419,12 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
 
           {/* Write input — ← → navigate chapters, Tab scrolls pane */}
           <input
+            ref={inputRef}
             type="text"
             value={writeValue}
             onChange={(e) => setWriteValue(e.target.value)}
             onKeyDown={handleWriteKeyDown}
-            placeholder="write… ←→ chapter · tab scroll"
+            placeholder="with ; will go to new location"
             style={{
               flex: 1, minWidth: 160, fontFamily: 'inherit', fontSize: 20,
               padding: '4px 10px', border: `1px solid ${borderColor}`, borderRadius: 4,
@@ -446,10 +433,10 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
             }}
           />
           <button
-            onClick={handleCopy}
-            style={{ fontFamily: 'inherit', fontSize: 12, background: 'none', border: `1px solid ${borderColor}`, borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: copied ? '#3c7a3c' : accentColor, whiteSpace: 'nowrap' }}
+            onClick={() => { setWriteValue(''); inputRef.current?.focus(); }}
+            style={{ fontFamily: 'inherit', fontSize: 12, background: 'none', border: `1px solid ${borderColor}`, borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: accentColor, whiteSpace: 'nowrap' }}
           >
-            {copied ? '✓ copied' : 'Copy'}
+            Clear
           </button>
 
           <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
