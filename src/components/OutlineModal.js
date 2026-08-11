@@ -268,7 +268,7 @@ function parseAIOutline(text) {
 }
 
 // ── Main Modal ───────────────────────────────────────────────────────────────
-export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, isSepiaMode, kjvContentRef, precomputedOutline, suppressEscape }) {
+export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, isSepiaMode, kjvContentRef, precomputedOutline, suppressEscape, onNavigateRef }) {
   const [showTags, setShowTags] = useState(false);
   const [useAI, setUseAI] = useState(true);
   const [flatMode, setFlatMode] = useState(true);
@@ -333,21 +333,45 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
 
   function handleWriteKeyDown(e) {
     if (e.key === 'ArrowRight') {
-      e.preventDefault();
+      e.preventDefault(); e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation();
       if (chapter < totalChapters) { onNextChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }
     } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
+      e.preventDefault(); e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation();
       if (chapter > 1) { onPrevChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault(); e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation();
+      const el = treeRef.current;
+      if (el) el.scrollBy({ top: el.clientHeight - 60, behavior: 'smooth' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault(); e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation();
+      const el = treeRef.current;
+      if (el) el.scrollBy({ top: -(el.clientHeight - 60), behavior: 'smooth' });
     } else if (e.key === 'Tab') {
       e.preventDefault();
       const el = treeRef.current;
       if (!el) return;
       el.scrollBy({ top: el.clientHeight - 60, behavior: 'smooth' });
+    } else if (e.key === 'Enter') {
+      const semiIdx = writeValue.lastIndexOf(';');
+      if (semiIdx === -1 || !onNavigateRef) return;
+      const ref = writeValue.slice(0, semiIdx).trim();
+      if (!ref) return;
+      e.preventDefault();
+      onNavigateRef(ref);
+      setWriteValue('');
     }
   }
 
   function handleModalKeyDown(e) {
-    if (e.key === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault(); e.nativeEvent?.stopImmediatePropagation();
+      const el = treeRef.current;
+      if (el) el.scrollBy({ top: el.clientHeight - 60, behavior: 'smooth' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault(); e.nativeEvent?.stopImmediatePropagation();
+      const el = treeRef.current;
+      if (el) el.scrollBy({ top: -(el.clientHeight - 60), behavior: 'smooth' });
+    } else if (e.key === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey) {
       const sel = window.getSelection();
       const text = sel ? sel.toString().trim() : '';
       if (!text) return;

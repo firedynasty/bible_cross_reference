@@ -3906,7 +3906,7 @@ const BibleApp = () => {
         }
       }
       // Up Arrow - scroll up one line at a time in KJV pane (opposite of 'x' key)
-      else if ((e.key === 'ArrowUp' || e.key === '-') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal) {
+      else if ((e.key === 'ArrowUp' || e.key === '-') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal && !showOutlineModal) {
         
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
@@ -4001,7 +4001,7 @@ const BibleApp = () => {
         }
       }
       // 'p' key, PageDown key, ArrowDown key, or Spacebar - page down (matches pane 2 page-down button: scroll, or advance chapter at bottom)
-      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === '+' || e.key === '=') && kjvContentRef.current && !showQuiz2Modal && !showWordsModal && !showYouTubeModal) {
+      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === '+' || e.key === '=') && kjvContentRef.current && !showQuiz2Modal && !showWordsModal && !showYouTubeModal && !showOutlineModal) {
         const kjvPane = kjvContentRef.current;
         const maxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
         const atBottom = maxScroll > 0 && kjvPane.scrollTop >= maxScroll - 5;
@@ -12138,6 +12138,7 @@ const BibleApp = () => {
             onClose={() => setShowOutlineModal(false)}
             precomputedOutline={outlinesData?.[oBook?.abbrev]?.[String(oChapter)]}
             suppressEscape={showBookNavModal}
+            onNavigateRef={navigateToRefWithHighlight}
           />
         );
       })()}
