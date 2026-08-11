@@ -437,6 +437,11 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
 
         {/* Tree */}
         <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <button
+            onClick={() => { if (treeRef.current) treeRef.current.scrollBy({ top: treeRef.current.clientHeight * 0.8, behavior: 'smooth' }); }}
+            style={{ position: 'absolute', bottom: 14, left: 14, zIndex: 10, fontFamily: 'inherit', fontSize: 18, background: isDarkMode ? '#2a2c30' : '#fff', border: `1px solid ${borderColor}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: accentColor, boxShadow: '0 2px 6px rgba(0,0,0,0.18)', opacity: 0.92 }}
+            title="Page down"
+          >↓</button>
           <div ref={treeRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 28px 32px', fontSize: `${fz}rem`, textAlign: 'left' }}>
             {roots.length === 0 ? (
               <p style={{ color: '#888', fontStyle: 'italic' }}>No verses to outline.</p>
@@ -447,16 +452,17 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
                 ))}
               </ul>
             )}
+            {chapter < totalChapters && (
+              <div style={{ marginTop: 24, textAlign: 'left' }}>
+                <button
+                  onClick={() => { onNextChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }}
+                  style={{ ...navBtnStyle(false), fontSize: 17, padding: '6px 18px' }}
+                >
+                  Next Chapter ›
+                </button>
+              </div>
+            )}
           </div>
-          <button
-            title="Page down"
-            onClick={() => treeRef.current?.scrollBy({ top: treeRef.current.clientHeight - 60, behavior: 'smooth' })}
-            style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgb(0,0,0)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.45'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '0.15'}
-          >
-            <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          </button>
         </div>
       </div>
     </div>
