@@ -336,6 +336,30 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
           saveTime(bookAbbrevRef.current, 0, storageKeyRef.current);
         } catch {}
       }
+      if (e.key === '[') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (playerRef.current) {
+          try {
+            const t = Math.max(0, playerRef.current.getCurrentTime() - 10);
+            playerRef.current.seekTo(t, true);
+            setCurrentTime(t);
+            saveTime(bookAbbrevRef.current, t, storageKeyRef.current);
+          } catch {}
+        }
+      }
+      if (e.key === ']') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (playerRef.current) {
+          try {
+            const t = playerRef.current.getCurrentTime() + 10;
+            playerRef.current.seekTo(t, true);
+            setCurrentTime(t);
+            saveTime(bookAbbrevRef.current, t, storageKeyRef.current);
+          } catch {}
+        }
+      }
       if (e.key === '1' && playerRef.current) {
         try {
           const t = Math.max(0, playerRef.current.getCurrentTime() - 180);
@@ -630,6 +654,39 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                       </select>
                     );
                   })()}
+                  <button
+                    onClick={() => {
+                      if (playerRef.current) {
+                        try {
+                          const t = Math.max(0, playerRef.current.getCurrentTime() - 10);
+                          playerRef.current.seekTo(t, true);
+                          setCurrentTime(t);
+                          saveTime(bookAbbrev, t, storageKeyRef.current);
+                        } catch {}
+                      }
+                    }}
+                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                    title="Back 10 seconds ([)"
+                  >
+                    -10s
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (playerRef.current) {
+                        try {
+                          const t = playerRef.current.getCurrentTime() + 10;
+                          playerRef.current.seekTo(t, true);
+                          setCurrentTime(t);
+                          saveTime(bookAbbrev, t, storageKeyRef.current);
+                        } catch {}
+                      }
+                    }}
+                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                    title="Forward 10 seconds (])"
+                  >
+                    +10s
+                  </button>
+                  &nbsp;&nbsp;
                   <button
                     onClick={() => {
                       if (playerRef.current) {
