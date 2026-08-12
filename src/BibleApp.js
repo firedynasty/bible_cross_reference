@@ -6,6 +6,7 @@ import FurtherReadingModal from './components/FurtherReadingModal';
 import ClassicalMusicModal from './components/ClassicalMusicModal';
 import YouTubeVideoModal from './components/YouTubeVideoModal';
 import OutlineModal from './components/OutlineModal';
+import BibleIntroModal from './components/BibleIntroModal';
 import { getStorytimeAudioUrl } from './data/storytimeAudio';
 import { getRhymeAudioUrl } from './data/rhymeAudio';
 
@@ -814,11 +815,11 @@ const NavigationPlaceholder = ({
               {isFeatureVisible('youtubeDramatized') && <button
                 className={`ml-1 rounded focus:outline-none ${isDramatizedPlaying ? 'ring-2 ring-white ring-offset-1 ring-offset-red-600' : ''}`}
                 style={{padding:'4px 10px',background:'linear-gradient(45deg,#7b6,#5a5)',cursor:'pointer',display:'flex',alignItems:'center',gap:'4px'}}
-                title="Dramatized audio (NKJV)"
+                title="Dramatized audio (NKJV) (t)"
                 onClick={() => onDramatizedVideo && onDramatizedVideo()}
               >
                 <svg width="22" height="16" viewBox="0 0 68 48" style={{flexShrink:0}}><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61-1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill="#c00"/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg>
-                <span style={{fontSize:10,color:'#dfd'}}>drm</span>
+                <span style={{fontSize:10,color:'#dfd'}}>yt(drm)(t)</span>
               </button>}
               {isFeatureVisible('youtubeDramatized') && <button
                 className="rounded focus:outline-none"
@@ -1774,7 +1775,7 @@ const BibleApp = () => {
     'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
     'fontPlus', 'youtube', 'youtubeDramatized', 'lang', 'soaking', 'classical', 'classicalPlay',
     'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
-    'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting', 'outline'
+    'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting', 'outline', 'intro'
   ];
   const featureLabels = {
     search: 'Search & Story', rhyme: 'Rhyme', storyAudio: 'Story ▶/⏸', chpCopy: 'Chp📋',
@@ -1788,7 +1789,7 @@ const BibleApp = () => {
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com',
-    pane2Only: 'P2 Only', scriptureWriting: 'Scripture Writing', outline: 'Outline(o)'
+    pane2Only: 'P2 Only', scriptureWriting: 'Scripture Writing', outline: 'Outline(o)', intro: 'Intro'
   };
   const [visibleFeatures, setVisibleFeatures] = useState(() => {
     try {
@@ -1984,6 +1985,16 @@ const BibleApp = () => {
   const [showOutlineModal, setShowOutlineModal] = useState(false);
   const [outlinesData, setOutlinesData] = useState(null);
   const [outlinesLoaded, setOutlinesLoaded] = useState(false);
+
+  // State for Bible Intro Modal
+  const [showIntroModal, setShowIntroModal] = useState(false);
+  const [introData, setIntroData] = useState(null);
+  const [introLoaded, setIntroLoaded] = useState(false);
+  const [introToast, setIntroToast] = useState(null); // { text, id }
+  const introToastTimerRef = useRef(null);
+  const introModalScrollRef = useRef(null);
+  const introModalScrollPosRef = useRef(0);
+  const introModalScrollBookRef = useRef(null);
 
   // State for Repeat Modal (paste text and have it read aloud)
   const [showRepeatModal, setShowRepeatModal] = useState(false);
@@ -2583,6 +2594,18 @@ const BibleApp = () => {
         .catch(() => {});
     }
   }, [showOutlineModal, outlinesLoaded]);
+
+  // Load bible intro JSON lazily on first Intro modal open
+  useEffect(() => {
+    if (showIntroModal && !introLoaded) {
+      setIntroLoaded(true);
+      const baseUrl = getBaseUrl();
+      fetch(`${baseUrl}/bible_intro.json`)
+        .then(r => r.json())
+        .then(data => setIntroData(data))
+        .catch(() => {});
+    }
+  }, [showIntroModal, introLoaded]);
 
   // Load verse filters JSON on startup
   useEffect(() => {
@@ -3850,6 +3873,13 @@ const BibleApp = () => {
         return;
       }
 
+      // 'i' key - toggle Bible Intro modal
+      if (e.key === 'i' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showRefPrompt && !showOutlineModal) {
+        e.preventDefault();
+        setShowIntroModal(prev => !prev);
+        return;
+      }
+
       // 's' key - toggle soaking worship audio
       if (e.key === 's' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal) {
         e.preventDefault();
@@ -3905,8 +3935,16 @@ const BibleApp = () => {
           }, 50);
         }
       }
+      // Arrow keys scroll the Intro modal when it's open
+      else if (showIntroModal && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && introModalScrollRef.current) {
+        e.preventDefault();
+        const step = introModalScrollRef.current.clientHeight * 0.35;
+        introModalScrollRef.current.scrollBy({ top: e.key === 'ArrowDown' ? step : -step, behavior: 'smooth' });
+        return;
+      }
+
       // Up Arrow - scroll up one line at a time in KJV pane (opposite of 'x' key)
-      else if ((e.key === 'ArrowUp' || e.key === '-') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal && !showOutlineModal) {
+      else if ((e.key === 'ArrowUp' || e.key === '-') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal && !showOutlineModal && !showIntroModal) {
         
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
@@ -4001,7 +4039,7 @@ const BibleApp = () => {
         }
       }
       // 'p' key, PageDown key, ArrowDown key, or Spacebar - page down (matches pane 2 page-down button: scroll, or advance chapter at bottom)
-      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === '+' || e.key === '=') && kjvContentRef.current && !showQuiz2Modal && !showWordsModal && !showYouTubeModal && !showOutlineModal) {
+      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === '+' || e.key === '=') && kjvContentRef.current && !showQuiz2Modal && !showWordsModal && !showYouTubeModal && !showOutlineModal && !showIntroModal) {
         const kjvPane = kjvContentRef.current;
         const maxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
         const atBottom = maxScroll > 0 && kjvPane.scrollTop >= maxScroll - 5;
@@ -4197,17 +4235,9 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // 't' key - go to chapter 1 of current book
+      // 't' key - open/close Dramatized audio modal
       else if (e.key === 't' || e.key === 'T') {
-        // Find the chapter select dropdown and set it to 1
-        const chapterSelect = document.querySelector('select.border.border-gray-300, select.border.border-gray-600');
-        if (chapterSelect) {
-          // Set to chapter 1
-          chapterSelect.value = '1';
-          // Trigger change event to update the chapter
-          chapterSelect.dispatchEvent(new Event('change', { bubbles: true }));
-          console.log("t key pressed - navigated to chapter 1");
-        }
+        setShowDramatizedModal(prev => !prev);
         e.preventDefault();
       }
       // 'y' key - go to previous chapter (-1)
@@ -4466,6 +4496,10 @@ const BibleApp = () => {
           setShowQuiz2Modal(false);
         } else if (showRefPrompt) {
           setShowRefPrompt(false);
+        } else if (showIntroModal) {
+          introModalScrollPosRef.current = introModalScrollRef.current?.scrollTop ?? 0;
+          introModalScrollBookRef.current = selectedBook?.abbrev ?? null;
+          setShowIntroModal(false);
         } else if (showBookNavModal) {
           setShowBookNavModal(false);
           setBookNavInput('');
@@ -4545,7 +4579,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showDramatizedModal, showRefPrompt, showBookNavModal, loadStorytimeForCurrent, showOutlineModal]);
+  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showDramatizedModal, showRefPrompt, showBookNavModal, loadStorytimeForCurrent, showOutlineModal, showIntroModal]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
@@ -6294,6 +6328,15 @@ const BibleApp = () => {
                   title="Sentence outline of current chapter (o)"
                 >
                   Outline(o)
+                </button>}
+
+                {/* Bible Intro Modal Button */}
+                {isFeatureVisible('intro') && <button
+                  onClick={() => setShowIntroModal(true)}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-teal-600 text-white hover:bg-teal-700 font-semibold"
+                  title="Book introduction and outline (i)"
+                >
+                  Intro(i)
                 </button>}
 
                 {/* Dropbox Highlights Button - hidden */}
@@ -12142,6 +12185,77 @@ const BibleApp = () => {
           />
         );
       })()}
+
+      {/* Bible Intro Modal */}
+      {showIntroModal && selectedBook && (
+        <BibleIntroModal
+          bookAbbrev={selectedBook.abbrev}
+          bookName={getBookName(selectedBook.abbrev)}
+          introText={introData?.[selectedBook.abbrev] ?? (introLoaded ? '' : null)}
+          isDarkMode={isDarkMode}
+          isSepiaMode={isSepiaMode}
+          scrollRef={introModalScrollRef}
+          initialScrollTop={introModalScrollBookRef.current === selectedBook?.abbrev ? introModalScrollPosRef.current : 0}
+          onClose={() => {
+            introModalScrollPosRef.current = introModalScrollRef.current?.scrollTop ?? 0;
+            introModalScrollBookRef.current = selectedBook?.abbrev ?? null;
+            setShowIntroModal(false);
+          }}
+          onNavigate={(fullRef, refInner) => {
+            // Save scroll positions before navigation so we can restore them
+            const savedP1 = chapterContentRef.current?.scrollTop ?? 0;
+            const savedP2 = kjvContentRef.current?.scrollTop ?? 0;
+            navigateToRefWithHighlight(fullRef);
+            // After navigateToRefWithHighlight resets scrollTop to 0, restore if same chapter
+            // (navigateToRefWithHighlight will then scroll to the verse — that's fine)
+            // For cross-chapter jumps we still want verse-scroll, so only restore when same chapter
+            const parsed = (() => {
+              try {
+                const m = fullRef.match(/^(.+?)\s+(\d+)/);
+                return m ? { chapter: parseInt(m[2], 10) } : null;
+              } catch { return null; }
+            })();
+            if (parsed && parsed.chapter === selectedChapter) {
+              // Same chapter — restore scroll positions (verse highlight will then smooth-scroll)
+              requestAnimationFrame(() => {
+                if (chapterContentRef.current) chapterContentRef.current.scrollTop = savedP1;
+                if (kjvContentRef.current) kjvContentRef.current.scrollTop = savedP2;
+              });
+            }
+            // Show toast with the reference inner text (e.g. "2:4–25")
+            if (introToastTimerRef.current) clearTimeout(introToastTimerRef.current);
+            const id = Date.now();
+            setIntroToast({ text: refInner, id });
+            introToastTimerRef.current = setTimeout(() => setIntroToast(null), 5000);
+          }}
+        />
+      )}
+
+      {/* Intro reference toast */}
+      {introToast && (
+        <div
+          key={introToast.id}
+          style={{
+            position: 'fixed', top: 16, right: 16, zIndex: 20000,
+            background: isDarkMode ? '#1e3a5f' : '#1d4ed8',
+            color: '#fff',
+            padding: '10px 16px',
+            borderRadius: 10,
+            fontSize: 14,
+            fontWeight: 700,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
+            display: 'flex', alignItems: 'center', gap: 10,
+            animation: 'introToastIn 0.2s ease',
+          }}
+        >
+          <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.8 }}>Looking for</span>
+          <span>{introToast.text}</span>
+          <button
+            onClick={() => { clearTimeout(introToastTimerRef.current); setIntroToast(null); }}
+            style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 15, opacity: 0.7, padding: '0 2px', lineHeight: 1 }}
+          >×</button>
+        </div>
+      )}
 
       {/* TTS selection tooltip — hidden if no language is visible */}
       {ttsTooltip && TTS_TOOLTIP_LANGS.some(l => isTtsLangVisible(l.key)) && (
