@@ -668,7 +668,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                     className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
                     title="Back 10 seconds ([)"
                   >
-                    -10s
+                    -10s([)
                   </button>
                   <button
                     onClick={() => {
@@ -684,7 +684,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                     className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
                     title="Forward 10 seconds (])"
                   >
-                    +10s
+                    +10s(])
                   </button>
                   &nbsp;&nbsp;
                   <button
