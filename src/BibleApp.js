@@ -7477,77 +7477,8 @@ const BibleApp = () => {
                   </span>
                 </h2>
                 <div className="space-y-5">
-                  {selectedBook && selectedBook.chapters && selectedBook.chapters[selectedChapter - 1] && (() => {
-                    // Last 3 verses of the previous chapter as context (full style with cross-refs)
-                    let prevTailElements = [];
-                    if (selectedChapter > 1 && selectedBook.chapters[selectedChapter - 2]) {
-                      const prevChapter = selectedBook.chapters[selectedChapter - 2];
-                      const tail = prevChapter.slice(-3);
-                      const prevTotal = prevChapter.length;
-                      const startVerse = prevTotal - tail.length + 1;
-                      prevTailElements = tail.map((verse, i) => {
-                        const verseNumber = startVerse + i;
-                        const negIdx = -(tail.length - i); // -3 .. -1
-                        const prevRefKey = `${selectedBook.abbrev}-${selectedChapter - 1}-${verseNumber}`;
-                        const prevHasReference = crossReferences[prevRefKey] && crossReferences[prevRefKey].length > 0;
-                        return (
-                          <div
-                            key={`prev-${negIdx}`}
-                            id={`verse-${negIdx}`}
-                            className={`leading-relaxed p-4 rounded-md transition-colors ${prevHasReference ? (isDarkMode ? 'hover:bg-blue-900' : 'hover:bg-blue-50') : ''}`}
-                            style={{ fontSize: `${fontScale * 1.125}rem` }}
-                          >
-                            <p className="flex">
-                              <span
-                                title="Read verse aloud (TTS)"
-                                onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`${getBookName(selectedBook.abbrev)} ${selectedChapter - 1}:${verseNumber} ${verse}`).catch(() => {}); handleVerseTts(verseNumber, verse, selectedTranslation); }}
-                                className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}
-                              >{verseNumber}</span>
-                              <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(verse, showGlosses)}</span>
-                            </p>
-                            {prevHasReference && (
-                              <div className={`mt-2 pl-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} style={{ fontSize: `${fontScale * 0.85}rem` }}>
-                                <span className="font-medium mr-1">Refs:</span>
-                                {crossReferences[prevRefKey].map((ref, ri) => {
-                                  const isPentateuch = ['gn','ge','ex','lv','nm','dt'].includes(ref.book);
-                                  const isIsaiah = ref.book === 'is';
-                                  const isOrange = ['ps','rm','hb','lk'].includes(ref.book);
-                                  const isNT = ['mt','mk','jo','act','1co','2co','gl','eph','ph','cl','1ts','2ts','1tm','2tm','tt','phm','jm','1pe','2pe','1jo','2jo','3jo','jd','re'].includes(ref.book);
-                                  return (
-                                    <button
-                                      key={ri}
-                                      onClick={() => { const bgBook = (abbrevToBookName[ref.book] || getBookName(ref.book)).replace(/ /g, '%20'); window.open(`https://www.biblegateway.com/passage/?search=${bgBook}%20${ref.chapter}&version=WEB#v${ref.verse}`, '_blank'); }}
-                                      className={`mr-2 ${isPentateuch || isIsaiah ? 'hover:opacity-80' : isOrange ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800') : isNT ? (isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-800') : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')}`}
-                                      style={isPentateuch ? { color: isDarkMode ? '#FCD34D' : '#92400E' } : isIsaiah ? { color: isDarkMode ? '#e8e8e6' : '#242422' } : undefined}
-                                    >
-                                      {getBookName(ref.book)} {ref.chapter}:{ref.verse}{ri < crossReferences[prevRefKey].length - 1 ? ',' : ''}
-                                    </button>
-                                  );
-                                })}
-                                <button
-                                  onClick={() => handleExpandRefs(prevRefKey, verseNumber)}
-                                  className={`ml-1 inline-flex items-center ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-500 hover:text-blue-700'}`}
-                                  title="Show all cross-reference verses in pane 2"
-                                >
-                                  <Link className="h-4 w-4" />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      });
-                    }
-
-                    const chapterDivider = prevTailElements.length > 0 ? (
-                      <div
-                        key="chapter-divider"
-                        className={`px-4 py-1 text-center text-xs font-semibold tracking-widest border-t border-b ${isDarkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-500'} my-1`}
-                      >
-                        — Chapter {selectedChapter} —
-                      </div>
-                    ) : null;
-
-                    const currentElements = selectedBook.chapters[selectedChapter - 1]
+                  {selectedBook && selectedBook.chapters && selectedBook.chapters[selectedChapter - 1] &&
+                    selectedBook.chapters[selectedChapter - 1]
                       .map((verse, originalIndex) => ({ verse, verseNumber: originalIndex + 1 }))
                       .filter(({ verseNumber }) => {
                         // If filtering is disabled, show all verses
@@ -7629,10 +7560,8 @@ const BibleApp = () => {
                         )}
                       </div>
                     );
-                      });
-
-                    return [...prevTailElements, chapterDivider, ...currentElements];
-                  })()}
+                      })
+                  }
                 </div>
 
                 {/* Chapter Navigation - Simple inline approach */}
@@ -8351,57 +8280,7 @@ const BibleApp = () => {
                           }
                         }
                         if (resolvedVerses) {
-                          // Get last 5 verses of the previous chapter (if it exists)
-                          let prevChapterTailElements = [];
-                          if (effectiveChapter > 1) {
-                            let prevResolved = null;
-                            if (nltPsalmsData && bookAbbrev === 'ps') {
-                              const nltBook = nltPsalmsData.find(b => b.abbrev === 'ps');
-                              if (nltBook && nltBook.chapters[effectiveChapter - 2]) {
-                                prevResolved = nltBook.chapters[effectiveChapter - 2];
-                              }
-                            }
-                            if (!prevResolved) {
-                              const rightPaneBook = rightPaneBibleData && rightPaneBibleData.find(b => b.abbrev === bookAbbrev);
-                              if (rightPaneBook && rightPaneBook.chapters[effectiveChapter - 2]) {
-                                prevResolved = rightPaneBook.chapters[effectiveChapter - 2];
-                              }
-                            }
-                            if (prevResolved) {
-                              const tail = prevResolved.slice(-3);
-                              const prevTotal = prevResolved.length;
-                              const startVerse = prevTotal - tail.length + 1;
-                              prevChapterTailElements = tail.map((verse, i) => {
-                                const verseNumber = startVerse + i;
-                                const negIdx = -(tail.length - i); // -3 .. -1
-                                return (
-                                  <div
-                                    key={`prev-${negIdx}`}
-                                    id={`right-pane-verse-${negIdx}`}
-                                    className="leading-relaxed p-4 rounded-md transition-colors opacity-40"
-                                    style={{ fontSize: `${fontScale * 1.125}rem` }}
-                                  >
-                                    <p className="flex">
-                                      <span className={`font-bold mr-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{verseNumber}</span>
-                                      <span className="flex-1">{renderWithGlosses(showPane2Syllables ? syllabifyText(verse) : verse, showGlosses)}</span>
-                                    </p>
-                                  </div>
-                                );
-                              });
-                            }
-                          }
-
-                          // Chapter divider shown only when previous tail is present
-                          const chapterDivider = prevChapterTailElements.length > 0 ? (
-                            <div
-                              key="chapter-divider"
-                              className={`px-4 py-1 text-center text-xs font-semibold tracking-widest border-t border-b ${isDarkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-500'} my-1`}
-                            >
-                              — Chapter {effectiveChapter} —
-                            </div>
-                          ) : null;
-
-                          const currentElements = resolvedVerses
+                          return resolvedVerses
                             .map((verse, originalIndex) => ({ verse, verseNumber: originalIndex + 1 }))
                             .filter(({ verseNumber }) => {
                               // If filtering is disabled, show all verses
@@ -8435,8 +8314,6 @@ const BibleApp = () => {
                               </div>
                             );
                           });
-
-                          return [...prevChapterTailElements, chapterDivider, ...currentElements];
                         } else {
                           return (
                             <div className="p-4 text-amber-600">
