@@ -1,0 +1,66 @@
+gn    Genesis           50
+ex    Exodus            40
+lv    Leviticus         27
+nm    Numbers           36
+dt    Deuteronomy       34
+js    Joshua            24
+jud   Judges            21
+rt    Ruth               4
+1sm   1 Samuel          31
+2sm   2 Samuel          24
+1kgs  1 Kings           22
+2kgs  2 Kings           25
+1ch   1 Chronicles      29
+2ch   2 Chronicles      36
+ezr   Ezra              10
+ne    Nehemiah          13
+et    Esther            10
+job   Job               42
+ps    Psalms           150
+prv   Proverbs          31
+ec    Ecclesiastes      12
+so    Song of Solomon    8
+is    Isaiah            	6
+jr    Jeremiah          52
+lm    Lamentations       5
+ez    Ezekiel           48
+dn    Daniel            12
+ho    Hosea             14
+jl    Joel               3
+am    Amos               9
+ob    Obadiah            1
+jn    Jonah              4
+mi    Micah              7
+na    Nahum              3
+hk    Habakkuk           3
+zp    Zephaniah          3
+hg    Haggai             2
+zc    Zechariah         14
+ml    Malachi            4
+mt    Matthew           28
+mk    Mark              16
+lk    Luke              24
+jo    John              21
+act   Acts              28
+rm    Romans            16
+1co   1 Corinthians     16
+2co   2 Corinthians     13
+gl    Galatians          6
+eph   Ephesians          6
+ph    Philippians        4
+cl    Colossians         4
+1ts   1 Thessalonians    5
+2ts   2 Thessalonians    3
+1tm   1 Timothy          6
+2tm   2 Timothy          4
+tt    Titus              3
+phm   Philemon           1
+hb    Hebrews           13
+jm    James              5
+1pe   1 Peter            5
+2pe   2 Peter            3
+1jo   1 John             5
+2jo   2 John             1
+3jo   3 John             1
+jd    Jude               1
+re    Revelation        22
