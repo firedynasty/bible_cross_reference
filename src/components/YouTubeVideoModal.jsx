@@ -618,6 +618,17 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
               >
                 copy s
               </button>
+              {currentChapter && (
+                <a
+                  href={`https://www.biblegateway.com/passage/?search=${encodeURIComponent(bookName + ' ' + currentChapter)}&version=NKJV`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                  title={`Open ${bookName} ${currentChapter} in BibleGateway NKJV`}
+                >
+                  BG NKJV
+                </a>
+              )}
               {videoId && (
                 <>
                   {(() => {

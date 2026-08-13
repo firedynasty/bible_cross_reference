@@ -4138,7 +4138,7 @@ const BibleApp = () => {
       // 'e' key - open Ref prompt modal
       else if (e.key === 'e' || e.key === 'E' || e.keyCode === 69) {
         if (!showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showRefPrompt) {
-          setShowRefPrompt(true);
+          setTextPasteContent(''); setTextParsedRefs([]); setShowRefPrompt(true);
         }
         e.preventDefault();
       }
@@ -6370,21 +6370,17 @@ const BibleApp = () => {
                   </button>
                 )}
 
-                {isFeatureVisible('nltPsalms') && <button
+                {isFeatureVisible('nltPsalms') && selectedBook && <button
                   onClick={() => {
-                    if (nltPsalmsData) {
-                      setNltPsalmsData(null);
-                    } else {
-                      fetch('/en_nlt_psalms.json')
-                        .then(r => r.json())
-                        .then(data => setNltPsalmsData(data))
-                        .catch(e => console.warn('Failed to load NLT Psalms:', e));
-                    }
+                    const bookName = selectedBook.book || selectedBook.abbrev;
+                    const chapter = selectedChapter || 1;
+                    const url = `https://www.biblegateway.com/passage/?search=${encodeURIComponent(bookName + ' ' + chapter)}&version=NKJV`;
+                    window.open(url, '_blank');
                   }}
-                  className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold inline-block ${nltPsalmsData ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-                  title={nltPsalmsData ? "NLT Psalms active — click to disable" : "Load NLT for Psalms in pane 2"}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold inline-block bg-blue-500 text-white hover:bg-blue-600"
+                  title={`Open ${selectedBook.book || selectedBook.abbrev} ${selectedChapter || 1} in BibleGateway NKJV (popup)`}
                 >
-                  NLT(Ps only){nltPsalmsData ? '✓' : ''}
+                  NKJV-out
                 </button>}
 
                 {isFeatureVisible('plan') && <a
@@ -6899,7 +6895,7 @@ const BibleApp = () => {
               showPane2Syllables={showPane2Syllables}
               onTogglePane2Syllables={() => setShowPane2Syllables(s => { const next = !s; localStorage.setItem('bible-pane2-syllables', next); return next; })}
               syllabifyText={syllabifyText}
-              onRefPrompt={() => setShowRefPrompt(true)}
+              onRefPrompt={() => { setTextPasteContent(''); setTextParsedRefs([]); setShowRefPrompt(true); }}
               onClipboardRef={async () => {
                 try {
                   const text = (await navigator.clipboard.readText()).trim();
@@ -8905,6 +8901,7 @@ const BibleApp = () => {
                 )}
               </div>
               <textarea
+                autoFocus
                 value={textPasteContent}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -8948,6 +8945,15 @@ const BibleApp = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>Notes</span>
                 <div style={{ display: 'flex', gap: 8 }}>
+                  {textParsedRefs.length > 0 && (
+                    <button
+                      onClick={() => { navigateToRefWithHighlight(textParsedRefs[0].ref); setShowRefPrompt(false); }}
+                      style={{ fontSize: 11, color: isDarkMode ? '#86efac' : '#15803d', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 6px', marginBottom: 4 }}
+                      title={`Go to ${textParsedRefs[0].ref}`}
+                    >
+                      go to pill
+                    </button>
+                  )}
                   {refNotes && (
                     <button
                       onClick={() => { navigator.clipboard.writeText(refNotes); }}
