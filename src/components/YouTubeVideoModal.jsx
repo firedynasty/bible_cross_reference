@@ -501,9 +501,6 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
             intervalRef.current = setInterval(() => {
               if (destroyed) return;
               try {
-                // Do nothing while paused — the timer wakes 1x/sec but performs
-                // zero work unless the video is actually playing
-                if (player.getPlayerState() !== YT.PlayerState.PLAYING) return;
                 const t = player.getCurrentTime();
                 if (t > 0) {
                   setCurrentTime(t);
@@ -609,7 +606,21 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
             <h2 ref={headerRef} tabIndex={-1} className="text-lg font-semibold flex items-center flex-wrap gap-2 focus:outline-none">
-              <span>{bookName}{currentChapter ? ` Ch.${currentChapter}` : ''} — {isDramatized ? 'Dramatized' : 'Audio'}</span>
+              <span>{bookName}{currentChapter ? ` Ch.${currentChapter}` : ''}{(() => {
+                if (!currentChapter) return '';
+                const tsData = isDramatized ? dramatizedChapterTimestamps : youtubeChapterTimestamps;
+                const tsMap = tsData[bookAbbrev];
+                if (!tsMap) return '';
+                const chStart = tsMap[currentChapter];
+                if (chStart == null) return '';
+                const chapters = Object.keys(tsMap).map(Number).sort((a, b) => a - b);
+                const nextCh = chapters.find(c => c > currentChapter);
+                const chEnd = nextCh != null ? tsMap[nextCh] : null;
+                if (chEnd == null) return '';
+                const tAdj = currentTime - bookOffset;
+                const pct = Math.min(100, Math.max(0, Math.round((tAdj - chStart) / (chEnd - chStart) * 100)));
+                return ` · ${pct}%`;
+              })()} — {isDramatized ? 'Dramatized' : 'Audio'}</span>
               <span className="text-sm text-gray-400 font-mono">{formatTime(currentTime)} · {Math.floor(currentTime)}s</span>
               <button
                 onClick={() => navigator.clipboard.writeText(String(Math.floor(currentTime))).catch(() => {})}
