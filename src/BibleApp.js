@@ -833,7 +833,7 @@ const NavigationPlaceholder = ({
                       onClick={() => isDrm ? (onDramatizedVideo && onDramatizedVideo()) : (onYouTubeVideo && onYouTubeVideo())}
                     >
                       <svg width="22" height="16" viewBox="0 0 68 48" style={{flexShrink:0}}><path d="M66.5 7.7s-.7-4.7-2.7-6.8C61-1.7 58-1.7 56.6-1.9 47.3-2.6 34-2.6 34-2.6s-13.3 0-22.6.7C10-1.7 7-1.7 4.2.9 2.2 3 1.5 7.7 1.5 7.7S.8 13.2.8 18.8v5.2c0 5.5.7 11.1.7 11.1s.7 4.7 2.7 6.8c2.8 2.6 6.4 2.5 8 2.8 5.8.5 24.8.7 24.8.7s13.3 0 22.6-.7c1.4-.2 4.4-.2 7.2-2.8 2-2.1 2.7-6.8 2.7-6.8s.7-5.5.7-11.1v-5.2c0-5.6-.7-11.1-.7-11.1z" fill={ytFill}/><path d="M27 33V13l18.2 10L27 33z" fill="white"/></svg>
-                      <span style={{fontSize:10,color:'#ddd'}}>{label}</span>
+                      <span style={{fontSize:10,color:'#ddd'}}>yt</span>
                     </button>
                     {/* Play/pause button */}
                     <button
