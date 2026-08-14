@@ -225,7 +225,7 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose, onOpen, bookAbbrev, currentChapter, onPlayingChange, onChapterChange, isDramatized = false }, ref) {
+const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose, onOpen, bookAbbrev, currentChapter, onPlayingChange, onChapterChange, isDramatized = false, ytMode, onYtModeChange }, ref) {
   const [currentTime, setCurrentTime] = useState(0);
   const [playerReady, setPlayerReady] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -621,6 +621,17 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                 const pct = Math.min(100, Math.max(0, Math.round((tAdj - chStart) / (chEnd - chStart) * 100)));
                 return ` · ${pct}%`;
               })()} — {isDramatized ? 'Dramatized' : 'Audio'}</span>
+              {onYtModeChange && (
+                <span className="flex rounded overflow-hidden" style={{fontSize:10,border:'1px solid #555'}}>
+                  {['kjv','drm'].map(mode => (
+                    <button
+                      key={mode}
+                      onClick={() => onYtModeChange(mode)}
+                      style={{padding:'2px 6px',background: ytMode === mode ? (mode === 'drm' ? '#5a5' : '#666') : '#333',color: ytMode === mode ? '#fff' : '#999',cursor:'pointer',border:'none'}}
+                    >{mode}</button>
+                  ))}
+                </span>
+              )}
               <span className="text-sm text-gray-400 font-mono">{formatTime(currentTime)} · {Math.floor(currentTime)}s</span>
               <button
                 onClick={() => navigator.clipboard.writeText(String(Math.floor(currentTime))).catch(() => {})}
