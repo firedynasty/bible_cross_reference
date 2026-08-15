@@ -29,7 +29,7 @@ function splitSentences(para) {
   }
   const last = t.slice(pos).trim();
   if (last) out.push(last);
-  return out.map(s => s.replace(/\x01/g, '.')).filter(s => s.trim());
+  return out.map(s => s.replace(new RegExp(ABBR_MARK, 'g'), '.')).filter(s => s.trim());
 }
 
 const STOPWORDS = new Set(['their','there','which','would','could','should','about',
@@ -53,7 +53,7 @@ function setIntersects(a, b) {
 const ANAPHORA_RE = /^(?:sometimes|often|usually|always|now|here|there|also|still|even|yes|no)?\s*(this|that|these|those|it|its|he|she|they|and|indeed|nor|neither|either|the same|such|so much|at any rate|in fact|anyway|none of us|we all|all of us|you and i)\b/i;
 
 function stripOpener(sent) {
-  return sent.replace(/^["\u2018\u2019\u201c\u201d(\[\]… ]+/, '');
+  return sent.replace(/^["\u2018\u2019\u201c\u201d([\]… ]+/, '');
 }
 
 const Q = '"\'\u2018\u2019\u201c\u201d';
@@ -127,7 +127,7 @@ const TAG_RULES = [
   ['evidence', /^(because|for\b|since\b|after all|the reason|in fact|as a matter of fact|the fact (?:is|remains)|we know|it is a fact|that is (?:the reason|why we know))/i],
   ['qualification', /^(?:now\s+)?(if\b|unless|provided|although|though\b|even if|even though|when\b|whenever|as long as|so long as|as far as|so far as|while it is true|only\b)/i],
   ['consequence', /^(therefore|thus|hence|consequently|accordingly|so\b(?!\s+(?:long|far|much|many|great|be\b))|then\b|it follows|which means|that is why|the result is|and so|in that case)/i],
-  ['restatement', /^(that is\b|in other words|i mean|or rather|namely|again\b|to put it (?:another way|differently)|put another way|(?:first|firstly|second|secondly|third|thirdly|fourth|fourthly|fifth|finally|lastly|next\b)[,.\)])/i],
+  ['restatement', /^(that is\b|in other words|i mean|or rather|namely|again\b|to put it (?:another way|differently)|put another way|(?:first|firstly|second|secondly|third|thirdly|fourth|fourthly|fifth|finally|lastly|next\b)[,.)])/i],
   ['definition', /^(by .{1,40} i mean|what (?:do )?(?:we|i) mean|let me (?:define|explain)|i am using|we mean by|i mean by)/i],
 ];
 
@@ -269,7 +269,7 @@ function parseAIOutline(text) {
 
 // ── Main Modal ───────────────────────────────────────────────────────────────
 export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, isSepiaMode, kjvContentRef, precomputedOutline, suppressEscape, onNavigateRef }) {
-  const [showTags, setShowTags] = useState(false);
+  const [showTags] = useState(false);
   const [useAI, setUseAI] = useState(true);
   const [flatMode, setFlatMode] = useState(true);
   const [fz, setFz] = useState(() => {

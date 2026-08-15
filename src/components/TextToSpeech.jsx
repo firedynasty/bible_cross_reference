@@ -9,15 +9,15 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   const [availableVoices, setAvailableVoices] = useState([]);
   const [readToEnd, setReadToEnd] = useState(false);
   const [delayRead, setDelayRead] = useState(false);
-  const [versesLeftToRead, setVersesLeftToRead] = useState(0);
+  const [, setVersesLeftToRead] = useState(0);
   const [autoScroll, setAutoScroll] = useState(true); // Always on by default
   const [currentUtterance, setCurrentUtterance] = useState(null);
   const [shouldContinueAfterCurrent, setShouldContinueAfterCurrent] = useState(false);
   const [autoScrollTimer, setAutoScrollTimer] = useState(null);
   const [autoScrollRunning, setAutoScrollRunning] = useState(false);
   const [chineseAction, setChineseAction] = useState(() => localStorage.getItem('bibleAppChineseAction') || 'copy');
-  const [chineseHalf, setChineseHalf] = useState(() => localStorage.getItem('bibleAppChineseHalf') || 'upper');
-  const [lastChineseVerseIdx, setLastChineseVerseIdx] = useState(0);
+  const [, setChineseHalf] = useState(() => localStorage.getItem('bibleAppChineseHalf') || 'upper');
+  const [, setLastChineseVerseIdx] = useState(0);
   const timerIdRef = useRef(null);
 
   // Chapters to clipboard modal state
@@ -536,6 +536,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
 
 
   // Auto-scroll functions with better timer management
+  // eslint-disable-next-line no-unused-vars
   const startAutoScroll = useCallback(() => {
     // Prevent multiple instances
     if (autoScrollTimer) {
@@ -600,6 +601,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
   }, [autoScrollTimer]);
 
   // Restart auto-scroll from current verse (used when speed changes)
+  // eslint-disable-next-line no-unused-vars
   const restartAutoScrollAtCurrentVerse = useCallback(() => {
     if (autoScrollRunning) {
       console.log('Auto-scroll already running, ignoring restart request');
@@ -775,7 +777,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
         setCurrentUtterance(null);
       }
     }, 100);
-  }, [selectedVerse, verses, isSpeaking, rightPaneTranslation, availableVoices, maxVerses, readToEndRef, shouldContinueRef, setIsSpeaking, setCurrentUtterance, setSelectedVerse, setShouldContinueAfterCurrent, speechVolume]);
+  }, [selectedVerse, verses, isSpeaking, rightPaneTranslation, availableVoices, maxVerses, readToEndRef, shouldContinueRef, setIsSpeaking, setCurrentUtterance, setSelectedVerse, setShouldContinueAfterCurrent, speechVolume, cleanTextForTTS, currentBook, currentChapter]);
 
   // Handle DelayRead auto-start after speakVerse is defined
   useEffect(() => {
@@ -894,7 +896,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
       
       speakCurrentVerseOnly();
     }
-  }, [selectedVerse, verses, isSpeaking, rightPaneTranslation, availableVoices, stopSpeaking, setIsSpeaking, setCurrentUtterance, speechVolume]);
+  }, [selectedVerse, verses, isSpeaking, rightPaneTranslation, availableVoices, stopSpeaking, setIsSpeaking, setCurrentUtterance, speechVolume, cleanTextForTTS]);
 
   // Listen for read current verse events
   useEffect(() => {
@@ -1120,6 +1122,7 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
 
   // Part-by-part reading: split verse by punctuation and read one segment per click
   // Uses refs to avoid stale closure issues with speechSynthesis.cancel() triggering onend
+  // eslint-disable-next-line no-unused-vars
   const speakNextPart = useCallback(() => {
     if (!lastGridVerse) return;
 
@@ -1399,13 +1402,14 @@ const TextToSpeech = forwardRef(({ rightPaneBibleData, currentBook, currentChapt
                   if (!book) { alert('Book not found'); return; }
                   let text = `${book.name || book.abbrev}\n\n`;
                   for (let ch = start; ch <= end; ch++) {
-                    const verses = book.chapters[ch - 1];
-                    if (!verses) continue;
+                    const chVerses = book.chapters[ch - 1];
+                    if (!chVerses) continue;
                     text += `Chapter ${ch}\n`;
-                    verses.forEach((v, i) => {
+                    for (let i = 0; i < chVerses.length; i++) {
+                      const v = chVerses[i];
                       const verseText = typeof v === 'string' ? v : (v.text || v.verse || String(v));
                       text += `${i + 1}. ${verseText.replace(/\{[^}]*\}/g, '').trim()}\n`;
-                    });
+                    }
                     text += '\n';
                   }
                   try {

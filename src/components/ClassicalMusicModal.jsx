@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import classicalAlbums from '../data/classicalAlbums';
 
 function formatTime(seconds) {
@@ -58,7 +58,7 @@ const ClassicalMusicModal = forwardRef(function ClassicalMusicModal({ open, onCl
   }, [isPlaying, onPlayingChange]);
 
   const album = classicalAlbums[albumIndex];
-  const tracks = album?.tracks || [];
+  const tracks = useMemo(() => album?.tracks || [], [album]);
 
   // Initialize audio element once (persists across open/close)
   useEffect(() => {
@@ -103,7 +103,8 @@ const ClassicalMusicModal = forwardRef(function ClassicalMusicModal({ open, onCl
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, isPlaying]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Time update interval — runs always (even when modal is closed) so state stays synced
   useEffect(() => {
@@ -161,6 +162,7 @@ const ClassicalMusicModal = forwardRef(function ClassicalMusicModal({ open, onCl
     };
     a.addEventListener('seeked', onSeeked);
     return () => a.removeEventListener('seeked', onSeeked);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loopActive, loopCurrentRepeat, loopRepeats, loopDurationSec]);
 
   const loadAlbum = useCallback((idx) => {
@@ -176,6 +178,7 @@ const ClassicalMusicModal = forwardRef(function ClassicalMusicModal({ open, onCl
       a.src = classicalAlbums[idx].url;
       a.load();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const togglePlay = useCallback(() => {

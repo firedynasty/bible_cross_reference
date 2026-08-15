@@ -235,7 +235,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
   const [playerReady, setPlayerReady] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(100);
-  const [autoInit, setAutoInit] = useState(false);
+  const [autoInit] = useState(false);
   const playerRef = useRef(null);
   const pendingPlayRef = useRef(false);
   const intervalRef = useRef(null);
@@ -248,6 +248,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
   const onChapterChangeRef = useRef(onChapterChange);
   const isDramatizedRef = useRef(isDramatized);
   const storageKeyRef = useRef(isDramatized ? DRAMATIZED_STORAGE_KEY : STORAGE_KEY);
+  const onPlayingChangeRef = useRef(onPlayingChange);
   // Offset (seconds) for books that start partway into their video
   const bookOffset = isDramatized ? getDramatizedBookOffset(bookAbbrev) : 0;
   const bookOffsetRef = useRef(bookOffset);
@@ -259,6 +260,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
     isDramatizedRef.current = isDramatized;
     storageKeyRef.current = isDramatized ? DRAMATIZED_STORAGE_KEY : STORAGE_KEY;
   }, [isDramatized]);
+  useEffect(() => { onPlayingChangeRef.current = onPlayingChange; }, [onPlayingChange]);
   useEffect(() => {
     bookOffsetRef.current = isDramatized ? getDramatizedBookOffset(bookAbbrev) : 0;
   }, [isDramatized, bookAbbrev]);
@@ -452,7 +454,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
       } catch {}
       playerRef.current = null;
       setPlayerReady(false);
-      if (onPlayingChange) onPlayingChange(false);
+      if (onPlayingChangeRef.current) onPlayingChangeRef.current(false);
     }
 
     activeBookRef.current = bookAbbrev;
@@ -464,7 +466,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
     if ((!open && !autoInit) || !bookAbbrev) return;
     if (playerRef.current) return; // already have a player
 
-    const videoId = isDramatized ? getDramatizedYouTubeVideoId(bookAbbrev) : getYouTubeVideoId(bookAbbrev);
+    const videoId = isDramatizedRef.current ? getDramatizedYouTubeVideoId(bookAbbrev) : getYouTubeVideoId(bookAbbrev);
     if (!videoId) return;
     if (!containerRef.current) return;
 
@@ -546,13 +548,13 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
           },
           onStateChange: (event) => {
             if (event.data === YT.PlayerState.PLAYING) {
-              if (onPlayingChange) onPlayingChange(true);
+              if (onPlayingChangeRef.current) onPlayingChangeRef.current(true);
             } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.BUFFERING) {
-              if (onPlayingChange) onPlayingChange(false);
+              if (onPlayingChangeRef.current) onPlayingChangeRef.current(false);
             } else if (event.data === YT.PlayerState.ENDED) {
               saveTime(bookAbbrevRef.current, 0, storageKeyRef.current);
               setCurrentTime(0);
-              if (onPlayingChange) onPlayingChange(false);
+              if (onPlayingChangeRef.current) onPlayingChangeRef.current(false);
             }
           },
         },

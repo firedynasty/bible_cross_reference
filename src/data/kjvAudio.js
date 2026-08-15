@@ -1082,7 +1082,7 @@ const kjvAudioData = {
     23: "https://www.dropbox.com/scl/fi/qxdgnsaxodywkr0wxnm8d/luke23.mp3?rlkey=wnb1ia5hb8u1bvwl93s79w3nm&raw=1",
     24: "https://www.dropbox.com/scl/fi/t7ujie58a8df89ifolayk/luke24.mp3?rlkey=7jhnwhtziok0gpj53qa0epdpy&raw=1",
   },
-  "jn": {
+  "jo": {
     1: "https://www.dropbox.com/scl/fi/jnzkmflih1mxue9osp9jk/john01.mp3?rlkey=1x2r2ds516ncfxkvc24xjxaf6&raw=1",
     2: "https://www.dropbox.com/scl/fi/qf7bashcb0036x5wvh2ps/john02.mp3?rlkey=0yf8jbk7x5srgq2znb7jd78wv&raw=1",
     3: "https://www.dropbox.com/scl/fi/0n141j0r7dy7n6r8119qm/john03.mp3?rlkey=ov0bcgo4b70rsv91ii1w5wjck&raw=1",

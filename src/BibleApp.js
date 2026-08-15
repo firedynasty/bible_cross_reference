@@ -1,5 +1,5 @@
+/* eslint-disable no-unused-vars, react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-// eslint-disable-next-line no-unused-vars
 import { Book, Link, ChevronRight, History, BookOpen, Save, Database, Download } from 'lucide-react';
 import TextToSpeech from './components/TextToSpeech';
 import FurtherReadingModal from './components/FurtherReadingModal';
@@ -2225,7 +2225,7 @@ const BibleApp = () => {
       '1thess': '1ts', '1 thess': '1ts', '2thess': '2ts', '2 thess': '2ts',
       '1tim': '1tm', '1 tim': '1tm', '2tim': '2tm', '2 tim': '2tm',
       'tit': 'tt', 'phlm': 'phm', 'heb': 'hb',
-      'jas': 'jm', 'jam': 'jm', 'james': 'jm',
+      'jas': 'jm', 'jam': 'jm',
       '1pet': '1pe', '1 pet': '1pe', '2pet': '2pe', '2 pet': '2pe',
       '1jn': '1jo', '1 jn': '1jo', '2jn': '2jo', '2 jn': '2jo', '3jn': '3jo', '3 jn': '3jo',
       'rev': 're', 'revelations': 're'
@@ -10880,7 +10880,7 @@ const BibleApp = () => {
                       // Search outward from midpoint for a word ending in punctuation
                       for (let offset = 0; offset < mid; offset++) {
                         for (const idx of [mid - 1 - offset, mid + offset]) {
-                          if (idx >= 0 && idx < verseWords.length && /[,.\;:]$/.test(verseWords[idx])) {
+                          if (idx >= 0 && idx < verseWords.length && /[,.;:]$/.test(verseWords[idx])) {
                             halfWords = idx + 1; // reveal up to and including the punctuated word
                             offset = mid; // break outer loop
                             break;
@@ -11730,6 +11730,7 @@ const BibleApp = () => {
                 <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                   <div ref={storytimeScrollRef} className={isDarkMode ? 'scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : ''} style={{ overflowY: 'auto', flex: 1, fontSize: `${storytimeFontSize}em`, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333', whiteSpace: 'pre-wrap', direction: 'rtl', scrollbarColor: isDarkMode ? '#555 #2a2a2a' : isSepiaMode ? '#c4b89a #f4ecd8' : undefined }}><div style={{ direction: 'ltr' }}>
                     {storytimeContent.split('\n').map((line, i) => {
+                      // eslint-disable-next-line no-control-regex
                       const chMatch = line.match(/^\x00CH:(\d+)\x00$/);
                       if (chMatch) {
                         const ch = parseInt(chMatch[1]);
@@ -11829,7 +11830,7 @@ const BibleApp = () => {
                 const introLines = (introText || '').split('\n');
                 // Parse chapter:verse refs from a line
                 const parseIntroRefs = (line) => {
-                  const RE = /\((\d+):(\d+)(?:[–\-]\d+(?::\d+)?)?\)/g;
+                  const RE = /\((\d+):(\d+)(?:[–-]\d+(?::\d+)?)?\)/g;
                   const refs = [];
                   let m;
                   while ((m = RE.exec(line)) !== null) {
