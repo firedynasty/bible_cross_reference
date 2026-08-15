@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 
 /**
  * Parse all Bible chapter:verse references out of a line of text.
@@ -102,6 +102,7 @@ export default function BibleIntroModal({
   initialScrollTop,
 }) {
   const containerRef = useRef(null);
+  const [fontSize, setFontSize] = useState(13);
 
   // Close on Escape
   useEffect(() => {
@@ -157,21 +158,33 @@ export default function BibleIntroModal({
         }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#111' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 8 }}>
+          <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#111', flexShrink: 0 }}>
             {bookName} — Introduction
           </h3>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 18, color: isDarkMode ? '#aaa' : '#666', lineHeight: 1,
-              padding: '2px 6px', borderRadius: 4,
-            }}
-            title="Close (Esc)"
-          >
-            ×
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button
+              onClick={() => setFontSize(s => Math.max(9, s - 1))}
+              style={{ background: isDarkMode ? '#444' : '#e5e7eb', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 11, color: isDarkMode ? '#e0e0e0' : '#333', padding: '2px 6px', fontWeight: 'bold' }}
+              title="Decrease font size"
+            >A−</button>
+            <button
+              onClick={() => setFontSize(s => Math.min(24, s + 1))}
+              style={{ background: isDarkMode ? '#444' : '#e5e7eb', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 11, color: isDarkMode ? '#e0e0e0' : '#333', padding: '2px 6px', fontWeight: 'bold' }}
+              title="Increase font size"
+            >A+</button>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 18, color: isDarkMode ? '#aaa' : '#666', lineHeight: 1,
+                padding: '2px 6px', borderRadius: 4,
+              }}
+              title="Close (Esc)"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         {/* Hint */}
@@ -189,7 +202,7 @@ export default function BibleIntroModal({
             Loading…
           </div>
         ) : introText ? (
-          <div style={{ fontSize: 13, lineHeight: 1.7 }}>
+          <div style={{ fontSize: fontSize, lineHeight: 1.7 }}>
             {lines.map((line, i) => (
               <IntroLine
                 key={i}

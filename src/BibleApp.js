@@ -6,7 +6,6 @@ import FurtherReadingModal from './components/FurtherReadingModal';
 import ClassicalMusicModal from './components/ClassicalMusicModal';
 import YouTubeVideoModal from './components/YouTubeVideoModal';
 import OutlineModal from './components/OutlineModal';
-import BibleIntroModal from './components/BibleIntroModal';
 import { getStorytimeAudioUrl } from './data/storytimeAudio';
 import { getRhymeAudioUrl } from './data/rhymeAudio';
 
@@ -1924,6 +1923,7 @@ const BibleApp = () => {
 
   // State for Book Search Modal
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [storyIntroTab, setStoryIntroTab] = useState('story'); // 'story' | 'intro'
   const [showPane2TranslationPicker, setShowPane2TranslationPicker] = useState(false);
   const [showPane1TranslationPicker, setShowPane1TranslationPicker] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -2012,8 +2012,7 @@ const BibleApp = () => {
   const [outlinesData, setOutlinesData] = useState(null);
   const [outlinesLoaded, setOutlinesLoaded] = useState(false);
 
-  // State for Bible Intro Modal
-  const [showIntroModal, setShowIntroModal] = useState(false);
+  // State for Bible Intro (now embedded in Story modal as a tab)
   const [introData, setIntroData] = useState(null);
   const [introLoaded, setIntroLoaded] = useState(false);
   const [introToast, setIntroToast] = useState(null); // { text, id }
@@ -2080,6 +2079,7 @@ const BibleApp = () => {
     }
   });
   const [storytimeUnavailableMsg, setStorytimeUnavailableMsg] = useState(null);
+  const [introFontSize, setIntroFontSize] = useState(13);
   useEffect(() => {
     try { localStorage.setItem('storytime-font-size', String(storytimeFontSize)); } catch {}
   }, [storytimeFontSize]);
@@ -2621,9 +2621,9 @@ const BibleApp = () => {
     }
   }, [showOutlineModal, outlinesLoaded]);
 
-  // Load bible intro JSON lazily on first Intro modal open
+  // Load bible intro JSON lazily on first time intro tab is shown in story modal
   useEffect(() => {
-    if (showIntroModal && !introLoaded) {
+    if (showSearchModal && storyIntroTab === 'intro' && !introLoaded) {
       setIntroLoaded(true);
       const baseUrl = getBaseUrl();
       fetch(`${baseUrl}/bible_intro.json`)
@@ -2631,7 +2631,7 @@ const BibleApp = () => {
         .then(data => setIntroData(data))
         .catch(() => {});
     }
-  }, [showIntroModal, introLoaded]);
+  }, [showSearchModal, storyIntroTab, introLoaded]);
 
   // Load verse filters JSON on startup
   useEffect(() => {
@@ -3919,23 +3919,26 @@ const BibleApp = () => {
         return;
       }
 
-      // 'i' key - toggle Bible Intro modal
+      // 'i' key - open Story modal on Intro tab
       if (e.key === 'i' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showRefPrompt && !showOutlineModal) {
         e.preventDefault();
-        setShowIntroModal(prev => !prev);
+        loadStorytimeForCurrent();
+        setStoryIntroTab('intro');
+        setShowSearchModal(true);
+        setSearchStartRef('');
         return;
       }
 
-      // 's' key - toggle soaking worship audio
-      if (e.key === 's' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal) {
+      // 's' key - open Story modal
+      if (e.key === 's' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showOutlineModal) {
         e.preventDefault();
-        const playing = toggleSoaking();
-        const btn = document.getElementById('soaking-btn');
-        if (btn) btn.textContent = playing ? '⏸ Soaking' : 'Soaking(s)';
+        loadStorytimeForCurrent();
+        setStoryIntroTab('story');
+        setShowSearchModal(true);
+        setSearchStartRef('');
         return;
       }
 
-      // Removed '[' and ']' key handlers for translation switching
       // 'x' key - scroll down one line at a time in KJV pane (like 'z' but just one line)
       if (e.key === 'x' && kjvContentRef.current) {
         
@@ -3981,8 +3984,8 @@ const BibleApp = () => {
           }, 50);
         }
       }
-      // Arrow keys scroll the Intro modal when it's open
-      else if (showIntroModal && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && introModalScrollRef.current) {
+      // Arrow keys scroll the Intro tab when it's open inside the story modal
+      else if (showSearchModal && storyIntroTab === 'intro' && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && introModalScrollRef.current) {
         e.preventDefault();
         const step = introModalScrollRef.current.clientHeight * 0.35;
         introModalScrollRef.current.scrollBy({ top: e.key === 'ArrowDown' ? step : -step, behavior: 'smooth' });
@@ -3990,7 +3993,7 @@ const BibleApp = () => {
       }
 
       // Up Arrow - scroll up one line at a time in KJV pane (opposite of 'x' key)
-      else if ((e.key === 'ArrowUp' || e.key === '-') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal && !showOutlineModal && !showIntroModal) {
+      else if ((e.key === 'ArrowUp' || e.key === '-') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal && !showOutlineModal && !showSearchModal) {
         
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
@@ -4085,7 +4088,7 @@ const BibleApp = () => {
         }
       }
       // 'p' key, PageDown key, ArrowDown key, or Spacebar - page down (matches pane 2 page-down button: scroll, or advance chapter at bottom)
-      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === '+' || e.key === '=') && kjvContentRef.current && !showQuiz2Modal && !showWordsModal && !showYouTubeModal && !showOutlineModal && !showIntroModal) {
+      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === '+' || e.key === '=') && kjvContentRef.current && !showQuiz2Modal && !showWordsModal && !showYouTubeModal && !showOutlineModal && !showSearchModal) {
         const kjvPane = kjvContentRef.current;
         const maxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
         const atBottom = maxScroll > 0 && kjvPane.scrollTop >= maxScroll - 5;
@@ -4537,10 +4540,6 @@ const BibleApp = () => {
           setShowQuiz2Modal(false);
         } else if (showRefPrompt) {
           setShowRefPrompt(false);
-        } else if (showIntroModal) {
-          introModalScrollPosRef.current = introModalScrollRef.current?.scrollTop ?? 0;
-          introModalScrollBookRef.current = selectedBook?.abbrev ?? null;
-          setShowIntroModal(false);
         } else if (showBookNavModal) {
           setShowBookNavModal(false);
           setBookNavInput('');
@@ -4620,7 +4619,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showDramatizedModal, showRefPrompt, showBookNavModal, loadStorytimeForCurrent, showOutlineModal, showIntroModal]);
+  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, storyIntroTab, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showDramatizedModal, showRefPrompt, showBookNavModal, loadStorytimeForCurrent, showOutlineModal]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
@@ -6227,7 +6226,7 @@ const BibleApp = () => {
 
                 {/* Story Button */}
                 {isFeatureVisible('search') && <button
-                  onClick={() => { loadStorytimeForCurrent(); setShowSearchModal(true); setSearchStartRef(''); }}
+                  onClick={() => { loadStorytimeForCurrent(); setStoryIntroTab('story'); setShowSearchModal(true); setSearchStartRef(''); }}
                   className="ml-1 px-3 py-1 rounded focus:outline-none text-sm bg-teal-500 text-white hover:bg-teal-600 font-semibold inline-flex items-center gap-1"
                   title="Story (Esc)"
                 >
@@ -6372,7 +6371,7 @@ const BibleApp = () => {
 
                 {/* Bible Intro Modal Button */}
                 {isFeatureVisible('intro') && <button
-                  onClick={() => setShowIntroModal(true)}
+                  onClick={() => { loadStorytimeForCurrent(); setStoryIntroTab('intro'); setShowSearchModal(true); setSearchStartRef(''); }}
                   className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-teal-600 text-white hover:bg-teal-700 font-semibold"
                   title="Book introduction and outline (i)"
                 >
@@ -11529,63 +11528,76 @@ const BibleApp = () => {
           >
             <div style={{ background: isDarkMode ? '#2a2a2a' : isSepiaMode ? '#f4ecd8' : 'white', borderRadius: 16, padding: 24, width: '95%', maxWidth: 600, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
 
-              {/* Story Section */}
-              {storytimeContent && (
-                <>
-                  {/* Nav header */}
-                  {(() => {
-                    const activeBook = pane2Book || selectedBook;
-                    const activeChapter = pane2Chapter || selectedChapter;
-                    const bookDisplayName = activeBook ? (abbrevToBookName[activeBook.abbrev] || activeBook.abbrev) : '';
-                    const availableChapters = storytimeData
-                      ? Object.keys(storytimeData)
-                          .filter(k => k.startsWith(bookDisplayName + ' '))
-                          .map(k => parseInt(k.slice(bookDisplayName.length + 1)))
-                          .filter(n => !isNaN(n))
-                          .sort((a, b) => a - b)
-                      : [];
-                    const navBtnStyle = { background: isDarkMode ? '#3a3a3a' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 5, cursor: 'pointer', fontSize: '0.78em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '3px 10px', fontWeight: 700 };
-                    const scrollToChapter = (ch) => {
-                      setPane2Chapter(ch);
-                      setSelectedChapter(ch);
-                      const el = document.getElementById(`story-ch-${ch}`);
-                      if (el && storytimeScrollRef.current) {
-                        const pane = storytimeScrollRef.current;
-                        const elRect = el.getBoundingClientRect();
-                        const paneRect = pane.getBoundingClientRect();
-                        pane.scrollTop = elRect.top - paneRect.top + pane.scrollTop - 8;
-                      }
-                    };
-                    const goToBook = (book) => {
-                      if (!book || !storytimeData) return;
-                      if (book.abbrev !== selectedBook?.abbrev) setSelectedBook(book);
-                      setPane2Book(book);
-                      setPane2Chapter(1);
-                      setSelectedChapter(1);
-                      loadStorytimeForCurrent(book, 1);
-                    };
-                    const handlePrev = () => {
-                      if (!activeBook) return;
-                      const booksWithStories = bibleData.filter(b => {
-                        const bn = abbrevToBookName[b.abbrev] || b.abbrev;
-                        return storytimeData && Object.keys(storytimeData).some(k => k.startsWith(bn + ' '));
-                      });
-                      const idx = booksWithStories.findIndex(b => b.abbrev === activeBook.abbrev);
-                      if (idx > 0) goToBook(booksWithStories[idx - 1]);
-                    };
-                    const handleNext = () => {
-                      if (!activeBook) return;
-                      const booksWithStories = bibleData.filter(b => {
-                        const bn = abbrevToBookName[b.abbrev] || b.abbrev;
-                        return storytimeData && Object.keys(storytimeData).some(k => k.startsWith(bn + ' '));
-                      });
-                      const idx = booksWithStories.findIndex(b => b.abbrev === activeBook.abbrev);
-                      if (idx !== -1 && idx < booksWithStories.length - 1) goToBook(booksWithStories[idx + 1]);
-                    };
-                    return (
-                      <div style={{ borderBottom: `1px solid ${isDarkMode ? '#444' : isSepiaMode ? '#c4b89a' : '#e0e0e0'}`, marginBottom: 8, paddingBottom: 8 }}>
-                        {/* Single row: ‹ Book | BookName | ch dropdown | Book › | A- | A+ | 📋 | ✍️ | ✕ */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'nowrap' }}>
+              {/* Unified header */}
+              {(() => {
+                const activeBook = pane2Book || selectedBook;
+                const activeChapter = pane2Chapter || selectedChapter;
+                const bookDisplayName = activeBook ? (abbrevToBookName[activeBook.abbrev] || activeBook.abbrev) : '';
+                const availableChapters = storytimeData
+                  ? Object.keys(storytimeData)
+                      .filter(k => k.startsWith(bookDisplayName + ' '))
+                      .map(k => parseInt(k.slice(bookDisplayName.length + 1)))
+                      .filter(n => !isNaN(n))
+                      .sort((a, b) => a - b)
+                  : [];
+                const navBtnStyle = { background: isDarkMode ? '#3a3a3a' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 5, cursor: 'pointer', fontSize: '0.78em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '3px 10px', fontWeight: 700 };
+                const scrollToChapter = (ch) => {
+                  setPane2Chapter(ch);
+                  setSelectedChapter(ch);
+                  const el = document.getElementById(`story-ch-${ch}`);
+                  if (el && storytimeScrollRef.current) {
+                    const pane = storytimeScrollRef.current;
+                    const elRect = el.getBoundingClientRect();
+                    const paneRect = pane.getBoundingClientRect();
+                    pane.scrollTop = elRect.top - paneRect.top + pane.scrollTop - 8;
+                  }
+                };
+                const goToBook = (book) => {
+                  if (!book || !storytimeData) return;
+                  if (book.abbrev !== selectedBook?.abbrev) setSelectedBook(book);
+                  setPane2Book(book);
+                  setPane2Chapter(1);
+                  setSelectedChapter(1);
+                  loadStorytimeForCurrent(book, 1);
+                };
+                const handlePrev = () => {
+                  if (!activeBook) return;
+                  const booksWithStories = bibleData.filter(b => {
+                    const bn = abbrevToBookName[b.abbrev] || b.abbrev;
+                    return storytimeData && Object.keys(storytimeData).some(k => k.startsWith(bn + ' '));
+                  });
+                  const idx = booksWithStories.findIndex(b => b.abbrev === activeBook.abbrev);
+                  if (idx > 0) goToBook(booksWithStories[idx - 1]);
+                };
+                const handleNext = () => {
+                  if (!activeBook) return;
+                  const booksWithStories = bibleData.filter(b => {
+                    const bn = abbrevToBookName[b.abbrev] || b.abbrev;
+                    return storytimeData && Object.keys(storytimeData).some(k => k.startsWith(bn + ' '));
+                  });
+                  const idx = booksWithStories.findIndex(b => b.abbrev === activeBook.abbrev);
+                  if (idx !== -1 && idx < booksWithStories.length - 1) goToBook(booksWithStories[idx + 1]);
+                };
+                const tabBg = isDarkMode ? '#1a1a1a' : isSepiaMode ? '#e8dfc8' : '#e5e7eb';
+                const tabActiveBg = isDarkMode ? '#6d28d9' : '#7c3aed';
+                return (
+                  <div style={{ borderBottom: `1px solid ${isDarkMode ? '#444' : isSepiaMode ? '#c4b89a' : '#e0e0e0'}`, marginBottom: 8, paddingBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'nowrap' }}>
+                      {/* Story / Intro tab toggle */}
+                      <div style={{ display: 'flex', background: tabBg, borderRadius: 6, padding: 2, gap: 2, flexShrink: 0 }}>
+                        <span
+                          onClick={() => setStoryIntroTab('story')}
+                          style={{ fontSize: '0.72em', fontWeight: 700, padding: '2px 8px', borderRadius: 4, cursor: 'pointer', background: storyIntroTab === 'story' ? tabActiveBg : 'transparent', color: storyIntroTab === 'story' ? '#fff' : isDarkMode ? '#aaa' : '#555', transition: 'background 0.15s' }}
+                        >Story</span>
+                        <span
+                          onClick={() => setStoryIntroTab('intro')}
+                          style={{ fontSize: '0.72em', fontWeight: 700, padding: '2px 8px', borderRadius: 4, cursor: 'pointer', background: storyIntroTab === 'intro' ? tabActiveBg : 'transparent', color: storyIntroTab === 'intro' ? '#fff' : isDarkMode ? '#aaa' : '#555', transition: 'background 0.15s' }}
+                        >Intro</span>
+                      </div>
+
+                      {/* Story-tab controls */}
+                      {storyIntroTab === 'story' && storytimeContent && (
+                        <>
                           <button onClick={handlePrev} style={navBtnStyle} title="Previous book">‹ Book</button>
                           <span style={{ fontSize: '0.85em', fontWeight: 700, color: isDarkMode ? '#c4b5fd' : '#7c3aed', flexShrink: 0 }}>
                             {bookDisplayName}
@@ -11622,107 +11634,133 @@ const BibleApp = () => {
                             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85em', color: isDarkMode ? '#aaa' : '#666', padding: '2px 4px' }}
                             title="Copy to clipboard"
                           >📋</button>
-                          <div style={{ flex: 1 }} />
+                        </>
+                      )}
+
+                      {/* Intro-tab controls */}
+                      {storyIntroTab === 'intro' && (
+                        <>
+                          <span style={{ width: 1, alignSelf: 'stretch', background: isDarkMode ? '#555' : '#ddd', margin: '0 2px', flexShrink: 0 }} />
                           <button
-                            onClick={() => {
-                              const raw = storytimeContent || '';
-                              let t = raw;
-                              t = t.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
-                              t = t.replace(/^#{1,6}\s+/gm, '');
-                              t = t.replace(/\*\*\*(.+?)\*\*\*/g, '$1');
-                              t = t.replace(/\*\*(.+?)\*\*/g, '$1');
-                              t = t.replace(/__(.+?)__/g, '$1');
-                              t = t.replace(/\*(.+?)\*/g, '$1');
-                              t = t.replace(/_(.+?)_/g, '$1');
-                              t = t.replace(/`([^`]+)`/g, '$1');
-                              t = t.replace(/^>\s?/gm, '');
-                              t = t.replace(/^[-*]{3,}\s*$/gm, '');
-                              t = t.replace(/^\|.*\|$/gm, '');
-                              t = t.replace(/^[-|:\s]+$/gm, '');
-                              t = t.replace(/^[-*+]\s+/gm, '');
-                              t = t.replace(/^\d+\.\s+/gm, '');
-                              t = t.replace(/\n{3,}/g, '\n\n');
-                              const cleaned = t.trim();
-                              const clean = cleaned.replace(/\s+/g, ' ').trim();
-                              if (!clean) return;
-                              let out;
-                              const hasAtMarkers = /(?:^|\n)\s*@\S/.test(cleaned);
-                              if (hasAtMarkers) {
-                                out = cleaned.split(/\n(?=\s*@\S)/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
-                              } else {
-                                out = [];
-                                const MAX = 500;
-                                let i = 0;
-                                while (i < clean.length) {
-                                  if (clean.length - i <= MAX) { out.push(clean.slice(i).trim()); break; }
-                                  let end = i + MAX;
-                                  const slice = clean.slice(i, end);
-                                  const sentEnd = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('! '), slice.lastIndexOf('? '));
-                                  if (sentEnd > MAX / 2) {
-                                    end = i + sentEnd + 1;
-                                  } else {
-                                    const sp = clean.lastIndexOf(' ', end);
-                                    if (sp > i + MAX / 2) end = sp;
-                                  }
-                                  out.push(clean.slice(i, end).trim());
-                                  i = end;
+                            onClick={() => setIntroFontSize(s => Math.max(9, s - 1))}
+                            style={{ background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.75em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '2px 6px', fontWeight: 'bold' }}
+                            title="Decrease font size"
+                          >A−</button>
+                          <button
+                            onClick={() => setIntroFontSize(s => Math.min(24, s + 1))}
+                            style={{ background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.75em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '2px 6px', fontWeight: 'bold' }}
+                            title="Increase font size"
+                          >A+</button>
+                        </>
+                      )}
+
+                      <div style={{ flex: 1 }} />
+
+                      {/* Cursive send (story tab only) */}
+                      {storyIntroTab === 'story' && storytimeContent && (
+                        <button
+                          onClick={() => {
+                            const raw = storytimeContent || '';
+                            let t = raw;
+                            t = t.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+                            t = t.replace(/^#{1,6}\s+/gm, '');
+                            t = t.replace(/\*\*\*(.+?)\*\*\*/g, '$1');
+                            t = t.replace(/\*\*(.+?)\*\*/g, '$1');
+                            t = t.replace(/__(.+?)__/g, '$1');
+                            t = t.replace(/\*(.+?)\*/g, '$1');
+                            t = t.replace(/_(.+?)_/g, '$1');
+                            t = t.replace(/`([^`]+)`/g, '$1');
+                            t = t.replace(/^>\s?/gm, '');
+                            t = t.replace(/^[-*]{3,}\s*$/gm, '');
+                            t = t.replace(/^\|.*\|$/gm, '');
+                            t = t.replace(/^[-|:\s]+$/gm, '');
+                            t = t.replace(/^[-*+]\s+/gm, '');
+                            t = t.replace(/^\d+\.\s+/gm, '');
+                            t = t.replace(/\n{3,}/g, '\n\n');
+                            const cleaned = t.trim();
+                            const clean = cleaned.replace(/\s+/g, ' ').trim();
+                            if (!clean) return;
+                            let out;
+                            const hasAtMarkers = /(?:^|\n)\s*@\S/.test(cleaned);
+                            if (hasAtMarkers) {
+                              out = cleaned.split(/\n(?=\s*@\S)/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
+                            } else {
+                              out = [];
+                              const MAX = 500;
+                              let i = 0;
+                              while (i < clean.length) {
+                                if (clean.length - i <= MAX) { out.push(clean.slice(i).trim()); break; }
+                                let end = i + MAX;
+                                const slice = clean.slice(i, end);
+                                const sentEnd = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('! '), slice.lastIndexOf('? '));
+                                if (sentEnd > MAX / 2) {
+                                  end = i + sentEnd + 1;
+                                } else {
+                                  const sp = clean.lastIndexOf(' ', end);
+                                  if (sp > i + MAX / 2) end = sp;
                                 }
+                                out.push(clean.slice(i, end).trim());
+                                i = end;
                               }
-                              setCursiveClipboardBuckets(out);
-                              setCursiveBucketIndex(-1);
-                              setCursiveSource('story'); localStorage.setItem('cursive-source', 'story');
-                              if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-                              setShowSearchModal(false);
-                              setShowCursiveModal(true);
-                            }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75em', color: isDarkMode ? '#d97706' : '#b45309', padding: '2px 4px', fontWeight: 'bold' }}
-                            title="Send to Cursive"
-                          >✍️</button>
-                          <button
-                            onClick={() => closeStoryModal()}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1em', color: isDarkMode ? '#aaa' : '#888', padding: '2px 4px', fontWeight: 700, lineHeight: 1 }}
-                            title="Close (Esc)"
-                          >✕</button>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                  <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                    <div ref={storytimeScrollRef} className={isDarkMode ? 'scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : ''} style={{ overflowY: 'auto', flex: 1, fontSize: `${storytimeFontSize}em`, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333', whiteSpace: 'pre-wrap', direction: 'rtl', scrollbarColor: isDarkMode ? '#555 #2a2a2a' : isSepiaMode ? '#c4b89a #f4ecd8' : undefined }}><div style={{ direction: 'ltr' }}>
-                      {storytimeContent.split('\n').map((line, i) => {
-                        const chMatch = line.match(/^\x00CH:(\d+)\x00$/);
-                        if (chMatch) {
-                          const ch = parseInt(chMatch[1]);
-                          const activeBook = pane2Book || selectedBook;
-                          const bookDisplayName = activeBook ? (abbrevToBookName[activeBook.abbrev] || activeBook.abbrev) : '';
-                          return (
-                            <div key={i} id={`story-ch-${ch}`} style={{ borderTop: `2px solid ${isDarkMode ? '#6d28d9' : '#8b5cf6'}`, margin: '24px 0 12px', paddingTop: 8 }}>
-                              <span style={{ fontSize: '0.8em', fontWeight: 700, color: isDarkMode ? '#c4b5fd' : '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                {bookDisplayName} — Chapter {ch}
-                              </span>
-                            </div>
-                          );
-                        }
-                        if (line.startsWith('# ')) return <h2 key={i} style={{ fontSize: '1.2em', fontWeight: 'bold', margin: '8px 0' }}>{line.slice(2)}</h2>;
-                        if (line.startsWith('## ')) return <h3 key={i} style={{ fontSize: '1.05em', fontWeight: 'bold', margin: '12px 0 4px' }}>{line.slice(3)}</h3>;
-                        if (line.startsWith('### ')) return <h4 key={i} style={{ fontSize: '0.95em', fontWeight: 'bold', margin: '10px 0 4px' }}>{line.slice(4)}</h4>;
-                        if (line.startsWith('---')) return <hr key={i} style={{ border: 'none', borderTop: `1px solid ${isDarkMode ? '#555' : isSepiaMode ? '#c4b89a' : '#ddd'}`, margin: '12px 0' }} />;
-                        if (line.trim() === '') return <div key={i} style={{ height: 8 }} />;
-                        const parts = line.split(/(\*\*[^*]+\*\*)/g);
-                        return <p key={i} style={{ margin: '4px 0' }}>{parts.map((part, j) =>
-                          part.startsWith('**') && part.endsWith('**')
-                            ? <strong key={j}>{part.slice(2, -2)}</strong>
-                            : part
-                        )}</p>;
-                      })}
-                    </div></div>
+                            }
+                            setCursiveClipboardBuckets(out);
+                            setCursiveBucketIndex(-1);
+                            setCursiveSource('story'); localStorage.setItem('cursive-source', 'story');
+                            if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
+                            setShowSearchModal(false);
+                            setShowCursiveModal(true);
+                          }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75em', color: isDarkMode ? '#d97706' : '#b45309', padding: '2px 4px', fontWeight: 'bold' }}
+                          title="Send to Cursive"
+                        >✍️</button>
+                      )}
+
+                      <button
+                        onClick={() => closeStoryModal()}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1em', color: isDarkMode ? '#aaa' : '#888', padding: '2px 4px', fontWeight: 700, lineHeight: 1 }}
+                        title="Close (Esc)"
+                      >✕</button>
+                    </div>
                   </div>
-                </>
+                );
+              })()}
+
+              {/* Story content */}
+              {storyIntroTab === 'story' && storytimeContent && (
+                <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                  <div ref={storytimeScrollRef} className={isDarkMode ? 'scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : ''} style={{ overflowY: 'auto', flex: 1, fontSize: `${storytimeFontSize}em`, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333', whiteSpace: 'pre-wrap', direction: 'rtl', scrollbarColor: isDarkMode ? '#555 #2a2a2a' : isSepiaMode ? '#c4b89a #f4ecd8' : undefined }}><div style={{ direction: 'ltr' }}>
+                    {storytimeContent.split('\n').map((line, i) => {
+                      const chMatch = line.match(/^\x00CH:(\d+)\x00$/);
+                      if (chMatch) {
+                        const ch = parseInt(chMatch[1]);
+                        const activeBook = pane2Book || selectedBook;
+                        const bookDisplayName = activeBook ? (abbrevToBookName[activeBook.abbrev] || activeBook.abbrev) : '';
+                        return (
+                          <div key={i} id={`story-ch-${ch}`} style={{ borderTop: `2px solid ${isDarkMode ? '#6d28d9' : '#8b5cf6'}`, margin: '24px 0 12px', paddingTop: 8 }}>
+                            <span style={{ fontSize: '0.8em', fontWeight: 700, color: isDarkMode ? '#c4b5fd' : '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              {bookDisplayName} — Chapter {ch}
+                            </span>
+                          </div>
+                        );
+                      }
+                      if (line.startsWith('# ')) return <h2 key={i} style={{ fontSize: '1.2em', fontWeight: 'bold', margin: '8px 0' }}>{line.slice(2)}</h2>;
+                      if (line.startsWith('## ')) return <h3 key={i} style={{ fontSize: '1.05em', fontWeight: 'bold', margin: '12px 0 4px' }}>{line.slice(3)}</h3>;
+                      if (line.startsWith('### ')) return <h4 key={i} style={{ fontSize: '0.95em', fontWeight: 'bold', margin: '10px 0 4px' }}>{line.slice(4)}</h4>;
+                      if (line.startsWith('---')) return <hr key={i} style={{ border: 'none', borderTop: `1px solid ${isDarkMode ? '#555' : isSepiaMode ? '#c4b89a' : '#ddd'}`, margin: '12px 0' }} />;
+                      if (line.trim() === '') return <div key={i} style={{ height: 8 }} />;
+                      const parts = line.split(/(\*\*[^*]+\*\*)/g);
+                      return <p key={i} style={{ margin: '4px 0' }}>{parts.map((part, j) =>
+                        part.startsWith('**') && part.endsWith('**')
+                          ? <strong key={j}>{part.slice(2, -2)}</strong>
+                          : part
+                      )}</p>;
+                    })}
+                  </div></div>
+                </div>
               )}
 
               {/* No story available message */}
-              {!storytimeContent && (() => {
-                // Group all available stories by book name
+              {storyIntroTab === 'story' && !storytimeContent && (() => {
                 const byBook = {};
                 if (storytimeData) {
                   Object.keys(storytimeData).forEach(k => {
@@ -11783,8 +11821,75 @@ const BibleApp = () => {
                 );
               })()}
 
+              {/* Intro content */}
+              {storyIntroTab === 'intro' && (() => {
+                const introBookAbbrev = selectedBook?.abbrev;
+                const introBookName = introBookAbbrev ? (getBookName(introBookAbbrev) || introBookAbbrev) : '';
+                const introText = introData?.[introBookAbbrev] ?? (introLoaded ? '' : null);
+                const introLines = (introText || '').split('\n');
+                // Parse chapter:verse refs from a line
+                const parseIntroRefs = (line) => {
+                  const RE = /\((\d+):(\d+)(?:[–\-]\d+(?::\d+)?)?\)/g;
+                  const refs = [];
+                  let m;
+                  while ((m = RE.exec(line)) !== null) {
+                    const inner = m[0].slice(1, -1);
+                    refs.push({ start: m.index, end: m.index + m[0].length, chapter: parseInt(m[1], 10), verse: parseInt(m[2], 10), displayText: m[0], refInner: inner });
+                  }
+                  return refs;
+                };
+                const renderIntroLine = (line, idx) => {
+                  if (!line.trim()) return <div key={idx} style={{ height: 8 }} />;
+                  const refs = parseIntroRefs(line);
+                  const indent = line.match(/^(\s+)/)?.[1]?.length ?? 0;
+                  if (refs.length === 0) {
+                    return <div key={idx} style={{ marginBottom: 2, lineHeight: 1.6, paddingLeft: indent * 6 }}>{line}</div>;
+                  }
+                  const parts = [];
+                  let pos = 0;
+                  for (const ref of refs) {
+                    if (ref.start > pos) parts.push(<span key={`t${pos}`}>{line.slice(pos, ref.start)}</span>);
+                    const fullRef = `${introBookName} ${ref.chapter}:${ref.verse}`;
+                    parts.push(
+                      <span
+                        key={`r${ref.start}`}
+                        onClick={() => {
+                          navigateToRefWithHighlight(fullRef);
+                          if (introToastTimerRef.current) clearTimeout(introToastTimerRef.current);
+                          const id = Date.now();
+                          setIntroToast({ text: ref.refInner, id });
+                          introToastTimerRef.current = setTimeout(() => setIntroToast(null), 5000);
+                          closeStoryModal();
+                        }}
+                        style={{ color: isDarkMode ? '#93c5fd' : '#1d4ed8', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline', textDecorationStyle: 'dotted', padding: '0 1px', borderRadius: 2 }}
+                        title={`Go to ${ref.refInner}`}
+                      >{ref.displayText}</span>
+                    );
+                    pos = ref.end;
+                  }
+                  if (pos < line.length) parts.push(<span key={`t${pos}`}>{line.slice(pos)}</span>);
+                  return <div key={idx} style={{ marginBottom: 2, lineHeight: 1.6, paddingLeft: indent * 6 }}>{parts}</div>;
+                };
+                return (
+                  <div ref={introModalScrollRef} className={isDarkMode ? 'scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : ''} style={{ flex: 1, overflowY: 'auto', fontSize: introFontSize, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333', scrollbarColor: isDarkMode ? '#555 #2a2a2a' : isSepiaMode ? '#c4b89a #f4ecd8' : undefined }}>
+                    {introText === null ? (
+                      <div style={{ color: isDarkMode ? '#888' : '#999', fontStyle: 'italic', fontSize: 13 }}>Loading…</div>
+                    ) : introText ? (
+                      <>
+                        <div style={{ fontSize: 11, color: isDarkMode ? '#666' : '#aaa', marginBottom: 10, fontStyle: 'italic', borderBottom: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, paddingBottom: 6 }}>
+                          Click a reference <span style={{ color: isDarkMode ? '#93c5fd' : '#1d4ed8', fontWeight: 600 }}>(1:1–2:3)</span> to navigate
+                        </div>
+                        {introLines.map((line, i) => renderIntroLine(line, i))}
+                      </>
+                    ) : (
+                      <div style={{ color: isDarkMode ? '#888' : '#999', fontStyle: 'italic', fontSize: 13 }}>No introduction available for {introBookName}.</div>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div style={{ position: 'relative', marginTop: 8 }}>
-                {storytimeContent && (
+                {storyIntroTab === 'story' && storytimeContent && (
                   <>
                     <button
                       onClick={() => {
@@ -12014,50 +12119,7 @@ const BibleApp = () => {
         );
       })()}
 
-      {/* Bible Intro Modal */}
-      {showIntroModal && selectedBook && (
-        <BibleIntroModal
-          bookAbbrev={selectedBook.abbrev}
-          bookName={getBookName(selectedBook.abbrev)}
-          introText={introData?.[selectedBook.abbrev] ?? (introLoaded ? '' : null)}
-          isDarkMode={isDarkMode}
-          isSepiaMode={isSepiaMode}
-          scrollRef={introModalScrollRef}
-          initialScrollTop={introModalScrollBookRef.current === selectedBook?.abbrev ? introModalScrollPosRef.current : 0}
-          onClose={() => {
-            introModalScrollPosRef.current = introModalScrollRef.current?.scrollTop ?? 0;
-            introModalScrollBookRef.current = selectedBook?.abbrev ?? null;
-            setShowIntroModal(false);
-          }}
-          onNavigate={(fullRef, refInner) => {
-            // Save scroll positions before navigation so we can restore them
-            const savedP1 = chapterContentRef.current?.scrollTop ?? 0;
-            const savedP2 = kjvContentRef.current?.scrollTop ?? 0;
-            navigateToRefWithHighlight(fullRef);
-            // After navigateToRefWithHighlight resets scrollTop to 0, restore if same chapter
-            // (navigateToRefWithHighlight will then scroll to the verse — that's fine)
-            // For cross-chapter jumps we still want verse-scroll, so only restore when same chapter
-            const parsed = (() => {
-              try {
-                const m = fullRef.match(/^(.+?)\s+(\d+)/);
-                return m ? { chapter: parseInt(m[2], 10) } : null;
-              } catch { return null; }
-            })();
-            if (parsed && parsed.chapter === selectedChapter) {
-              // Same chapter — restore scroll positions (verse highlight will then smooth-scroll)
-              requestAnimationFrame(() => {
-                if (chapterContentRef.current) chapterContentRef.current.scrollTop = savedP1;
-                if (kjvContentRef.current) kjvContentRef.current.scrollTop = savedP2;
-              });
-            }
-            // Show toast with the reference inner text (e.g. "2:4–25")
-            if (introToastTimerRef.current) clearTimeout(introToastTimerRef.current);
-            const id = Date.now();
-            setIntroToast({ text: refInner, id });
-            introToastTimerRef.current = setTimeout(() => setIntroToast(null), 5000);
-          }}
-        />
-      )}
+      {/* Bible Intro Modal — now merged into the Story/Intro tab in showSearchModal */}
 
       {/* Intro reference toast */}
       {introToast && (

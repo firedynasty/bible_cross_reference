@@ -231,6 +231,7 @@ function formatTime(seconds) {
 const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose, onOpen, bookAbbrev, currentChapter, onPlayingChange, onChapterChange, isDramatized = false, ytMode, onYtModeChange }, ref) {
   const [currentTime, setCurrentTime] = useState(0);
   const [sessionSecs, setSessionSecs] = useState(0);
+  const [calcVerse, setCalcVerse] = useState(null);
   const [playerReady, setPlayerReady] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(100);
@@ -618,22 +619,47 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
             <h2 ref={headerRef} tabIndex={-1} className="text-lg font-semibold flex items-center flex-wrap gap-2 focus:outline-none">
               <span>{bookName}{currentChapter ? ` Ch.${currentChapter}` : ''}{(() => {
-                if (!currentChapter || !isDramatized) return '';
-                const tsMap = dramatizedChapterTimestamps[bookAbbrev];
-                if (!tsMap) return '';
+                if (!currentChapter) return '';
+                const tsData = isDramatized ? dramatizedChapterTimestamps : youtubeChapterTimestamps;
+                const tsMap = tsData[bookAbbrev];
+                const totalVerses = (VERSE_COUNTS[bookAbbrev] || [])[currentChapter - 1];
+                if (!tsMap || !totalVerses) return totalVerses ? ` · ${totalVerses}v` : '';
                 const chStart = tsMap[currentChapter];
-                if (chStart == null) return '';
+                if (chStart == null) return ` · ${totalVerses}v`;
                 const chapters = Object.keys(tsMap).map(Number).sort((a, b) => a - b);
                 const nextCh = chapters.find(c => c > currentChapter);
                 const chEnd = nextCh != null ? tsMap[nextCh] : null;
-                if (chEnd == null) return '';
+                if (chEnd == null) return ` · ${totalVerses}v`;
                 const tAdj = currentTime - bookOffset;
-                const pct = Math.min(1, Math.max(0, (tAdj - chStart) / (chEnd - chStart)));
-                const totalVerses = (VERSE_COUNTS[bookAbbrev] || [])[currentChapter - 1] || 0;
-                if (!totalVerses) return '';
-                const verse = Math.max(1, Math.round(pct * totalVerses));
-                return ` ~v.${verse}`;
+                const pct = Math.min(100, Math.max(0, Math.round((tAdj - chStart) / (chEnd - chStart) * 100)));
+                return ` · ${pct}% of ${totalVerses}v`;
               })()} — {isDramatized ? 'Dramatized' : 'Audio'}</span>
+              {currentChapter && (
+                <button
+                  onClick={() => {
+                    const tsData = isDramatized ? dramatizedChapterTimestamps : youtubeChapterTimestamps;
+                    const tsMap = tsData[bookAbbrev];
+                    const totalVerses = (VERSE_COUNTS[bookAbbrev] || [])[currentChapter - 1];
+                    if (!tsMap || !totalVerses) { setCalcVerse(null); return; }
+                    const chStart = tsMap[currentChapter];
+                    if (chStart == null) { setCalcVerse(null); return; }
+                    const chapters = Object.keys(tsMap).map(Number).sort((a, b) => a - b);
+                    const nextCh = chapters.find(c => c > currentChapter);
+                    const chEnd = nextCh != null ? tsMap[nextCh] : null;
+                    if (chEnd == null) { setCalcVerse(null); return; }
+                    const t = playerRef.current ? (() => { try { return playerRef.current.getCurrentTime(); } catch { return currentTime; } })() : currentTime;
+                    const tAdj = t - bookOffsetRef.current;
+                    const pct = Math.min(1, Math.max(0, (tAdj - chStart) / (chEnd - chStart)));
+                    const verse = Math.max(1, Math.round(pct * totalVerses));
+                    setCalcVerse(`~v.${verse}`);
+                  }}
+                  style={{padding:'2px 6px',background:'#444',color:'#ccc',cursor:'pointer',border:'none',borderRadius:3,fontSize:10}}
+                  title="Calculate approximate verse from current position"
+                >calc</button>
+              )}
+              {calcVerse && (
+                <span className="text-xs text-yellow-400 font-mono">{calcVerse}</span>
+              )}
               {onYtModeChange && (
                 <span className="flex rounded overflow-hidden" style={{fontSize:10,border:'1px solid #555'}}>
                   {['kjv','drm'].map(mode => (
