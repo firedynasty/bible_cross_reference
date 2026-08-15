@@ -9,8 +9,7 @@
 #   ./run.sh --dry-run        # show which book is next without running
 #
 # Requires env vars:
-#   ANTHROPIC_API_KEY   — for step 1 (MHC summarization with Claude)
-#   OPENAI_API_KEY      — for step 2 (story generation with GPT-4o)
+#   OPENAI_API_KEY      — for step 1 (MHC summarization) and step 2 (story generation)
 #
 # Steps:
 #   1. Extract MHC HTML + summarize with Anthropic  → storytime_summaries/
@@ -34,11 +33,6 @@ if book:
     exit 0
 fi
 
-if [[ -z "$ANTHROPIC_API_KEY" ]]; then
-    echo "ERROR: Set ANTHROPIC_API_KEY env var"
-    exit 1
-fi
-
 if [[ -z "$OPENAI_API_KEY" ]]; then
     echo "ERROR: Set OPENAI_API_KEY env var"
     exit 1
@@ -52,7 +46,7 @@ echo ""
 echo "========================================"
 echo "  STEP 1: Extract & Summarize MHC"
 echo "========================================"
-python3 step1_extract_and_summarize.py $BOOK_ARG
+python3 step1_extract_and_summarize.py "$BOOK_ARG"
 
 # ── Step 2: Generate Story Time with OpenAI ──────────────────────────────────
 
@@ -60,7 +54,7 @@ echo ""
 echo "========================================"
 echo "  STEP 2: Generate Story Time"
 echo "========================================"
-python3 step2_generate_story.py $BOOK_ARG
+python3 step2_generate_story.py "$BOOK_ARG"
 
 # ── Step 3: Build storytime.json ─────────────────────────────────────────────
 
@@ -76,7 +70,7 @@ echo ""
 echo "========================================"
 echo "  STEP 4: Build Prompt File"
 echo "========================================"
-python3 step4_build_prompt.py $BOOK_ARG
+python3 step4_build_prompt.py "$BOOK_ARG"
 
 # ── Step 5: Mark done in checklist ───────────────────────────────────────────
 

@@ -12,7 +12,7 @@ Usage:
     python step1_extract_and_summarize.py Joshua       # by book name
     python step1_extract_and_summarize.py              # next unchecked book
 
-Requires: ANTHROPIC_API_KEY env var
+Requires: OPENAI_API_KEY env var
 """
 
 import os
@@ -84,19 +84,19 @@ def extract_mhc_chapters(mhc_num):
 # ── Summarize ────────────────────────────────────────────────────────────────
 
 def summarize_chapter(text, book_name, chapter):
-    import anthropic
-    client = anthropic.Anthropic()
+    from openai import OpenAI
+    client = OpenAI()
 
     prompt = MHC_SUMMARIZE_PROMPT.format(
         book=book_name, chapter=chapter, text=text[:15000]
     )
 
-    message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+    response = client.chat.completions.create(
+        model="gpt-4o",
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}]
     )
-    return message.content[0].text
+    return response.choices[0].message.content
 
 
 def run(mhc_num, book_name, num_chapters):
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     book = resolve_book(arg)
     if book:
         mhc_num, book_name, num_chapters = book
-        if not os.environ.get("ANTHROPIC_API_KEY"):
-            print("ERROR: Set ANTHROPIC_API_KEY env var")
+        if not os.environ.get("OPENAI_API_KEY"):
+            print("ERROR: Set OPENAI_API_KEY env var")
             sys.exit(1)
         run(mhc_num, book_name, num_chapters)

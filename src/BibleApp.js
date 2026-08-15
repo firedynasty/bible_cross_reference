@@ -1804,7 +1804,7 @@ const BibleApp = () => {
     'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting', 'outline', 'intro'
   ];
   const featureLabels = {
-    search: 'Search & Story', rhyme: 'Rhyme', storyAudio: 'Story ▶/⏸', chpCopy: 'Chp📋',
+    search: 'Story', rhyme: 'Rhyme', storyAudio: 'Story ▶/⏸', chpCopy: 'Chp📋',
     ruler: '📏 Ruler', col: 'Groupings', hymn: 'Hymn', prompt: 'Prompt',
     nltPsalms: 'NLT(Ps)', plan: 'Plan', math: 'Math', figures: 'Figures',
     copyPane2: 'Copy Pane 2', toggleCuv: 'KJV/CUV', togglePsalms: 'Psalms/Prov',
@@ -3074,18 +3074,37 @@ const BibleApp = () => {
   }, [storytimeData, selectedBook, selectedChapter, pane2Book, pane2Chapter]);
 
   // Auto-load story content when combined modal opens
-  const loadStorytimeForCurrent = useCallback(() => {
+  const loadStorytimeForCurrent = useCallback((targetBook, targetChapter) => {
     if (!storytimeData || !selectedBook) return;
-    const activeBook = pane2Book || selectedBook;
-    const activeChapter = pane2Chapter || selectedChapter;
+    const activeBook = targetBook || pane2Book || selectedBook;
+    const activeChapter = targetChapter || pane2Chapter || selectedChapter;
     const bookName = abbrevToBookName[activeBook.abbrev] || activeBook.abbrev;
-    const key = `${bookName} ${activeChapter}`;
-    const story = storytimeData[key];
-    if (story) {
-      setStorytimeContent(story);
-    } else {
-      setStorytimeContent('');
-    }
+    // Collect all chapters for this book sorted
+    const chapters = Object.keys(storytimeData)
+      .filter(k => k.startsWith(bookName + ' '))
+      .map(k => parseInt(k.slice(bookName.length + 1)))
+      .filter(n => !isNaN(n))
+      .sort((a, b) => a - b);
+    if (chapters.length === 0) { setStorytimeContent(''); return; }
+    // Concatenate all chapters with separator markers
+    const combined = chapters.map(ch =>
+      `\x00CH:${ch}\x00\n${storytimeData[`${bookName} ${ch}`] || ''}`
+    ).join('\n\n');
+    setStorytimeContent(combined);
+    // Scroll to the active chapter after render
+    const scrollToChapter = (ch, attempts = 0) => {
+      if (!storytimeScrollRef.current) { if (attempts < 10) setTimeout(() => scrollToChapter(ch, attempts + 1), 80); return; }
+      const el = document.getElementById(`story-ch-${ch}`);
+      if (el) {
+        const pane = storytimeScrollRef.current;
+        const elRect = el.getBoundingClientRect();
+        const paneRect = pane.getBoundingClientRect();
+        pane.scrollTop = elRect.top - paneRect.top + pane.scrollTop - 8;
+      } else if (attempts < 10) {
+        setTimeout(() => scrollToChapter(ch, attempts + 1), 80);
+      }
+    };
+    setTimeout(() => scrollToChapter(activeChapter), 50);
   }, [storytimeData, selectedBook, selectedChapter, pane2Book, pane2Chapter]);
 
   // Toggle play/pause for the Story Time chapter audio
@@ -6206,14 +6225,13 @@ const BibleApp = () => {
                   )}
                 </div>
 
-                {/* Book Search + Story Button */}
+                {/* Story Button */}
                 {isFeatureVisible('search') && <button
                   onClick={() => { loadStorytimeForCurrent(); setShowSearchModal(true); setSearchStartRef(''); }}
                   className="ml-1 px-3 py-1 rounded focus:outline-none text-sm bg-teal-500 text-white hover:bg-teal-600 font-semibold inline-flex items-center gap-1"
-                  title="Search & Story (Esc)"
+                  title="Story (Esc)"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                  Search & Story
+                  Story
                 </button>}
 
                 {/* WEB / Rhyme toggle */}
@@ -11478,378 +11496,213 @@ const BibleApp = () => {
         );
       })()}
 
-      {/* Combined Search + Story Modal */}
+      {/* Story Modal */}
       {showSearchModal && (() => {
-        const bookName = selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : 'Book';
-        const translationFileMap = { KJV: 'en_kjv.json', NIV: 'en_niv.json', NLT: 'en_nlt.json', BSB: 'en_bsb.json' };
-        const getSearchData = async () => {
-          const file = translationFileMap[searchTranslation] || 'en_kjv.json';
-          if (rightPaneBibleData && rightPaneTranslation === file) return rightPaneBibleData;
-          if (bibleData && selectedTranslation === file) return bibleData;
-          if (searchDataCacheRef.current[file]) return searchDataCacheRef.current[file];
-          try {
-            const resp = await fetch(`/${file}`);
-            const data = await resp.json();
-            searchDataCacheRef.current[file] = data;
-            return data;
-          } catch (e) {
-            console.warn(`Failed to load ${searchTranslation} for search:`, e);
-            return bibleData;
-          }
-        };
-        const handleSearch = async (keyword) => {
-          if (!keyword.trim() || !selectedBook) {
-            setSearchResults([]);
-            return;
-          }
-          const searchData = await getSearchData();
-          if (!searchData) return;
-          const kw = keyword.toLowerCase();
-          const results = [];
-          let currentBookIdx;
-          let startChapter;
-          const parsedStart = searchStartRef.trim() ? parseSingleBibleRef(searchStartRef) : null;
-          if (parsedStart) {
-            currentBookIdx = searchData.findIndex(b => b.abbrev === parsedStart.abbrev);
-            startChapter = parsedStart.chapter || 1;
-          } else {
-            currentBookIdx = searchData.findIndex(b => b.abbrev === selectedBook.abbrev);
-            startChapter = selectedChapter || 1;
-          }
-          if (currentBookIdx === -1) return;
-          let chaptersSearched = 0;
-          const maxChapters = 30;
-          let lastSearchedBook = '';
-          let lastSearchedChapter = 0;
-          for (let bookIdx = currentBookIdx; bookIdx < searchData.length && chaptersSearched < maxChapters; bookIdx++) {
-            const book = searchData[bookIdx];
-            if (!book.chapters) continue;
-            const chStart = (bookIdx === currentBookIdx) ? startChapter - 1 : 0;
-            for (let chIdx = chStart; chIdx < book.chapters.length && chaptersSearched < maxChapters; chIdx++) {
-              chaptersSearched++;
-              lastSearchedBook = book.book || getBookName(book.abbrev);
-              lastSearchedChapter = chIdx + 1;
-              const verses = book.chapters[chIdx];
-              if (!verses) continue;
-              verses.forEach((text, vIdx) => {
-                if (text.toLowerCase().includes(kw)) {
-                  results.push({
-                    bookAbbrev: book.abbrev,
-                    bookName: book.book || getBookName(book.abbrev),
-                    chapter: chIdx + 1,
-                    verse: vIdx + 1,
-                    text
-                  });
-                }
-              });
+        const storyChapterLabel = selectedBook ? (abbrevToBookName[(pane2Book || selectedBook).abbrev] || (pane2Book || selectedBook).abbrev) + ' ' + (pane2Chapter || selectedChapter) : '';
+        // Detect which chapter is currently visible and navigate to it on close
+        const closeStoryModal = () => {
+          if (storytimeScrollRef.current) {
+            const pane = storytimeScrollRef.current;
+            const paneTop = pane.getBoundingClientRect().top;
+            // Find all chapter anchor divs and pick the last one above the midpoint
+            const anchors = pane.querySelectorAll('[id^="story-ch-"]');
+            let visibleCh = null;
+            anchors.forEach(el => {
+              const rect = el.getBoundingClientRect();
+              if (rect.top - paneTop <= pane.clientHeight * 0.4) {
+                const ch = parseInt(el.id.replace('story-ch-', ''));
+                if (!isNaN(ch)) visibleCh = ch;
+              }
+            });
+            if (visibleCh !== null) {
+              setPane2Chapter(visibleCh);
+              setSelectedChapter(visibleCh);
             }
           }
-          setSearchResults(results);
-          setSearchLastInfo(chaptersSearched > 0 ? `Searched ${chaptersSearched} ch (${searchTranslation}), ending at ${lastSearchedBook} ${lastSearchedChapter}` : '');
+          setShowSearchModal(false);
         };
-        const hasSearchResults = searchResults.length > 0;
-        const hasSearchQuery = searchKeyword.trim().length > 0;
-        const showStory = !hasSearchResults && !hasSearchQuery && storytimeContent;
-        const storyChapterLabel = selectedBook ? (abbrevToBookName[(pane2Book || selectedBook).abbrev] || (pane2Book || selectedBook).abbrev) + ' ' + (pane2Chapter || selectedChapter) : '';
         return (
           <div
             style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-            onClick={(e) => { if (e.target === e.currentTarget) setShowSearchModal(false); }}
-            onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setShowSearchModal(false); } }}
+            onClick={(e) => { if (e.target === e.currentTarget) closeStoryModal(); }}
+            onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); closeStoryModal(); } }}
           >
             <div style={{ background: isDarkMode ? '#2a2a2a' : isSepiaMode ? '#f4ecd8' : 'white', borderRadius: 16, padding: 24, width: '95%', maxWidth: 600, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-              {/* Search Section */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 8 }}>
-                {['KJV', 'NIV', 'NLT', 'BSB'].map(t => (
-                  <label key={t} style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 13, color: isDarkMode ? '#ccc' : '#555', fontWeight: searchTranslation === t ? 700 : 400 }}>
-                    <input
-                      type="radio"
-                      name="searchTranslation"
-                      value={t}
-                      checked={searchTranslation === t}
-                      onChange={() => { setSearchTranslation(t); localStorage.setItem('searchTranslation', t); setSearchResults([]); setSearchLastInfo(''); }}
-                      style={{ margin: 0 }}
-                    />
-                    {t}
-                  </label>
-                ))}
-              </div>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                const verseMatch = searchKeyword.trim().match(/^(\d+):(\d+)$/);
-                if (verseMatch && selectedBook) {
-                  const ch = parseInt(verseMatch[1]);
-                  const vs = parseInt(verseMatch[2]);
-                  const p2Book = pane2Book || selectedBook;
-                  setPane2Book(p2Book);
-                  setPane2Chapter(ch);
-                  setShowSearchModal(false);
-                  setSearchKeyword('');
-                  setTimeout(() => {
-                    if (kjvContentRef.current) {
-                      const verseEl = kjvContentRef.current.querySelector(`[data-verse="${vs}"]`) || kjvContentRef.current.querySelector(`#verse-${vs}`);
-                      if (verseEl) verseEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                  }, 300);
-                  return;
-                }
-                handleSearch(searchKeyword); setSearchKeyword(''); setTimeout(() => { const el = e.target.querySelector('input[type="text"]'); if (el) el.focus(); }, 0);
-              }} style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-                <input
-                  type="text"
-                  value={searchKeyword}
-                  onChange={(e) => { setSearchKeyword(e.target.value); setSearchResults([]); setSearchLastInfo(''); }}
-                  placeholder="Search next 30 chapters..."
-                  autoFocus
-                  style={{
-                    flex: 1, padding: '8px 12px', fontSize: 15, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 8,
-                    background: isDarkMode ? '#1a1a1a' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333', outline: 'none',
-                    minWidth: 0
-                  }}
-                />
-                <button
-                  type="submit"
-                  style={{
-                    padding: '8px 16px', fontSize: 14, border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
-                    background: '#0d9488', color: 'white', whiteSpace: 'nowrap'
-                  }}
-                >
-                  Search
-                </button>
-                {(hasSearchResults || searchLastInfo) && (
-                  <button
-                    type="button"
-                    onClick={() => { setSearchKeyword(''); setSearchResults([]); setSearchLastInfo(''); }}
-                    style={{
-                      padding: '8px 12px', fontSize: 14, border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
-                      background: isDarkMode ? '#555' : '#d1d5db', color: isDarkMode ? '#e0e0e0' : '#374151', whiteSpace: 'nowrap'
-                    }}
-                  >
-                    Clear
-                  </button>
-                )}
-              </form>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, justifyContent: 'center' }}>
-                <span style={{ fontSize: 11, color: isDarkMode ? '#aaa' : '#666', whiteSpace: 'nowrap' }}>from:</span>
-                <input
-                  type="text"
-                  value={searchStartRef}
-                  onChange={(e) => setSearchStartRef(e.target.value)}
-                  placeholder={`${bookName} ${selectedChapter}`}
-                  style={{
-                    padding: '3px 8px', fontSize: 11, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 6,
-                    background: isDarkMode ? '#1a1a1a' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333', outline: 'none',
-                    width: 120
-                  }}
-                />
-                {searchLastInfo && (
-                  <span style={{ fontSize: 11, color: isDarkMode ? '#7dd3fc' : '#0369a1', fontStyle: 'italic' }}>
-                    {searchLastInfo}
-                  </span>
-                )}
-              </div>
 
-              {/* Search Results (replaces story when active) */}
-              {(hasSearchResults || hasSearchQuery) && (
-                <div style={{ overflowY: 'auto', flex: 1 }}>
-                  {searchResults.length > 0 ? (
-                    <>
-                      <p style={{ fontSize: 12, color: isDarkMode ? '#999' : '#888', marginBottom: 8 }}>
-                        {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
-                      </p>
-                      {searchResults.map((r, i) => {
-                        const kw = searchKeyword.toLowerCase();
-                        const idx = r.text.toLowerCase().indexOf(kw);
-                        const before = r.text.slice(0, idx);
-                        const match = r.text.slice(idx, idx + searchKeyword.length);
-                        const after = r.text.slice(idx + searchKeyword.length);
-                        const isSameBook = r.bookAbbrev === selectedBook?.abbrev;
-                        return (
-                          <button
-                            key={i}
-                            onClick={() => {
-                              const scrollPaneToVerse = (paneRef, elId, verseNum, attempts = 0) => {
-                                const el = document.getElementById(elId);
-                                const pane = paneRef.current;
-                                if (el && pane) {
-                                  isManuallyScrolling.current = true;
-                                  const elRect = el.getBoundingClientRect();
-                                  const paneRect = pane.getBoundingClientRect();
-                                  const offset = elRect.top - paneRect.top + pane.scrollTop - pane.clientHeight / 3;
-                                  pane.scrollTo({ top: offset, behavior: 'smooth' });
-                                  el.style.backgroundColor = isDarkMode ? '#b45309' : '#fef9c3';
-                                  el.style.color = isDarkMode ? '#fffbeb' : '';
-                                  setTimeout(() => { el.style.backgroundColor = ''; el.style.color = ''; }, 3000);
-                                  setTimeout(() => { isManuallyScrolling.current = false; }, 800);
-                                } else if (attempts < 10) {
-                                  setTimeout(() => scrollPaneToVerse(paneRef, elId, verseNum, attempts + 1), 150);
-                                }
-                              };
-                              const targetBook = bibleData.find(b => b.abbrev === r.bookAbbrev);
-                              if (targetBook) {
-                                setSelectedBook(targetBook);
-                                setSelectedChapter(r.chapter);
-                                setPane2History(h => [...h, { book: pane2Book, chapter: pane2Chapter, concordance: strongsConcordance }]);
-                                setPane2Book(targetBook);
-                                setPane2Chapter(r.chapter);
-                              }
-                              setShowSearchModal(false);
-                              setSearchResults([]);
-                              setSearchLastInfo('');
-                              setTimeout(() => {
-                                scrollPaneToVerse(chapterContentRef, `verse-${r.verse}`, r.verse);
-                                scrollPaneToVerse(kjvContentRef, `right-pane-verse-${r.verse}`, r.verse);
-                              }, 300);
-                            }}
-                            style={{
-                              display: 'block', width: '100%', padding: '10px 12px', marginBottom: 6, fontSize: 13,
-                              border: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, borderRadius: 8, cursor: 'pointer',
-                              textAlign: 'left', background: isDarkMode ? '#1e1e1e' : '#fafafa',
-                              color: isDarkMode ? '#d0d0d0' : '#333', transition: 'background 0.15s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = isDarkMode ? '#2a2a3a' : '#e8f4f8'}
-                            onMouseLeave={(e) => e.target.style.background = isDarkMode ? '#1e1e1e' : '#fafafa'}
-                          >
-                            <span style={{ fontWeight: 700, color: isDarkMode ? '#5eead4' : '#0d9488', marginRight: 8 }}>
-                              {!isSameBook && <span style={{ color: isDarkMode ? '#fbbf24' : '#b45309' }}>{r.bookName} </span>}
-                              {r.chapter}:{r.verse}
-                            </span>
-                            <span>{before}<strong style={{ background: isDarkMode ? '#365314' : '#fef08a', padding: '0 2px', borderRadius: 2 }}>{match}</strong>{after}</span>
-                          </button>
-                        );
-                      })}
-                    </>
-                  ) : hasSearchQuery ? (
-                    <p style={{ textAlign: 'center', fontSize: 14, color: isDarkMode ? '#888' : '#999', marginTop: 20 }}>
-                      Press Search or Enter to search.
-                    </p>
-                  ) : null}
-                </div>
-              )}
-
-              {/* Story Section (shown when no search active) */}
-              {showStory && (
+              {/* Story Section */}
+              {storytimeContent && (
                 <>
-                  <div style={{ borderTop: `1px solid ${isDarkMode ? '#444' : isSepiaMode ? '#c4b89a' : '#e0e0e0'}`, margin: '4px 0 8px', paddingTop: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                      <span style={{ fontSize: '0.85em', fontWeight: 700, color: isDarkMode ? '#c4b5fd' : '#7c3aed' }}>
-                        Story — {storyChapterLabel}
-                      </span>
-                      <button
-                        onClick={() => setStorytimeFontSize(s => Math.max(0.6, s - 0.1))}
-                        style={{ background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.75em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '2px 6px', fontWeight: 'bold' }}
-                        title="Decrease font size"
-                      >A−</button>
-                      <button
-                        onClick={() => setStorytimeFontSize(s => Math.min(2.0, s + 0.1))}
-                        style={{ background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.75em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '2px 6px', fontWeight: 'bold' }}
-                        title="Increase font size"
-                      >A+</button>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(storytimeContent)
-                            .then(() => alert('Copied to clipboard'))
-                            .catch(err => alert('Failed to copy: ' + err));
-                        }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85em', color: isDarkMode ? '#aaa' : '#666', padding: '2px 4px' }}
-                        title="Copy to clipboard"
-                      >📋</button>
-                      <button
-                        onClick={handleStorytimeAudioToggle}
-                        style={{ background: isDarkMode ? '#7c3aed' : '#8b5cf6', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.7em', color: 'white', padding: '2px 6px', fontWeight: 'bold' }}
-                        title={isStorytimeAudioPlaying ? 'Pause Story Time audio' : 'Play Story Time audio'}
-                      >
-                        {isStorytimeAudioPlaying ? 'Pause ‖' : 'Play ▶'}
-                      </button>
-                      <button
-                        onClick={() => {
-                          const activeBook = pane2Book || selectedBook;
-                          const activeChapter = pane2Chapter || selectedChapter;
-                          if (!activeBook || !storytimeData) return;
-                          const maxChapters = activeBook.chapters ? activeBook.chapters.length : 999;
-                          let nextBook = activeBook;
-                          let nextChap = activeChapter + 1;
-                          if (nextChap > maxChapters) {
-                            const idx = bibleData.findIndex(b => b.abbrev === activeBook.abbrev);
-                            if (idx === -1 || idx >= bibleData.length - 1) return;
-                            nextBook = bibleData[idx + 1];
-                            nextChap = 1;
-                          }
-                          const bkName = abbrevToBookName[nextBook.abbrev] || nextBook.abbrev;
-                          const key = `${bkName} ${nextChap}`;
-                          const story = storytimeData[key];
-                          if (story) {
-                            if (nextBook.abbrev !== activeBook.abbrev) setSelectedBook(nextBook);
-                            handleChapterSelect(nextChap, true);
-                            setStorytimeContent(story);
-                            if (storytimeScrollRef.current) storytimeScrollRef.current.scrollTop = 0;
-                          } else {
-                            setStorytimeUnavailableMsg(`No Story Time available for ${key}.`);
-                          }
-                        }}
-                        style={{ background: isDarkMode ? '#7c3aed' : '#8b5cf6', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.7em', color: 'white', padding: '2px 6px', fontWeight: 'bold' }}
-                        title="Next chapter story"
-                      >Next &gt;</button>
-                      <button
-                        onClick={() => {
-                          const raw = storytimeContent || '';
-                          let t = raw;
-                          t = t.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
-                          t = t.replace(/^#{1,6}\s+/gm, '');
-                          t = t.replace(/\*\*\*(.+?)\*\*\*/g, '$1');
-                          t = t.replace(/\*\*(.+?)\*\*/g, '$1');
-                          t = t.replace(/__(.+?)__/g, '$1');
-                          t = t.replace(/\*(.+?)\*/g, '$1');
-                          t = t.replace(/_(.+?)_/g, '$1');
-                          t = t.replace(/`([^`]+)`/g, '$1');
-                          t = t.replace(/^>\s?/gm, '');
-                          t = t.replace(/^[-*]{3,}\s*$/gm, '');
-                          t = t.replace(/^\|.*\|$/gm, '');
-                          t = t.replace(/^[-|:\s]+$/gm, '');
-                          t = t.replace(/^[-*+]\s+/gm, '');
-                          t = t.replace(/^\d+\.\s+/gm, '');
-                          t = t.replace(/\n{3,}/g, '\n\n');
-                          const cleaned = t.trim();
-                          const clean = cleaned.replace(/\s+/g, ' ').trim();
-                          if (!clean) return;
-                          let out;
-                          const hasAtMarkers = /(?:^|\n)\s*@\S/.test(cleaned);
-                          if (hasAtMarkers) {
-                            out = cleaned.split(/\n(?=\s*@\S)/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
-                          } else {
-                            out = [];
-                            const MAX = 500;
-                            let i = 0;
-                            while (i < clean.length) {
-                              if (clean.length - i <= MAX) { out.push(clean.slice(i).trim()); break; }
-                              let end = i + MAX;
-                              const slice = clean.slice(i, end);
-                              const sentEnd = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('! '), slice.lastIndexOf('? '));
-                              if (sentEnd > MAX / 2) {
-                                end = i + sentEnd + 1;
-                              } else {
-                                const sp = clean.lastIndexOf(' ', end);
-                                if (sp > i + MAX / 2) end = sp;
-                              }
-                              out.push(clean.slice(i, end).trim());
-                              i = end;
+                  {/* Nav header */}
+                  {(() => {
+                    const activeBook = pane2Book || selectedBook;
+                    const activeChapter = pane2Chapter || selectedChapter;
+                    const bookDisplayName = activeBook ? (abbrevToBookName[activeBook.abbrev] || activeBook.abbrev) : '';
+                    const availableChapters = storytimeData
+                      ? Object.keys(storytimeData)
+                          .filter(k => k.startsWith(bookDisplayName + ' '))
+                          .map(k => parseInt(k.slice(bookDisplayName.length + 1)))
+                          .filter(n => !isNaN(n))
+                          .sort((a, b) => a - b)
+                      : [];
+                    const navBtnStyle = { background: isDarkMode ? '#3a3a3a' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 5, cursor: 'pointer', fontSize: '0.78em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '3px 10px', fontWeight: 700 };
+                    const scrollToChapter = (ch) => {
+                      setPane2Chapter(ch);
+                      setSelectedChapter(ch);
+                      const el = document.getElementById(`story-ch-${ch}`);
+                      if (el && storytimeScrollRef.current) {
+                        const pane = storytimeScrollRef.current;
+                        const elRect = el.getBoundingClientRect();
+                        const paneRect = pane.getBoundingClientRect();
+                        pane.scrollTop = elRect.top - paneRect.top + pane.scrollTop - 8;
+                      }
+                    };
+                    const goToBook = (book) => {
+                      if (!book || !storytimeData) return;
+                      if (book.abbrev !== selectedBook?.abbrev) setSelectedBook(book);
+                      setPane2Book(book);
+                      setPane2Chapter(1);
+                      setSelectedChapter(1);
+                      loadStorytimeForCurrent(book, 1);
+                    };
+                    const handlePrev = () => {
+                      if (!activeBook) return;
+                      const booksWithStories = bibleData.filter(b => {
+                        const bn = abbrevToBookName[b.abbrev] || b.abbrev;
+                        return storytimeData && Object.keys(storytimeData).some(k => k.startsWith(bn + ' '));
+                      });
+                      const idx = booksWithStories.findIndex(b => b.abbrev === activeBook.abbrev);
+                      if (idx > 0) goToBook(booksWithStories[idx - 1]);
+                    };
+                    const handleNext = () => {
+                      if (!activeBook) return;
+                      const booksWithStories = bibleData.filter(b => {
+                        const bn = abbrevToBookName[b.abbrev] || b.abbrev;
+                        return storytimeData && Object.keys(storytimeData).some(k => k.startsWith(bn + ' '));
+                      });
+                      const idx = booksWithStories.findIndex(b => b.abbrev === activeBook.abbrev);
+                      if (idx !== -1 && idx < booksWithStories.length - 1) goToBook(booksWithStories[idx + 1]);
+                    };
+                    return (
+                      <div style={{ borderBottom: `1px solid ${isDarkMode ? '#444' : isSepiaMode ? '#c4b89a' : '#e0e0e0'}`, marginBottom: 8, paddingBottom: 8 }}>
+                        {/* Single row: ‹ Book | BookName | ch dropdown | Book › | A- | A+ | 📋 | ✍️ | ✕ */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'nowrap' }}>
+                          <button onClick={handlePrev} style={navBtnStyle} title="Previous book">‹ Book</button>
+                          <span style={{ fontSize: '0.85em', fontWeight: 700, color: isDarkMode ? '#c4b5fd' : '#7c3aed', flexShrink: 0 }}>
+                            {bookDisplayName}
+                          </span>
+                          <select
+                            value={activeChapter}
+                            onChange={(e) => scrollToChapter(parseInt(e.target.value))}
+                            style={{ fontSize: '0.8em', padding: '2px 4px', borderRadius: 5, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, background: isDarkMode ? '#1a1a1a' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer' }}
+                            title="Jump to chapter"
+                          >
+                            {availableChapters.length > 0
+                              ? availableChapters.map(ch => <option key={ch} value={ch}>Ch {ch}</option>)
+                              : <option value={activeChapter}>Ch {activeChapter}</option>
                             }
-                          }
-                          setCursiveClipboardBuckets(out);
-                          setCursiveBucketIndex(-1);
-                          setCursiveSource('story'); localStorage.setItem('cursive-source', 'story');
-                          if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
-                          setShowSearchModal(false);
-                          setShowCursiveModal(true);
-                        }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75em', color: isDarkMode ? '#d97706' : '#b45309', padding: '2px 4px', fontWeight: 'bold' }}
-                        title="Send to Cursive"
-                      >✍️</button>
-                    </div>
-                  </div>
+                          </select>
+                          <button onClick={handleNext} style={navBtnStyle} title="Next book">Book ›</button>
+                          <span style={{ width: 1, alignSelf: 'stretch', background: isDarkMode ? '#555' : '#ddd', margin: '0 2px', flexShrink: 0 }} />
+                          <button
+                            onClick={() => setStorytimeFontSize(s => Math.max(0.6, s - 0.1))}
+                            style={{ background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.75em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '2px 6px', fontWeight: 'bold' }}
+                            title="Decrease font size"
+                          >A−</button>
+                          <button
+                            onClick={() => setStorytimeFontSize(s => Math.min(2.0, s + 0.1))}
+                            style={{ background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.75em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '2px 6px', fontWeight: 'bold' }}
+                            title="Increase font size"
+                          >A+</button>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(storytimeContent)
+                                .then(() => alert('Copied to clipboard'))
+                                .catch(err => alert('Failed to copy: ' + err));
+                            }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85em', color: isDarkMode ? '#aaa' : '#666', padding: '2px 4px' }}
+                            title="Copy to clipboard"
+                          >📋</button>
+                          <div style={{ flex: 1 }} />
+                          <button
+                            onClick={() => {
+                              const raw = storytimeContent || '';
+                              let t = raw;
+                              t = t.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+                              t = t.replace(/^#{1,6}\s+/gm, '');
+                              t = t.replace(/\*\*\*(.+?)\*\*\*/g, '$1');
+                              t = t.replace(/\*\*(.+?)\*\*/g, '$1');
+                              t = t.replace(/__(.+?)__/g, '$1');
+                              t = t.replace(/\*(.+?)\*/g, '$1');
+                              t = t.replace(/_(.+?)_/g, '$1');
+                              t = t.replace(/`([^`]+)`/g, '$1');
+                              t = t.replace(/^>\s?/gm, '');
+                              t = t.replace(/^[-*]{3,}\s*$/gm, '');
+                              t = t.replace(/^\|.*\|$/gm, '');
+                              t = t.replace(/^[-|:\s]+$/gm, '');
+                              t = t.replace(/^[-*+]\s+/gm, '');
+                              t = t.replace(/^\d+\.\s+/gm, '');
+                              t = t.replace(/\n{3,}/g, '\n\n');
+                              const cleaned = t.trim();
+                              const clean = cleaned.replace(/\s+/g, ' ').trim();
+                              if (!clean) return;
+                              let out;
+                              const hasAtMarkers = /(?:^|\n)\s*@\S/.test(cleaned);
+                              if (hasAtMarkers) {
+                                out = cleaned.split(/\n(?=\s*@\S)/).map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean);
+                              } else {
+                                out = [];
+                                const MAX = 500;
+                                let i = 0;
+                                while (i < clean.length) {
+                                  if (clean.length - i <= MAX) { out.push(clean.slice(i).trim()); break; }
+                                  let end = i + MAX;
+                                  const slice = clean.slice(i, end);
+                                  const sentEnd = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('! '), slice.lastIndexOf('? '));
+                                  if (sentEnd > MAX / 2) {
+                                    end = i + sentEnd + 1;
+                                  } else {
+                                    const sp = clean.lastIndexOf(' ', end);
+                                    if (sp > i + MAX / 2) end = sp;
+                                  }
+                                  out.push(clean.slice(i, end).trim());
+                                  i = end;
+                                }
+                              }
+                              setCursiveClipboardBuckets(out);
+                              setCursiveBucketIndex(-1);
+                              setCursiveSource('story'); localStorage.setItem('cursive-source', 'story');
+                              if (window._cursiveTimer) { clearTimeout(window._cursiveTimer); window._cursiveTimer = null; }
+                              setShowSearchModal(false);
+                              setShowCursiveModal(true);
+                            }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75em', color: isDarkMode ? '#d97706' : '#b45309', padding: '2px 4px', fontWeight: 'bold' }}
+                            title="Send to Cursive"
+                          >✍️</button>
+                          <button
+                            onClick={() => closeStoryModal()}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1em', color: isDarkMode ? '#aaa' : '#888', padding: '2px 4px', fontWeight: 700, lineHeight: 1 }}
+                            title="Close (Esc)"
+                          >✕</button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                     <div ref={storytimeScrollRef} className={isDarkMode ? 'scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : ''} style={{ overflowY: 'auto', flex: 1, fontSize: `${storytimeFontSize}em`, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333', whiteSpace: 'pre-wrap', direction: 'rtl', scrollbarColor: isDarkMode ? '#555 #2a2a2a' : isSepiaMode ? '#c4b89a #f4ecd8' : undefined }}><div style={{ direction: 'ltr' }}>
                       {storytimeContent.split('\n').map((line, i) => {
+                        const chMatch = line.match(/^\x00CH:(\d+)\x00$/);
+                        if (chMatch) {
+                          const ch = parseInt(chMatch[1]);
+                          const activeBook = pane2Book || selectedBook;
+                          const bookDisplayName = activeBook ? (abbrevToBookName[activeBook.abbrev] || activeBook.abbrev) : '';
+                          return (
+                            <div key={i} id={`story-ch-${ch}`} style={{ borderTop: `2px solid ${isDarkMode ? '#6d28d9' : '#8b5cf6'}`, margin: '24px 0 12px', paddingTop: 8 }}>
+                              <span style={{ fontSize: '0.8em', fontWeight: 700, color: isDarkMode ? '#c4b5fd' : '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                {bookDisplayName} — Chapter {ch}
+                              </span>
+                            </div>
+                          );
+                        }
                         if (line.startsWith('# ')) return <h2 key={i} style={{ fontSize: '1.2em', fontWeight: 'bold', margin: '8px 0' }}>{line.slice(2)}</h2>;
                         if (line.startsWith('## ')) return <h3 key={i} style={{ fontSize: '1.05em', fontWeight: 'bold', margin: '12px 0 4px' }}>{line.slice(3)}</h3>;
                         if (line.startsWith('### ')) return <h4 key={i} style={{ fontSize: '0.95em', fontWeight: 'bold', margin: '10px 0 4px' }}>{line.slice(4)}</h4>;
@@ -11868,35 +11721,100 @@ const BibleApp = () => {
               )}
 
               {/* No story available message */}
-              {!hasSearchResults && !hasSearchQuery && !storytimeContent && (
-                <p style={{ textAlign: 'center', fontSize: 13, color: isDarkMode ? '#888' : '#999', marginTop: 12, fontStyle: 'italic' }}>
-                  No Story Time available for this chapter. Type to search.
-                </p>
-              )}
+              {!storytimeContent && (() => {
+                // Group all available stories by book name
+                const byBook = {};
+                if (storytimeData) {
+                  Object.keys(storytimeData).forEach(k => {
+                    const lastSpace = k.lastIndexOf(' ');
+                    const bk = k.slice(0, lastSpace);
+                    const ch = parseInt(k.slice(lastSpace + 1));
+                    if (!isNaN(ch)) {
+                      if (!byBook[bk]) byBook[bk] = [];
+                      byBook[bk].push(ch);
+                    }
+                  });
+                  Object.values(byBook).forEach(arr => arr.sort((a, b) => a - b));
+                }
+                const bookEntries = Object.entries(byBook);
+                return (
+                  <div style={{ marginTop: 12, overflowY: 'auto', flex: 1 }}>
+                    <p style={{ fontSize: 13, color: isDarkMode ? '#888' : '#999', fontStyle: 'italic', marginBottom: 12, textAlign: 'center' }}>
+                      No Story Time available for this chapter.
+                    </p>
+                    {bookEntries.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {bookEntries.map(([bk, chapters]) => (
+                          <div key={bk} style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: isDarkMode ? '#c4b5fd' : '#7c3aed', minWidth: 80, flexShrink: 0 }}>
+                              {bk}
+                            </span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                              {chapters.map(ch => (
+                                <button
+                                  key={ch}
+                                  onClick={() => {
+                                    const story = storytimeData[`${bk} ${ch}`];
+                                    if (!story) return;
+                                    const targetBook = bibleData.find(b => (abbrevToBookName[b.abbrev] || b.abbrev) === bk);
+                                    if (targetBook) {
+                                      setSelectedBook(targetBook);
+                                      setPane2Book(targetBook);
+                                      setPane2Chapter(ch);
+                                      setSelectedChapter(ch);
+                                    }
+                                    setStorytimeContent(story);
+                                  }}
+                                  style={{
+                                    padding: '2px 8px', fontSize: 11, border: `1px solid ${isDarkMode ? '#555' : '#d1d5db'}`,
+                                    borderRadius: 5, cursor: 'pointer', background: isDarkMode ? '#333' : '#f3f4f6',
+                                    color: isDarkMode ? '#d0d0d0' : '#555', fontWeight: 500
+                                  }}
+                                >
+                                  {ch}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div style={{ position: 'relative', marginTop: 8 }}>
-                {showStory && (
-                  <button
-                    onClick={() => {
-                      const el = storytimeScrollRef.current;
-                      if (!el) return;
-                      const maxScroll = el.scrollHeight - el.clientHeight;
-                      el.scrollTop = Math.min(maxScroll, el.scrollTop + el.clientHeight * 0.9);
-                    }}
-                    style={{ position: 'absolute', right: 8, bottom: 4, zIndex: 10, width: 40, height: 40, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = ''; }}
-                    title="Page down"
-                  >
-                    <svg width="36" height="36" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </button>
+                {storytimeContent && (
+                  <>
+                    <button
+                      onClick={() => {
+                        const el = storytimeScrollRef.current;
+                        if (!el) return;
+                        el.scrollTop = Math.max(0, el.scrollTop - el.clientHeight * 0.9);
+                      }}
+                      style={{ position: 'absolute', right: 8, bottom: 100, zIndex: 10, width: 40, height: 40, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = ''; }}
+                      title="Page up"
+                    >
+                      <svg width="36" height="36" viewBox="0 0 64 64"><path d="M8 44 L32 20 L56 44" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const el = storytimeScrollRef.current;
+                        if (!el) return;
+                        const maxScroll = el.scrollHeight - el.clientHeight;
+                        el.scrollTop = Math.min(maxScroll, el.scrollTop + el.clientHeight * 0.9);
+                      }}
+                      style={{ position: 'absolute', right: 8, bottom: 52, zIndex: 10, width: 40, height: 40, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = ''; }}
+                      title="Page down"
+                    >
+                      <svg width="36" height="36" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                  </>
                 )}
-                <button
-                  onClick={() => setShowSearchModal(false)}
-                  style={{ width: '100%', padding: 8, fontSize: 13, border: 'none', borderRadius: 8, background: isDarkMode ? '#444' : '#e0e0e0', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer', fontWeight: 600 }}
-                >
-                  Close (Esc)
-                </button>
               </div>
             </div>
           </div>
