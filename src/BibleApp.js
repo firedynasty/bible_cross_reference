@@ -6,6 +6,7 @@ import FurtherReadingModal from './components/FurtherReadingModal';
 import ClassicalMusicModal from './components/ClassicalMusicModal';
 import YouTubeVideoModal from './components/YouTubeVideoModal';
 import OutlineModal from './components/OutlineModal';
+import VerseCommentaryModal from './components/VerseCommentaryModal';
 import { getStorytimeAudioUrl } from './data/storytimeAudio';
 import { getRhymeAudioUrl } from './data/rhymeAudio';
 
@@ -1635,6 +1636,7 @@ const BibleApp = () => {
   }, [pendingBookSelection]);
   const [showCrossRef, setShowCrossRef] = useState(null);
   const [expandedRefsData, setExpandedRefsData] = useState(null); // { verseLabel, refs: [{label, text}] }
+  const [verseModalData, setVerseModalData] = useState(null); // { verseLabel, verseText, bookAbbrev, chapter, verseNumber }
 
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
@@ -8345,8 +8347,19 @@ const BibleApp = () => {
                               >
                                 <p className="flex">
                                   <span
-                                    title="Scroll Pane 1 to verse"
-                                    onClick={(e) => { e.stopPropagation(); const el = chapterContentRef.current?.querySelector(`#verse-${verseNumber}`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+                                    title="View commentary"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const verseStr = typeof verse === 'string' ? verse : (verse?.text || verse?.verse || String(verse));
+                                      const bookName = getBookName(bookAbbrev);
+                                      setVerseModalData({
+                                        verseLabel: `${bookName} ${effectiveChapter}:${verseNumber}`,
+                                        verseText: verseStr,
+                                        bookAbbrev,
+                                        chapter: effectiveChapter,
+                                        verseNumber,
+                                      });
+                                    }}
                                     className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}
                                   >{verseNumber}</span>
                                   <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(showPane2Syllables ? syllabifyText(verse) : verse, showGlosses)}</span>
@@ -12082,6 +12095,17 @@ const BibleApp = () => {
       })()}
 
       <FurtherReadingModal open={showFiguresModal} onClose={() => setShowFiguresModal(false)} />
+      <VerseCommentaryModal
+        open={!!verseModalData}
+        onClose={() => setVerseModalData(null)}
+        verseLabel={verseModalData?.verseLabel}
+        verseText={verseModalData?.verseText}
+        bookAbbrev={verseModalData?.bookAbbrev}
+        chapter={verseModalData?.chapter}
+        verseNumber={verseModalData?.verseNumber}
+        isDarkMode={isDarkMode}
+        isSepiaMode={isSepiaMode}
+      />
       <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
       <YouTubeVideoModal ref={youtubeModalRef} open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} onOpen={() => setShowYouTubeModal(true)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsYouTubePlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} ytMode={ytMode} onYtModeChange={handleYtModeChange} />
       <YouTubeVideoModal ref={dramatizedModalRef} isDramatized open={showDramatizedModal} onClose={() => setShowDramatizedModal(false)} onOpen={() => setShowDramatizedModal(true)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsDramatizedPlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} ytMode={ytMode} onYtModeChange={handleYtModeChange} />
