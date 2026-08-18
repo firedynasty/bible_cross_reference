@@ -53,6 +53,7 @@ export default function VerseCommentaryModal({
   open, onClose,
   verseLabel, verseText,
   bookAbbrev, chapter, verseNumber,
+  totalVerses, onNavigateVerse,
   isDarkMode, isSepiaMode,
 }) {
   const [selectedCommentary, setSelectedCommentary] = useState('john-gill');
@@ -114,6 +115,7 @@ export default function VerseCommentaryModal({
 
   useEffect(() => {
     if (open && bookAbbrev && chapter && verseNumber) {
+      if (bodyRef.current) bodyRef.current.scrollTop = 0;
       fetchCommentary(bookAbbrev, chapter, verseNumber, selectedCommentary);
     }
   }, [open, bookAbbrev, chapter, verseNumber, selectedCommentary, fetchCommentary]);
@@ -168,7 +170,31 @@ export default function VerseCommentaryModal({
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '14px 20px', borderBottom: `1px solid ${border}`, flexShrink: 0,
         }}>
-          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{verseLabel}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => onNavigateVerse?.(verseNumber - 1)}
+              disabled={!verseNumber || verseNumber <= 1}
+              style={{
+                width: 28, height: 28, border: `1px solid ${border}`, borderRadius: 6,
+                cursor: verseNumber > 1 ? 'pointer' : 'default',
+                background: closeBg, color: verseNumber > 1 ? textColor : subText,
+                fontWeight: 700, fontSize: 14, opacity: verseNumber > 1 ? 1 : 0.4,
+              }}
+              aria-label="Previous verse"
+            >‹</button>
+            <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{verseLabel}</h2>
+            <button
+              onClick={() => onNavigateVerse?.(verseNumber + 1)}
+              disabled={!totalVerses || verseNumber >= totalVerses}
+              style={{
+                width: 28, height: 28, border: `1px solid ${border}`, borderRadius: 6,
+                cursor: (totalVerses && verseNumber < totalVerses) ? 'pointer' : 'default',
+                background: closeBg, color: (totalVerses && verseNumber < totalVerses) ? textColor : subText,
+                fontWeight: 700, fontSize: 14, opacity: (totalVerses && verseNumber < totalVerses) ? 1 : 0.4,
+              }}
+              aria-label="Next verse"
+            >›</button>
+          </div>
           <button
             onClick={onClose}
             style={{
@@ -221,7 +247,6 @@ export default function VerseCommentaryModal({
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title="Open Matthew Henry Commentary on BibleHub"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4,
                     background: selectBg, color: textColor, border: `1px solid ${border}`,
@@ -259,13 +284,11 @@ export default function VerseCommentaryModal({
         <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <button
             onClick={() => { if (bodyRef.current) bodyRef.current.scrollBy({ top: bodyRef.current.clientHeight * 0.8, behavior: 'smooth' }); }}
-            style={{ position: 'absolute', bottom: 14, left: 14, zIndex: 10, fontFamily: 'inherit', fontSize: 18, background: isDarkMode ? '#2a2c30' : isSepiaMode ? '#f5efe0' : '#fff', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: isDarkMode ? '#93c5fd' : isSepiaMode ? '#7a5a2a' : '#2563eb', boxShadow: '0 2px 6px rgba(0,0,0,0.18)', opacity: 0.92 }}
-            title="Page down"
+            style={{ position: 'absolute', bottom: 14, left: 14, zIndex: 10, fontFamily: 'inherit', fontSize: 18, background: isDarkMode ? '#2a2c30' : isSepiaMode ? '#f5efe0' : '#fff', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: isDarkMode ? '#93c5fd' : isSepiaMode ? '#7a5a2a' : '#2563eb', boxShadow: '0 2px 6px rgba(0,0,0,0.18)', opacity: 0.35 }}
           >↓</button>
           <button
             onClick={() => { if (bodyRef.current) bodyRef.current.scrollBy({ top: -56, behavior: 'smooth' }); }}
-            style={{ position: 'absolute', bottom: 60, left: 14, zIndex: 10, fontFamily: 'inherit', fontSize: 18, background: isDarkMode ? '#2a2c30' : isSepiaMode ? '#f5efe0' : '#fff', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: isDarkMode ? '#93c5fd' : isSepiaMode ? '#7a5a2a' : '#2563eb', boxShadow: '0 2px 6px rgba(0,0,0,0.18)', opacity: 0.92 }}
-            title="Scroll up 2 lines"
+            style={{ position: 'absolute', bottom: 60, left: 14, zIndex: 10, fontFamily: 'inherit', fontSize: 18, background: isDarkMode ? '#2a2c30' : isSepiaMode ? '#f5efe0' : '#fff', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: isDarkMode ? '#93c5fd' : isSepiaMode ? '#7a5a2a' : '#2563eb', boxShadow: '0 2px 6px rgba(0,0,0,0.18)', opacity: 0.35 }}
           >↑</button>
         <div ref={bodyRef} style={{ overflowY: 'auto', padding: '16px 20px', flexGrow: 1 }}>
           {loading && (
@@ -287,6 +310,19 @@ export default function VerseCommentaryModal({
                 </p>
               ))}
             </>
+          )}
+          {totalVerses > 0 && verseNumber < totalVerses && (
+            <button
+              onClick={() => onNavigateVerse?.(verseNumber + 1)}
+              style={{
+                display: 'block', marginTop: 24, marginBottom: 8,
+                marginLeft: -6,
+                fontFamily: 'inherit', fontSize: 17, background: 'none',
+                border: `1px solid ${border}`, borderRadius: 4,
+                padding: '6px 18px', cursor: 'pointer',
+                color: isDarkMode ? '#9ca3af' : isSepiaMode ? '#7a5a2a' : '#6b7280',
+              }}
+            >Next Verse ›</button>
           )}
         </div>
         </div>

@@ -5534,6 +5534,60 @@ const BibleApp = () => {
     }
   };
 
+  // Helper: get resolved right-pane verses for a given bookAbbrev + chapter
+  const getRightPaneChapterVerses = (bookAbbrev, chapter) => {
+    if (nltPsalmsData && bookAbbrev === 'ps') {
+      const nltBook = nltPsalmsData.find(b => b.abbrev === 'ps');
+      if (nltBook && nltBook.chapters[chapter - 1]) return nltBook.chapters[chapter - 1];
+    }
+    if (rightPaneBibleData) {
+      const rpBook = rightPaneBibleData.find(b => b.abbrev === bookAbbrev);
+      if (rpBook && rpBook.chapters[chapter - 1]) return rpBook.chapters[chapter - 1];
+    }
+    return null;
+  };
+
+  const handleVerseModalNavigate = (newVerseNumber) => {
+    if (!verseModalData) return;
+    const { bookAbbrev, chapter } = verseModalData;
+    const verses = getRightPaneChapterVerses(bookAbbrev, chapter);
+    if (!verses || newVerseNumber < 1 || newVerseNumber > verses.length) return;
+    const raw = verses[newVerseNumber - 1];
+    const verseStr = typeof raw === 'string' ? raw : (raw?.text || raw?.verse || String(raw));
+    setVerseModalData({
+      verseLabel: `${getBookName(bookAbbrev)} ${chapter}:${newVerseNumber}`,
+      verseText: verseStr,
+      bookAbbrev,
+      chapter,
+      verseNumber: newVerseNumber,
+    });
+  };
+
+  const handleVerseModalNextChapter = () => {
+    if (!verseModalData) return;
+    const { bookAbbrev, chapter } = verseModalData;
+    const totalCh = selectedBook?.chapters?.length || 0;
+    if (chapter >= totalCh) return;
+    const nextCh = chapter + 1;
+    handleChapterSelect(nextCh, true);
+    const verses = getRightPaneChapterVerses(bookAbbrev, nextCh);
+    const raw = verses?.[0];
+    const verseStr = raw ? (typeof raw === 'string' ? raw : (raw?.text || raw?.verse || String(raw))) : '';
+    setVerseModalData({
+      verseLabel: `${getBookName(bookAbbrev)} ${nextCh}:1`,
+      verseText: verseStr,
+      bookAbbrev,
+      chapter: nextCh,
+      verseNumber: 1,
+    });
+  };
+
+  const verseModalTotalVerses = (() => {
+    if (!verseModalData) return 0;
+    const verses = getRightPaneChapterVerses(verseModalData.bookAbbrev, verseModalData.chapter);
+    return verses ? verses.length : 0;
+  })();
+
   // Handle expanding all cross-references for a verse into pane 2
   const handleExpandRefs = (refKey, verseNumber) => {
     const refs = crossReferences[refKey];
@@ -12103,6 +12157,8 @@ const BibleApp = () => {
         bookAbbrev={verseModalData?.bookAbbrev}
         chapter={verseModalData?.chapter}
         verseNumber={verseModalData?.verseNumber}
+        totalVerses={verseModalTotalVerses}
+        onNavigateVerse={handleVerseModalNavigate}
         isDarkMode={isDarkMode}
         isSepiaMode={isSepiaMode}
       />
