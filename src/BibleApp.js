@@ -3906,8 +3906,8 @@ const BibleApp = () => {
         return;
       }
 
-      // 'y' or 't' key - toggle active YouTube modal (mode: kjv or drm)
-      if ((e.key === 'y' || e.key === 't') && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal) {
+      // 'y' key - toggle active YouTube modal (mode: kjv or drm)
+      if (e.key === 'y' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal) {
         e.preventDefault();
         if (ytMode === 'drm') setShowDramatizedModal(prev => !prev);
         else setShowYouTubeModal(prev => !prev);
@@ -3931,13 +3931,31 @@ const BibleApp = () => {
         return;
       }
 
-      // 's' key - open Story modal
-      if (e.key === 's' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showOutlineModal) {
+      // 't' key - open Story modal
+      if (e.key === 't' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showOutlineModal) {
         e.preventDefault();
         loadStorytimeForCurrent();
         setStoryIntroTab('story');
         setShowSearchModal(true);
         setSearchStartRef('');
+        return;
+      }
+
+      // 'c' key - open Verse Commentary modal for topmost visible verse in right pane
+      if (e.key === 'c' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showOutlineModal) {
+        e.preventDefault();
+        const pane = kjvContentRef.current;
+        if (pane) {
+          const paneRect = pane.getBoundingClientRect();
+          let topVerse = 1;
+          for (let i = 1; i <= 200; i++) {
+            const el = document.getElementById(`right-pane-verse-${i}`);
+            if (!el) break;
+            const elRect = el.getBoundingClientRect();
+            if (elRect.bottom > paneRect.top + 40) { topVerse = i; break; }
+          }
+          window.dispatchEvent(new CustomEvent('openVerseCommentaryAtVerse', { detail: { verseNumber: topVerse } }));
+        }
         return;
       }
 
@@ -3995,7 +4013,7 @@ const BibleApp = () => {
       }
 
       // Up Arrow - scroll up one line at a time in KJV pane (opposite of 'x' key)
-      else if ((e.key === 'ArrowUp' || e.key === '-') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal && !showOutlineModal && !showSearchModal) {
+      else if ((e.key === 'ArrowUp' || e.key === '-' || e.key === 'a') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal && !showOutlineModal && !showSearchModal && !verseModalData) {
         
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
@@ -4090,7 +4108,7 @@ const BibleApp = () => {
         }
       }
       // 'p' key, PageDown key, ArrowDown key, or Spacebar - page down (matches pane 2 page-down button: scroll, or advance chapter at bottom)
-      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === '+' || e.key === '=') && kjvContentRef.current && !showQuiz2Modal && !showWordsModal && !showYouTubeModal && !showOutlineModal && !showSearchModal) {
+      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === '+' || e.key === '=' || e.key === 's') && kjvContentRef.current && !showQuiz2Modal && !showWordsModal && !showYouTubeModal && !showOutlineModal && !showSearchModal && !verseModalData) {
         const kjvPane = kjvContentRef.current;
         const maxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
         const atBottom = maxScroll > 0 && kjvPane.scrollTop >= maxScroll - 5;
@@ -4366,16 +4384,16 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // Left Arrow - go to previous chapter (skip when Recite or Outline modal is open)
+      // Left Arrow - go to previous chapter (skip when Recite, Outline, or Verse Commentary modal is open)
       else if (e.key === 'ArrowLeft') {
-        if (showQuiz2Modal || showOutlineModal) return;
+        if (showQuiz2Modal || showOutlineModal || verseModalData) return;
         const prevBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Previous Chapter'));
         if (prevBtn) prevBtn.click();
         e.preventDefault();
       }
-      // Right Arrow - go to next chapter (skip when Recite or Outline modal is open)
+      // Right Arrow - go to next chapter (skip when Recite, Outline, or Verse Commentary modal is open)
       else if (e.key === 'ArrowRight') {
-        if (showQuiz2Modal || showOutlineModal) return;
+        if (showQuiz2Modal || showOutlineModal || verseModalData) return;
         const nextBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Next Chapter'));
         if (nextBtn) nextBtn.click();
         e.preventDefault();
@@ -5587,6 +5605,28 @@ const BibleApp = () => {
     const verses = getRightPaneChapterVerses(verseModalData.bookAbbrev, verseModalData.chapter);
     return verses ? verses.length : 0;
   })();
+
+  // 'c' key: open commentary for topmost visible verse (dispatched from keydown handler)
+  useEffect(() => {
+    const handler = (e) => {
+      const { verseNumber: topVerse } = e.detail;
+      const abbrev = selectedBook?.abbrev;
+      if (!abbrev || !selectedChapter) return;
+      const verses = getRightPaneChapterVerses(abbrev, selectedChapter);
+      const raw = verses?.[topVerse - 1];
+      const verseStr = raw ? (typeof raw === 'string' ? raw : (raw?.text || raw?.verse || String(raw))) : '';
+      setVerseModalData({
+        verseLabel: `${getBookName(abbrev)} ${selectedChapter}:${topVerse}`,
+        verseText: verseStr,
+        bookAbbrev: abbrev,
+        chapter: selectedChapter,
+        verseNumber: topVerse,
+        totalVerses: verses?.length || null,
+      });
+    };
+    window.addEventListener('openVerseCommentaryAtVerse', handler);
+    return () => window.removeEventListener('openVerseCommentaryAtVerse', handler);
+  }, [selectedBook, selectedChapter, getRightPaneChapterVerses, getBookName]);
 
   // Handle expanding all cross-references for a verse into pane 2
   const handleExpandRefs = (refKey, verseNumber) => {
@@ -9338,7 +9378,7 @@ const BibleApp = () => {
         <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)' }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowShortcutsModal(false); }}
         >
-          <div style={{ background: isDarkMode ? '#2a2a3a' : 'white', borderRadius: 12, padding: 24, width: '90%', maxWidth: 600, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: isDarkMode ? '#2a2a3a' : 'white', borderRadius: 12, padding: 24, width: '95%', maxWidth: 860, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.3)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333' }}>Shortcuts</h3>
               <button onClick={() => setShowShortcutsModal(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: isDarkMode ? '#aaa' : '#666' }}>X</button>

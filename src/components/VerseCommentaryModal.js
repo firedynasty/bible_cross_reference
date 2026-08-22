@@ -57,7 +57,10 @@ export default function VerseCommentaryModal({
   isDarkMode, isSepiaMode,
 }) {
   const [selectedCommentary, setSelectedCommentary] = useState('john-gill');
-  const [fontSize, setFontSize] = useState(0.93);
+  const [fontSize, setFontSize] = useState(() => {
+    const saved = parseFloat(localStorage.getItem('verseCommentaryFontSize'));
+    return isNaN(saved) ? 0.93 : saved;
+  });
   const [commentary, setCommentary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -128,10 +131,29 @@ export default function VerseCommentaryModal({
   }, [open]);
 
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose?.();
-    if (open) window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+    const onKey = (e) => {
+      if (e.key === 'Escape') { onClose?.(); return; }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (verseNumber > 1) onNavigateVerse?.(verseNumber - 1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (totalVerses && verseNumber < totalVerses) onNavigateVerse?.(verseNumber + 1);
+      } else if (e.key === 'ArrowDown' || e.key === 's') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (bodyRef.current) bodyRef.current.scrollBy({ top: bodyRef.current.clientHeight * 0.8, behavior: 'smooth' });
+      } else if (e.key === 'ArrowUp' || e.key === 'a') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (bodyRef.current) bodyRef.current.scrollBy({ top: -bodyRef.current.clientHeight * 0.8, behavior: 'smooth' });
+      }
+    };
+    if (open) window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [open, onClose, onNavigateVerse, verseNumber, totalVerses]);
 
   if (!open) return null;
 
@@ -194,6 +216,28 @@ export default function VerseCommentaryModal({
               }}
               aria-label="Next verse"
             >›</button>
+            {(() => {
+              const bookId = BOOK_ID_MAP[bookAbbrev];
+              const slug = bookId && MHC_SLUGS[bookId];
+              if (!slug) return null;
+              const href = `https://biblehub.com/commentaries/mhc/${slug}/${chapter}.htm`;
+              return (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    background: selectBg, color: textColor, border: `1px solid ${border}`,
+                    borderRadius: 6, padding: '4px 9px', fontSize: '0.82rem',
+                    fontWeight: 600, textDecoration: 'none', cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  MHC ↗
+                </a>
+              );
+            })()}
           </div>
           <button
             onClick={onClose}
@@ -237,32 +281,10 @@ export default function VerseCommentaryModal({
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
-            {(() => {
-              const bookId = BOOK_ID_MAP[bookAbbrev];
-              const slug = bookId && MHC_SLUGS[bookId];
-              if (!slug) return null;
-              const href = `https://biblehub.com/commentaries/mhc/${slug}/${chapter}.htm`;
-              return (
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                    background: selectBg, color: textColor, border: `1px solid ${border}`,
-                    borderRadius: 6, padding: '4px 9px', fontSize: '0.82rem',
-                    fontWeight: 600, textDecoration: 'none', cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  MHC ↗
-                </a>
-              );
-            })()}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <button
-              onClick={() => setFontSize(s => Math.max(0.6, +(s - 0.1).toFixed(2)))}
+              onClick={() => setFontSize(s => { const n = Math.max(0.6, +(s - 0.1).toFixed(2)); localStorage.setItem('verseCommentaryFontSize', n); return n; })}
               style={{
                 background: closeBg, color: textColor, border: 'none', borderRadius: 6,
                 padding: '3px 9px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
@@ -270,7 +292,7 @@ export default function VerseCommentaryModal({
               aria-label="Decrease font size"
             >A−</button>
             <button
-              onClick={() => setFontSize(s => Math.min(2.0, +(s + 0.1).toFixed(2)))}
+              onClick={() => setFontSize(s => { const n = Math.min(2.0, +(s + 0.1).toFixed(2)); localStorage.setItem('verseCommentaryFontSize', n); return n; })}
               style={{
                 background: closeBg, color: textColor, border: 'none', borderRadius: 6,
                 padding: '3px 9px', fontSize: '1rem', fontWeight: 700, cursor: 'pointer',
