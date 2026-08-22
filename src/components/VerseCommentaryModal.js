@@ -137,7 +137,7 @@ export default function VerseCommentaryModal({
         e.preventDefault();
         e.stopPropagation();
         if (verseNumber > 1) onNavigateVerse?.(verseNumber - 1);
-      } else if (e.key === 'ArrowRight') {
+      } else if (e.key === 'ArrowRight' || e.key === 'f') {
         e.preventDefault();
         e.stopPropagation();
         if (totalVerses && verseNumber < totalVerses) onNavigateVerse?.(verseNumber + 1);
@@ -255,7 +255,7 @@ export default function VerseCommentaryModal({
           padding: '12px 20px', borderBottom: `1px solid ${border}`,
           background: verseBg, flexShrink: 0,
         }}>
-          <p style={{ margin: 0, lineHeight: 1.7, fontSize: '0.95rem', fontStyle: 'italic' }}>
+          <p style={{ margin: 0, lineHeight: 1.7, fontSize: '1em', fontStyle: 'italic', fontWeight: 600 }}>
             {verseText}
           </p>
         </div>
@@ -344,7 +344,7 @@ export default function VerseCommentaryModal({
                 padding: '6px 18px', cursor: 'pointer',
                 color: isDarkMode ? '#9ca3af' : isSepiaMode ? '#7a5a2a' : '#6b7280',
               }}
-            >Next Verse ›</button>
+            >Next Verse (f) ›</button>
           )}
         </div>
         </div>
