@@ -11701,11 +11701,30 @@ const BibleApp = () => {
                           style={{ fontSize: '0.72em', fontWeight: 700, padding: '2px 8px', borderRadius: 4, cursor: 'pointer', background: storyIntroTab === 'intro' ? tabActiveBg : 'transparent', color: storyIntroTab === 'intro' ? '#fff' : isDarkMode ? '#aaa' : '#555', transition: 'background 0.15s' }}
                         >Intro</span>
                       </div>
+                      {/* Comm button — opens commentary modal for verse 1 of active chapter */}
+                      <button
+                        onClick={() => {
+                          const abbrev = activeBook?.abbrev;
+                          if (!abbrev) return;
+                          const verses = getRightPaneChapterVerses(abbrev, activeChapter);
+                          const raw = verses?.[0];
+                          const verseStr = raw ? (typeof raw === 'string' ? raw : (raw?.text || raw?.verse || String(raw))) : '';
+                          setVerseModalData({
+                            verseLabel: `${getBookName(abbrev)} ${activeChapter}:1`,
+                            verseText: verseStr,
+                            bookAbbrev: abbrev,
+                            chapter: activeChapter,
+                            verseNumber: 1,
+                          });
+                          closeStoryModal();
+                        }}
+                        style={navBtnStyle}
+                        title="Open commentary"
+                      >commen</button>
 
                       {/* Story-tab controls */}
                       {storyIntroTab === 'story' && storytimeContent && (
                         <>
-                          <button onClick={handlePrev} style={navBtnStyle} title="Previous book">‹ Book</button>
                           <span style={{ fontSize: '0.85em', fontWeight: 700, color: isDarkMode ? '#c4b5fd' : '#7c3aed', flexShrink: 0 }}>
                             {bookDisplayName}
                           </span>
@@ -11720,7 +11739,6 @@ const BibleApp = () => {
                               : <option value={activeChapter}>Ch {activeChapter}</option>
                             }
                           </select>
-                          <button onClick={handleNext} style={navBtnStyle} title="Next book">Book ›</button>
                           <span style={{ width: 1, alignSelf: 'stretch', background: isDarkMode ? '#555' : '#ddd', margin: '0 2px', flexShrink: 0 }} />
                           <button
                             onClick={() => setStorytimeFontSize(s => Math.max(0.6, s - 0.1))}
@@ -12201,6 +12219,13 @@ const BibleApp = () => {
         onNavigateVerse={handleVerseModalNavigate}
         isDarkMode={isDarkMode}
         isSepiaMode={isSepiaMode}
+        onOpenStory={() => {
+          setVerseModalData(null);
+          loadStorytimeForCurrent();
+          setStoryIntroTab('story');
+          setShowSearchModal(true);
+          setSearchStartRef('');
+        }}
       />
       <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
       <YouTubeVideoModal ref={youtubeModalRef} open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} onOpen={() => setShowYouTubeModal(true)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsYouTubePlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} ytMode={ytMode} onYtModeChange={handleYtModeChange} />

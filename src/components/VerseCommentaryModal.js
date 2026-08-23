@@ -55,6 +55,7 @@ export default function VerseCommentaryModal({
   bookAbbrev, chapter, verseNumber,
   totalVerses, onNavigateVerse,
   isDarkMode, isSepiaMode,
+  onOpenStory,
 }) {
   const [selectedCommentary, setSelectedCommentary] = useState('john-gill');
   const [fontSize, setFontSize] = useState(() => {
@@ -238,6 +239,19 @@ export default function VerseCommentaryModal({
                 </a>
               );
             })()}
+            {onOpenStory && (
+              <button
+                onClick={() => { onClose?.(); onOpenStory(); }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: selectBg, color: textColor, border: `1px solid ${border}`,
+                  borderRadius: 6, padding: '4px 9px', fontSize: '0.82rem',
+                  fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                }}
+              >
+                Story
+              </button>
+            )}
           </div>
           <button
             onClick={onClose}
