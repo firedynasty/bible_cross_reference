@@ -525,92 +525,20 @@ const NavigationPlaceholder = ({
 }) => {
   const [navigationHistory, setNavigationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [showPromptDropdown, setShowPromptDropdown] = useState(false);
   const [showTouchDropdown, setShowTouchDropdown] = useState(false);
   const [showLinksDropdown, setShowLinksDropdown] = useState(false);
-  const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
-
-  // Bible study prompt options
-  const bibleStudyPrompts = [
-    {
-      id: 1,
-      label: "1. Meditation",
-      template: "Meditation Connection, For {book} {chapter}, tell me what is the theme connect to meditation like breathe in out"
-    },
-    {
-      id: 2,
-      label: "Literary",
-      template: 'Literary & Structure Analysis: For {book} {chapter}, "Analyze the literary structure, rhetorical devices, and narrative techniques used in this chapter - how do elements like repetition, imagery, parallelism, chiasm, or progression of ideas work together to reinforce the central message and create emotional or theological impact?"'
-    },
-    {
-      id: 3,
-      label: "Historical",
-      template: 'Historical & Cultural Context: For {book} {chapter}, "Explore the historical setting, cultural practices, social structures, and contextual factors that shaped this chapter - how do understanding the original audience, historical circumstances, and cultural background illuminate the meaning and significance of the text?"'
-    },
-    {
-      id: 4,
-      label: "Theological",
-      template: 'Theological & Doctrinal: For {book} {chapter}, "What does this chapter reveal about the nature and character of God, humanity\'s relationship with the divine, and major theological themes like covenant, salvation, justice, or redemption - and how do these teachings connect to or develop broader biblical doctrine?"'
-    },
-    {
-      id: 5,
-      label: "Practical",
-      template: 'Practical Application: For {book} {chapter}, "Given the original context and timeless principles in this chapter, what specific life situations, moral decisions, relationship dynamics, or spiritual challenges does this text address, and how can its wisdom be authentically applied to contemporary personal and communal life?"'
-    },
-    {
-      id: 6,
-      label: "Comparative",
-      template: 'Comparative Analysis: For {book} {chapter}, "How does this chapter\'s themes, language, imagery, and theological content compare and contrast with similar passages throughout Scripture, what unique contribution does it make to biblical literature, and how do different translations or interpretative traditions handle its key concepts?"'
-    },
-    {
-      id: 7,
-      label: "Spiritual",
-      template: 'Spiritual Formation: For {book} {chapter}, "How can this chapter inform and transform personal spiritual practices like prayer, meditation, worship, and discipleship - what spiritual disciplines does it model or encourage, and how might regular engagement with its content shape character and faith development?"'
-    },
-    {
-      id: 8,
-      label: "Creative",
-      template: 'Creative Engagement: For {book} {chapter}, "If you were to reimagine this chapter through contemporary storytelling, artistic expression, or modern parallels, what would it look like, what current situations mirror its dynamics, and how might creative interpretation help unlock its relevance for today\'s audience?"'
-    },
-    {
-      id: 9,
-      label: "Additional",
-      template: 'For {book} {chapter}, '
-    }
-  ];
-
-  // Handle copying Bible study prompt to clipboard
-  const handlePromptClipboard = useCallback((promptTemplate) => {
-    if (!book) return;
-    
-    const bookName = book.book || getBookName(book.abbrev);
-    const finalPrompt = promptTemplate.replace('{book}', bookName).replace('{chapter}', `Chapter ${chapter}`);
-    
-    navigator.clipboard.writeText(finalPrompt)
-      .then(() => {
-        alert(`Copied to clipboard: ${finalPrompt}`);
-        setShowPromptDropdown(false);
-      })
-      .catch(err => {
-        console.error('Failed to copy text: ', err);
-        alert('Failed to copy to clipboard. ' + err);
-      });
-  }, [book, chapter, getBookName]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (showPromptDropdown && !event.target.closest('.relative')) {
-        setShowPromptDropdown(false);
-      }
       if (showTouchDropdown && !event.target.closest('.relative')) {
         setShowTouchDropdown(false);
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showPromptDropdown, showTouchDropdown]);
+  }, [showTouchDropdown]);
 
 
 
@@ -929,40 +857,6 @@ const NavigationPlaceholder = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
           </svg>
         </button>
-        
-        {/* Bible study prompts - hidden (see prompts.txt for content) */}
-        <div className="hidden flex items-center">
-          <select
-            className="border border-gray-300 bg-white rounded px-2 py-1 text-sm max-w-xs ml-2"
-            style={{width: 'auto'}}
-            value={currentPromptIndex}
-            onChange={(e) => setCurrentPromptIndex(parseInt(e.target.value))}
-            title="Select Bible study prompt"
-          >
-            {bibleStudyPrompts.map((prompt, index) => (
-              <option key={prompt.id} value={index}>
-                {prompt.id}. {prompt.label}
-              </option>
-            ))}
-          </select>
-
-          <button
-            onClick={() => {
-              // Get current selection from the dropdown directly
-              const promptsSelect = document.querySelector('select[title="Select Bible study prompt"]');
-              if (promptsSelect) {
-                const currentIndex = parseInt(promptsSelect.value);
-                const currentPrompt = bibleStudyPrompts[currentIndex];
-                handlePromptClipboard(currentPrompt.template);
-              }
-            }}
-            className="ml-1 px-2 py-0.5 rounded focus:outline-none bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs"
-            title="Load selected prompt to clipboard"
-          >
-            <Download className="h-3 w-3" />
-          </button>
-          (/:read2end)
-        </div>
         
         {/* Text to Speech Component */}
         <TextToSpeech
@@ -2050,9 +1944,6 @@ const BibleApp = () => {
   const [strongsConcordance, setStrongsConcordance] = useState(null); // { number: 'H430', refs: [...], def: {...} }
 
   // State for Book Prompts (from prompts.json)
-  const [promptsData, setPromptsData] = useState(null);
-  const [showPromptPickerModal, setShowPromptPickerModal] = useState(false);
-  const [promptPickerOptions, setPromptPickerOptions] = useState([]);
 
   // State for Study Questions Modal
   const [showStudyQModal, setShowStudyQModal] = useState(false);
@@ -2561,21 +2452,6 @@ const BibleApp = () => {
   }, []);
 
   // Load book prompts JSON on startup
-  useEffect(() => {
-    const loadPrompts = async () => {
-      try {
-        const baseUrl = getBaseUrl();
-        const response = await fetch(`${baseUrl}/prompts.json`);
-        if (response.ok) {
-          const data = await response.json();
-          setPromptsData(data);
-        }
-      } catch (error) {
-        console.log('No prompts.json found');
-      }
-    };
-    loadPrompts();
-  }, []);
 
   // Load psalm hymns JSON on startup
   useEffect(() => {
@@ -3036,29 +2912,6 @@ const BibleApp = () => {
     're': 'Revelation', 'ge': 'Genesis'
   };
 
-  // Handle Prompt button click - auto-detect book, copy or show picker
-  const handlePromptButtonClick = useCallback(() => {
-    if (!promptsData || !selectedBook) return;
-    const bookName = abbrevToBookName[selectedBook.abbrev] || selectedBook.abbrev;
-    console.log('Prompt button: abbrev=', selectedBook.abbrev, 'bookName=', bookName);
-    // Find all matching keys (exact match or starts with book name)
-    const matches = Object.keys(promptsData).filter(
-      key => key === bookName || key.startsWith(bookName + ' ')
-    );
-    if (matches.length === 0) {
-      // No prompt for this book - show all available books in picker
-      setPromptPickerOptions(Object.keys(promptsData));
-      setShowPromptPickerModal(true);
-    } else if (matches.length === 1) {
-      navigator.clipboard.writeText(promptsData[matches[0]])
-        .then(() => alert(`Copied ${bookName} prompt to clipboard`))
-        .catch(err => alert('Failed to copy: ' + err));
-    } else {
-      // Multiple parts - show picker modal
-      setPromptPickerOptions(matches);
-      setShowPromptPickerModal(true);
-    }
-  }, [promptsData, selectedBook]);
 
   // Handle Story Time button click - load story content and open combined modal
   const handleStorytimeButtonClick = useCallback(() => {
@@ -4004,7 +3857,13 @@ const BibleApp = () => {
           }, 50);
         }
       }
-      // Arrow keys scroll the Intro tab when it's open inside the story modal
+      // Arrow keys scroll the Story/Intro tab when the story modal is open
+      else if (showSearchModal && storyIntroTab === 'story' && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && storytimeScrollRef.current) {
+        e.preventDefault();
+        const step = storytimeScrollRef.current.clientHeight * 0.8;
+        storytimeScrollRef.current.scrollBy({ top: e.key === 'ArrowDown' ? step : -step, behavior: 'smooth' });
+        return;
+      }
       else if (showSearchModal && storyIntroTab === 'intro' && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && introModalScrollRef.current) {
         e.preventDefault();
         const step = introModalScrollRef.current.clientHeight * 0.35;
@@ -4013,7 +3872,7 @@ const BibleApp = () => {
       }
 
       // Up Arrow - scroll up one line at a time in KJV pane (opposite of 'x' key)
-      else if ((e.key === 'ArrowUp' || e.key === '-' || e.key === 'a') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal && !showOutlineModal && !showSearchModal && !verseModalData) {
+      else if ((e.key === 'ArrowUp' || e.key === 'a') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal && !showOutlineModal && !showSearchModal && !verseModalData) {
         
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
@@ -4108,7 +3967,7 @@ const BibleApp = () => {
         }
       }
       // 'p' key, PageDown key, ArrowDown key, or Spacebar - page down (matches pane 2 page-down button: scroll, or advance chapter at bottom)
-      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === '+' || e.key === '=' || e.key === 's') && kjvContentRef.current && !showQuiz2Modal && !showWordsModal && !showYouTubeModal && !showOutlineModal && !showSearchModal && !verseModalData) {
+      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === 's') && kjvContentRef.current && !showQuiz2Modal && !showWordsModal && !showYouTubeModal && !showOutlineModal && !showSearchModal && !verseModalData) {
         const kjvPane = kjvContentRef.current;
         const maxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
         const atBottom = maxScroll > 0 && kjvPane.scrollTop >= maxScroll - 5;
@@ -4343,32 +4202,6 @@ const BibleApp = () => {
         if (readToEndButton) {
           readToEndButton.click();
           console.log("/ key pressed - toggled Read to End");
-        }
-        e.preventDefault();
-      }
-      // 'u' key - cycle to next prompt (like Next Transl button)
-      else if (e.key === 'u' || e.key === 'U') {
-        // Find the prompts select element by its title
-        const promptsSelect = document.querySelector('select[title="Select Bible study prompt"]');
-        if (promptsSelect) {
-          const currentIndex = parseInt(promptsSelect.value);
-          const totalOptions = promptsSelect.options.length;
-          const nextIndex = (currentIndex + 1) % totalOptions;
-          
-          // Update the select value directly without triggering change event
-          promptsSelect.value = nextIndex;
-          
-          console.log(`u key pressed - cycled to prompt ${nextIndex + 1}: ${promptsSelect.options[nextIndex].text}`);
-        }
-        e.preventDefault();
-      }
-      // 'i' key - click Load prompt button
-      else if (e.key === 'i' || e.key === 'I') {
-        // Find the Load prompt button by its title
-        const loadButton = document.querySelector('button[title="Load selected prompt to clipboard"]');
-        if (loadButton) {
-          loadButton.click();
-          console.log("i key pressed - clicked Load prompt button");
         }
         e.preventDefault();
       }
@@ -6494,16 +6327,6 @@ const BibleApp = () => {
                   </button>
                 )}
 
-                {/* Book Prompt to Clipboard Button */}
-                {isFeatureVisible('prompt') && promptsData && (
-                  <button
-                    onClick={handlePromptButtonClick}
-                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-amber-500 text-white hover:bg-amber-600 font-semibold"
-                    title="Copy book prompt/commentary to clipboard"
-                  >
-                    Prompt
-                  </button>
-                )}
 
                 {isFeatureVisible('nltPsalms') && selectedBook && <button
                   onClick={() => {
@@ -11256,47 +11079,6 @@ const BibleApp = () => {
 
       {/* Study Questions - now rendered inline in pane 2 (see above) */}
 
-      {/* Prompt Picker Modal (for multi-part books or when no prompt for current book) */}
-      {showPromptPickerModal && (() => {
-        const bookName = selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : '';
-        const isAllBooks = promptPickerOptions.length === Object.keys(promptsData || {}).length;
-        return (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 max-h-[80vh] flex flex-col">
-              <h3 className="text-lg font-bold mb-1">
-                {isAllBooks ? 'No prompt for ' + bookName : 'Select Part'}
-              </h3>
-              {isAllBooks && (
-                <p className="text-sm text-gray-500 mb-3">Available prompts:</p>
-              )}
-              <div className="flex flex-col gap-2 overflow-y-auto">
-                {promptPickerOptions.map(key => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      navigator.clipboard.writeText(promptsData[key])
-                        .then(() => {
-                          alert(`Copied "${key}" prompt to clipboard`);
-                          setShowPromptPickerModal(false);
-                        })
-                        .catch(err => alert('Failed to copy: ' + err));
-                    }}
-                    className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-semibold text-sm text-left"
-                  >
-                    {key}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => setShowPromptPickerModal(false)}
-                className="mt-4 w-full px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-sm"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Hidden audio element for Story Time chapter playback */}
       <audio
@@ -11721,6 +11503,12 @@ const BibleApp = () => {
                         style={navBtnStyle}
                         title="Open commentary"
                       >commen</button>
+                      {/* Outline button */}
+                      <button
+                        onClick={() => { closeStoryModal(); setShowOutlineModal(true); }}
+                        style={navBtnStyle}
+                        title="Open outline"
+                      >outline</button>
 
                       {/* Story-tab controls */}
                       {storyIntroTab === 'story' && storytimeContent && (
@@ -12226,6 +12014,17 @@ const BibleApp = () => {
           setShowSearchModal(true);
           setSearchStartRef('');
         }}
+        onOpenIntro={() => {
+          setVerseModalData(null);
+          loadStorytimeForCurrent();
+          setStoryIntroTab('intro');
+          setShowSearchModal(true);
+          setSearchStartRef('');
+        }}
+        onOpenOutline={() => {
+          setVerseModalData(null);
+          setShowOutlineModal(true);
+        }}
       />
       <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
       <YouTubeVideoModal ref={youtubeModalRef} open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} onOpen={() => setShowYouTubeModal(true)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsYouTubePlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} ytMode={ytMode} onYtModeChange={handleYtModeChange} />
@@ -12261,6 +12060,35 @@ const BibleApp = () => {
             precomputedOutline={outlinesData?.[oBook?.abbrev]?.[String(oChapter)]}
             suppressEscape={showBookNavModal}
             onNavigateRef={navigateToRefWithHighlight}
+            onOpenStory={() => {
+              setShowOutlineModal(false);
+              loadStorytimeForCurrent();
+              setStoryIntroTab('story');
+              setShowSearchModal(true);
+              setSearchStartRef('');
+            }}
+            onOpenIntro={() => {
+              setShowOutlineModal(false);
+              loadStorytimeForCurrent();
+              setStoryIntroTab('intro');
+              setShowSearchModal(true);
+              setSearchStartRef('');
+            }}
+            onOpenCommentary={() => {
+              const abbrev = oBook?.abbrev;
+              if (!abbrev) return;
+              const verses = getRightPaneChapterVerses(abbrev, oChapter);
+              const raw = verses?.[0];
+              const verseStr = raw ? (typeof raw === 'string' ? raw : (raw?.text || raw?.verse || String(raw))) : '';
+              setVerseModalData({
+                verseLabel: `${oBookName} ${oChapter}:1`,
+                verseText: verseStr,
+                bookAbbrev: abbrev,
+                chapter: oChapter,
+                verseNumber: 1,
+              });
+              setShowOutlineModal(false);
+            }}
           />
         );
       })()}

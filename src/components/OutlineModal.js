@@ -268,17 +268,14 @@ function parseAIOutline(text) {
 }
 
 // ── Main Modal ───────────────────────────────────────────────────────────────
-export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, isSepiaMode, kjvContentRef, precomputedOutline, suppressEscape, onNavigateRef }) {
+export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, isSepiaMode, kjvContentRef, precomputedOutline, suppressEscape, onNavigateRef, onOpenStory, onOpenCommentary, onOpenIntro }) {
   const [showTags] = useState(false);
   const [useAI, setUseAI] = useState(true);
   const [flatMode, setFlatMode] = useState(true);
   const [fz, setFz] = useState(() => {
     try { return parseFloat(localStorage.getItem('outline-fz')) || 1.0; } catch (e) { return 1.0; }
   });
-  const [writeValue, setWriteValue] = useState('');
-
   const treeRef = useRef(null);
-  const inputRef = useRef(null);
 
   // Keyboard navigation: Escape closes, ArrowLeft/Right navigate chapters
   useEffect(() => {
@@ -288,7 +285,6 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
         onClose();
         return;
       }
-      // Arrow chapter nav — skip when the write input has focus (it handles its own)
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.key === 'ArrowLeft') {
         if (chapter > 1) { e.preventDefault(); onPrevChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }
@@ -331,32 +327,6 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
     borderRadius: 4, padding: '2px 10px', cursor: disabled ? 'default' : 'pointer',
     color: disabled ? '#aaa' : accentColor, opacity: disabled ? 0.4 : 1,
   });
-
-  function handleWriteKeyDown(e) {
-    if (e.key === 'ArrowRight') {
-      e.preventDefault(); e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation();
-      if (chapter < totalChapters) { onNextChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault(); e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation();
-      if (chapter > 1) { onPrevChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault(); e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation();
-      const el = treeRef.current;
-      if (el) el.scrollBy({ top: el.clientHeight - 60, behavior: 'smooth' });
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault(); e.stopPropagation(); e.nativeEvent?.stopImmediatePropagation();
-      const el = treeRef.current;
-      if (el) el.scrollBy({ top: -(el.clientHeight - 60), behavior: 'smooth' });
-    } else if (e.key === 'Enter') {
-      const semiIdx = writeValue.lastIndexOf(';');
-      if (semiIdx === -1 || !onNavigateRef) return;
-      const ref = writeValue.slice(0, semiIdx).trim();
-      if (!ref) return;
-      e.preventDefault();
-      onNavigateRef(ref);
-      setWriteValue('');
-    }
-  }
 
   function handleModalKeyDown(e) {
     if (e.key === 'ArrowDown') {
@@ -417,29 +387,30 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
           <span style={{ fontWeight: 700, fontSize: 15, color: textColor }}>{bookName} {chapter}</span>
           <button onClick={() => { onNextChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }} disabled={chapter >= totalChapters} style={navBtnStyle(chapter >= totalChapters)}>›</button>
 
-          {/* Write input — ← → navigate chapters, Tab scrolls pane */}
-          <input
-            ref={inputRef}
-            type="text"
-            value={writeValue}
-            onChange={(e) => setWriteValue(e.target.value)}
-            onKeyDown={handleWriteKeyDown}
-            placeholder="with ; will go to new location"
-            style={{
-              flex: 1, minWidth: 160, fontFamily: 'inherit', fontSize: 20,
-              padding: '4px 10px', border: `1px solid ${borderColor}`, borderRadius: 4,
-              background: isDarkMode ? '#0d0f12' : '#2b2b2b', color: isDarkMode ? '#e8e4db' : '#f0ece3',
-              outline: 'none',
-            }}
-          />
-          <button
-            onClick={() => { setWriteValue(''); inputRef.current?.focus(); }}
-            style={{ fontFamily: 'inherit', fontSize: 12, background: 'none', border: `1px solid ${borderColor}`, borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: accentColor, whiteSpace: 'nowrap' }}
-          >
-            Clear
-          </button>
+          {/* Cross-navigation buttons */}
+          {onOpenStory && (
+            <button
+              onClick={onOpenStory}
+              style={{ fontFamily: 'inherit', fontSize: 13, background: 'none', border: `1px solid ${borderColor}`, borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: accentColor, whiteSpace: 'nowrap' }}
+              title="Open story"
+            >Story</button>
+          )}
+          {onOpenIntro && (
+            <button
+              onClick={onOpenIntro}
+              style={{ fontFamily: 'inherit', fontSize: 13, background: 'none', border: `1px solid ${borderColor}`, borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: accentColor, whiteSpace: 'nowrap' }}
+              title="Open intro"
+            >Intro</button>
+          )}
+          {onOpenCommentary && (
+            <button
+              onClick={onOpenCommentary}
+              style={{ fontFamily: 'inherit', fontSize: 13, background: 'none', border: `1px solid ${borderColor}`, borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: accentColor, whiteSpace: 'nowrap' }}
+              title="Open commentary"
+            >commen</button>
+          )}
 
-          <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto' }}>
             <button onClick={() => setFz(f => { const n = Math.max(0.7, +(f - 0.1).toFixed(2)); try { localStorage.setItem('outline-fz', n); } catch (e) {} return n; })} style={{ fontFamily: 'inherit', fontSize: 12, background: 'none', border: 'none', cursor: 'pointer', color: accentColor, padding: '2px 2px' }}>A−</button>
             <button onClick={() => setFz(f => { const n = Math.min(2.0, +(f + 0.1).toFixed(2)); try { localStorage.setItem('outline-fz', n); } catch (e) {} return n; })} style={{ fontFamily: 'inherit', fontSize: 12, background: 'none', border: 'none', cursor: 'pointer', color: accentColor, padding: '2px 2px' }}>A+</button>
             <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, color: '#888', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}>×</button>

@@ -56,6 +56,8 @@ export default function VerseCommentaryModal({
   totalVerses, onNavigateVerse,
   isDarkMode, isSepiaMode,
   onOpenStory,
+  onOpenIntro,
+  onOpenOutline,
 }) {
   const [selectedCommentary, setSelectedCommentary] = useState('john-gill');
   const [fontSize, setFontSize] = useState(() => {
@@ -250,6 +252,32 @@ export default function VerseCommentaryModal({
                 }}
               >
                 Story
+              </button>
+            )}
+            {onOpenIntro && (
+              <button
+                onClick={() => { onClose?.(); onOpenIntro(); }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: selectBg, color: textColor, border: `1px solid ${border}`,
+                  borderRadius: 6, padding: '4px 9px', fontSize: '0.82rem',
+                  fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                }}
+              >
+                Intro
+              </button>
+            )}
+            {onOpenOutline && (
+              <button
+                onClick={() => { onClose?.(); onOpenOutline(); }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: selectBg, color: textColor, border: `1px solid ${border}`,
+                  borderRadius: 6, padding: '4px 9px', fontSize: '0.82rem',
+                  fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                }}
+              >
+                outline
               </button>
             )}
           </div>
