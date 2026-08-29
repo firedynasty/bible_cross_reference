@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 function splitIntoChunks(verseText) {
   if (!verseText) return [];
-  const raw = verseText.split(/(?<=[,;:])/).map(s => s.trim()).filter(s => s.length > 0);
+  const raw = verseText.split(/(?<=[,;:.])/).map(s => s.trim()).filter(s => s.length > 0);
   return raw.length > 1 ? raw : [verseText];
 }
 
