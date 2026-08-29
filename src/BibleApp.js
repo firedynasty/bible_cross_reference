@@ -7,6 +7,7 @@ import ClassicalMusicModal from './components/ClassicalMusicModal';
 import YouTubeVideoModal from './components/YouTubeVideoModal';
 import OutlineModal from './components/OutlineModal';
 import VerseCommentaryModal from './components/VerseCommentaryModal';
+import VerseMemorizeModal from './components/VerseMemorizeModal';
 import { getStorytimeAudioUrl } from './data/storytimeAudio';
 import { getRhymeAudioUrl } from './data/rhymeAudio';
 
@@ -1531,6 +1532,7 @@ const BibleApp = () => {
   const [showCrossRef, setShowCrossRef] = useState(null);
   const [expandedRefsData, setExpandedRefsData] = useState(null); // { verseLabel, refs: [{label, text}] }
   const [verseModalData, setVerseModalData] = useState(null); // { verseLabel, verseText, bookAbbrev, chapter, verseNumber }
+  const [memorizeModalData, setMemorizeModalData] = useState(null); // { verseLabel, verseText, bookAbbrev, chapter, verseNumber }
 
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
@@ -1696,7 +1698,8 @@ const BibleApp = () => {
     'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
     'fontPlus', 'youtube', 'youtubeDramatized', 'lang', 'soaking', 'classical', 'classicalPlay',
     'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
-    'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting', 'outline', 'intro'
+    'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting', 'outline', 'intro',
+    'memorize', 'commentary'
   ];
   const featureLabels = {
     search: 'Story', rhyme: 'Rhyme', storyAudio: 'Story ▶/⏸', chpCopy: 'Chp📋',
@@ -1710,7 +1713,8 @@ const BibleApp = () => {
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com',
-    pane2Only: 'P2 Only', scriptureWriting: 'Scripture Writing', outline: 'Outline(o)', intro: 'Intro'
+    pane2Only: 'P2 Only', scriptureWriting: 'Scripture Writing', outline: 'Outline(o)', intro: 'Intro',
+    memorize: 'Memorize', commentary: 'Commentary'
   };
   const [visibleFeatures, setVisibleFeatures] = useState(() => {
     try {
@@ -1723,6 +1727,8 @@ const BibleApp = () => {
     } catch (e) {}
     const defaults = Object.fromEntries(allFeatureKeys.map(k => [k, true]));
     defaults.scriptureWriting = false;
+    defaults.memorize = false;
+    defaults.commentary = false;
     return defaults;
   });
   const [showFeatureToggleModal, setShowFeatureToggleModal] = useState(false);
@@ -6049,6 +6055,63 @@ const BibleApp = () => {
               </svg>
             </button>
 
+            {/* Memorize button */}
+            {isFeatureVisible('memorize') && (
+              <button
+                onClick={() => {
+                  const pane = kjvContentRef.current;
+                  if (!pane || !selectedBook || !selectedChapter) return;
+                  const paneRect = pane.getBoundingClientRect();
+                  let topVerse = 1;
+                  for (let i = 1; i <= 200; i++) {
+                    const el = document.getElementById(`right-pane-verse-${i}`);
+                    if (!el) break;
+                    if (el.getBoundingClientRect().bottom > paneRect.top + 40) { topVerse = i; break; }
+                  }
+                  const abbrev = selectedBook.abbrev;
+                  const chapterVerses = getRightPaneChapterVerses(abbrev, selectedChapter);
+                  const raw = chapterVerses?.[topVerse - 1];
+                  const verseStr = raw ? (typeof raw === 'string' ? raw : (raw?.text || raw?.verse || String(raw))) : '';
+                  const bkName = getBookName(abbrev);
+                  setMemorizeModalData({
+                    verseLabel: `${bkName} ${selectedChapter}:${topVerse}`,
+                    verseText: verseStr,
+                    bookAbbrev: abbrev,
+                    chapter: selectedChapter,
+                    verseNumber: topVerse,
+                    bookName: bkName,
+                    chapterVerses,
+                  });
+                }}
+                className={`px-2 py-0.5 rounded text-xs font-semibold ${isDarkMode ? 'bg-blue-700 text-white hover:bg-blue-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                title="Memorize current verse"
+              >
+                Memorize
+              </button>
+            )}
+
+            {/* Commentary button */}
+            {isFeatureVisible('commentary') && (
+              <button
+                onClick={() => {
+                  const pane = kjvContentRef.current;
+                  if (!pane) return;
+                  const paneRect = pane.getBoundingClientRect();
+                  let topVerse = 1;
+                  for (let i = 1; i <= 200; i++) {
+                    const el = document.getElementById(`right-pane-verse-${i}`);
+                    if (!el) break;
+                    if (el.getBoundingClientRect().bottom > paneRect.top + 40) { topVerse = i; break; }
+                  }
+                  window.dispatchEvent(new CustomEvent('openVerseCommentaryAtVerse', { detail: { verseNumber: topVerse } }));
+                }}
+                className={`px-2 py-0.5 rounded text-xs font-semibold ${isDarkMode ? 'bg-amber-600 text-white hover:bg-amber-500' : 'bg-amber-500 text-white hover:bg-amber-600'}`}
+                title="View commentary for current verse"
+              >
+                Commentary
+              </button>
+            )}
+
             {/* Current book name next to gear */}
             {selectedBook && (
               <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>{selectedBook.book || getBookName(selectedBook.abbrev)}</span>
@@ -8264,17 +8327,20 @@ const BibleApp = () => {
                               >
                                 <p className="flex">
                                   <span
-                                    title="View commentary"
+                                    title="Memorize / speak chunks"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       const verseStr = typeof verse === 'string' ? verse : (verse?.text || verse?.verse || String(verse));
                                       const bookName = getBookName(bookAbbrev);
-                                      setVerseModalData({
+                                      const chapterVerses = getRightPaneChapterVerses(bookAbbrev, effectiveChapter);
+                                      setMemorizeModalData({
                                         verseLabel: `${bookName} ${effectiveChapter}:${verseNumber}`,
                                         verseText: verseStr,
                                         bookAbbrev,
                                         chapter: effectiveChapter,
                                         verseNumber,
+                                        bookName,
+                                        chapterVerses,
                                       });
                                     }}
                                     className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}
@@ -11995,6 +12061,23 @@ const BibleApp = () => {
       })()}
 
       <FurtherReadingModal open={showFiguresModal} onClose={() => setShowFiguresModal(false)} />
+      <VerseMemorizeModal
+        open={!!memorizeModalData}
+        onClose={() => setMemorizeModalData(null)}
+        verseLabel={memorizeModalData?.verseLabel}
+        verseText={memorizeModalData?.verseText}
+        bookName={memorizeModalData?.bookName}
+        chapter={memorizeModalData?.chapter}
+        startVerseNumber={memorizeModalData?.verseNumber}
+        chapterVerses={memorizeModalData?.chapterVerses}
+        isDarkMode={isDarkMode}
+        isSepiaMode={isSepiaMode}
+        onOpenCommentary={() => {
+          const d = memorizeModalData;
+          setMemorizeModalData(null);
+          setVerseModalData(d);
+        }}
+      />
       <VerseCommentaryModal
         open={!!verseModalData}
         onClose={() => setVerseModalData(null)}
