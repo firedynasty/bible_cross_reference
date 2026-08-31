@@ -349,8 +349,11 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
     return { flatWords: fw, flatNodes: fn, nodeWordRanges: nwr };
   }, [roots]);
 
-  // Reset game when chapter changes
-  useEffect(() => { setGameWordIdx(null); }, [chapter]);
+  // Reset game and scroll to top when chapter changes
+  useEffect(() => {
+    setGameWordIdx(null);
+    if (treeRef.current) treeRef.current.scrollTop = 0;
+  }, [chapter]);
 
   // Scroll active word into view
   useEffect(() => {
@@ -424,15 +427,6 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
             }
           }
           return 0;
-        });
-      } else if (e.key === 'k') {
-        // Jump to start of next sentence/node
-        e.preventDefault();
-        setGameWordIdx(prev => {
-          if (prev === null) return 0;
-          const nodeIdx = flatNodes.findIndex(n => prev >= n.start && prev < n.start + n.count);
-          if (nodeIdx === -1 || nodeIdx >= flatNodes.length - 1) return Math.min(prev + 5, flatWords.length - 1);
-          return flatNodes[nodeIdx + 1].start;
         });
       } else if (e.key === 'l') {
         e.preventDefault();
