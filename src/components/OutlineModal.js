@@ -211,7 +211,7 @@ const TAG_STYLES = {
 const INDENT_TAGS = new Set(['qualification', 'consequence', 'contrast']);
 
 // ── React tree renderer ──────────────────────────────────────────────────────
-function OutlineNodeEl({ node, showTags, gameWordIdx, nodeWordRanges, activeWordRef }) {
+function OutlineNodeEl({ node, showTags, gameWordIdx, nodeWordRanges, activeWordRef, onNodeRef }) {
   if (node.tag === 'spacer') {
     return <li style={{ listStyle: 'none', margin: '10px 0 2px', minHeight: 10 }} aria-hidden="true" />;
   }
@@ -241,7 +241,7 @@ function OutlineNodeEl({ node, showTags, gameWordIdx, nodeWordRanges, activeWord
   }
 
   return (
-    <li style={{ margin: '4px 0', lineHeight: 1.55, position: 'relative', paddingLeft: 16, marginLeft: extraIndent }}>
+    <li ref={el => { if (el && onNodeRef) onNodeRef(node, el); }} style={{ margin: '4px 0', lineHeight: 1.55, position: 'relative', paddingLeft: 16, marginLeft: extraIndent }}>
       <span style={{ position: 'absolute', left: 0, top: '0.65em', width: 5, height: 5, borderRadius: '50%', background: '#b9b2a2', display: 'inline-block' }} />
       {textContent}
       {showTags && node.tag && ts && (
@@ -252,7 +252,7 @@ function OutlineNodeEl({ node, showTags, gameWordIdx, nodeWordRanges, activeWord
       {node.children.length > 0 && (
         <ul style={{ listStyle: 'none', margin: 0, paddingLeft: 22 }}>
           {node.children.map((child, i) => (
-            <OutlineNodeEl key={i} node={child} showTags={showTags} gameWordIdx={gameWordIdx} nodeWordRanges={nodeWordRanges} activeWordRef={activeWordRef} />
+            <OutlineNodeEl key={i} node={child} showTags={showTags} gameWordIdx={gameWordIdx} nodeWordRanges={nodeWordRanges} activeWordRef={activeWordRef} onNodeRef={onNodeRef} />
           ))}
         </ul>
       )}
@@ -301,6 +301,8 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
   const [gameWordIdx, setGameWordIdx] = useState(null);
   const treeRef = useRef(null);
   const activeWordRef = useRef(null);
+  const nodeElsRef = useRef(new Map());
+  const onNodeRef = (node, el) => { nodeElsRef.current.set(node, el); };
 
   // Build one "paragraph" per verse — no verse numbers
   const paragraphs = useMemo(() => {
@@ -357,7 +359,32 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
     }
   }, [gameWordIdx]);
 
-  // Keyboard navigation: Escape closes/deactivates game, ArrowLeft/Right navigate chapters, j/k/l/; word-hop game
+  // Full-page scroll on wheel inside the outline tree — accumulates ticks so rapid scrolling stacks
+  const scrollTargetRef = useRef(null);
+  const scrollResetTimerRef = useRef(null);
+  useEffect(() => {
+    const el = treeRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      e.preventDefault();
+      const page = el.clientHeight;
+      // Use tracked target if still animating, otherwise start from actual scrollTop
+      const current = scrollTargetRef.current ?? el.scrollTop;
+      const next = Math.max(0, Math.min(el.scrollHeight - el.clientHeight, current + (e.deltaY > 0 ? page : -page)));
+      scrollTargetRef.current = next;
+      el.scrollTo({ top: next, behavior: 'smooth' });
+      // Reset tracker after animation settles so next scroll starts from real position
+      clearTimeout(scrollResetTimerRef.current);
+      scrollResetTimerRef.current = setTimeout(() => { scrollTargetRef.current = null; }, 600);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      clearTimeout(scrollResetTimerRef.current);
+    };
+  }, []);
+
+  // Keyboard navigation: Escape closes/deactivates game, ArrowLeft/Right navigate chapters, j/k/l word-hop game
   useEffect(() => {
     const handler = (e) => {
       if (e.key === 'Escape') {
@@ -381,11 +408,24 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
       // Word-hop game keys
       else if (e.key === 'j') {
         e.preventDefault();
-        setGameWordIdx(prev => prev === null ? 0 : Math.min(prev + 1, flatWords.length - 1));
+        setGameWordIdx(prev => {
+          if (prev !== null) return Math.min(prev + 1, flatWords.length - 1);
+          // Find first visible node in the scroll container
+          const container = treeRef.current;
+          if (container) {
+            const cTop = container.getBoundingClientRect().top;
+            const cBottom = container.getBoundingClientRect().bottom;
+            for (const [node, range] of nodeWordRanges) {
+              const el = nodeElsRef.current.get(node);
+              if (el) {
+                const rect = el.getBoundingClientRect();
+                if (rect.bottom > cTop && rect.top < cBottom) return range.start;
+              }
+            }
+          }
+          return 0;
+        });
       } else if (e.key === 'k') {
-        e.preventDefault();
-        setGameWordIdx(prev => prev === null ? 0 : Math.max(prev - 1, 0));
-      } else if (e.key === 'l') {
         // Jump to start of next sentence/node
         e.preventDefault();
         setGameWordIdx(prev => {
@@ -394,22 +434,21 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
           if (nodeIdx === -1 || nodeIdx >= flatNodes.length - 1) return Math.min(prev + 5, flatWords.length - 1);
           return flatNodes[nodeIdx + 1].start;
         });
-      } else if (e.key === ';') {
-        // Jump to start of current sentence, or prev sentence if already at start
+      } else if (e.key === 'l') {
         e.preventDefault();
-        setGameWordIdx(prev => {
-          if (prev === null) return 0;
-          const nodeIdx = flatNodes.findIndex(n => prev >= n.start && prev < n.start + n.count);
-          if (nodeIdx === -1) return 0;
-          const cur = flatNodes[nodeIdx];
-          if (prev === cur.start && nodeIdx > 0) return flatNodes[nodeIdx - 1].start;
-          return cur.start;
-        });
+        if (gameWordIdx !== null) setGameWordIdx(null);
+        const el = treeRef.current;
+        if (el) el.scrollBy({ top: -(el.clientHeight - 60), behavior: 'smooth' });
+      } else if (e.key === 'h') {
+        e.preventDefault();
+        if (gameWordIdx !== null) setGameWordIdx(null);
+        const el = treeRef.current;
+        if (el) el.scrollBy({ top: el.clientHeight - 60, behavior: 'smooth' });
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose, suppressEscape, chapter, totalChapters, onPrevChapter, onNextChapter, gameWordIdx, flatWords, flatNodes]);
+  }, [onClose, suppressEscape, chapter, totalChapters, onPrevChapter, onNextChapter, gameWordIdx, flatWords, flatNodes, nodeWordRanges]);
 
   const bg = isDarkMode ? '#1a1c20' : '#faf8f3';
   const textColor = isDarkMode ? '#e8e4db' : '#2b2b2b';
@@ -530,7 +569,7 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
             ) : (
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                 {roots.map((node, i) => (
-                  <OutlineNodeEl key={i} node={node} showTags={showTags} gameWordIdx={gameWordIdx} nodeWordRanges={nodeWordRanges} activeWordRef={activeWordRef} />
+                  <OutlineNodeEl key={i} node={node} showTags={showTags} gameWordIdx={gameWordIdx} nodeWordRanges={nodeWordRanges} activeWordRef={activeWordRef} onNodeRef={onNodeRef} />
                 ))}
               </ul>
             )}
