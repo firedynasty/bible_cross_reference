@@ -211,16 +211,39 @@ const TAG_STYLES = {
 const INDENT_TAGS = new Set(['qualification', 'consequence', 'contrast']);
 
 // ── React tree renderer ──────────────────────────────────────────────────────
-function OutlineNodeEl({ node, showTags }) {
+function OutlineNodeEl({ node, showTags, gameWordIdx, nodeWordRanges, activeWordRef }) {
   if (node.tag === 'spacer') {
     return <li style={{ listStyle: 'none', margin: '10px 0 2px', minHeight: 10 }} aria-hidden="true" />;
   }
   const ts = node.tag ? TAG_STYLES[node.tag] : null;
   const extraIndent = node.tag && INDENT_TAGS.has(node.tag) ? 16 : 0;
+
+  // Word-hop game: render words as individually addressable spans
+  let textContent;
+  const range = nodeWordRanges?.get(node);
+  if (range && gameWordIdx !== null) {
+    const tokens = node.text.split(/(\s+)/);
+    let wordCounter = 0;
+    textContent = tokens.map((token, ti) => {
+      if (/^\s+$/.test(token)) return token;
+      const globalIdx = range.start + wordCounter++;
+      const isActive = globalIdx === gameWordIdx;
+      return (
+        <span
+          key={ti}
+          ref={isActive ? activeWordRef : null}
+          style={isActive ? { background: '#3b82f6', color: '#fff', borderRadius: 3, padding: '0 2px', fontWeight: 'bold' } : {}}
+        >{token}</span>
+      );
+    });
+  } else {
+    textContent = node.text;
+  }
+
   return (
     <li style={{ margin: '4px 0', lineHeight: 1.55, position: 'relative', paddingLeft: 16, marginLeft: extraIndent }}>
       <span style={{ position: 'absolute', left: 0, top: '0.65em', width: 5, height: 5, borderRadius: '50%', background: '#b9b2a2', display: 'inline-block' }} />
-      {node.text}
+      {textContent}
       {showTags && node.tag && ts && (
         <span style={{ fontFamily: 'monospace', fontSize: 10, padding: '1px 5px', borderRadius: 9, marginLeft: 6, background: ts.bg, color: ts.color, whiteSpace: 'nowrap' }}>
           [{node.tag}]
@@ -229,7 +252,7 @@ function OutlineNodeEl({ node, showTags }) {
       {node.children.length > 0 && (
         <ul style={{ listStyle: 'none', margin: 0, paddingLeft: 22 }}>
           {node.children.map((child, i) => (
-            <OutlineNodeEl key={i} node={child} showTags={showTags} />
+            <OutlineNodeEl key={i} node={child} showTags={showTags} gameWordIdx={gameWordIdx} nodeWordRanges={nodeWordRanges} activeWordRef={activeWordRef} />
           ))}
         </ul>
       )}
@@ -275,26 +298,9 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
   const [fz, setFz] = useState(() => {
     try { return parseFloat(localStorage.getItem('outline-fz')) || 1.0; } catch (e) { return 1.0; }
   });
+  const [gameWordIdx, setGameWordIdx] = useState(null);
   const treeRef = useRef(null);
-
-  // Keyboard navigation: Escape closes, ArrowLeft/Right navigate chapters
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.key === 'Escape' && !suppressEscape) {
-        e.preventDefault();
-        onClose();
-        return;
-      }
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-      if (e.key === 'ArrowLeft') {
-        if (chapter > 1) { e.preventDefault(); onPrevChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }
-      } else if (e.key === 'ArrowRight') {
-        if (chapter < totalChapters) { e.preventDefault(); onNextChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose, suppressEscape, chapter, totalChapters, onPrevChapter, onNextChapter]);
+  const activeWordRef = useRef(null);
 
   // Build one "paragraph" per verse — no verse numbers
   const paragraphs = useMemo(() => {
@@ -316,6 +322,94 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
   const flatRoots = useMemo(() => flatChapter(paragraphs), [paragraphs]);
 
   const roots = flatMode ? flatRoots : ((useAI && aiRoots) ? aiRoots : autoRoots);
+
+  // ── Word-hop game: flatten all words across the outline tree ─────────────────
+  const { flatWords, flatNodes, nodeWordRanges } = useMemo(() => {
+    const fw = [];
+    const fn = []; // [{start, count}]
+    const nwr = new Map(); // node → {start, count}
+
+    function traverse(nodes) {
+      for (const node of nodes) {
+        if (node.tag === 'spacer') continue;
+        const words = node.text.match(/\S+/g) || [];
+        if (words.length > 0) {
+          const start = fw.length;
+          nwr.set(node, { start, count: words.length });
+          fn.push({ start, count: words.length });
+          fw.push(...words);
+        }
+        if (node.children.length) traverse(node.children);
+      }
+    }
+
+    traverse(roots);
+    return { flatWords: fw, flatNodes: fn, nodeWordRanges: nwr };
+  }, [roots]);
+
+  // Reset game when chapter changes
+  useEffect(() => { setGameWordIdx(null); }, [chapter]);
+
+  // Scroll active word into view
+  useEffect(() => {
+    if (gameWordIdx !== null && activeWordRef.current) {
+      activeWordRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [gameWordIdx]);
+
+  // Keyboard navigation: Escape closes/deactivates game, ArrowLeft/Right navigate chapters, j/k/l/; word-hop game
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'Escape') {
+        if (gameWordIdx !== null) {
+          e.preventDefault();
+          setGameWordIdx(null);
+          return; // deactivate game, don't close modal
+        }
+        if (!suppressEscape) {
+          e.preventDefault();
+          onClose();
+        }
+        return;
+      }
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === 'ArrowLeft') {
+        if (chapter > 1) { e.preventDefault(); onPrevChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }
+      } else if (e.key === 'ArrowRight') {
+        if (chapter < totalChapters) { e.preventDefault(); onNextChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }
+      }
+      // Word-hop game keys
+      else if (e.key === 'j') {
+        e.preventDefault();
+        setGameWordIdx(prev => prev === null ? 0 : Math.min(prev + 1, flatWords.length - 1));
+      } else if (e.key === 'k') {
+        e.preventDefault();
+        setGameWordIdx(prev => prev === null ? 0 : Math.max(prev - 1, 0));
+      } else if (e.key === 'l') {
+        // Jump to start of next sentence/node
+        e.preventDefault();
+        setGameWordIdx(prev => {
+          if (prev === null) return 0;
+          const nodeIdx = flatNodes.findIndex(n => prev >= n.start && prev < n.start + n.count);
+          if (nodeIdx === -1 || nodeIdx >= flatNodes.length - 1) return Math.min(prev + 5, flatWords.length - 1);
+          return flatNodes[nodeIdx + 1].start;
+        });
+      } else if (e.key === ';') {
+        // Jump to start of current sentence, or prev sentence if already at start
+        e.preventDefault();
+        setGameWordIdx(prev => {
+          if (prev === null) return 0;
+          const nodeIdx = flatNodes.findIndex(n => prev >= n.start && prev < n.start + n.count);
+          if (nodeIdx === -1) return 0;
+          const cur = flatNodes[nodeIdx];
+          if (prev === cur.start && nodeIdx > 0) return flatNodes[nodeIdx - 1].start;
+          return cur.start;
+        });
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose, suppressEscape, chapter, totalChapters, onPrevChapter, onNextChapter, gameWordIdx, flatWords, flatNodes]);
 
   const bg = isDarkMode ? '#1a1c20' : '#faf8f3';
   const textColor = isDarkMode ? '#e8e4db' : '#2b2b2b';
@@ -370,6 +464,12 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
         {/* Header */}
         <div style={{ padding: '14px 20px', borderBottom: `1px solid ${borderColor}`, display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
           <span style={{ fontFamily: 'monospace', fontSize: 12, color: accentColor, fontWeight: 700, letterSpacing: '0.05em' }}>OUTLINE</span>
+          {gameWordIdx !== null && (
+            <span style={{ fontFamily: 'monospace', fontSize: 10, padding: '2px 7px', borderRadius: 9, background: '#3b82f6', color: '#fff', fontWeight: 700 }}
+              title="Word-hop game active — j/k=word, l/;=sentence, Esc=exit">
+              {gameWordIdx + 1}/{flatWords.length}
+            </span>
+          )}
           {aiRoots && !flatMode && (
             <button
               onClick={() => setUseAI(v => !v)}
@@ -430,7 +530,7 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
             ) : (
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                 {roots.map((node, i) => (
-                  <OutlineNodeEl key={i} node={node} showTags={showTags} />
+                  <OutlineNodeEl key={i} node={node} showTags={showTags} gameWordIdx={gameWordIdx} nodeWordRanges={nodeWordRanges} activeWordRef={activeWordRef} />
                 ))}
               </ul>
             )}

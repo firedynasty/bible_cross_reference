@@ -4102,9 +4102,9 @@ const BibleApp = () => {
         
         e.preventDefault();
       }
-      // 'm' or ';' key - go to next chapter when available by simulating a click on the Next Chapter button
-      else if (e.key === 'm' || e.key === ';') {
-        console.log("Semicolon key pressed for Next Chapter");
+      // 'm' key - go to next chapter when available by simulating a click on the Next Chapter button
+      else if (e.key === 'm') {
+        console.log("m key pressed for Next Chapter");
         console.log("Current state:", { 
           selectedBook: selectedBook?.abbrev, 
           selectedChapter, 
