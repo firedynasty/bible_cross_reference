@@ -766,7 +766,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                     onClick={() => {
                       if (playerRef.current) {
                         try {
-                          const t = Math.max(0, playerRef.current.getCurrentTime() - 60);
+                          const t = Math.max(0, playerRef.current.getCurrentTime() - 25);
                           playerRef.current.seekTo(t, true);
                           setCurrentTime(t);
                           saveTime(bookAbbrev, t, storageKeyRef.current);
@@ -775,14 +775,14 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                     }}
                     className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
                   >
-                    -1min(2)
+                    -25s(2)
                   </button>
                   &nbsp;&nbsp;
                   <button
                     onClick={() => {
                       if (playerRef.current) {
                         try {
-                          const t = playerRef.current.getCurrentTime() + 60;
+                          const t = playerRef.current.getCurrentTime() + 25;
                           playerRef.current.seekTo(t, true);
                           setCurrentTime(t);
                           saveTime(bookAbbrev, t, storageKeyRef.current);
@@ -791,7 +791,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                     }}
                     className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
                   >
-                    +1min(3)
+                    +25s(3)
                   </button>
                   &nbsp;&nbsp;
                   <button
