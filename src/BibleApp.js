@@ -8,6 +8,7 @@ import YouTubeVideoModal from './components/YouTubeVideoModal';
 import OutlineModal from './components/OutlineModal';
 import VerseCommentaryModal from './components/VerseCommentaryModal';
 import VerseMemorizeModal from './components/VerseMemorizeModal';
+import SongMemorizeModal, { parseSongTxt } from './components/SongMemorizeModal';
 import { getStorytimeAudioUrl } from './data/storytimeAudio';
 import { getRhymeAudioUrl } from './data/rhymeAudio';
 
@@ -1533,6 +1534,8 @@ const BibleApp = () => {
   const [expandedRefsData, setExpandedRefsData] = useState(null); // { verseLabel, refs: [{label, text}] }
   const [verseModalData, setVerseModalData] = useState(null); // { verseLabel, verseText, bookAbbrev, chapter, verseNumber }
   const [memorizeModalData, setMemorizeModalData] = useState(null); // { verseLabel, verseText, bookAbbrev, chapter, verseNumber }
+  const [songMemorizeData, setSongMemorizeData] = useState(null); // { sections, songTitle }
+  const songFileInputRef = useRef(null);
 
   // Add refs for the chapter content containers
   const chapterContentRef = useRef(null);
@@ -3800,8 +3803,8 @@ const BibleApp = () => {
         return;
       }
 
-      // 'c' key - open Verse Commentary modal for topmost visible verse in right pane
-      if (e.key === 'c' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showOutlineModal) {
+      // 'm' key - open Verse Commentary modal for topmost visible verse in right pane
+      if (e.key === 'm' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showOutlineModal) {
         e.preventDefault();
         const pane = kjvContentRef.current;
         if (pane) {
@@ -4102,9 +4105,9 @@ const BibleApp = () => {
         
         e.preventDefault();
       }
-      // 'm' or ';' key - go to next chapter when available by simulating a click on the Next Chapter button
-      else if (e.key === 'm' || e.key === ';') {
-        console.log("m/; key pressed for Next Chapter");
+      // ';' key - go to next chapter when available by simulating a click on the Next Chapter button
+      else if (e.key === ';') {
+        console.log("; key pressed for Next Chapter");
         console.log("Current state:", { 
           selectedBook: selectedBook?.abbrev, 
           selectedChapter, 
@@ -6089,6 +6092,46 @@ const BibleApp = () => {
                 Memorize
               </button>
             )}
+
+            {/* Song .txt memorize */}
+            <>
+              <input
+                ref={songFileInputRef}
+                type="file"
+                accept=".txt"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = ev => {
+                    const sections = parseSongTxt(ev.target.result || '');
+                    setSongMemorizeData({
+                      sections,
+                      songTitle: file.name.replace(/\.txt$/i, ''),
+                    });
+                  };
+                  reader.readAsText(file);
+                  e.target.value = '';
+                }}
+              />
+              <button
+                onClick={() => songFileInputRef.current?.click()}
+                className={`px-2 py-0.5 rounded text-xs font-semibold ${isDarkMode ? 'bg-purple-700 text-white hover:bg-purple-600' : 'bg-purple-600 text-white hover:bg-purple-700'}`}
+                title="Load a song .txt file to memorize"
+              >
+                Song .txt
+              </button>
+              {songMemorizeData && (
+                <button
+                  onClick={() => setSongMemorizeData(s => ({ ...s }))}
+                  className={`px-2 py-0.5 rounded text-xs font-semibold ${isDarkMode ? 'bg-purple-900 text-purple-200 hover:bg-purple-800' : 'bg-purple-100 text-purple-800 hover:bg-purple-200'}`}
+                  title={`Reopen: ${songMemorizeData.songTitle}`}
+                >
+                  ♪ {songMemorizeData.songTitle.slice(0, 18)}{songMemorizeData.songTitle.length > 18 ? '…' : ''}
+                </button>
+              )}
+            </>
 
             {/* Commentary button */}
             {isFeatureVisible('commentary') && (
@@ -12061,6 +12104,14 @@ const BibleApp = () => {
       })()}
 
       <FurtherReadingModal open={showFiguresModal} onClose={() => setShowFiguresModal(false)} />
+      <SongMemorizeModal
+        open={!!songMemorizeData?.sections?.length}
+        onClose={() => setSongMemorizeData(null)}
+        sections={songMemorizeData?.sections || []}
+        songTitle={songMemorizeData?.songTitle || ''}
+        isDarkMode={isDarkMode}
+        isSepiaMode={isSepiaMode}
+      />
       <VerseMemorizeModal
         open={!!memorizeModalData}
         onClose={() => setMemorizeModalData(null)}
