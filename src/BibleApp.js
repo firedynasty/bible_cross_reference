@@ -3786,10 +3786,30 @@ const BibleApp = () => {
       // 'i' key - open Story modal on Intro tab
       if (e.key === 'i' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showRefPrompt && !showOutlineModal) {
         e.preventDefault();
-        loadStorytimeForCurrent();
-        setStoryIntroTab('intro');
-        setShowSearchModal(true);
-        setSearchStartRef('');
+        const pane = kjvContentRef.current;
+        if (pane && selectedBook && selectedChapter) {
+          const paneRect = pane.getBoundingClientRect();
+          let topVerse = 1;
+          for (let i = 1; i <= 200; i++) {
+            const el = document.getElementById(`right-pane-verse-${i}`);
+            if (!el) break;
+            if (el.getBoundingClientRect().bottom > paneRect.top + 40) { topVerse = i; break; }
+          }
+          const abbrev = selectedBook.abbrev;
+          const chapterVerses = getRightPaneChapterVerses(abbrev, selectedChapter);
+          const raw = chapterVerses?.[topVerse - 1];
+          const verseStr = raw ? (typeof raw === 'string' ? raw : (raw?.text || raw?.verse || String(raw))) : '';
+          const bkName = getBookName(abbrev);
+          setMemorizeModalData({
+            verseLabel: `${bkName} ${selectedChapter}:${topVerse}`,
+            verseText: verseStr,
+            bookAbbrev: abbrev,
+            chapter: selectedChapter,
+            verseNumber: topVerse,
+            bookName: bkName,
+            chapterVerses,
+          });
+        }
         return;
       }
 
@@ -6089,7 +6109,7 @@ const BibleApp = () => {
                 className={`px-2 py-0.5 rounded text-xs font-semibold ${isDarkMode ? 'bg-blue-700 text-white hover:bg-blue-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                 title="Memorize current verse"
               >
-                Memorize
+                Memorize(i)
               </button>
             )}
 
