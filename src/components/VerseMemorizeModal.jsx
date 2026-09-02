@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
 function splitIntoChunks(verseText) {
   if (!verseText) return [];
@@ -34,116 +34,81 @@ export default function VerseMemorizeModal({
   onOpenCommentary,
   isDarkMode, isSepiaMode,
 }) {
-  const [activeIdx, setActiveIdx] = useState(0);   // 0-based index into chapterVerses
-  const [showPicker, setShowPicker] = useState(false);
-  const [inputVal, setInputVal] = useState('');
+  // null = show verse picker; number = 0-based index of selected verse
+  const [selectedIdx, setSelectedIdx] = useState(null);
   const [activeChunk, setActiveChunk] = useState(null);
-  const inputRef = useRef(null);
-  const pickerRef = useRef(null);
 
-  // Derive active verse text & label
+  const bg        = isDarkMode ? '#1e2235' : isSepiaMode ? '#f5efe0' : '#ffffff';
+  const textColor = isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a4a2a' : '#1a1a1a';
+  const border    = isDarkMode ? '#3a3f5c' : isSepiaMode ? '#c9b99a' : '#e5e7eb';
+  const verseBg   = isDarkMode ? '#252840' : isSepiaMode ? '#ede0c8' : '#f9fafb';
+  const closeBg   = isDarkMode ? '#444'    : isSepiaMode ? '#d4c9a8' : '#e5e7eb';
+  const subText   = isDarkMode ? '#9ca3af' : isSepiaMode ? '#8a7a5a' : '#6b7280';
+  const accent    = isDarkMode ? '#60a5fa' : '#2563eb';
+  const hoverBg   = isDarkMode ? '#2d3148' : isSepiaMode ? '#e8ddc8' : '#f3f4f6';
+  const activeBg  = isDarkMode ? '#1e3a5f' : '#dbeafe';
+
   const hasChapterVerses = chapterVerses && chapterVerses.length > 0;
-  const activeVerseText = hasChapterVerses
-    ? verseToString(chapterVerses[activeIdx])
+
+  // Resolve the active verse text and label
+  const activeVerseText = selectedIdx !== null && hasChapterVerses
+    ? verseToString(chapterVerses[selectedIdx])
     : verseText;
-  const activeVerseLabel = hasChapterVerses && bookName && chapter
-    ? `${bookName} ${chapter}:${activeIdx + 1}`
+  const activeVerseLabel = selectedIdx !== null && hasChapterVerses && bookName && chapter
+    ? `${bookName} ${chapter}:${selectedIdx + 1}`
     : verseLabel;
 
   const chunks = splitIntoChunks(activeVerseText);
 
+  const goToPrev = () => setSelectedIdx(i => Math.max(0, i - 1));
+  const goToNext = () => setSelectedIdx(i => Math.min((chapterVerses?.length ?? 1) - 1, i + 1));
+
   // Reset when modal opens
   useEffect(() => {
     if (open) {
-      const idx = startVerseNumber ? startVerseNumber - 1 : 0;
-      setActiveIdx(idx);
-      setShowPicker(false);
-      setInputVal('');
+      // If chapterVerses, start at picker; else go straight to verse view
+      if (hasChapterVerses) {
+        const idx = startVerseNumber ? startVerseNumber - 1 : null;
+        setSelectedIdx(idx !== null ? Math.max(0, idx) : null);
+      } else {
+        setSelectedIdx(null);
+      }
       setActiveChunk(null);
-      setTimeout(() => inputRef.current?.focus(), 60);
     }
-  }, [open, startVerseNumber]);
+  }, [open, startVerseNumber, hasChapterVerses]);
 
-  // Scroll picker to active verse
-  useEffect(() => {
-    if (showPicker && pickerRef.current) {
-      const el = pickerRef.current.querySelector(`[data-idx="${activeIdx}"]`);
-      if (el) el.scrollIntoView({ block: 'center' });
-    }
-  }, [showPicker, activeIdx]);
+  // Reset chunk highlight when verse changes
+  useEffect(() => { setActiveChunk(null); }, [selectedIdx]);
 
-  // Reset chunks when verse changes
-  useEffect(() => {
-    setActiveChunk(null);
-  }, [activeIdx]);
-
-  // Keyboard: 1-9 speaks chunks, Escape closes
+  // Keyboard shortcuts
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
-      if (e.target === inputRef.current) return;
-      if (e.key === 'Escape') { onClose(); return; }
-      if (!showPicker && /^[1-9]$/.test(e.key)) {
-        const idx = parseInt(e.key) - 1;
-        if (chunks[idx]) {
-          e.preventDefault();
-          setActiveChunk(idx);
-          speakText(chunks[idx]);
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (selectedIdx !== null && hasChapterVerses) { setSelectedIdx(null); } else { onClose(); }
+        return;
+      }
+      if (selectedIdx !== null) {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); goToPrev(); return; }
+        if (e.key === 'ArrowRight') { e.preventDefault(); goToNext(); return; }
+        if (/^[1-9]$/.test(e.key)) {
+          const idx = parseInt(e.key) - 1;
+          if (chunks[idx] !== undefined) {
+            e.preventDefault();
+            setActiveChunk(idx);
+            speakText(chunks[idx]);
+          }
         }
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, chunks, onClose, showPicker]);
+  }, [open, selectedIdx, hasChapterVerses, chunks, onClose]);
 
   if (!open) return null;
 
-  const bg         = isDarkMode ? '#1e2235' : isSepiaMode ? '#f5efe0' : '#ffffff';
-  const textColor  = isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a4a2a' : '#1a1a1a';
-  const border     = isDarkMode ? '#3a3f5c' : isSepiaMode ? '#c9b99a' : '#e5e7eb';
-  const verseBg    = isDarkMode ? '#252840' : isSepiaMode ? '#ede0c8' : '#f9fafb';
-  const closeBg    = isDarkMode ? '#444'    : isSepiaMode ? '#d4c9a8' : '#e5e7eb';
-  const subText    = isDarkMode ? '#9ca3af' : isSepiaMode ? '#8a7a5a' : '#6b7280';
-  const accentBlue = isDarkMode ? '#60a5fa' : '#2563eb';
-  const chunkActiveBg = isDarkMode ? '#1e3a5f' : '#dbeafe';
-  const hoverBg    = isDarkMode ? '#2d3148' : isSepiaMode ? '#e8ddc8' : '#f3f4f6';
-
-  const btnBase = {
-    display: 'inline-flex', alignItems: 'center',
-    border: `1px solid ${border}`, borderRadius: 6,
-    padding: '4px 9px', fontSize: '0.82rem',
-    fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-  };
-
-  const handleChunkClick = (chunk, i) => {
-    setActiveChunk(i);
-    speakText(chunk);
-  };
-
-  const handleInputKeyDown = (e) => {
-    if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const val = inputVal.trim();
-      if (!val) return;
-      const n = parseInt(val);
-      if (!isNaN(n) && n >= 1 && n <= chunks.length) {
-        setActiveChunk(n - 1);
-        speakText(chunks[n - 1]);
-      } else {
-        setActiveChunk(null);
-        speakText(val);
-      }
-      setInputVal('');
-    }
-  };
-
-  const selectVerse = (i) => {
-    setActiveIdx(i);
-    setShowPicker(false);
-    setInputVal('');
-    setTimeout(() => inputRef.current?.focus(), 60);
-  };
+  const showPicker = selectedIdx === null && hasChapterVerses;
 
   return (
     <div
@@ -170,145 +135,158 @@ export default function VerseMemorizeModal({
         {/* Header */}
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '14px 20px', borderBottom: `1px solid ${border}`, flexShrink: 0, gap: 8,
+          padding: '12px 18px', borderBottom: `1px solid ${border}`, flexShrink: 0, gap: 8,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{activeVerseLabel}</h2>
-            {onOpenCommentary && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            {selectedIdx !== null && hasChapterVerses && (
+              <button
+                onClick={goToPrev}
+                disabled={selectedIdx <= 0}
+                style={{
+                  padding: '3px 8px', fontSize: '0.82rem', fontWeight: 700,
+                  border: `1px solid ${border}`, borderRadius: 6,
+                  background: hoverBg, color: selectedIdx <= 0 ? subText : textColor,
+                  cursor: selectedIdx <= 0 ? 'default' : 'pointer', flexShrink: 0,
+                  opacity: selectedIdx <= 0 ? 0.4 : 1,
+                }}
+                aria-label="Previous verse"
+              >←</button>
+            )}
+            <h2 style={{
+              margin: 0, fontSize: '0.98rem', fontWeight: 700,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>
+              {showPicker ? (bookName && chapter ? `${bookName} ${chapter}` : (verseLabel || 'Verses')) : activeVerseLabel}
+            </h2>
+            {selectedIdx !== null && hasChapterVerses && (
+              <button
+                onClick={goToNext}
+                disabled={selectedIdx >= (chapterVerses?.length ?? 1) - 1}
+                style={{
+                  padding: '3px 8px', fontSize: '0.82rem', fontWeight: 700,
+                  border: `1px solid ${border}`, borderRadius: 6,
+                  background: hoverBg,
+                  color: selectedIdx >= (chapterVerses?.length ?? 1) - 1 ? subText : textColor,
+                  cursor: selectedIdx >= (chapterVerses?.length ?? 1) - 1 ? 'default' : 'pointer', flexShrink: 0,
+                  opacity: selectedIdx >= (chapterVerses?.length ?? 1) - 1 ? 0.4 : 1,
+                }}
+                aria-label="Next verse"
+              >→</button>
+            )}
+            {onOpenCommentary && selectedIdx !== null && (
               <button
                 onClick={() => { onClose(); onOpenCommentary(); }}
-                style={{ ...btnBase, background: hoverBg, color: textColor }}
-              >
-                Commentary
-              </button>
-            )}
-            {hasChapterVerses && (
-              <button
-                onClick={() => setShowPicker(v => !v)}
                 style={{
-                  ...btnBase,
-                  background: showPicker
-                    ? (isDarkMode ? '#1e3a5f' : '#dbeafe')
-                    : (isDarkMode ? '#2d3148' : isSepiaMode ? '#dde8c8' : '#dbeafe'),
-                  color: isDarkMode ? '#93c5fd' : isSepiaMode ? '#3a5a2a' : '#1d4ed8',
-                  border: `1px solid ${isDarkMode ? '#2d5a8f' : isSepiaMode ? '#b9c9a8' : '#bfdbfe'}`,
+                  padding: '3px 9px', fontSize: '0.82rem', fontWeight: 600,
+                  border: `1px solid ${border}`, borderRadius: 6,
+                  background: hoverBg, color: textColor,
+                  cursor: 'pointer', flexShrink: 0,
                 }}
-              >
-                {showPicker ? 'Back' : 'Full Chapter'}
-              </button>
+              >Commentary</button>
             )}
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              width: 28, height: 28, border: 'none', borderRadius: 6,
-              cursor: 'pointer', background: closeBg, color: textColor,
-              fontWeight: 700, fontSize: 14, flexShrink: 0,
-            }}
-            aria-label="Close"
-          >✕</button>
+
+          {selectedIdx !== null ? (
+            <button
+              onClick={() => speakText(chunks.join(' '))}
+              style={{
+                padding: '3px 10px', fontSize: '0.82rem', fontWeight: 700,
+                border: `1px solid ${border}`, borderRadius: 6,
+                background: hoverBg, color: accent,
+                cursor: 'pointer', flexShrink: 0,
+              }}
+              aria-label="Speak all chunks"
+            >▶ All</button>
+          ) : (
+            <button
+              onClick={onClose}
+              style={{
+                width: 28, height: 28, border: 'none', borderRadius: 6,
+                cursor: 'pointer', background: closeBg, color: textColor,
+                fontWeight: 700, fontSize: 14, flexShrink: 0,
+              }}
+              aria-label="Close"
+            >✕</button>
+          )}
         </div>
 
-        {showPicker ? (
-          /* ── Verse picker ── */
-          <div
-            ref={pickerRef}
-            style={{ overflowY: 'auto', flex: 1, padding: '8px 12px' }}
-          >
-            <p style={{
-              margin: '4px 8px 8px', fontSize: '0.72rem', color: subText,
-              textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600,
-            }}>
-              {bookName} {chapter} — {chapterVerses.length} verses
-            </p>
-            {chapterVerses.map((v, i) => {
-              const text = verseToString(v);
-              const isActive = i === activeIdx;
-              return (
-                <div
-                  key={i}
-                  data-idx={i}
-                  onClick={() => selectVerse(i)}
-                  style={{
-                    display: 'flex', alignItems: 'flex-start', gap: 10,
-                    padding: '7px 10px', borderRadius: 6, cursor: 'pointer',
-                    marginBottom: 2,
-                    background: isActive ? chunkActiveBg : 'transparent',
-                    border: isActive ? `1px solid ${accentBlue}40` : '1px solid transparent',
-                  }}
-                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = hoverBg; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = isActive ? chunkActiveBg : 'transparent'; }}
-                >
-                  <span style={{ fontWeight: 700, color: accentBlue, minWidth: 22, fontSize: '0.88em', lineHeight: 1.7, flexShrink: 0 }}>
-                    {i + 1}
-                  </span>
-                  <span style={{ lineHeight: 1.6, fontSize: '0.88em', color: isActive ? textColor : subText }}>
-                    {text.length > 80 ? text.slice(0, 80) + '…' : text}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <>
-            {/* Full verse text */}
-            <div style={{
-              padding: '12px 20px', borderBottom: `1px solid ${border}`,
-              background: verseBg, flexShrink: 0,
-            }}>
-              <p style={{ margin: 0, lineHeight: 1.7, fontSize: '0.97em', fontStyle: 'italic', fontWeight: 600 }}>
-                {activeVerseText}
-              </p>
-            </div>
-
-            {/* Chunks list */}
-            <div style={{ overflowY: 'auto', flex: 1, padding: '10px 20px' }}>
+        {/* Body */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '12px 18px' }}>
+          {showPicker ? (
+            /* ── Verse picker ── */
+            <>
               <p style={{
-                margin: '0 0 8px', fontSize: '0.72rem', color: subText,
+                margin: '0 0 10px', fontSize: '0.72rem', color: subText,
                 textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600,
               }}>
-                Click or press 1–{Math.min(chunks.length, 9)} to hear a chunk
+                Choose a verse to memorize
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {chapterVerses.map((v, i) => {
+                  const text = verseToString(v);
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedIdx(i)}
+                      style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 12,
+                        padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
+                        border: `1px solid ${border}`,
+                        background: verseBg, color: textColor,
+                        textAlign: 'left', width: '100%',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = hoverBg; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = verseBg; }}
+                    >
+                      <span style={{
+                        fontWeight: 700, color: accent, fontSize: '0.82rem',
+                        minWidth: 22, flexShrink: 0, paddingTop: 2,
+                      }}>
+                        {i + 1}
+                      </span>
+                      <span style={{ lineHeight: 1.5, fontSize: '0.88rem', textAlign: 'left', color: subText }}>
+                        {text.slice(0, 70)}{text.length > 70 ? '…' : ''}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            /* ── Chunks view ── */
+            <>
+              <p style={{
+                margin: '0 0 10px', fontSize: '0.72rem', color: subText,
+                textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600,
+              }}>
+                Click or press 1–{Math.min(chunks.length, 9)} to hear a chunk · ←/→ for verses
               </p>
               {chunks.slice(0, 9).map((chunk, i) => (
                 <div
                   key={i}
-                  onClick={() => handleChunkClick(chunk, i)}
+                  onClick={() => { setActiveChunk(i); speakText(chunk); }}
                   style={{
                     display: 'flex', alignItems: 'flex-start', gap: 10,
-                    padding: '7px 10px', borderRadius: 6, cursor: 'pointer',
-                    marginBottom: 3,
-                    background: activeChunk === i ? chunkActiveBg : 'transparent',
-                    border: activeChunk === i ? `1px solid ${accentBlue}30` : '1px solid transparent',
+                    padding: '9px 12px', borderRadius: 7, cursor: 'pointer',
+                    marginBottom: 4,
+                    background: activeChunk === i ? activeBg : 'transparent',
+                    border: activeChunk === i ? `1px solid ${accent}40` : '1px solid transparent',
                   }}
                   onMouseEnter={e => { if (activeChunk !== i) e.currentTarget.style.background = hoverBg; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = activeChunk === i ? chunkActiveBg : 'transparent'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = activeChunk === i ? activeBg : 'transparent'; }}
                 >
-                  <span style={{ fontWeight: 700, color: accentBlue, minWidth: 16, fontSize: '0.92em', lineHeight: 1.7 }}>
+                  <span style={{
+                    fontWeight: 700, color: accent, minWidth: 18,
+                    fontSize: '0.92rem', lineHeight: 1.7, flexShrink: 0,
+                  }}>
                     {i + 1}
                   </span>
-                  <span style={{ lineHeight: 1.65, fontSize: '0.95em' }}>{chunk}</span>
+                  <span style={{ lineHeight: 1.65, fontSize: '0.97rem' }}>{chunk}</span>
                 </div>
               ))}
-            </div>
-
-            {/* Input */}
-            <div style={{ padding: '10px 20px', borderTop: `1px solid ${border}`, flexShrink: 0 }}>
-              <input
-                ref={inputRef}
-                value={inputVal}
-                onChange={e => setInputVal(e.target.value)}
-                onKeyDown={handleInputKeyDown}
-                placeholder="Type 1–9 + Enter for a chunk, or any text + Enter to speak"
-                style={{
-                  width: '100%', padding: '8px 12px', fontSize: '0.88rem',
-                  border: `1px solid ${border}`, borderRadius: 8,
-                  background: verseBg, color: textColor,
-                  boxSizing: 'border-box', outline: 'none',
-                }}
-              />
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
