@@ -4430,21 +4430,6 @@ const BibleApp = () => {
       }
       
       
-      // Numeric keys (1-9) for pane 2 translation selection (only when no modal is open)
-      else if (e.key >= '1' && e.key <= '9' && !showSearchModal && !showQuizModal && !showQuiz2Modal && !showCollectionModal && !showDropboxModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showWordsModal && !showYouTubeModal) {
-        // Allow browser shortcuts like Cmd+1, Cmd+2, etc. for tab switching
-        if (e.metaKey || e.ctrlKey) {
-          return;
-        }
-        const index = parseInt(e.key) - 1;
-        if (index < translations.length) {
-          const t = translations[index];
-          setSelectedDropdownTranslation(t.id);
-          try { handleApplySelectedTranslationToPane2(t.id); } catch (err) { console.warn('Error applying translation:', err); }
-        }
-        e.preventDefault();
-      }
-      
       // 'b' key - go to previous chapter (only when no modal is open)
       else if ((e.key === 'b' || e.key === 'B') && !showSearchModal && !showQuizModal && !showQuiz2Modal && !showCollectionModal && !showDropboxModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showWordsModal && !showYouTubeModal) {
         if (selectedBook && selectedChapter > 1) {
