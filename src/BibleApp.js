@@ -1612,7 +1612,7 @@ const BibleApp = () => {
   useEffect(() => { localStorage.setItem('bibleAppViewMode', viewMode); }, [viewMode]);
 
   // Pane 2 only mode - hides pane 1, shows only pane 2 at full width
-  const [showPane2Only, setShowPane2Only] = useState(false);
+  const [showPane2Only, setShowPane2Only] = useState(() => localStorage.getItem('showPane2Only') === 'true');
   // Blank pane 1 content (keeps pane visible but empties text so Cmd+F skips it)
   const [blankPane1, setBlankPane1] = useState(() => localStorage.getItem('blankPane1') === 'true');
   // Reading guide — horizontal ruler line following mouse
@@ -6759,7 +6759,7 @@ const BibleApp = () => {
               viewMode={viewMode}
               onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : viewMode === 'interleaved' ? 'interleaved-pd' : 'side-by-side')}
               showPane2Only={showPane2Only}
-              onPane2OnlyToggle={() => setShowPane2Only(!showPane2Only)}
+              onPane2OnlyToggle={() => { const next = !showPane2Only; setShowPane2Only(next); localStorage.setItem('showPane2Only', next); }}
               dualPanePD={dualPanePD}
               onDualPanePDToggle={() => setDualPanePD(prev => !prev)}
               gridReadMode={gridReadMode}
@@ -6807,7 +6807,7 @@ const BibleApp = () => {
               viewMode={viewMode}
               onViewModeToggle={() => setViewMode(viewMode === 'side-by-side' ? 'interleaved' : viewMode === 'interleaved' ? 'interleaved-pd' : 'side-by-side')}
               showPane2Only={showPane2Only}
-              onPane2OnlyToggle={() => setShowPane2Only(!showPane2Only)}
+              onPane2OnlyToggle={() => { const next = !showPane2Only; setShowPane2Only(next); localStorage.setItem('showPane2Only', next); }}
               dualPanePD={dualPanePD}
               onDualPanePDToggle={() => setDualPanePD(prev => !prev)}
               gridReadMode={gridReadMode}
