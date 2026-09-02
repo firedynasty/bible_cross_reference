@@ -4246,16 +4246,16 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // Left Arrow - go to previous chapter (skip when Recite, Outline, or Verse Commentary modal is open)
+      // Left Arrow - go to previous chapter (skip when Recite, Outline, Verse Commentary, or Memorize modal is open)
       else if (e.key === 'ArrowLeft') {
-        if (showQuiz2Modal || showOutlineModal || verseModalData) return;
+        if (showQuiz2Modal || showOutlineModal || verseModalData || memorizeModalData) return;
         const prevBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Previous Chapter'));
         if (prevBtn) prevBtn.click();
         e.preventDefault();
       }
-      // Right Arrow - go to next chapter (skip when Recite, Outline, or Verse Commentary modal is open)
+      // Right Arrow - go to next chapter (skip when Recite, Outline, Verse Commentary, or Memorize modal is open)
       else if (e.key === 'ArrowRight') {
-        if (showQuiz2Modal || showOutlineModal || verseModalData) return;
+        if (showQuiz2Modal || showOutlineModal || verseModalData || memorizeModalData) return;
         const nextBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Next Chapter'));
         if (nextBtn) nextBtn.click();
         e.preventDefault();
