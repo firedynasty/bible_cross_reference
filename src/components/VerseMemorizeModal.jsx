@@ -1,9 +1,24 @@
 import React, { useState, useEffect } from 'react';
 
+const MIN_CHUNK_LEN = 20;
+
 function splitIntoChunks(verseText) {
   if (!verseText) return [];
   const raw = verseText.split(/(?<=[,;:.])/).map(s => s.trim()).filter(s => s.length > 0);
-  return raw.length > 1 ? raw : [verseText];
+  if (raw.length <= 1) return [verseText];
+
+  // Merge chunks shorter than MIN_CHUNK_LEN into the next chunk
+  const merged = [];
+  let acc = '';
+  for (let i = 0; i < raw.length; i++) {
+    acc = acc ? acc + ' ' + raw[i] : raw[i];
+    if (acc.length >= MIN_CHUNK_LEN || i === raw.length - 1) {
+      merged.push(acc);
+      acc = '';
+    }
+  }
+
+  return merged.length > 1 ? merged : [verseText];
 }
 
 function speakText(text) {
