@@ -426,6 +426,24 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
           setVolume(next);
         } catch {}
       }
+      if (e.key === 'r' && playerRef.current && currentChapterRef.current) {
+        e.preventDefault();
+        const tsData = isDramatizedRef.current ? dramatizedChapterTimestamps : youtubeChapterTimestamps;
+        const bookTimestamps = tsData[bookAbbrevRef.current];
+        if (bookTimestamps) {
+          let ch = currentChapterRef.current;
+          while (ch >= 1 && bookTimestamps[ch] == null) { ch--; }
+          if (ch >= 1) {
+            const ts = bookTimestamps[ch] + bookOffsetRef.current;
+            try {
+              playerRef.current.seekTo(ts, true);
+              setCurrentTime(ts);
+              saveTime(bookAbbrevRef.current, ts, storageKeyRef.current);
+              chapterSeekDone.current = `${bookAbbrevRef.current}-${currentChapterRef.current}`;
+            } catch {}
+          }
+        }
+      }
       if ((e.key === '+' || e.key === '=') && playerRef.current) {
         try {
           const cur = playerRef.current.getVolume();
@@ -749,9 +767,9 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                           } catch {}
                         }}
                         className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
-                        title={`Restart chapter ${currentChapter}`}
+                        title={`Restart chapter ${currentChapter} (r)`}
                       >
-                        ↻ ch
+                        ↻ ch(r)
                       </button>
                     );
                   })()}
