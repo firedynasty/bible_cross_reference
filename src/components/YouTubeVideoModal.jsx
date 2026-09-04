@@ -729,6 +729,32 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                       </select>
                     );
                   })()}
+                  {currentChapter && (() => {
+                    const tsData = isDramatized ? dramatizedChapterTimestamps : youtubeChapterTimestamps;
+                    const bookTimestamps = tsData[bookAbbrev];
+                    if (!bookTimestamps) return null;
+                    return (
+                      <button
+                        onClick={() => {
+                          if (!playerRef.current) return;
+                          let ch = currentChapter;
+                          while (ch >= 1 && bookTimestamps[ch] == null) { ch--; }
+                          if (ch < 1) return;
+                          const ts = bookTimestamps[ch] + bookOffsetRef.current;
+                          try {
+                            playerRef.current.seekTo(ts, true);
+                            setCurrentTime(ts);
+                            saveTime(bookAbbrev, ts, storageKeyRef.current);
+                            chapterSeekDone.current = `${bookAbbrev}-${currentChapter}`;
+                          } catch {}
+                        }}
+                        className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                        title={`Restart chapter ${currentChapter}`}
+                      >
+                        ↻ ch
+                      </button>
+                    );
+                  })()}
                   <button
                     onClick={() => {
                       if (playerRef.current) {
