@@ -658,13 +658,6 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
     }
     setTimerRemaining(loopsLeft);
     timerRef.current = setTimeout(() => {
-      if (timerPausedRef.current) {
-        // Stuck — don't seek or reschedule; unpause will resume
-        timerStuckRef.current = true;
-        timerStuckLoopsRef.current = loopsLeft;
-        timerRef.current = null;
-        return;
-      }
       const seekTo = parseTimestamp(timerTimestampRef.current);
       if (playerRef.current) {
         try { playerRef.current.seekTo(seekTo, true); } catch {}
@@ -677,15 +670,17 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
     const nowPaused = !timerPausedRef.current;
     timerPausedRef.current = nowPaused;
     setTimerPaused(nowPaused);
-    if (!nowPaused && timerStuckRef.current) {
-      // Resume from stuck state: seek and continue
-      timerStuckRef.current = false;
-      const loopsLeft = timerStuckLoopsRef.current;
-      const seekTo = parseTimestamp(timerTimestampRef.current);
-      if (playerRef.current) {
-        try { playerRef.current.seekTo(seekTo, true); } catch {}
-      }
-      runTimerLoop(loopsLeft - 1);
+    if (nowPaused) {
+      // Cancel the pending timeout immediately so no rewind fires while paused
+      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    } else {
+      // Resume: capture current player time as new loop-back point
+      let nowSecs = 0;
+      try { nowSecs = playerRef.current.getCurrentTime(); } catch {}
+      const hms = secsToHMS(nowSecs);
+      timerTimestampRef.current = hms;
+      setTimerTimestamp(hms);
+      runTimerLoop(timerRemaining);
     }
   };
 
