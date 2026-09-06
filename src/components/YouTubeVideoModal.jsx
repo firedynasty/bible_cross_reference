@@ -777,39 +777,6 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                     onClick={() => {
                       if (playerRef.current) {
                         try {
-                          const t = Math.max(0, playerRef.current.getCurrentTime() - 10);
-                          playerRef.current.seekTo(t, true);
-                          setCurrentTime(t);
-                          saveTime(bookAbbrev, t, storageKeyRef.current);
-                        } catch {}
-                      }
-                    }}
-                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
-                    title="Back 10 seconds ([)"
-                  >
-                    -10s([)
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (playerRef.current) {
-                        try {
-                          const t = playerRef.current.getCurrentTime() + 10;
-                          playerRef.current.seekTo(t, true);
-                          setCurrentTime(t);
-                          saveTime(bookAbbrev, t, storageKeyRef.current);
-                        } catch {}
-                      }
-                    }}
-                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
-                    title="Forward 10 seconds (])"
-                  >
-                    +10s(])
-                  </button>
-                  &nbsp;&nbsp;
-                  <button
-                    onClick={() => {
-                      if (playerRef.current) {
-                        try {
                           const t = Math.max(0, playerRef.current.getCurrentTime() - 25);
                           playerRef.current.seekTo(t, true);
                           setCurrentTime(t);
@@ -870,44 +837,6 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                     title="Volume up (+)"
                   >
                     vol+
-                  </button>
-                  &nbsp;&nbsp;
-                  <button
-                    onClick={() => {
-                      if (playerRef.current) {
-                        try {
-                          const rates = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-                          const cur = playerRef.current.getPlaybackRate();
-                          const idx = rates.indexOf(cur);
-                          const next = rates[Math.max(0, idx - 1)];
-                          playerRef.current.setPlaybackRate(next);
-                          setPlaybackRate(next);
-                        } catch {}
-                      }
-                    }}
-                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
-                    title="Speed down (,)"
-                  >
-                    &lt;spd
-                  </button>
-                  <span className="text-xs text-gray-400 px-1">{playbackRate}x</span>
-                  <button
-                    onClick={() => {
-                      if (playerRef.current) {
-                        try {
-                          const rates = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-                          const cur = playerRef.current.getPlaybackRate();
-                          const idx = rates.indexOf(cur);
-                          const next = rates[Math.min(rates.length - 1, idx + 1)];
-                          playerRef.current.setPlaybackRate(next);
-                          setPlaybackRate(next);
-                        } catch {}
-                      }
-                    }}
-                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
-                    title="Speed up (.)"
-                  >
-                    spd&gt;
                   </button>
                 </>
               )}
