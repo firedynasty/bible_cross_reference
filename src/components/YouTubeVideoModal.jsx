@@ -236,6 +236,17 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
   const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(100);
   const [autoInit] = useState(false);
+  const [timerLoops, setTimerLoops] = useState(40);
+  const [timerTimestamp, setTimerTimestamp] = useState('00:00:00');
+  const timerTimestampRef = useRef('00:00:00');
+  const [timerActive, setTimerActive] = useState(false);
+  const [timerRemaining, setTimerRemaining] = useState(0);
+  const [timerPaused, setTimerPaused] = useState(false);
+  const timerRef = useRef(null);
+  const timerLoopsRef = useRef(0);
+  const timerPausedRef = useRef(false);
+  const timerStuckRef = useRef(false); // fired while paused, waiting to resume
+  const timerStuckLoopsRef = useRef(0);
   const playerRef = useRef(null);
   const pendingPlayRef = useRef(false);
   const intervalRef = useRef(null);
@@ -585,6 +596,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
       if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
       if (playerRef.current) {
         try {
@@ -615,6 +627,80 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
 
   const videoId = isDramatized ? getDramatizedYouTubeVideoId(bookAbbrev) : getYouTubeVideoId(bookAbbrev);
   const bookName = bookFullNames[bookAbbrev] || bookAbbrev;
+
+  const cancelTimer = () => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    timerPausedRef.current = false;
+    timerStuckRef.current = false;
+    setTimerActive(false);
+    setTimerPaused(false);
+    setTimerRemaining(0);
+  };
+
+  const parseTimestamp = (ts) => {
+    const parts = ts.split(':').map(Number);
+    return (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
+  };
+
+  const secsToHMS = (s) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = Math.floor(s % 60);
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  };
+
+  const runTimerLoop = (loopsLeft) => {
+    if (loopsLeft <= 0) {
+      timerRef.current = null;
+      setTimerActive(false);
+      setTimerRemaining(0);
+      return;
+    }
+    setTimerRemaining(loopsLeft);
+    timerRef.current = setTimeout(() => {
+      if (timerPausedRef.current) {
+        // Stuck — don't seek or reschedule; unpause will resume
+        timerStuckRef.current = true;
+        timerStuckLoopsRef.current = loopsLeft;
+        timerRef.current = null;
+        return;
+      }
+      const seekTo = parseTimestamp(timerTimestampRef.current);
+      if (playerRef.current) {
+        try { playerRef.current.seekTo(seekTo, true); } catch {}
+      }
+      runTimerLoop(loopsLeft - 1);
+    }, 30000);
+  };
+
+  const toggleTimerPause = () => {
+    const nowPaused = !timerPausedRef.current;
+    timerPausedRef.current = nowPaused;
+    setTimerPaused(nowPaused);
+    if (!nowPaused && timerStuckRef.current) {
+      // Resume from stuck state: seek and continue
+      timerStuckRef.current = false;
+      const loopsLeft = timerStuckLoopsRef.current;
+      const seekTo = parseTimestamp(timerTimestampRef.current);
+      if (playerRef.current) {
+        try { playerRef.current.seekTo(seekTo, true); } catch {}
+      }
+      runTimerLoop(loopsLeft - 1);
+    }
+  };
+
+  const startTimer = () => {
+    if (timerActive) { cancelTimer(); return; }
+    if (!playerRef.current) return;
+    let t = 0;
+    try { t = playerRef.current.getCurrentTime(); } catch {}
+    const hms = secsToHMS(t);
+    timerTimestampRef.current = hms;
+    setTimerTimestamp(hms);
+    const loops = Math.max(1, parseInt(timerLoops, 10) || 1);
+    setTimerActive(true);
+    runTimerLoop(loops);
+  };
 
   // The player container is always rendered so the iframe stays alive.
   // When modal is closed, we move it offscreen via CSS.
@@ -838,6 +924,32 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                   >
                     vol+
                   </button>
+                  &nbsp;&nbsp;
+                  <input
+                    type="text"
+                    value={timerTimestamp}
+                    onChange={(e) => { timerTimestampRef.current = e.target.value; setTimerTimestamp(e.target.value); }}
+                    className="border border-gray-600 bg-gray-800 text-gray-200 rounded px-1 py-0 text-xs font-mono"
+                    style={{ width: '72px' }}
+                    title="Loop back to this timestamp (HH:MM:SS)"
+                    placeholder="00:00:00"
+                  />
+                  <button
+                    onClick={startTimer}
+                    className={`text-xs px-2 py-0.5 rounded text-white font-bold ${timerActive ? 'bg-red-700 hover:bg-red-600' : 'bg-orange-600 hover:bg-orange-500'}`}
+                    title={timerActive ? `Cancel timer (${timerRemaining} loops left)` : 'Play 30s, rewind, repeat'}
+                  >
+                    {timerActive ? `⏹ ${timerRemaining}/${timerLoops}` : '⏱ 30s'}
+                  </button>
+                  {timerActive && (
+                    <button
+                      onClick={toggleTimerPause}
+                      className={`text-xs px-2 py-0.5 rounded text-white font-bold ${timerPaused ? 'bg-yellow-600 hover:bg-yellow-500' : 'bg-gray-600 hover:bg-gray-500'}`}
+                      title={timerPaused ? 'Resume loop' : 'Pause loop (let current 30s run out, then hold)'}
+                    >
+                      {timerPaused ? '▶ resume' : '⏸ pause'}
+                    </button>
+                  )}
                 </>
               )}
             </h2>
