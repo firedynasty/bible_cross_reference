@@ -783,11 +783,23 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
               </button>
               {currentChapter && (
                 <a
-                  href={`https://www.biblegateway.com/passage/?search=${encodeURIComponent(bookName + ' ' + currentChapter)}&version=NKJV`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const tsData = isDramatized ? dramatizedChapterTimestamps : youtubeChapterTimestamps;
+                    const tsMap = tsData[bookAbbrev];
+                    const t = playerRef.current ? (() => { try { return playerRef.current.getCurrentTime(); } catch { return currentTime; } })() : currentTime;
+                    const tAdj = t - bookOffsetRef.current;
+                    let chapter = currentChapter;
+                    if (tsMap) {
+                      const chapters = Object.keys(tsMap).map(Number).sort((a, b) => a - b);
+                      const found = chapters.slice().reverse().find(c => tsMap[c] <= tAdj);
+                      if (found != null) chapter = found;
+                    }
+                    window.open(`https://www.biblegateway.com/passage/?search=${encodeURIComponent(bookName + ' ' + chapter)}&version=NKJV`, '_blank', 'noopener,noreferrer');
+                  }}
                   className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
-                  title={`Open ${bookName} ${currentChapter} in BibleGateway NKJV`}
+                  title={`Open current chapter in BibleGateway NKJV (calculated from audio position)`}
                 >
                   BG NKJV
                 </a>
