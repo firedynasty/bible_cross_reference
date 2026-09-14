@@ -2137,7 +2137,8 @@ const BibleApp = () => {
     if (!trimmed) return null;
 
     // Match patterns like "Matthew 11:28-30" or "Psalm 23" or "1 Corinthians 13:4-8"
-    const match = trimmed.match(/^(\d?\s*[A-Za-z]+(?:\s+of\s+[A-Za-z]+)?)\s+(\d+)(?::(.+))?$/i);
+    // Trailing "\.?" allows abbreviated forms like "Matt. 1:21" or "Gen. 3:22" (period before the chapter).
+    const match = trimmed.match(/^(\d?\s*[A-Za-z]+(?:\s+of\s+[A-Za-z]+)?)\.?\s+(\d+)(?::(.+))?$/i);
     if (match) {
       const bookName = match[1].trim().toLowerCase();
       const chapter = parseInt(match[2]);
@@ -2147,7 +2148,7 @@ const BibleApp = () => {
 
     // Try book name only (no chapter) — default to chapter 1
     // Handles "1 Timothy", "Genesis", "Song of Solomon", etc.
-    const bookOnly = trimmed.match(/^(\d?\s*[A-Za-z]+(?:\s+of\s+[A-Za-z]+)?)$/i);
+    const bookOnly = trimmed.match(/^(\d?\s*[A-Za-z]+(?:\s+of\s+[A-Za-z]+)?)\.?$/i);
     if (bookOnly) {
       const bookName = bookOnly[1].trim().toLowerCase();
       const abbrev = bookNameToAbbrev[bookName];
@@ -2268,6 +2269,91 @@ const BibleApp = () => {
     }
     return texts.join(' ') || null;
   }, [bibleData, parseSingleBibleRef]);
+
+  // Extract Bible references from pasted text using a given regex mode ('standard' | 'parenthesized' | 'logos').
+  // Shared by the "Find Verses" button so every mode can be tried as a fallback when one comes up empty.
+  const extractRefsFromText = useCallback((mode, text) => {
+    if (!text) return [];
+    const bookNames = '(?:Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalms?|Proverbs?|Ecclesiastes|Song of Solomon|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Gen|Exo?d?|Lev|Num|Deut?|Josh?|Judg|Sam|Kgs|Chr|Neh|Est|Ps|Psa|Prov?|Eccl?|Song|Isa|Jer|Lam|Ezek?|Dan|Hos|Oba?|Jon|Mic|Nah|Hab|Zeph?|Hag|Zech?|Mal|Matt?|Mrk|Mk|Luk?|Lk|Joh?|Jn|Rom|Cor|Gal|Eph|Phil?|Php|Col|Thess|Tim|Tit|Phlm|Phm|Heb|Jas|Jam|Pet|Re|Rev)';
+    // "\\.?" after the book name allows abbreviated + punctuated forms like "Matt. 1:21", "Gen. 3:22 – 24",
+    // and "cf. Gen. 3:22 - 24" / "cf Matt. 1:21" (the "cf"/"cf." prefix is simply skipped over by the search).
+    const singleRefRegex = new RegExp('\\b(\\d?\\s*' + bookNames + ')\\.?\\s+(\\d+)(?::(\\d+)(?:\\s*[-–]\\s*(\\d+))?)?', 'gi');
+    const found = [];
+    const seen = new Set();
+    if (mode === 'logos') {
+      // Logos Wilson Commentary format: line-by-line, implied book carries forward
+      // e.g. "Judg. 9:26 1 b\n2 Kings 18:19 1 f\nJob 4:6 2 a\n18:14 1 g"
+      // Trailing codes like "1 b", "2 a" are sense/sub-sense annotations to strip
+      const lines = text.split('\n');
+      let lastBook = '';
+      const logosBookRegex = /^(\d?\s*[A-Za-z]+\.?(?:\s+of\s+[A-Za-z]+)?)\s+(\d+):(\d+)/;
+      const contRegex = /^(\d+):(\d+)/;
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+        let bookPart = '';
+        let chapter = '';
+        let verse = '';
+        const fullMatch = trimmedLine.match(logosBookRegex);
+        if (fullMatch) {
+          bookPart = fullMatch[1].replace(/\.$/, '').trim();
+          chapter = fullMatch[2];
+          verse = fullMatch[3];
+          lastBook = bookPart;
+        } else {
+          const contMatch = trimmedLine.match(contRegex);
+          if (contMatch && lastBook) {
+            bookPart = lastBook;
+            chapter = contMatch[1];
+            verse = contMatch[2];
+          } else continue;
+        }
+        const refStr = `${bookPart} ${chapter}:${verse}`;
+        const parsed = parseSingleBibleRef(refStr);
+        if (parsed) {
+          const key = `${parsed.abbrev}_${parsed.chapter}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            found.push({ raw: refStr, parsed });
+          }
+        }
+      }
+    } else if (mode === 'parenthesized') {
+      // Find all parenthesized groups, then split by semicolons to get each ref
+      const parenRegex = /\(([^)]+)\)/g;
+      let pm;
+      while ((pm = parenRegex.exec(text)) !== null) {
+        const inner = pm[1];
+        const parts = inner.split(';');
+        for (const part of parts) {
+          const trimmed = part.replace(/\*\*/g, '').trim();
+          if (!trimmed) continue;
+          singleRefRegex.lastIndex = 0;
+          const rm = singleRefRegex.exec(trimmed);
+          if (rm) {
+            const refStr = rm[0].trim();
+            const parsed = parseSingleBibleRef(refStr);
+            if (parsed && !seen.has(refStr)) {
+              seen.add(refStr);
+              found.push({ raw: refStr, parsed });
+            }
+          }
+        }
+      }
+    } else {
+      // Standard: word-boundary match across entire text
+      let m;
+      while ((m = singleRefRegex.exec(text)) !== null) {
+        const refStr = m[0].replace(/\*\*/g, '').trim();
+        const parsed = parseSingleBibleRef(refStr);
+        if (parsed && !seen.has(refStr)) {
+          seen.add(refStr);
+          found.push({ raw: refStr, parsed });
+        }
+      }
+    }
+    return found;
+  }, [parseSingleBibleRef]);
 
   // Load a collection by name - navigates to first reference
   const loadCollection = useCallback((collectionName) => {
@@ -8898,88 +8984,26 @@ const BibleApp = () => {
                   <button
                     onClick={() => {
                       if (!textPasteContent) return;
-                      const bookNames = '(?:Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalms?|Proverbs?|Ecclesiastes|Song of Solomon|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Gen|Exo?d?|Lev|Num|Deut?|Josh?|Judg|Sam|Kgs|Chr|Neh|Est|Ps|Psa|Prov?|Eccl?|Song|Isa|Jer|Lam|Ezek?|Dan|Hos|Oba?|Jon|Mic|Nah|Hab|Zeph?|Hag|Zech?|Mal|Matt?|Mrk|Mk|Luk?|Lk|Joh?|Jn|Rom|Cor|Gal|Eph|Phil?|Php|Col|Thess|Tim|Tit|Phlm|Phm|Heb|Jas|Jam|Pet|Re|Rev)';
-                      const singleRefRegex = new RegExp('\\b(\\d?\\s*' + bookNames + ')\\s+(\\d+)(?::(\\d+)(?:\\s*[-–]\\s*(\\d+))?)?', 'gi');
-                      const found = [];
-                      const seen = new Set();
-                      if (refRegexMode === 'logos') {
-                        // Logos Wilson Commentary format: line-by-line, implied book carries forward
-                        // e.g. "Judg. 9:26 1 b\n2 Kings 18:19 1 f\nJob 4:6 2 a\n18:14 1 g"
-                        // Trailing codes like "1 b", "2 a" are sense/sub-sense annotations to strip
-                        const lines = textPasteContent.split('\n');
-                        let lastBook = '';
-                        const logosBookRegex = /^(\d?\s*[A-Za-z]+\.?(?:\s+of\s+[A-Za-z]+)?)\s+(\d+):(\d+)/;
-                        const contRegex = /^(\d+):(\d+)/;
-                        for (const line of lines) {
-                          const trimmedLine = line.trim();
-                          if (!trimmedLine) continue;
-                          let bookPart = '';
-                          let chapter = '';
-                          let verse = '';
-                          const fullMatch = trimmedLine.match(logosBookRegex);
-                          if (fullMatch) {
-                            bookPart = fullMatch[1].replace(/\.$/, '').trim();
-                            chapter = fullMatch[2];
-                            verse = fullMatch[3];
-                            lastBook = bookPart;
-                          } else {
-                            const contMatch = trimmedLine.match(contRegex);
-                            if (contMatch && lastBook) {
-                              bookPart = lastBook;
-                              chapter = contMatch[1];
-                              verse = contMatch[2];
-                            } else continue;
-                          }
-                          const refStr = `${bookPart} ${chapter}:${verse}`;
-                          const parsed = parseSingleBibleRef(refStr);
-                          if (parsed) {
-                            const key = `${parsed.abbrev}_${parsed.chapter}`;
-                            if (!seen.has(key)) {
-                              seen.add(key);
-                              found.push({ raw: refStr, parsed });
-                            }
-                          }
-                        }
-                      } else if (refRegexMode === 'parenthesized') {
-                        // Find all parenthesized groups, then split by semicolons to get each ref
-                        const parenRegex = /\(([^)]+)\)/g;
-                        let pm;
-                        while ((pm = parenRegex.exec(textPasteContent)) !== null) {
-                          const inner = pm[1];
-                          const parts = inner.split(';');
-                          for (const part of parts) {
-                            const trimmed = part.replace(/\*\*/g, '').trim();
-                            if (!trimmed) continue;
-                            singleRefRegex.lastIndex = 0;
-                            const rm = singleRefRegex.exec(trimmed);
-                            if (rm) {
-                              const refStr = rm[0].trim();
-                              const parsed = parseSingleBibleRef(refStr);
-                              if (parsed && !seen.has(refStr)) {
-                                seen.add(refStr);
-                                found.push({ raw: refStr, parsed });
-                              }
-                            }
-                          }
-                        }
-                      } else {
-                        // Standard: word-boundary match across entire text
-                        let m;
-                        while ((m = singleRefRegex.exec(textPasteContent)) !== null) {
-                          const refStr = m[0].replace(/\*\*/g, '').trim();
-                          const parsed = parseSingleBibleRef(refStr);
-                          if (parsed && !seen.has(refStr)) {
-                            seen.add(refStr);
-                            found.push({ raw: refStr, parsed });
+                      let found = extractRefsFromText(refRegexMode, textPasteContent);
+                      // If the selected mode found nothing, automatically try the other modes in the
+                      // dropdown (standard → parenthesized → logos) and switch to whichever one works.
+                      if (found.length === 0) {
+                        const fallbackOrder = ['standard', 'parenthesized', 'logos'].filter(m => m !== refRegexMode);
+                        for (const mode of fallbackOrder) {
+                          const attempt = extractRefsFromText(mode, textPasteContent);
+                          if (attempt.length > 0) {
+                            found = attempt;
+                            setRefRegexMode(mode);
+                            localStorage.setItem('bibleRefRegexMode', mode);
+                            break;
                           }
                         }
                       }
                       if (found.length > 0) {
-                        setRefHistory(prev => {
-                          const existingKeys = new Set(prev.map(h => `${h.parsed.abbrev}_${h.parsed.chapter}`));
-                          const newItems = found.filter(f => !existingKeys.has(`${f.parsed.abbrev}_${f.parsed.chapter}`));
-                          return [...prev, ...newItems];
-                        });
+                        // Replace History with just this paste's refs, rather than appending to whatever was there before.
+                        setRefHistory(found);
+                      } else {
+                        window.alert('No verse references found in the pasted text.');
                       }
                     }}
                     style={{ fontSize: 11, color: isDarkMode ? '#86efac' : '#16a34a', background: isDarkMode ? '#1a2e1a' : '#f0fff0', border: `1px solid ${isDarkMode ? '#166534' : '#bbf7d0'}`, borderRadius: 4, cursor: 'pointer', fontWeight: 600, padding: '3px 10px', whiteSpace: 'nowrap' }}
