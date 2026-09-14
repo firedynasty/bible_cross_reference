@@ -1,0 +1,26 @@
+Ref Modal ('e' key) — update log
+=================================
+Tracks bugs/fixes found in the "Go to Reference" modal (opened via the 'e' keycode)
+and its "Paste paragraphs" -> Find Verses parser (extractRefsFromText / parseSingleBibleRef
+in src/BibleApp.js).
+
+2026-09-14
+----------
+- Reported: pasting text with "(Eph. 5:26; cf. John 15:3)" into the modal — "Eph. 5:26"
+  silently failed to be picked up as a ref (only "John 15:3" was found).
+- Root cause: bookNameToAbbrev (src/BibleApp.js, parseSingleBibleRef) was missing the
+  short-form key 'eph' — only the full name 'ephesians' was mapped. The extraction
+  regex's book-name alternation already listed "Eph" as a recognized abbreviation, so
+  candidates matched but then got silently dropped when parseSingleBibleRef rejected them.
+- Fix: added missing short abbreviations that the regex alternation already recognized but
+  the lookup map didn't: 'eph', 'ex' (Exodus), 'mk' (Mark), 'lk' (Luke), 'phm' (Philemon),
+  're' (Revelation). Status: FIXED in src/BibleApp.js.
+- Verified via standalone regex test: "Eph. 5:26", "Ex. 20:1", "Mk 4:1", "Lk 2:1",
+  "Phm 1:1" all now parse correctly.
+
+How to log a new one
+---------------------
+When something "doesn't work" in this modal, add a dated entry above with:
+- Reported: what text/action triggered it, verbatim if possible.
+- Root cause: (fill in once diagnosed).
+- Fix: what changed, and where. Status: FIXED / WONTFIX / INVESTIGATING.
