@@ -291,7 +291,7 @@ function parseAIOutline(text) {
 }
 
 // ── Main Modal ───────────────────────────────────────────────────────────────
-export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, isSepiaMode, kjvContentRef, precomputedOutline, suppressEscape, onNavigateRef, onOpenStory, onOpenCommentary, onOpenIntro }) {
+export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, isSepiaMode, kjvContentRef, precomputedOutline, suppressEscape, onNavigateRef, onOpenStory, onOpenCommentary, onOpenIntro, onOpenMemorize }) {
   const [showTags] = useState(false);
   const [useAI, setUseAI] = useState(true);
   const [flatMode, setFlatMode] = useState(true);
@@ -422,6 +422,17 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
       } else if (e.key === 'ArrowRight') {
         if (chapter < totalChapters) { e.preventDefault(); onNextChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }
       }
+      // Cross-navigation keys — mirror the header's Story/Intro/Memorize buttons
+      else if (e.key === 'i' && onOpenMemorize) {
+        e.preventDefault();
+        onOpenMemorize();
+      } else if (e.key === 't' && onOpenStory) {
+        e.preventDefault();
+        onOpenStory();
+      } else if (e.key === 'n' && onOpenIntro) {
+        e.preventDefault();
+        onOpenIntro();
+      }
       // Word-hop game keys
       else if (e.key === 'j') {
         e.preventDefault();
@@ -456,7 +467,7 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose, suppressEscape, chapter, totalChapters, onPrevChapter, onNextChapter, gameWordIdx, flatWords, flatNodes, nodeWordRanges]);
+  }, [onClose, suppressEscape, chapter, totalChapters, onPrevChapter, onNextChapter, gameWordIdx, flatWords, flatNodes, nodeWordRanges, onOpenMemorize, onOpenStory, onOpenIntro]);
 
   const bg = isDarkMode ? '#1a1c20' : '#faf8f3';
   const textColor = isDarkMode ? '#e8e4db' : '#2b2b2b';
@@ -543,14 +554,14 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
               onClick={onOpenStory}
               style={{ fontFamily: 'inherit', fontSize: 13, background: 'none', border: `1px solid ${borderColor}`, borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: accentColor, whiteSpace: 'nowrap' }}
               title="Open story"
-            >Story</button>
+            >S(t)ory</button>
           )}
           {onOpenIntro && (
             <button
               onClick={onOpenIntro}
               style={{ fontFamily: 'inherit', fontSize: 13, background: 'none', border: `1px solid ${borderColor}`, borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: accentColor, whiteSpace: 'nowrap' }}
               title="Open intro"
-            >Intro</button>
+            >i(n)tro</button>
           )}
           {onOpenCommentary && (
             <button
@@ -558,6 +569,13 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
               style={{ fontFamily: 'inherit', fontSize: 13, background: 'none', border: `1px solid ${borderColor}`, borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: accentColor, whiteSpace: 'nowrap' }}
               title="Open commentary"
             >commen</button>
+          )}
+          {onOpenMemorize && (
+            <button
+              onClick={onOpenMemorize}
+              style={{ fontFamily: 'inherit', fontSize: 13, background: 'none', border: `1px solid ${borderColor}`, borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: accentColor, whiteSpace: 'nowrap' }}
+              title="Open memorize"
+            >memor(i)ze</button>
           )}
 
           <span style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto' }}>

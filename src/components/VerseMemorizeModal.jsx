@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const MIN_CHUNK_LEN = 20;
 
@@ -21,7 +21,7 @@ function splitIntoChunks(verseText) {
   return merged.length > 1 ? merged : [verseText];
 }
 
-function speakText(text) {
+function speakText(text, onEnd) {
   if (!text || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(text);
@@ -33,6 +33,7 @@ function speakText(text) {
     voices.find(v => v.lang.startsWith('en-US')) ||
     voices.find(v => v.lang.startsWith('en'));
   if (voice) utt.voice = voice;
+  if (onEnd) utt.onend = onEnd;
   window.speechSynthesis.speak(utt);
 }
 
@@ -46,12 +47,13 @@ export default function VerseMemorizeModal({
   verseLabel, verseText,
   bookName, chapter, startVerseNumber,
   chapterVerses,
-  onOpenCommentary,
   isDarkMode, isSepiaMode,
 }) {
   // null = show verse picker; number = 0-based index of selected verse
   const [selectedIdx, setSelectedIdx] = useState(null);
   const [activeChunk, setActiveChunk] = useState(null);
+  // Bumped on every manual speak action to invalidate any in-flight '/' auto-play chain
+  const playTokenRef = useRef(0);
 
   const bg        = isDarkMode ? '#1e2235' : isSepiaMode ? '#f5efe0' : '#ffffff';
   const textColor = isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a4a2a' : '#1a1a1a';
@@ -75,12 +77,38 @@ export default function VerseMemorizeModal({
 
   const chunks = splitIntoChunks(activeVerseText);
 
-  const goToPrev = () => setSelectedIdx(i => Math.max(0, i - 1));
-  const goToNext = () => setSelectedIdx(i => Math.min((chapterVerses?.length ?? 1) - 1, i + 1));
+  // Move to a different verse, resetting the active chunk back to 1 (like pressing '1')
+  const jumpToVerse = (newIdx) => {
+    if (selectedIdx === null || newIdx === selectedIdx) return;
+    playTokenRef.current++; // cancel any in-progress '/' auto-play
+    setSelectedIdx(newIdx);
+    const newChunks = splitIntoChunks(verseToString(chapterVerses[newIdx]));
+    setActiveChunk(0);
+    speakText(newChunks[0]);
+  };
+  const goToPrev = () => { if (selectedIdx !== null) jumpToVerse(Math.max(0, selectedIdx - 1)); };
+  const goToNext = () => { if (selectedIdx !== null) jumpToVerse(Math.min((chapterVerses?.length ?? 1) - 1, selectedIdx + 1)); };
+
+  // '/' continues speaking chunks one after another starting from the highlighted
+  // one, advancing the highlight as each finishes — like pressing Enter to keep going.
+  const speakFromHighlight = () => {
+    const token = ++playTokenRef.current;
+    const startIdx = activeChunk === null ? 0 : activeChunk;
+    const playFrom = (idx) => {
+      if (idx >= chunks.length) return;
+      setActiveChunk(idx);
+      speakText(chunks[idx], () => {
+        if (playTokenRef.current !== token) return; // interrupted by a manual action
+        playFrom(idx + 1);
+      });
+    };
+    playFrom(startIdx);
+  };
 
   // Reset when modal opens
   useEffect(() => {
     if (open) {
+      playTokenRef.current++; // cancel any in-progress '/' auto-play from a prior open
       // If chapterVerses, start at picker; else go straight to verse view
       if (hasChapterVerses) {
         const idx = startVerseNumber ? startVerseNumber - 1 : null;
@@ -92,25 +120,46 @@ export default function VerseMemorizeModal({
     }
   }, [open, startVerseNumber, hasChapterVerses]);
 
-  // Reset chunk highlight when verse changes
-  useEffect(() => { setActiveChunk(null); }, [selectedIdx]);
-
   // Keyboard shortcuts
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
+        playTokenRef.current++;
+        window.speechSynthesis?.cancel();
         if (selectedIdx !== null && hasChapterVerses) { setSelectedIdx(null); } else { onClose(); }
         return;
       }
       if (selectedIdx !== null) {
         if (e.key === 'ArrowLeft') { e.preventDefault(); goToPrev(); return; }
         if (e.key === 'ArrowRight') { e.preventDefault(); goToNext(); return; }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          playTokenRef.current++;
+          const next = activeChunk === null ? 0 : Math.max(0, activeChunk - 1);
+          setActiveChunk(next);
+          speakText(chunks[next]);
+          return;
+        }
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          playTokenRef.current++;
+          const next = activeChunk === null ? 0 : Math.min(chunks.length - 1, activeChunk + 1);
+          setActiveChunk(next);
+          speakText(chunks[next]);
+          return;
+        }
+        if (e.key === '/') {
+          e.preventDefault();
+          speakFromHighlight();
+          return;
+        }
         if (/^[1-9]$/.test(e.key)) {
           const idx = parseInt(e.key) - 1;
           if (chunks[idx] !== undefined) {
             e.preventDefault();
+            playTokenRef.current++;
             setActiveChunk(idx);
             speakText(chunks[idx]);
           }
@@ -119,7 +168,7 @@ export default function VerseMemorizeModal({
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, selectedIdx, hasChapterVerses, chunks, onClose]);
+  }, [open, selectedIdx, hasChapterVerses, chunks, activeChunk, onClose]);
 
   if (!open) return null;
 
@@ -188,22 +237,11 @@ export default function VerseMemorizeModal({
                 aria-label="Next verse"
               >→</button>
             )}
-            {onOpenCommentary && selectedIdx !== null && (
-              <button
-                onClick={() => { onClose(); onOpenCommentary(); }}
-                style={{
-                  padding: '3px 9px', fontSize: '0.82rem', fontWeight: 600,
-                  border: `1px solid ${border}`, borderRadius: 6,
-                  background: hoverBg, color: textColor,
-                  cursor: 'pointer', flexShrink: 0,
-                }}
-              >Commentary</button>
-            )}
           </div>
 
           {selectedIdx !== null ? (
             <button
-              onClick={() => speakText(chunks.join(' '))}
+              onClick={() => { playTokenRef.current++; speakText(chunks.join(' ')); }}
               style={{
                 padding: '3px 10px', fontSize: '0.82rem', fontWeight: 700,
                 border: `1px solid ${border}`, borderRadius: 6,
@@ -242,7 +280,7 @@ export default function VerseMemorizeModal({
                   return (
                     <button
                       key={i}
-                      onClick={() => setSelectedIdx(i)}
+                      onClick={() => { setSelectedIdx(i); setActiveChunk(null); }}
                       style={{
                         display: 'flex', alignItems: 'flex-start', gap: 12,
                         padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
@@ -274,12 +312,12 @@ export default function VerseMemorizeModal({
                 margin: '0 0 10px', fontSize: '0.72rem', color: subText,
                 textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600,
               }}>
-                Click or press 1–{Math.min(chunks.length, 9)} to hear a chunk · ←/→ for verses
+                Click or press 1–{Math.min(chunks.length, 9)} to hear a chunk · ↑/↓ steps through chunks · ←/→ for verses · / continues reading from here
               </p>
               {chunks.slice(0, 9).map((chunk, i) => (
                 <div
                   key={i}
-                  onClick={() => { setActiveChunk(i); speakText(chunk); }}
+                  onClick={() => { playTokenRef.current++; setActiveChunk(i); speakText(chunk); }}
                   style={{
                     display: 'flex', alignItems: 'flex-start', gap: 10,
                     padding: '9px 12px', borderRadius: 7, cursor: 'pointer',

@@ -2595,17 +2595,17 @@ const BibleApp = () => {
     }
   }, [showOutlineModal, outlinesLoaded]);
 
-  // Restore the Outline in pane 2 once a Story/Intro/Commentary overlay opened from
-  // inside it has fully closed. outlineReturnArmed is only ever set true by the
-  // onOpenStory/onOpenIntro/onOpenCommentary callbacks passed to <OutlineModal>, so
-  // overlays reached any other way — and a manual Outline close via × / Escape —
-  // never arm this and are unaffected.
+  // Restore the Outline in pane 2 once a Story/Intro/Commentary/Memorize overlay opened
+  // from inside it has fully closed. outlineReturnArmed is only ever set true by the
+  // onOpenStory/onOpenIntro/onOpenCommentary/onOpenMemorize callbacks passed to
+  // <OutlineModal>, so overlays reached any other way — and a manual Outline close via
+  // × / Escape — never arm this and are unaffected.
   useEffect(() => {
-    if (outlineReturnArmed && !showSearchModal && !verseModalData) {
+    if (outlineReturnArmed && !showSearchModal && !verseModalData && !memorizeModalData) {
       setShowOutlineModal(true);
       setOutlineReturnArmed(false);
     }
-  }, [showSearchModal, verseModalData, outlineReturnArmed]);
+  }, [showSearchModal, verseModalData, memorizeModalData, outlineReturnArmed]);
 
   // Load bible intro JSON lazily on first time intro tab is shown in story modal
   useEffect(() => {
@@ -4000,7 +4000,7 @@ const BibleApp = () => {
       }
 
       // Up Arrow - scroll up one line at a time in KJV pane (opposite of 'x' key)
-      else if ((e.key === 'ArrowUp' || e.key === 'a') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal && !showOutlineModal && !showSearchModal && !verseModalData) {
+      else if ((e.key === 'ArrowUp' || e.key === 'a') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal && !showOutlineModal && !showSearchModal && !verseModalData && !memorizeModalData) {
         
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
@@ -4095,7 +4095,7 @@ const BibleApp = () => {
         }
       }
       // 'p' key, PageDown key, ArrowDown key, or Spacebar - page down (matches pane 2 page-down button: scroll, or advance chapter at bottom)
-      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === 's') && kjvContentRef.current && !showQuiz2Modal && !showWordsModal && !showYouTubeModal && !showOutlineModal && !showSearchModal && !verseModalData) {
+      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === 's') && kjvContentRef.current && !showQuiz2Modal && !showWordsModal && !showYouTubeModal && !showOutlineModal && !showSearchModal && !verseModalData && !memorizeModalData) {
         const kjvPane = kjvContentRef.current;
         const maxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
         const atBottom = maxScroll > 0 && kjvPane.scrollTop >= maxScroll - 5;
@@ -4321,8 +4321,9 @@ const BibleApp = () => {
         e.preventDefault();
       }
 
-      // '/' key - toggle Read to End button
-      else if (e.key === '/' || e.keyCode === 191) {
+      // '/' key - toggle Read to End button (disabled while the Memorize modal is open,
+      // so its own chunk-reading keys aren't interrupted by the chapter-wide TTS toggle)
+      else if ((e.key === '/' || e.keyCode === 191) && !memorizeModalData) {
         // Find and click the Read to End toggle button
         const readToEndButton = Array.from(document.querySelectorAll('button'))
           .find(btn => btn.textContent.includes('Read2End'));
@@ -4543,15 +4544,6 @@ const BibleApp = () => {
         }
         e.preventDefault();
       }
-      // 'n' key - go to next chapter (only when no modal is open)
-      else if ((e.key === 'n' || e.key === 'N') && !showSearchModal && !showQuizModal && !showQuiz2Modal && !showCollectionModal && !showDropboxModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showWordsModal && !showYouTubeModal) {
-        const nextChapterButtons = Array.from(document.querySelectorAll('button'))
-          .filter(button => button.textContent.includes('Next Chapter'));
-        if (nextChapterButtons.length > 0) {
-          nextChapterButtons[0].click();
-        }
-        e.preventDefault();
-      }
       // Cmd+C (or Ctrl+C) - trigger TTS for top visible verse in pane 2, only when no text is selected
       else if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
         const selection = window.getSelection();
@@ -4585,7 +4577,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, storyIntroTab, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showDramatizedModal, showRefPrompt, showBookNavModal, loadStorytimeForCurrent, showOutlineModal]);
+  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, storyIntroTab, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showDramatizedModal, showRefPrompt, showBookNavModal, loadStorytimeForCurrent, showOutlineModal, verseModalData, memorizeModalData]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
@@ -7325,8 +7317,21 @@ const BibleApp = () => {
                           >
                             <p className="flex">
                               <span
-                                title="Read verse aloud (TTS)"
-                                onClick={(e) => { e.stopPropagation(); handleVerseTts(item.verseNumber, item.text, item.type === 'primary' ? selectedTranslation : rightPaneTranslation); }}
+                                title={item.type === 'primary' ? 'View commentary' : 'Read verse aloud (TTS)'}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (item.type === 'primary') {
+                                    setVerseModalData({
+                                      verseLabel: `${getBookName(selectedBook.abbrev)} ${selectedChapter}:${item.verseNumber}`,
+                                      verseText: item.text,
+                                      bookAbbrev: selectedBook.abbrev,
+                                      chapter: selectedChapter,
+                                      verseNumber: item.verseNumber,
+                                    });
+                                  } else {
+                                    handleVerseTts(item.verseNumber, item.text, rightPaneTranslation);
+                                  }
+                                }}
                                 className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${speakingPaneVerse === item.verseNumber ? (isDarkMode ? 'text-green-400' : 'text-green-600') : (isDarkMode ? 'text-blue-400' : 'text-blue-600')}`}
                               >
                                 {item.verseNumber}
@@ -7679,8 +7684,17 @@ const BibleApp = () => {
                       >
                         <p className="flex">
                           <span
-                            title="Read verse aloud (TTS)"
-                            onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`${getBookName(selectedBook.abbrev)} ${selectedChapter}:${verseNumber} ${verse}`).catch(() => {}); handleVerseTts(verseNumber, verse, selectedTranslation); }}
+                            title="View commentary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setVerseModalData({
+                                verseLabel: `${getBookName(selectedBook.abbrev)} ${selectedChapter}:${verseNumber}`,
+                                verseText: verse,
+                                bookAbbrev: selectedBook.abbrev,
+                                chapter: selectedChapter,
+                                verseNumber,
+                              });
+                            }}
                             className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${speakingPaneVerse === verseNumber ? (isDarkMode ? 'text-green-400' : 'text-green-600') : (isDarkMode ? 'text-blue-400' : 'text-blue-600')}`}
                           >{verseNumber}</span>
                           <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(verse, showGlosses)}</span>
@@ -8474,20 +8488,17 @@ const BibleApp = () => {
                               >
                                 <p className="flex">
                                   <span
-                                    title="Memorize / speak chunks"
+                                    title="View commentary"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       const verseStr = typeof verse === 'string' ? verse : (verse?.text || verse?.verse || String(verse));
                                       const bookName = getBookName(bookAbbrev);
-                                      const chapterVerses = getRightPaneChapterVerses(bookAbbrev, effectiveChapter);
-                                      setMemorizeModalData({
+                                      setVerseModalData({
                                         verseLabel: `${bookName} ${effectiveChapter}:${verseNumber}`,
                                         verseText: verseStr,
                                         bookAbbrev,
                                         chapter: effectiveChapter,
                                         verseNumber,
-                                        bookName,
-                                        chapterVerses,
                                       });
                                     }}
                                     className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}
@@ -12165,11 +12176,6 @@ const BibleApp = () => {
         chapterVerses={memorizeModalData?.chapterVerses}
         isDarkMode={isDarkMode}
         isSepiaMode={isSepiaMode}
-        onOpenCommentary={() => {
-          const d = memorizeModalData;
-          setMemorizeModalData(null);
-          setVerseModalData(d);
-        }}
       />
       <VerseCommentaryModal
         open={!!verseModalData}
@@ -12265,6 +12271,24 @@ const BibleApp = () => {
                 bookAbbrev: abbrev,
                 chapter: oChapter,
                 verseNumber: 1,
+              });
+              setShowOutlineModal(false);
+            }}
+            onOpenMemorize={() => {
+              const abbrev = oBook?.abbrev;
+              if (!abbrev) return;
+              setOutlineReturnArmed(true);
+              const chapterVerses = getRightPaneChapterVerses(abbrev, oChapter);
+              const raw = chapterVerses?.[0];
+              const verseStr = raw ? (typeof raw === 'string' ? raw : (raw?.text || raw?.verse || String(raw))) : '';
+              setMemorizeModalData({
+                verseLabel: `${oBookName} ${oChapter}:1`,
+                verseText: verseStr,
+                bookAbbrev: abbrev,
+                chapter: oChapter,
+                verseNumber: 1,
+                bookName: oBookName,
+                chapterVerses,
               });
               setShowOutlineModal(false);
             }}
