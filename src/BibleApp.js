@@ -1914,6 +1914,7 @@ const BibleApp = () => {
 
   // State for Outline Modal
   const [showOutlineModal, setShowOutlineModal] = useState(false);
+  const [outlineReturnArmed, setOutlineReturnArmed] = useState(false);
   const [outlinesData, setOutlinesData] = useState(null);
   const [outlinesLoaded, setOutlinesLoaded] = useState(false);
 
@@ -2593,6 +2594,18 @@ const BibleApp = () => {
         .catch(() => {});
     }
   }, [showOutlineModal, outlinesLoaded]);
+
+  // Restore the Outline in pane 2 once a Story/Intro/Commentary overlay opened from
+  // inside it has fully closed. outlineReturnArmed is only ever set true by the
+  // onOpenStory/onOpenIntro/onOpenCommentary callbacks passed to <OutlineModal>, so
+  // overlays reached any other way — and a manual Outline close via × / Escape —
+  // never arm this and are unaffected.
+  useEffect(() => {
+    if (outlineReturnArmed && !showSearchModal && !verseModalData) {
+      setShowOutlineModal(true);
+      setOutlineReturnArmed(false);
+    }
+  }, [showSearchModal, verseModalData, outlineReturnArmed]);
 
   // Load bible intro JSON lazily on first time intro tab is shown in story modal
   useEffect(() => {
@@ -12224,6 +12237,7 @@ const BibleApp = () => {
             suppressEscape={showBookNavModal}
             onNavigateRef={navigateToRefWithHighlight}
             onOpenStory={() => {
+              setOutlineReturnArmed(true);
               setShowOutlineModal(false);
               loadStorytimeForCurrent();
               setStoryIntroTab('story');
@@ -12231,6 +12245,7 @@ const BibleApp = () => {
               setSearchStartRef('');
             }}
             onOpenIntro={() => {
+              setOutlineReturnArmed(true);
               setShowOutlineModal(false);
               loadStorytimeForCurrent();
               setStoryIntroTab('intro');
@@ -12240,6 +12255,7 @@ const BibleApp = () => {
             onOpenCommentary={() => {
               const abbrev = oBook?.abbrev;
               if (!abbrev) return;
+              setOutlineReturnArmed(true);
               const verses = getRightPaneChapterVerses(abbrev, oChapter);
               const raw = verses?.[0];
               const verseStr = raw ? (typeof raw === 'string' ? raw : (raw?.text || raw?.verse || String(raw))) : '';
