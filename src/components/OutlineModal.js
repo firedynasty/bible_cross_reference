@@ -304,6 +304,20 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
   const nodeElsRef = useRef(new Map());
   const onNodeRef = (node, el) => { nodeElsRef.current.set(node, el); };
 
+  // Measure pane 2's on-screen rect so the outline swaps in over it exactly,
+  // instead of covering the whole viewport as a floating modal.
+  const [paneRect, setPaneRect] = useState(null);
+  useEffect(() => {
+    const el = kjvContentRef?.current;
+    if (!el) return;
+    const update = () => setPaneRect(el.getBoundingClientRect());
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener('resize', update);
+    return () => { ro.disconnect(); window.removeEventListener('resize', update); };
+  }, [kjvContentRef]);
+
   // Build one "paragraph" per verse — no verse numbers
   const paragraphs = useMemo(() => {
     if (!verses || !verses.length) return [];
@@ -448,7 +462,6 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
   const textColor = isDarkMode ? '#e8e4db' : '#2b2b2b';
   const borderColor = isDarkMode ? '#3a3a4a' : '#e3e0d8';
   const accentColor = isDarkMode ? '#a08060' : '#7a5c2e';
-  const overlayBg = isDarkMode ? 'rgba(0,0,0,0.88)' : 'rgba(0,0,0,0.6)';
   const navBtnStyle = (disabled) => ({
     fontFamily: 'inherit', fontSize: 13, background: 'none', border: `1px solid ${borderColor}`,
     borderRadius: 4, padding: '2px 10px', cursor: disabled ? 'default' : 'pointer',
@@ -485,16 +498,20 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
 
   return (
     <div
-      style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: overlayBg, zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: 16, paddingBottom: 16, overflowY: 'auto' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: 'fixed',
+        top: paneRect ? paneRect.top : 0,
+        left: paneRect ? paneRect.left : 0,
+        width: paneRect ? paneRect.width : '100%',
+        height: paneRect ? paneRect.height : '100%',
+        visibility: paneRect ? 'visible' : 'hidden',
+        background: bg, color: textColor, display: 'flex', flexDirection: 'column',
+        fontFamily: "Georgia, 'Times New Roman', serif", overflow: 'hidden', zIndex: 100,
+      }}
+      onKeyDown={handleModalKeyDown}
+      tabIndex={-1}
     >
-      <div
-        style={{ background: bg, color: textColor, borderRadius: 10, width: '92%', maxWidth: 820, maxHeight: '96vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', fontFamily: "Georgia, 'Times New Roman', serif", overflow: 'hidden' }}
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={handleModalKeyDown}
-        tabIndex={-1}
-      >
-        {/* Header */}
+      {/* Header */}
         <div style={{ padding: '14px 20px', borderBottom: `1px solid ${borderColor}`, display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap' }}>
           <span style={{ fontFamily: 'monospace', fontSize: 12, color: accentColor, fontWeight: 700, letterSpacing: '0.05em' }}>OUTLINE</span>
           {gameWordIdx !== null && (
@@ -580,6 +597,5 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
           </div>
         </div>
       </div>
-    </div>
   );
 }
