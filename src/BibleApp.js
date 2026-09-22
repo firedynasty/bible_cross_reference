@@ -1532,6 +1532,13 @@ const BibleApp = () => {
   }, [pendingBookSelection]);
   const [showCrossRef, setShowCrossRef] = useState(null);
   const [expandedRefsData, setExpandedRefsData] = useState(null); // { verseLabel, refs: [{label, text}] }
+  const [refContextMenu, setRefContextMenu] = useState(null); // { x, y, book, chapter, verse }
+  useEffect(() => {
+    if (!refContextMenu) return;
+    const onKey = (e) => { if (e.key === 'Escape') setRefContextMenu(null); };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [refContextMenu]);
   const [verseModalData, setVerseModalData] = useState(null); // { verseLabel, verseText, bookAbbrev, chapter, verseNumber }
   const [memorizeModalData, setMemorizeModalData] = useState(null); // { verseLabel, verseText, bookAbbrev, chapter, verseNumber }
   const [songMemorizeData, setSongMemorizeData] = useState(null); // { sections, songTitle }
@@ -3020,6 +3027,19 @@ const BibleApp = () => {
     're': 'Revelation', 'ge': 'Genesis'
   };
 
+  // Build a BibleGateway deep link for a cross-reference {book, chapter, verse}
+  const getRefBibleGatewayUrl = (ref) => {
+    const bgBook = (abbrevToBookName[ref.book] || getBookName(ref.book)).replace(/ /g, '%20');
+    return `https://www.biblegateway.com/passage/?search=${bgBook}%20${ref.chapter}&version=WEB#v${ref.verse}`;
+  };
+
+  // Build an in-app deep link for a cross-reference {book, chapter, verse}
+  // Uses the same ?bookname&chapter[:verse] convention as the deep-link loader above.
+  const getRefVercelBibleUrl = (ref) => {
+    const token = (abbrevToBookName[ref.book] || getBookName(ref.book)).toLowerCase().replace(/\s+/g, '');
+    const chapterVerse = ref.verse ? `${ref.chapter}:${ref.verse}` : `${ref.chapter}`;
+    return `${window.location.origin}${window.location.pathname}?${token}&${chapterVerse}`;
+  };
 
   // Handle Story Time button click - load story content and open combined modal
   const handleStorytimeButtonClick = useCallback(() => {
@@ -7356,7 +7376,9 @@ const BibleApp = () => {
                                   return (
                                   <button
                                     key={i}
-                                    onClick={() => { const bgBook = (abbrevToBookName[ref.book] || getBookName(ref.book)).replace(/ /g, '%20'); window.open(`https://www.biblegateway.com/passage/?search=${bgBook}%20${ref.chapter}&version=WEB#v${ref.verse}`, '_blank'); }}
+                                    onClick={() => window.open(getRefBibleGatewayUrl(ref), '_blank')}
+                                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setRefContextMenu({ x: e.clientX, y: e.clientY, book: ref.book, chapter: ref.chapter, verse: ref.verse }); }}
+                                    title="Right-click for more options"
                                     className={`mr-2 ${
                                       isPentateuch || isIsaiah
                                         ? 'hover:opacity-80'
@@ -7712,7 +7734,9 @@ const BibleApp = () => {
                               return (
                               <button
                                 key={i}
-                                onClick={() => { const bgBook = (abbrevToBookName[ref.book] || getBookName(ref.book)).replace(/ /g, '%20'); window.open(`https://www.biblegateway.com/passage/?search=${bgBook}%20${ref.chapter}&version=WEB#v${ref.verse}`, '_blank'); }}
+                                onClick={() => window.open(getRefBibleGatewayUrl(ref), '_blank')}
+                                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setRefContextMenu({ x: e.clientX, y: e.clientY, book: ref.book, chapter: ref.chapter, verse: ref.verse }); }}
+                                title="Right-click for more options"
                                 className={`mr-2 ${
                                   isPentateuch || isIsaiah
                                     ? 'hover:opacity-80'
@@ -8146,6 +8170,8 @@ const BibleApp = () => {
                               href={`https://www.biblegateway.com/passage/?search=${encodeURIComponent(getBookName(ref.book) + ' ' + ref.chapter)}&version=NLT`}
                               target="_blank"
                               rel="noopener noreferrer"
+                              onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setRefContextMenu({ x: e.clientX, y: e.clientY, book: ref.book, chapter: ref.chapter, verse: ref.verse }); }}
+                              title="Right-click for more options"
                               className="font-bold mb-1 hover:underline"
                               style={{ color: labelColor, padding: 0, fontSize: `${fontScale * 0.95}rem`, textDecoration: 'none' }}
                             >
@@ -12211,6 +12237,54 @@ const BibleApp = () => {
       <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
       <YouTubeVideoModal ref={youtubeModalRef} open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} onOpen={() => setShowYouTubeModal(true)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsYouTubePlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} ytMode={ytMode} onYtModeChange={handleYtModeChange} />
       <YouTubeVideoModal ref={dramatizedModalRef} isDramatized open={showDramatizedModal} onClose={() => setShowDramatizedModal(false)} onOpen={() => setShowDramatizedModal(true)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsDramatizedPlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} ytMode={ytMode} onYtModeChange={handleYtModeChange} />
+
+      {/* Right-click context menu for cross-reference links: choose BibleGateway or in-app (Vercel-Bible) */}
+      {refContextMenu && (
+        <div
+          onClick={() => setRefContextMenu(null)}
+          onContextMenu={(e) => { e.preventDefault(); setRefContextMenu(null); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 10300 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'fixed',
+              top: Math.min(refContextMenu.y, window.innerHeight - 96),
+              left: Math.min(refContextMenu.x, window.innerWidth - 190),
+              zIndex: 10301, minWidth: 170,
+              background: isDarkMode ? '#2d3148' : '#ffffff',
+              border: `1px solid ${isDarkMode ? '#3a3f5c' : '#e5e7eb'}`,
+              borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+              padding: 5, display: 'flex', flexDirection: 'column', gap: 2,
+            }}
+          >
+            <button
+              onClick={() => { window.open(getRefBibleGatewayUrl(refContextMenu), '_blank'); setRefContextMenu(null); }}
+              style={{
+                textAlign: 'left', padding: '7px 10px', borderRadius: 6, border: 'none',
+                background: 'transparent', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
+                color: isDarkMode ? '#e0e0e0' : '#1a1a1a',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = isDarkMode ? '#3a3f5c' : '#f3f4f6'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              Open in BibleGateway
+            </button>
+            <button
+              onClick={() => { window.open(getRefVercelBibleUrl(refContextMenu), '_blank'); setRefContextMenu(null); }}
+              style={{
+                textAlign: 'left', padding: '7px 10px', borderRadius: 6, border: 'none',
+                background: 'transparent', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
+                color: isDarkMode ? '#e0e0e0' : '#1a1a1a',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = isDarkMode ? '#3a3f5c' : '#f3f4f6'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              Open in Vercel-Bible
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Outline Modal */}
       {showOutlineModal && (() => {
