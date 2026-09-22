@@ -2814,6 +2814,13 @@ const BibleApp = () => {
 
     window.history.replaceState({}, document.title, window.location.pathname);
 
+    // Show a toast for the landed-on verse/chapter, mirroring BibleGateway's #v-fragment convention
+    const landedBookName = book.book || book.abbrev;
+    const landedRefLabel = verse != null ? `${landedBookName} ${chapter}:${verse}` : `${landedBookName} ${chapter}`;
+    if (introToastTimerRef.current) clearTimeout(introToastTimerRef.current);
+    setIntroToast({ text: landedRefLabel, id: Date.now(), label: 'Viewing' });
+    introToastTimerRef.current = setTimeout(() => setIntroToast(null), 5000);
+
     if (verse != null) {
       const tryScroll = (attempts) => {
         if (attempts > 20) return;
@@ -4773,7 +4780,29 @@ const BibleApp = () => {
     const loadData = async () => {
       try {
         setLoading(true);
-        
+
+        // Landing from a shared verse link (e.g. the right-click "Open in Vercel-Bible" menu, or
+        // any external ?bookname&chapter:verse deep link) should always show the public-domain
+        // KJV / WEB translations — matching the linked BibleGateway passage — regardless of
+        // whatever translations were last used in this browser.
+        let isDeepLinkLanding = false;
+        try {
+          const deepLinkParams = new URLSearchParams(window.location.search);
+          isDeepLinkLanding = Array.from(deepLinkParams.keys()).length > 0 && !deepLinkParams.get('code');
+        } catch {
+          isDeepLinkLanding = false;
+        }
+        if (isDeepLinkLanding) {
+          if (selectedTranslation !== 'en_kjv.json') {
+            setSelectedTranslation('en_kjv.json');
+            return;
+          }
+          if (rightPaneTranslation !== 'en_web.json') {
+            setRightPaneTranslation('en_web.json');
+            return;
+          }
+        }
+
         const baseUrl = getBaseUrl();
         console.log("Using base URL:", baseUrl);
         console.log("Current hostname:", window.location.hostname);
@@ -4885,7 +4914,7 @@ const BibleApp = () => {
 
             // Always use KJV as the sticky pane
             setStickyPane('kjv');
-            
+
             // Restore theme mode setting if available
             if (parsedState.themeMode) {
               setThemeMode(parsedState.themeMode);
@@ -4893,8 +4922,8 @@ const BibleApp = () => {
               setThemeMode(parsedState.isDarkMode ? 'dark' : 'light');
             }
 
-            // Restore right pane translation if available
-            if (parsedState.rightPaneTranslation) {
+            // Restore right pane translation if available (skip on a deep-link landing — see above)
+            if (!isDeepLinkLanding && parsedState.rightPaneTranslation) {
               const isRightTranslationAvailable = translations.some(t => t.id === parsedState.rightPaneTranslation);
               if (isRightTranslationAvailable) {
                 setRightPaneTranslation(parsedState.rightPaneTranslation);
@@ -4903,19 +4932,21 @@ const BibleApp = () => {
 
             // Check if the saved translation is still available
             const isTranslationAvailable = translations.some(t => t.id === savedTranslation);
-            
+
             // If the saved translation is available and different from the current one, load it
-            if (isTranslationAvailable && savedTranslation !== selectedTranslation) {
+            // (skip on a deep-link landing — see above)
+            if (!isDeepLinkLanding && isTranslationAvailable && savedTranslation !== selectedTranslation) {
               setSelectedTranslation(savedTranslation);
               // Return early as changing the translation will trigger a reload
               return;
             }
-            
+
             // If the saved translation is no longer available (e.g., he_heb.json was replaced),
             // we'll continue with the default translation
-            
-            // Always try to restore saved position regardless of translation
-            if (bibleData) {
+
+            // Always try to restore saved position regardless of translation (skipped on a deep-link
+            // landing since the deep-link effect sets the book/chapter directly from the URL)
+            if (!isDeepLinkLanding && bibleData) {
               const bookAbbrev = parsedState.bookAbbrev;
               savedBook = bibleData.find(b => b.abbrev === bookAbbrev);
               savedChapter = parsedState.chapter || 1;
@@ -12389,7 +12420,7 @@ const BibleApp = () => {
             animation: 'introToastIn 0.2s ease',
           }}
         >
-          <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.8 }}>Looking for</span>
+          <span style={{ fontSize: 11, fontWeight: 400, opacity: 0.8 }}>{introToast.label || 'Looking for'}</span>
           <span>{introToast.text}</span>
           <button
             onClick={() => { clearTimeout(introToastTimerRef.current); setIntroToast(null); }}
