@@ -382,8 +382,18 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
   useEffect(() => {
     const el = treeRef.current;
     if (!el) return;
+    // Trackpads emit a stream of wheel events (plus momentum) per swipe. Treat a swipe as one
+    // gesture: page once at its start, ignore the rest until the stream pauses or a new push begins.
+    let lastTime = 0;
+    let lastAbs = 0;
     const onWheel = (e) => {
       e.preventDefault();
+      const now = e.timeStamp;
+      const abs = Math.abs(e.deltaY);
+      const isNewGesture = now - lastTime > 120 || abs > lastAbs + 4;
+      lastTime = now;
+      lastAbs = abs;
+      if (!isNewGesture || abs === 0) return;
       const page = el.clientHeight;
       // Use tracked target if still animating, otherwise start from actual scrollTop
       const current = scrollTargetRef.current ?? el.scrollTop;
