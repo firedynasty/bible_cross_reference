@@ -4736,6 +4736,82 @@ const BibleApp = () => {
     isManuallyScrolling.current = false;
   }, [isMobileView, setMobileScrollPosition]);
 
+  // Page-down button handler: scrolls pane 2 one page and syncs pane 1 to the same scroll percentage (same as keyboard page-down)
+  const pageDownBothPanes = useCallback(() => {
+    const kjvPane = kjvContentRef.current;
+    const primaryPane = chapterContentRef.current;
+    // When the Outline modal covers pane 2, its tree is what the reader sees, so it drives the scroll
+    const outlineTree = showOutlineModal ? document.getElementById('outline-tree-scroll') : null;
+    const driver = outlineTree || (kjvPane && kjvPane.offsetParent !== null ? kjvPane : primaryPane);
+    if (!driver) return;
+    const maxScroll = driver.scrollHeight - driver.clientHeight;
+    isManuallyScrolling.current = true;
+    try {
+      driver.scrollTop = Math.min(maxScroll, driver.scrollTop + driver.clientHeight * 0.9);
+      const pct = driver.scrollTop / (maxScroll || 1);
+      [primaryPane, kjvPane].forEach(other => {
+        if (other && other !== driver && other.offsetParent !== null) {
+          other.scrollTop = pct * (other.scrollHeight - other.clientHeight || 1);
+        }
+      });
+      if (primaryPane) lastPrimaryScrollPos.current = primaryPane.scrollTop;
+    } finally {
+      setTimeout(() => { isManuallyScrolling.current = false; }, 50);
+    }
+  }, [showOutlineModal]);
+
+  // Keep pane 1, pane 2 and the Outline tree scrolled to the same percentage when the user scrolls any of them
+  // (wheel, touch, keyboard, scrollbar drag). Programmatic scrolls (verse jumps etc.) are not mirrored.
+  useEffect(() => {
+    let lastInput = 0;
+    let pointerDown = false;
+    const expected = new Map(); // pane -> scrollTop we set programmatically, so its echo scroll event is ignored
+    const markInput = () => { lastInput = Date.now(); };
+    const onPointerDown = () => { pointerDown = true; markInput(); };
+    const onPointerUp = () => { pointerDown = false; markInput(); };
+    const onScroll = (e) => {
+      const src = e.target;
+      if (!src || src.nodeType !== 1) return;
+      if (expected.has(src)) {
+        const exp = expected.get(src);
+        expected.delete(src);
+        if (Math.abs(src.scrollTop - exp) < 2) return;
+      }
+      if (isManuallyScrolling.current) return;
+      const tree = document.getElementById('outline-tree-scroll');
+      const panes = [chapterContentRef.current, kjvContentRef.current, tree];
+      if (!panes.includes(src)) return;
+      if (!pointerDown && Date.now() - lastInput > 400) return;
+      markInput(); // keep a smooth/momentum scroll gesture (e.g. extension page-down) alive while it continues
+      const srcMax = src.scrollHeight - src.clientHeight;
+      if (srcMax <= 0) return;
+      const pct = src.scrollTop / srcMax;
+      panes.forEach(other => {
+        if (!other || other === src || other.offsetParent === null) return;
+        const target = pct * (other.scrollHeight - other.clientHeight);
+        if (Math.abs(other.scrollTop - target) < 1) return;
+        other.scrollTop = target;
+        expected.set(other, other.scrollTop);
+        setTimeout(() => { if (expected.get(other) === other.scrollTop) expected.delete(other); }, 150);
+      });
+      if (chapterContentRef.current) lastPrimaryScrollPos.current = chapterContentRef.current.scrollTop;
+    };
+    document.addEventListener('wheel', markInput, true);
+    document.addEventListener('touchmove', markInput, true);
+    document.addEventListener('keydown', markInput, true);
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('pointerup', onPointerUp, true);
+    document.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('wheel', markInput, true);
+      document.removeEventListener('touchmove', markInput, true);
+      document.removeEventListener('keydown', markInput, true);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('pointerup', onPointerUp, true);
+      document.removeEventListener('scroll', onScroll, true);
+    };
+  }, []);
+
   const handlePaneClick = useCallback((event, pane) => {
     if (!dualPanePD) return;
     // Block page-down for 500ms after a chapter advance
@@ -7491,13 +7567,7 @@ const BibleApp = () => {
             {(!isMobileView || isTabletView) && selectedBook && selectedChapter > 0 && (
               <>
                 <button
-                  onClick={() => {
-                    const pane = chapterContentRef.current;
-                    if (pane) {
-                      const maxScroll = pane.scrollHeight - pane.clientHeight;
-                      pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
-                    }
-                  }}
+                  onClick={pageDownBothPanes}
                   style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
@@ -7506,13 +7576,7 @@ const BibleApp = () => {
                   <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
                 <button
-                  onClick={() => {
-                    const pane = chapterContentRef.current;
-                    if (pane) {
-                      const maxScroll = pane.scrollHeight - pane.clientHeight;
-                      pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
-                    }
-                  }}
+                  onClick={pageDownBothPanes}
                   style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
@@ -7547,13 +7611,7 @@ const BibleApp = () => {
             {isMobileView && !isTabletView && selectedBook && selectedChapter > 0 && (
               <>
                 <button
-                  onClick={() => {
-                    const pane = kjvContentRef.current;
-                    if (pane) {
-                      const maxScroll = pane.scrollHeight - pane.clientHeight;
-                      pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
-                    }
-                  }}
+                  onClick={pageDownBothPanes}
                   style={{ position: 'sticky', top: '50%', right: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'right' }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'scale(1.1)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = ''; }}
@@ -7906,13 +7964,7 @@ const BibleApp = () => {
                 return (
                   <>
                     <button
-                      onClick={() => {
-                        const pane = kjvContentRef.current;
-                        if (pane) {
-                          const maxScroll = pane.scrollHeight - pane.clientHeight;
-                          pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
-                        }
-                      }}
+                      onClick={pageDownBothPanes}
                       style={{ position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
@@ -7921,13 +7973,7 @@ const BibleApp = () => {
                       <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
                     <button
-                      onClick={() => {
-                        const pane = kjvContentRef.current;
-                        if (pane) {
-                          const maxScroll = pane.scrollHeight - pane.clientHeight;
-                          pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
-                        }
-                      }}
+                      onClick={pageDownBothPanes}
                       style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = 'translateY(-50%)'; }}
@@ -8141,13 +8187,7 @@ const BibleApp = () => {
                 {isMobileView && !isTabletView && (
                   <>
                     <button
-                      onClick={() => {
-                        const pane = kjvContentRef.current;
-                        if (pane) {
-                          const maxScroll = pane.scrollHeight - pane.clientHeight;
-                          pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
-                        }
-                      }}
+                      onClick={pageDownBothPanes}
                       style={{ position: 'sticky', top: '50%', left: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'left' }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'scale(1.1)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = ''; }}
@@ -8156,13 +8196,7 @@ const BibleApp = () => {
                       <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
                     <button
-                      onClick={() => {
-                        const pane = kjvContentRef.current;
-                        if (pane) {
-                          const maxScroll = pane.scrollHeight - pane.clientHeight;
-                          pane.scrollTop = Math.min(maxScroll, pane.scrollTop + pane.clientHeight * 0.9);
-                        }
-                      }}
+                      onClick={pageDownBothPanes}
                       style={{ position: 'sticky', top: '50%', right: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'right' }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'scale(1.1)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = ''; }}
@@ -9097,7 +9131,12 @@ const BibleApp = () => {
                 autoFocus
                 value={textPasteContent}
                 onChange={(e) => {
-                  const val = e.target.value;
+                  // Strip BibleGateway links down to their passage ("...search=Genesis%2014&version=NIV" → "Genesis 14")
+                  const val = e.target.value.replace(/https?:\/\/(?:www\.)?biblegateway\.com\/passage\/?\?[^\s]*/gi, (url) => {
+                    const m = url.match(/[?&]search=([^&#\s]+)/i);
+                    if (!m) return url;
+                    try { return decodeURIComponent(m[1].replace(/\+/g, ' ')); } catch (err) { return url; }
+                  });
                   setTextPasteContent(val);
                   // Parse quoted verse references (Dropbox style)
                   const quotedRefs = parseDropboxVerseFile(val);

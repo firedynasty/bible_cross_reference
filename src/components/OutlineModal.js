@@ -602,7 +602,7 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
             style={{ position: 'absolute', bottom: 14, left: 14, zIndex: 10, fontFamily: 'inherit', fontSize: 18, background: isDarkMode ? '#2a2c30' : '#fff', border: `1px solid ${borderColor}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: accentColor, boxShadow: '0 2px 6px rgba(0,0,0,0.18)', opacity: 0.92 }}
             title="Page down"
           >↓</button>
-          <div ref={treeRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 28px 32px', fontSize: `${fz}rem`, textAlign: 'left' }}>
+          <div ref={treeRef} id="outline-tree-scroll" className={isDarkMode ? 'scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : ''} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 28px 32px', fontSize: `${fz}rem`, textAlign: 'left', scrollbarColor: isDarkMode ? '#555 #2a2a2a' : isSepiaMode ? '#c4b89a #f4ecd8' : undefined }}>
             {roots.length === 0 ? (
               <p style={{ color: '#888', fontStyle: 'italic' }}>No verses to outline.</p>
             ) : (
