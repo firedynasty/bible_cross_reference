@@ -291,7 +291,59 @@ function parseAIOutline(text) {
 }
 
 // ── Main Modal ───────────────────────────────────────────────────────────────
-export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, isSepiaMode, kjvContentRef, precomputedOutline, suppressEscape, onNavigateRef, onOpenStory, onOpenCommentary, onOpenIntro, onOpenMemorize }) {
+// ── Typewriter widget: types out text, then leaves a blinking caret ──────────────
+function TypewriterLine({ text, label, isDarkMode, accentColor, borderColor }) {
+  const [shown, setShown] = useState('');
+  const [typing, setTyping] = useState(false);
+  const [replayKey, setReplayKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setShown('');
+    if (!text) return undefined;
+    setTyping(true);
+    (async () => {
+      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+      await sleep(600);
+      for (let i = 1; i <= text.length; i++) {
+        if (cancelled) return;
+        setShown(text.slice(0, i));
+        await sleep(25 + Math.random() * 45);
+      }
+      if (!cancelled) setTyping(false);
+    })();
+    return () => { cancelled = true; };
+  }, [text, replayKey]);
+
+  if (!text) return null;
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <style>{'@keyframes outline-caret-blink { 50% { opacity: 0; } }'}</style>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <span style={{ fontFamily: 'monospace', fontSize: 11, color: accentColor, letterSpacing: '0.04em' }}>{label}</span>
+        <button
+          onClick={() => setReplayKey(k => k + 1)}
+          title="Replay typing"
+          style={{ fontFamily: 'monospace', fontSize: 11, background: 'none', border: `1px solid ${borderColor}`, borderRadius: 4, padding: '0 8px', cursor: 'pointer', color: accentColor }}
+        >↻</button>
+      </div>
+      <div style={{
+        background: isDarkMode ? '#23252a' : '#f4f4f2', borderRadius: 12, padding: '18px 20px', minHeight: 64,
+        fontFamily: '"Courier New", monospace', fontSize: '1.05em', lineHeight: 1.6, color: isDarkMode ? '#e8e4db' : '#111',
+        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+      }}>
+        <span>{shown}</span>
+        <span style={{
+          display: 'inline-block', width: 2, height: '1.2em', background: isDarkMode ? '#e8e4db' : '#111',
+          verticalAlign: 'text-bottom', marginLeft: 1,
+          animation: typing ? 'none' : 'outline-caret-blink 1s steps(1) infinite',
+        }} />
+      </div>
+    </div>
+  );
+}
+
+export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, isSepiaMode, kjvContentRef, primaryPaneRef, precomputedOutline, suppressEscape, onNavigateRef, onOpenStory, onOpenCommentary, onOpenIntro, onOpenMemorize }) {
   const [showTags] = useState(false);
   const [useAI, setUseAI] = useState(true);
   const [flatMode, setFlatMode] = useState(true);
@@ -328,6 +380,29 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
       })
       .filter(p => p);
   }, [verses]);
+
+  // First verse visible at the top of pane 1 (falls back to the chapter's first verse) for the typewriter line
+  const [firstSeen, setFirstSeen] = useState({ text: '', label: '' });
+  useEffect(() => {
+    const pane = primaryPaneRef?.current;
+    let found = null;
+    if (pane) {
+      const top = pane.getBoundingClientRect().top;
+      for (let n = 1; n <= 200; n++) {
+        const el = document.getElementById(`verse-${n}`);
+        if (!el) break;
+        if (el.getBoundingClientRect().bottom > top + 10) {
+          const span = el.querySelector('p > span.flex-1');
+          const t = span ? span.textContent.trim() : '';
+          if (t) { found = { text: t, label: `${bookName} ${chapter}:${n}` }; break; }
+        }
+      }
+    }
+    if (!found && paragraphs.length) found = { text: paragraphs[0], label: `${bookName} ${chapter}:1` };
+    setFirstSeen(found || { text: '', label: '' });
+    // Re-run only when the chapter changes, not on every pane-1 scroll
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapter, bookName, verses]);
 
   const aiRoots = useMemo(() => {
     if (!precomputedOutline?.outline) return null;
@@ -603,6 +678,7 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
             title="Page down"
           >↓</button>
           <div ref={treeRef} id="outline-tree-scroll" className={isDarkMode ? 'scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : ''} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 28px 32px', fontSize: `${fz}rem`, textAlign: 'left', scrollbarColor: isDarkMode ? '#555 #2a2a2a' : isSepiaMode ? '#c4b89a #f4ecd8' : undefined }}>
+            <TypewriterLine text={firstSeen.text} label={firstSeen.label} isDarkMode={isDarkMode} accentColor={accentColor} borderColor={borderColor} />
             {roots.length === 0 ? (
               <p style={{ color: '#888', fontStyle: 'italic' }}>No verses to outline.</p>
             ) : (

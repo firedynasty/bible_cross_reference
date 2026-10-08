@@ -12382,6 +12382,7 @@ const BibleApp = () => {
             isDarkMode={isDarkMode}
             isSepiaMode={isSepiaMode}
             kjvContentRef={kjvContentRef}
+            primaryPaneRef={chapterContentRef}
             onClose={() => setShowOutlineModal(false)}
             precomputedOutline={outlinesData?.[oBook?.abbrev]?.[String(oChapter)]}
             suppressEscape={showBookNavModal}
