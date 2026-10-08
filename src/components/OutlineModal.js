@@ -211,7 +211,7 @@ const TAG_STYLES = {
 const INDENT_TAGS = new Set(['qualification', 'consequence', 'contrast']);
 
 // ── React tree renderer ──────────────────────────────────────────────────────
-function OutlineNodeEl({ node, showTags, gameWordIdx, nodeWordRanges, activeWordRef, onNodeRef, typeNode, typeProps }) {
+function OutlineNodeEl({ node, showTags, gameWordIdx, nodeWordRanges, activeWordRef, onNodeRef, typeNodes, typeProps, onHoverNode }) {
   if (node.tag === 'spacer') {
     return <li style={{ listStyle: 'none', margin: '10px 0 2px', minHeight: 10 }} aria-hidden="true" />;
   }
@@ -241,7 +241,7 @@ function OutlineNodeEl({ node, showTags, gameWordIdx, nodeWordRanges, activeWord
   }
 
   return (
-    <li ref={el => { if (el && onNodeRef) onNodeRef(node, el); }} style={{ margin: '4px 0', lineHeight: 1.55, position: 'relative', paddingLeft: 16, marginLeft: extraIndent }}>
+    <li ref={el => { if (el && onNodeRef) onNodeRef(node, el); }} onMouseOver={onHoverNode ? (e) => { e.stopPropagation(); onHoverNode(node); } : undefined} style={{ margin: '4px 0', lineHeight: 1.55, position: 'relative', paddingLeft: 16, marginLeft: extraIndent }}>
       <span style={{ position: 'absolute', left: 0, top: '0.65em', width: 5, height: 5, borderRadius: '50%', background: '#b9b2a2', display: 'inline-block' }} />
       {textContent}
       {showTags && node.tag && ts && (
@@ -249,7 +249,7 @@ function OutlineNodeEl({ node, showTags, gameWordIdx, nodeWordRanges, activeWord
           [{node.tag}]
         </span>
       )}
-      {typeNode === node && typeProps && (
+      {typeNodes?.has(node) && typeProps && (
         <div style={{ marginTop: 6 }}>
           <TypewriterLine text={node.text} label="" {...typeProps} />
         </div>
@@ -257,7 +257,7 @@ function OutlineNodeEl({ node, showTags, gameWordIdx, nodeWordRanges, activeWord
       {node.children.length > 0 && (
         <ul style={{ listStyle: 'none', margin: 0, paddingLeft: 22 }}>
           {node.children.map((child, i) => (
-            <OutlineNodeEl key={i} node={child} showTags={showTags} gameWordIdx={gameWordIdx} nodeWordRanges={nodeWordRanges} activeWordRef={activeWordRef} onNodeRef={onNodeRef} typeNode={typeNode} typeProps={typeProps} />
+            <OutlineNodeEl key={i} node={child} showTags={showTags} gameWordIdx={gameWordIdx} nodeWordRanges={nodeWordRanges} activeWordRef={activeWordRef} onNodeRef={onNodeRef} typeNodes={typeNodes} typeProps={typeProps} onHoverNode={onHoverNode} />
           ))}
         </ul>
       )}
@@ -354,7 +354,11 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
   const [typeMode, setTypeMode] = useState(() => {
     try { return localStorage.getItem('outline-type-mode') !== '0'; } catch (e) { return true; }
   });
-  const [typeNode, setTypeNode] = useState(null);
+  const [typeNodes, setTypeNodes] = useState(() => new Set()); // sentences currently showing a typewriter box (any number)
+  const lastScrollAtRef = useRef(0); // hovers caused by content scrolling under a still pointer are ignored
+  const hoverTypeNode = (node) => { if (Date.now() - lastScrollAtRef.current > 400) addTypeNode(node); };
+  const addTypeNode = (node) => setTypeNodes(prev => (prev.has(node) ? prev : new Set(prev).add(node)));
+  const clearTypeNodes = () => setTypeNodes(prev => (prev.size ? new Set() : prev));
   const [useAI, setUseAI] = useState(true);
   const [flatMode, setFlatMode] = useState(true);
   const [fz, setFz] = useState(() => {
@@ -430,7 +434,7 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
 
   useEffect(() => {
     try { localStorage.setItem('outline-type-mode', typeMode ? '1' : '0'); } catch (e) { /* ignore */ }
-    setTypeNode(null);
+    clearTypeNodes();
     const el = treeRef.current;
     if (!typeMode || !el) return undefined;
     let timer = null;
@@ -438,10 +442,10 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
       clearTimeout(timer);
       timer = setTimeout(() => {
         const best = pickTopNode();
-        if (best) setTypeNode(best);
+        if (best) addTypeNode(best);
       }, 10000);
     };
-    const onScroll = () => { setTypeNode(null); arm(); };
+    const onScroll = () => { lastScrollAtRef.current = Date.now(); arm(); };
     arm(); // also start counting when the outline opens / the chapter changes, before any scroll
     el.addEventListener('scroll', onScroll);
     return () => { el.removeEventListener('scroll', onScroll); clearTimeout(timer); };
@@ -673,9 +677,9 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
             title={flatMode ? 'Flat bullets — click for outline' : 'Outline — click for flat bullets'}
           >{flatMode ? 'FLAT ON' : 'FLAT'}</button>
           <button
-            onClick={() => setTypeNode(prev => (prev ? null : pickTopNode()))}
+            onClick={() => { if (typeNodes.size) clearTypeNodes(); else { const n = pickTopNode(); if (n) addTypeNode(n); } }}
             style={{ fontFamily: 'monospace', fontSize: 11, padding: '1px 7px', borderRadius: 9, border: `1px solid ${borderColor}`, cursor: 'pointer', background: 'none', color: accentColor, fontWeight: 700 }}
-            title="Type the sentence nearest the top now (click again to hide)"
+            title="Type the sentence nearest the top now — or, if boxes are open, close them all"
           >⌨</button>
           <button
             onClick={() => setTypeMode(v => !v)}
@@ -713,6 +717,11 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
         {/* Tree */}
         <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <button
+            onClick={() => { if (treeRef.current) treeRef.current.scrollBy({ top: -(treeRef.current.clientHeight - 60), behavior: 'smooth' }); }}
+            style={{ position: 'absolute', bottom: 62, left: 14, zIndex: 10, fontFamily: 'inherit', fontSize: 18, background: isDarkMode ? '#2a2c30' : '#fff', border: `1px solid ${borderColor}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: accentColor, boxShadow: '0 2px 6px rgba(0,0,0,0.18)', opacity: 0.92 }}
+            title="Scroll up (same as the up arrow key)"
+          >↑</button>
+          <button
             onClick={() => { if (treeRef.current) treeRef.current.scrollBy({ top: treeRef.current.clientHeight * 0.8, behavior: 'smooth' }); }}
             style={{ position: 'absolute', bottom: 14, left: 14, zIndex: 10, fontFamily: 'inherit', fontSize: 18, background: isDarkMode ? '#2a2c30' : '#fff', border: `1px solid ${borderColor}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: accentColor, boxShadow: '0 2px 6px rgba(0,0,0,0.18)', opacity: 0.92 }}
             title="Page down"
@@ -724,7 +733,7 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
             ) : (
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                 {roots.map((node, i) => (
-                  <OutlineNodeEl key={i} node={node} showTags={showTags} gameWordIdx={gameWordIdx} nodeWordRanges={nodeWordRanges} activeWordRef={activeWordRef} onNodeRef={onNodeRef} typeNode={typeNode} typeProps={typeProps} />
+                  <OutlineNodeEl key={i} node={node} showTags={showTags} gameWordIdx={gameWordIdx} nodeWordRanges={nodeWordRanges} activeWordRef={activeWordRef} onNodeRef={onNodeRef} typeNodes={typeNodes} typeProps={typeProps} onHoverNode={typeMode ? hoverTypeNode : undefined} />
                 ))}
               </ul>
             )}

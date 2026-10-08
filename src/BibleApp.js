@@ -1726,6 +1726,48 @@ const BibleApp = () => {
     pane2Only: 'P2 Only', scriptureWriting: 'Scripture Writing', outline: 'Outline(o)', intro: 'Intro',
     memorize: 'Memorize', commentary: 'Commentary'
   };
+  // One-line explanations shown under each name in the Toggle Buttons modal (only for buttons whose behaviour is known)
+  const featureDescriptions = {
+    search: 'Opens the Story / Intro / commentary reader (Esc).',
+    rhyme: 'Opens the Rhyme audio player.',
+    storyAudio: 'Plays or pauses the Story Time audio for pane 2\'s book.',
+    chpCopy: 'Copies the Story Time text for a range of chapters in the current book to the clipboard.',
+    ruler: 'Toggles the reading ruler (u) and lets you change its height.',
+    col: 'Opens your verse collections.',
+    hymn: 'Opens the recommended hymns for this book.',
+    prompt: 'Not used by any button in the app right now.',
+    nltPsalms: 'Opens the current chapter in BibleGateway (NKJV).',
+    plan: 'Opens the Bible reading plan.',
+    math: 'Opens the Math modal.',
+    figures: 'Opens the Figures modal.',
+    copyPane2: 'Copies the verses showing in pane 2 to the clipboard.',
+    toggleCuv: 'Switches pane 2 between KJV and CUV.',
+    togglePsalms: 'Jumps between Psalms and Proverbs.',
+    toggleRhyme: 'Switches pane 2 between WEB and Rhyme.',
+    cyclePane1: 'Pick which translation pane 1 shows.',
+    clrPane1: 'Blanks pane 1 so Cmd+F only searches pane 2; click again to bring it back.',
+    ref: 'Go to a Bible reference (e) \u2014 you can paste a BibleGateway link.',
+    syllable: 'Shows or hides syllable breaks in pane 2.',
+    darkMode: 'Cycles light, sepia and dark themes.',
+    fontMinus: 'Makes the text smaller (\u2212) or larger (+).',
+    youtube: 'Plays the book overview video (KJV).',
+    youtubeDramatized: 'Plays the dramatized audio (NKJV).',
+    lang: 'Cycles the language: en, cant, chin, heb, span, fr.',
+    soaking: 'Plays or pauses the soaking worship music (s).',
+    classical: 'Opens the classical music player.',
+    classicalPlay: 'Plays or pauses the classical music.',
+    pane1Verse: 'Shows pane 1\'s translation of the verses you last copied from pane 2.',
+    snippets: 'Saves and copies text snippets.',
+    clipboardRef: 'Reads a chapter:verse from the clipboard and goes to it.',
+    searchNiv: 'Opens search-niv.netlify.app.',
+    pane2Only: 'Hides pane 1 so pane 2 fills the screen; click again to restore.',
+    scriptureWriting: 'Shows or hides the scripture writing panel.',
+    outline: 'Opens the sentence outline of the current chapter (o).',
+    intro: 'Opens the book introduction and outline (i).',
+    memorize: 'Opens Memorize for the current verse.',
+    commentary: 'Opens the commentary for the current verse.',
+    repeat: 'Paste text and have it read aloud.',
+  };
   const [visibleFeatures, setVisibleFeatures] = useState(() => {
     try {
       const saved = localStorage.getItem('bible-visible-features');
@@ -9326,7 +9368,7 @@ const BibleApp = () => {
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)' }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowFeatureToggleModal(false); }}
         >
-          <div style={{ background: isDarkMode ? '#2a2a3a' : 'white', borderRadius: 12, padding: 24, maxWidth: 400, width: '90%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: isDarkMode ? '#2a2a3a' : 'white', borderRadius: 12, padding: 24, maxWidth: 560, width: '90%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.3)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ margin: 0, fontSize: '1.2em', color: isDarkMode ? '#e0e0e0' : '#333' }}>Toggle Buttons</h3>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -9365,14 +9407,20 @@ const BibleApp = () => {
                       <label key="font-pair" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: fontPairOn ? (isDarkMode ? '#3a3a5a' : '#f0f7ff') : (isDarkMode ? '#1a1a2a' : '#f5f5f5'), border: `1px solid ${fontPairOn ? '#667eea' : (isDarkMode ? '#444' : '#ddd')}` }}
                         onClick={() => { const next = !fontPairOn; setVisibleFeatures(prev => { const updated = { ...prev, fontMinus: next, fontPlus: next }; localStorage.setItem('bible-visible-features', JSON.stringify(updated)); return updated; }); }}>
                         <input type="checkbox" checked={fontPairOn} onChange={() => {}} style={{ accentColor: '#667eea' }} />
-                        <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}><span style={{ color: isDarkMode ? '#aaa' : '#777' }}>font:</span> − +</span>
+                        <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                          <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}><span style={{ color: isDarkMode ? '#aaa' : '#777' }}>font:</span> − +</span>
+                          <span style={{ fontSize: 10.5, lineHeight: 1.3, marginTop: 2, color: isDarkMode ? '#9aa' : '#888' }}>{featureDescriptions.fontMinus}</span>
+                        </span>
                       </label>
                     );
                   }
                   return (
                     <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: visibleFeatures[key] !== false ? (isDarkMode ? '#3a3a5a' : '#f0f7ff') : (isDarkMode ? '#1a1a2a' : '#f5f5f5'), border: `1px solid ${visibleFeatures[key] !== false ? '#667eea' : (isDarkMode ? '#444' : '#ddd')}` }}>
                       <input type="checkbox" checked={visibleFeatures[key] !== false} onChange={() => toggleFeature(key)} style={{ accentColor: '#667eea' }} />
-                      <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}>{featureLabels[key] || key}</span>
+                      <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                        <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}>{featureLabels[key] || key}</span>
+                        {featureDescriptions[key] && <span style={{ fontSize: 10.5, lineHeight: 1.3, marginTop: 2, color: isDarkMode ? '#9aa' : '#888' }}>{featureDescriptions[key]}</span>}
+                      </span>
                     </label>
                   );
                 });
@@ -9393,7 +9441,10 @@ const BibleApp = () => {
                     onChange={() => toggleFeature(key)}
                     style={{ accentColor: '#e06688' }}
                   />
-                  <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}>{featureLabels[key] || key}</span>
+                  <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                        <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}>{featureLabels[key] || key}</span>
+                        {featureDescriptions[key] && <span style={{ fontSize: 10.5, lineHeight: 1.3, marginTop: 2, color: isDarkMode ? '#9aa' : '#888' }}>{featureDescriptions[key]}</span>}
+                      </span>
                 </label>
               ))}
             </div>
