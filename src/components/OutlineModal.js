@@ -211,7 +211,7 @@ const TAG_STYLES = {
 const INDENT_TAGS = new Set(['qualification', 'consequence', 'contrast']);
 
 // ── React tree renderer ──────────────────────────────────────────────────────
-function OutlineNodeEl({ node, showTags, gameWordIdx, nodeWordRanges, activeWordRef, onNodeRef }) {
+function OutlineNodeEl({ node, showTags, gameWordIdx, nodeWordRanges, activeWordRef, onNodeRef, typeNode, typeProps }) {
   if (node.tag === 'spacer') {
     return <li style={{ listStyle: 'none', margin: '10px 0 2px', minHeight: 10 }} aria-hidden="true" />;
   }
@@ -249,10 +249,15 @@ function OutlineNodeEl({ node, showTags, gameWordIdx, nodeWordRanges, activeWord
           [{node.tag}]
         </span>
       )}
+      {typeNode === node && typeProps && (
+        <div style={{ marginTop: 6 }}>
+          <TypewriterLine text={node.text} label="" {...typeProps} />
+        </div>
+      )}
       {node.children.length > 0 && (
         <ul style={{ listStyle: 'none', margin: 0, paddingLeft: 22 }}>
           {node.children.map((child, i) => (
-            <OutlineNodeEl key={i} node={child} showTags={showTags} gameWordIdx={gameWordIdx} nodeWordRanges={nodeWordRanges} activeWordRef={activeWordRef} onNodeRef={onNodeRef} />
+            <OutlineNodeEl key={i} node={child} showTags={showTags} gameWordIdx={gameWordIdx} nodeWordRanges={nodeWordRanges} activeWordRef={activeWordRef} onNodeRef={onNodeRef} typeNode={typeNode} typeProps={typeProps} />
           ))}
         </ul>
       )}
@@ -345,6 +350,11 @@ function TypewriterLine({ text, label, isDarkMode, accentColor, borderColor }) {
 
 export default function OutlineModal({ verses, bookName, chapter, totalChapters, onPrevChapter, onNextChapter, onClose, isDarkMode, isSepiaMode, kjvContentRef, primaryPaneRef, precomputedOutline, suppressEscape, onNavigateRef, onOpenStory, onOpenCommentary, onOpenIntro, onOpenMemorize }) {
   const [showTags] = useState(false);
+  // Type mode: after the outline sits still for 10s, type out the sentence nearest the top underneath itself
+  const [typeMode, setTypeMode] = useState(() => {
+    try { return localStorage.getItem('outline-type-mode') !== '0'; } catch (e) { return true; }
+  });
+  const [typeNode, setTypeNode] = useState(null);
   const [useAI, setUseAI] = useState(true);
   const [flatMode, setFlatMode] = useState(true);
   const [fz, setFz] = useState(() => {
@@ -403,6 +413,32 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
     // Re-run only when the chapter changes, not on every pane-1 scroll
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapter, bookName, verses]);
+
+  useEffect(() => {
+    try { localStorage.setItem('outline-type-mode', typeMode ? '1' : '0'); } catch (e) { /* ignore */ }
+    setTypeNode(null);
+    const el = treeRef.current;
+    if (!typeMode || !el) return undefined;
+    let timer = null;
+    const arm = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const top = el.getBoundingClientRect().top;
+        let best = null, bestTop = Infinity;
+        for (const [node, nodeEl] of nodeElsRef.current) {
+          if (!nodeEl.isConnected) continue;
+          const rect = nodeEl.getBoundingClientRect();
+          // first sentence whose text is still (at least partly) in view at the top
+          if (rect.bottom > top + 8 && rect.top < bestTop) { best = node; bestTop = rect.top; }
+        }
+        if (best) setTypeNode(best);
+      }, 10000);
+    };
+    const onScroll = () => { setTypeNode(null); arm(); };
+    arm(); // also start counting when the outline opens / the chapter changes, before any scroll
+    el.addEventListener('scroll', onScroll);
+    return () => { el.removeEventListener('scroll', onScroll); clearTimeout(timer); };
+  }, [typeMode, chapter]);
 
   const aiRoots = useMemo(() => {
     if (!precomputedOutline?.outline) return null;
@@ -558,6 +594,7 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
   const textColor = isDarkMode ? '#e8e4db' : '#2b2b2b';
   const borderColor = isDarkMode ? '#3a3a4a' : '#e3e0d8';
   const accentColor = isDarkMode ? '#a08060' : '#7a5c2e';
+  const typeProps = { isDarkMode, accentColor, borderColor };
   const navBtnStyle = (disabled) => ({
     fontFamily: 'inherit', fontSize: 13, background: 'none', border: `1px solid ${borderColor}`,
     borderRadius: 4, padding: '2px 10px', cursor: disabled ? 'default' : 'pointer',
@@ -628,6 +665,11 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
             style={{ fontFamily: 'monospace', fontSize: 10, padding: '2px 7px', borderRadius: 9, border: 'none', cursor: 'pointer', background: flatMode ? '#374151' : (isDarkMode ? '#3a3a4a' : isSepiaMode ? '#c8b89a' : '#e3e0d8'), color: flatMode ? '#fff' : (isDarkMode ? '#aaa' : isSepiaMode ? '#5a4a35' : '#666'), fontWeight: 700, letterSpacing: '0.04em' }}
             title={flatMode ? 'Flat bullets — click for outline' : 'Outline — click for flat bullets'}
           >{flatMode ? 'FLAT ON' : 'FLAT'}</button>
+          <button
+            onClick={() => setTypeMode(v => !v)}
+            style={{ fontFamily: 'monospace', fontSize: 10, padding: '2px 7px', borderRadius: 9, border: 'none', cursor: 'pointer', background: typeMode ? '#374151' : (isDarkMode ? '#3a3a4a' : isSepiaMode ? '#c8b89a' : '#e3e0d8'), color: typeMode ? '#fff' : (isDarkMode ? '#aaa' : isSepiaMode ? '#5a4a35' : '#666'), fontWeight: 700, letterSpacing: '0.04em' }}
+            title={typeMode ? 'Typewriter on — types the sentence near the top after 10s of no scrolling. Click to turn off' : 'Typewriter off — click to type the sentence near the top after 10s of no scrolling'}
+          >{typeMode ? 'TYPE ON' : 'TYPE'}</button>
           {/* Prev / chapter title / Next */}
           <button onClick={() => { onPrevChapter(); if (treeRef.current) treeRef.current.scrollTop = 0; }} disabled={chapter <= 1} style={navBtnStyle(chapter <= 1)}>‹</button>
           <span style={{ fontWeight: 700, fontSize: 15, color: textColor }}>{bookName} {chapter}</span>
@@ -641,26 +683,12 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
               title="Open story"
             >S(t)ory</button>
           )}
-          {onOpenIntro && (
-            <button
-              onClick={onOpenIntro}
-              style={{ fontFamily: 'inherit', fontSize: 13, background: 'none', border: `1px solid ${borderColor}`, borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: accentColor, whiteSpace: 'nowrap' }}
-              title="Open intro"
-            >i(n)tro</button>
-          )}
           {onOpenCommentary && (
             <button
               onClick={onOpenCommentary}
               style={{ fontFamily: 'inherit', fontSize: 13, background: 'none', border: `1px solid ${borderColor}`, borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: accentColor, whiteSpace: 'nowrap' }}
               title="Open commentary"
             >commen</button>
-          )}
-          {onOpenMemorize && (
-            <button
-              onClick={onOpenMemorize}
-              style={{ fontFamily: 'inherit', fontSize: 13, background: 'none', border: `1px solid ${borderColor}`, borderRadius: 4, padding: '2px 8px', cursor: 'pointer', color: accentColor, whiteSpace: 'nowrap' }}
-              title="Open memorize"
-            >memor(i)ze</button>
           )}
 
           <span style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto' }}>
@@ -678,13 +706,13 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
             title="Page down"
           >↓</button>
           <div ref={treeRef} id="outline-tree-scroll" className={isDarkMode ? 'scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : ''} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 28px 32px', fontSize: `${fz}rem`, textAlign: 'left', scrollbarColor: isDarkMode ? '#555 #2a2a2a' : isSepiaMode ? '#c4b89a #f4ecd8' : undefined }}>
-            <TypewriterLine text={firstSeen.text} label={firstSeen.label} isDarkMode={isDarkMode} accentColor={accentColor} borderColor={borderColor} />
+            {typeMode && <TypewriterLine text={firstSeen.text} label={firstSeen.label} isDarkMode={isDarkMode} accentColor={accentColor} borderColor={borderColor} />}
             {roots.length === 0 ? (
               <p style={{ color: '#888', fontStyle: 'italic' }}>No verses to outline.</p>
             ) : (
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                 {roots.map((node, i) => (
-                  <OutlineNodeEl key={i} node={node} showTags={showTags} gameWordIdx={gameWordIdx} nodeWordRanges={nodeWordRanges} activeWordRef={activeWordRef} onNodeRef={onNodeRef} />
+                  <OutlineNodeEl key={i} node={node} showTags={showTags} gameWordIdx={gameWordIdx} nodeWordRanges={nodeWordRanges} activeWordRef={activeWordRef} onNodeRef={onNodeRef} typeNode={typeNode} typeProps={typeProps} />
                 ))}
               </ul>
             )}
