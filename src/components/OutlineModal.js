@@ -414,6 +414,20 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapter, bookName, verses]);
 
+  // Sentence nearest the top of the outline viewport (first one still at least partly in view)
+  const pickTopNode = () => {
+    const el = treeRef.current;
+    if (!el) return null;
+    const top = el.getBoundingClientRect().top;
+    let best = null, bestTop = Infinity;
+    for (const [node, nodeEl] of nodeElsRef.current) {
+      if (!nodeEl.isConnected) continue;
+      const rect = nodeEl.getBoundingClientRect();
+      if (rect.bottom > top + 8 && rect.top < bestTop) { best = node; bestTop = rect.top; }
+    }
+    return best;
+  };
+
   useEffect(() => {
     try { localStorage.setItem('outline-type-mode', typeMode ? '1' : '0'); } catch (e) { /* ignore */ }
     setTypeNode(null);
@@ -423,14 +437,7 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
     const arm = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        const top = el.getBoundingClientRect().top;
-        let best = null, bestTop = Infinity;
-        for (const [node, nodeEl] of nodeElsRef.current) {
-          if (!nodeEl.isConnected) continue;
-          const rect = nodeEl.getBoundingClientRect();
-          // first sentence whose text is still (at least partly) in view at the top
-          if (rect.bottom > top + 8 && rect.top < bestTop) { best = node; bestTop = rect.top; }
-        }
+        const best = pickTopNode();
         if (best) setTypeNode(best);
       }, 10000);
     };
@@ -665,6 +672,11 @@ export default function OutlineModal({ verses, bookName, chapter, totalChapters,
             style={{ fontFamily: 'monospace', fontSize: 10, padding: '2px 7px', borderRadius: 9, border: 'none', cursor: 'pointer', background: flatMode ? '#374151' : (isDarkMode ? '#3a3a4a' : isSepiaMode ? '#c8b89a' : '#e3e0d8'), color: flatMode ? '#fff' : (isDarkMode ? '#aaa' : isSepiaMode ? '#5a4a35' : '#666'), fontWeight: 700, letterSpacing: '0.04em' }}
             title={flatMode ? 'Flat bullets — click for outline' : 'Outline — click for flat bullets'}
           >{flatMode ? 'FLAT ON' : 'FLAT'}</button>
+          <button
+            onClick={() => setTypeNode(prev => (prev ? null : pickTopNode()))}
+            style={{ fontFamily: 'monospace', fontSize: 11, padding: '1px 7px', borderRadius: 9, border: `1px solid ${borderColor}`, cursor: 'pointer', background: 'none', color: accentColor, fontWeight: 700 }}
+            title="Type the sentence nearest the top now (click again to hide)"
+          >⌨</button>
           <button
             onClick={() => setTypeMode(v => !v)}
             style={{ fontFamily: 'monospace', fontSize: 10, padding: '2px 7px', borderRadius: 9, border: 'none', cursor: 'pointer', background: typeMode ? '#374151' : (isDarkMode ? '#3a3a4a' : isSepiaMode ? '#c8b89a' : '#e3e0d8'), color: typeMode ? '#fff' : (isDarkMode ? '#aaa' : isSepiaMode ? '#5a4a35' : '#666'), fontWeight: 700, letterSpacing: '0.04em' }}
