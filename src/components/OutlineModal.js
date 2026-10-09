@@ -334,7 +334,7 @@ function TypewriterLine({ text, label, isDarkMode, accentColor, borderColor }) {
       </div>
       <div style={{
         background: isDarkMode ? '#23252a' : '#f4f4f2', borderRadius: 12, padding: '18px 20px', minHeight: 64,
-        fontFamily: '"Courier New", monospace', fontSize: '1.05em', lineHeight: 1.6, color: isDarkMode ? '#e8e4db' : '#111',
+        fontFamily: '"Courier New", monospace', fontSize: '1.05em', fontWeight: 700, lineHeight: 1.6, color: isDarkMode ? '#e8e4db' : '#111',
         whiteSpace: 'pre-wrap', wordBreak: 'break-word',
       }}>
         <span>{shown}</span>
