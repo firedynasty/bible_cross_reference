@@ -1783,6 +1783,15 @@ const BibleApp = () => {
     defaults.commentary = false;
     return defaults;
   });
+  // Which side the single mobile page-down button sits on ('left' | 'right'), remembered across sessions
+  const [pageDownSide, setPageDownSide] = useState(() => {
+    try { return localStorage.getItem('bible-pagedown-side') === 'left' ? 'left' : 'right'; } catch (e) { return 'right'; }
+  });
+  const togglePageDownSide = () => setPageDownSide(prev => {
+    const next = prev === 'left' ? 'right' : 'left';
+    try { localStorage.setItem('bible-pagedown-side', next); } catch (e) { /* ignore */ }
+    return next;
+  });
   const [showFeatureToggleModal, setShowFeatureToggleModal] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [shortcutsContent, setShortcutsContent] = useState('');
@@ -7654,7 +7663,7 @@ const BibleApp = () => {
               <>
                 <button
                   onClick={pageDownBothPanes}
-                  style={{ position: 'sticky', top: '50%', right: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'right' }}
+                  style={{ position: 'sticky', top: '50%', [pageDownSide]: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: pageDownSide }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'scale(1.1)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = ''; }}
                   title="Page down"
@@ -8230,16 +8239,7 @@ const BibleApp = () => {
                   <>
                     <button
                       onClick={pageDownBothPanes}
-                      style={{ position: 'sticky', top: '50%', left: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'left' }}
-                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = ''; }}
-                      title="Page down"
-                    >
-                      <svg width="48" height="48" viewBox="0 0 64 64"><path d="M8 20 L32 44 L56 20" stroke="rgba(0,0,0,0.7)" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </button>
-                    <button
-                      onClick={pageDownBothPanes}
-                      style={{ position: 'sticky', top: '50%', right: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: 'right' }}
+                      style={{ position: 'sticky', top: '50%', [pageDownSide]: 6, zIndex: 10, width: 48, height: 48, background: 'rgba(0,0,0,0.08)', borderRadius: '50%', border: '1.5px solid rgba(0,0,0,1)', opacity: 0.15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', marginBottom: -48, float: pageDownSide }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)'; e.currentTarget.style.opacity = '0.2'; e.currentTarget.style.transform = 'scale(1.1)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.08)'; e.currentTarget.style.opacity = '0.15'; e.currentTarget.style.transform = ''; }}
                       title="Page down"
@@ -9426,6 +9426,19 @@ const BibleApp = () => {
                 });
               })()}
             </div>
+
+            {/* Mobile page-down button side */}
+            <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: isDarkMode ? '#8899bb' : '#667eea', paddingLeft: 4 }}>Mobile</div>
+            <button
+              onClick={togglePageDownSide}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 8, padding: '8px 10px', marginBottom: 16, borderRadius: 6, cursor: 'pointer', border: '1px solid #ccc', background: isDarkMode ? '#3a3a4a' : '#f5f5f5', textAlign: 'left' }}
+            >
+              <span style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}>Page-down button side</span>
+                <span style={{ fontSize: 10.5, lineHeight: 1.3, marginTop: 2, color: isDarkMode ? '#9aa' : '#888' }}>One page-down button on phones; tap to move it between the left and right edge.</span>
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#667eea', whiteSpace: 'nowrap' }}>{pageDownSide === 'left' ? '◀ Left' : 'Right ▶'}</span>
+            </button>
 
             {/* Divider */}
             <div style={{ borderTop: `2px solid ${isDarkMode ? '#555' : '#ddd'}`, marginBottom: 12 }} />

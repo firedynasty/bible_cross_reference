@@ -346,13 +346,20 @@ export default function VerseCommentaryModal({
 
         {/* Scrollable commentary body */}
         <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          {totalVerses > 0 && verseNumber < totalVerses && (
+            <button
+              onClick={() => onNavigateVerse?.(verseNumber + 1)}
+              style={{ position: 'absolute', bottom: 14, left: 14, zIndex: 10, fontFamily: 'inherit', fontSize: 15, background: isDarkMode ? '#2a2c30' : isSepiaMode ? '#f5efe0' : '#fff', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: isDarkMode ? '#93c5fd' : isSepiaMode ? '#7a5a2a' : '#2563eb', boxShadow: '0 2px 6px rgba(0,0,0,0.18)', opacity: 0.35 }}
+              title="Next verse (f)"
+            >Next Verse (f) ›</button>
+          )}
           <button
             onClick={() => { if (bodyRef.current) bodyRef.current.scrollBy({ top: bodyRef.current.clientHeight * 0.8, behavior: 'smooth' }); }}
-            style={{ position: 'absolute', bottom: 14, left: 14, zIndex: 10, fontFamily: 'inherit', fontSize: 18, background: isDarkMode ? '#2a2c30' : isSepiaMode ? '#f5efe0' : '#fff', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: isDarkMode ? '#93c5fd' : isSepiaMode ? '#7a5a2a' : '#2563eb', boxShadow: '0 2px 6px rgba(0,0,0,0.18)', opacity: 0.35 }}
+            style={{ position: 'absolute', bottom: 60, left: 14, zIndex: 10, fontFamily: 'inherit', fontSize: 18, background: isDarkMode ? '#2a2c30' : isSepiaMode ? '#f5efe0' : '#fff', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: isDarkMode ? '#93c5fd' : isSepiaMode ? '#7a5a2a' : '#2563eb', boxShadow: '0 2px 6px rgba(0,0,0,0.18)', opacity: 0.35 }}
           >↓</button>
           <button
             onClick={() => { if (bodyRef.current) bodyRef.current.scrollBy({ top: -56, behavior: 'smooth' }); }}
-            style={{ position: 'absolute', bottom: 60, left: 14, zIndex: 10, fontFamily: 'inherit', fontSize: 18, background: isDarkMode ? '#2a2c30' : isSepiaMode ? '#f5efe0' : '#fff', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: isDarkMode ? '#93c5fd' : isSepiaMode ? '#7a5a2a' : '#2563eb', boxShadow: '0 2px 6px rgba(0,0,0,0.18)', opacity: 0.35 }}
+            style={{ position: 'absolute', bottom: 106, left: 14, zIndex: 10, fontFamily: 'inherit', fontSize: 18, background: isDarkMode ? '#2a2c30' : isSepiaMode ? '#f5efe0' : '#fff', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: isDarkMode ? '#93c5fd' : isSepiaMode ? '#7a5a2a' : '#2563eb', boxShadow: '0 2px 6px rgba(0,0,0,0.18)', opacity: 0.35 }}
           >↑</button>
         <div ref={bodyRef} style={{ overflowY: 'auto', padding: '16px 20px', flexGrow: 1 }}>
           {loading && (
