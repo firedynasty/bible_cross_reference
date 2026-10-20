@@ -21,8 +21,11 @@ function splitIntoChunks(verseText) {
   return merged.length > 1 ? merged : [verseText];
 }
 
+// Mirrors the modal's TTS toggle so speakText can stay a plain module function
+let ttsEnabled = true;
+
 function speakText(text, onEnd) {
-  if (!text || !('speechSynthesis' in window)) return;
+  if (!ttsEnabled || !text || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(text);
   utt.lang = 'en-US';
@@ -54,6 +57,17 @@ export default function VerseMemorizeModal({
   const [activeChunk, setActiveChunk] = useState(null);
   // Bumped on every manual speak action to invalidate any in-flight '/' auto-play chain
   const playTokenRef = useRef(0);
+  const [ttsOn, setTtsOn] = useState(() => {
+    try { return localStorage.getItem('memorize-tts') !== 'off'; } catch { return true; }
+  });
+  ttsEnabled = ttsOn;
+  const toggleTts = () => {
+    const next = !ttsOn;
+    ttsEnabled = next;
+    if (!next) { playTokenRef.current++; window.speechSynthesis?.cancel(); }
+    setTtsOn(next);
+    try { localStorage.setItem('memorize-tts', next ? 'on' : 'off'); } catch { /* ignore */ }
+  };
 
   const bg        = isDarkMode ? '#1e2235' : isSepiaMode ? '#f5efe0' : '#ffffff';
   const textColor = isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a4a2a' : '#1a1a1a';
@@ -168,6 +182,7 @@ export default function VerseMemorizeModal({
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, selectedIdx, hasChapterVerses, chunks, activeChunk, onClose]);
 
   if (!open) return null;
@@ -239,6 +254,18 @@ export default function VerseMemorizeModal({
             )}
           </div>
 
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <button
+            onClick={toggleTts}
+            title={ttsOn ? 'Speech on (click to mute)' : 'Speech off (click to unmute)'}
+            aria-pressed={ttsOn}
+            style={{
+              padding: '3px 8px', fontSize: '0.82rem', fontWeight: 700,
+              border: `1px solid ${border}`, borderRadius: 6,
+              background: hoverBg, color: ttsOn ? accent : subText,
+              cursor: 'pointer', flexShrink: 0,
+            }}
+          >{ttsOn ? '🔊' : '🔇'}</button>
           {selectedIdx !== null ? (
             <button
               onClick={() => { playTokenRef.current++; speakText(chunks.join(' ')); }}
@@ -261,6 +288,7 @@ export default function VerseMemorizeModal({
               aria-label="Close"
             >✕</button>
           )}
+          </div>
         </div>
 
         {/* Body */}
