@@ -1,24 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const MIN_CHUNK_LEN = 20;
-
+// The whole verse is one chunk, so ←/→ and tapping speak the full verse
 function splitIntoChunks(verseText) {
-  if (!verseText) return [];
-  const raw = verseText.split(/(?<=[,;:.])/).map(s => s.trim()).filter(s => s.length > 0);
-  if (raw.length <= 1) return [verseText];
-
-  // Merge chunks shorter than MIN_CHUNK_LEN into the next chunk
-  const merged = [];
-  let acc = '';
-  for (let i = 0; i < raw.length; i++) {
-    acc = acc ? acc + ' ' + raw[i] : raw[i];
-    if (acc.length >= MIN_CHUNK_LEN || i === raw.length - 1) {
-      merged.push(acc);
-      acc = '';
-    }
-  }
-
-  return merged.length > 1 ? merged : [verseText];
+  return verseText ? [verseText] : [];
 }
 
 // Mirrors the modal's TTS toggle so speakText can stay a plain module function
@@ -370,7 +354,7 @@ export default function VerseMemorizeModal({
                 margin: '0 0 10px', fontSize: '0.72rem', color: subText,
                 textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600,
               }}>
-                Click or press 1–{Math.min(chunks.length, 9)} to hear a chunk · ↑/↓ steps through chunks · ←/→ for verses · / continues reading from here
+                Tap the verse or press 1 to hear it · ←/→ for previous/next verse (reads it aloud)
               </p>
               {chunks.slice(0, 9).map((chunk, i) => (
                 <div
