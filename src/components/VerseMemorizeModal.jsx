@@ -192,8 +192,9 @@ export default function VerseMemorizeModal({
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 10100,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.55)', padding: '1rem',
+        // Anchored to the top so the modal doesn't jump when verse length changes
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.55)', padding: '0 1rem 1rem',
       }}
       role="dialog"
       aria-modal="true"
