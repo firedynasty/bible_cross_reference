@@ -102,6 +102,8 @@ export default function VerseMemorizeModal({
     : verseLabel;
 
   const chunks = splitIntoChunks(activeVerseText);
+  // Header shows just chapter:verse (the book name gets truncated on mobile)
+  const activeVerseNumber = selectedIdx !== null && hasChapterVerses ? selectedIdx + 1 : startVerseNumber;
 
   // Move to a different verse, resetting the active chunk back to 1 (like pressing '1')
   const jumpToVerse = (newIdx) => {
@@ -247,7 +249,7 @@ export default function VerseMemorizeModal({
               margin: 0, fontSize: '0.98rem', fontWeight: 700,
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
-              {showPicker ? (bookName && chapter ? `${bookName} ${chapter}` : (verseLabel || 'Verses')) : activeVerseLabel}
+              {showPicker ? (bookName && chapter ? `${bookName} ${chapter}` : (verseLabel || 'Verses')) : (activeVerseNumber && chapter ? `${chapter}:${activeVerseNumber}` : activeVerseLabel)}
             </h2>
             {selectedIdx !== null && hasChapterVerses && (
               <button
