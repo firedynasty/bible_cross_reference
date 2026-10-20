@@ -377,7 +377,7 @@ export default function VerseMemorizeModal({
                     fontWeight: 700, color: accent, minWidth: 18,
                     fontSize: `${0.92 * fontScale}rem`, lineHeight: 1.7, flexShrink: 0,
                   }}>
-                    {i + 1}
+                    {activeVerseNumber || i + 1}
                   </span>
                   <span style={{ lineHeight: 1.65, fontSize: `${0.97 * fontScale}rem` }}>{chunk}</span>
                 </div>
