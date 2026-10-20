@@ -61,6 +61,18 @@ export default function VerseMemorizeModal({
     try { return localStorage.getItem('memorize-tts') !== 'off'; } catch { return true; }
   });
   ttsEnabled = ttsOn;
+  // Body text scale (rem multiplier), adjusted by the A-/A+ buttons
+  const [fontScale, setFontScale] = useState(() => {
+    try {
+      const v = parseFloat(localStorage.getItem('memorize-font-scale'));
+      return v >= 0.8 && v <= 2.2 ? v : 1;
+    } catch { return 1; }
+  });
+  const changeFont = (delta) => {
+    const next = Math.round(Math.min(2.2, Math.max(0.8, fontScale + delta)) * 100) / 100;
+    setFontScale(next);
+    try { localStorage.setItem('memorize-font-scale', String(next)); } catch { /* ignore */ }
+  };
   const toggleTts = () => {
     const next = !ttsOn;
     ttsEnabled = next;
@@ -255,6 +267,22 @@ export default function VerseMemorizeModal({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {[['A-', -0.1, 'Smaller text', fontScale <= 0.8], ['A+', 0.1, 'Larger text', fontScale >= 2.2]].map(([label, delta, title, disabled]) => (
+            <button
+              key={label}
+              onClick={() => changeFont(delta)}
+              disabled={disabled}
+              title={title}
+              aria-label={title}
+              style={{
+                padding: '3px 8px', fontSize: '0.82rem', fontWeight: 700,
+                border: `1px solid ${border}`, borderRadius: 6,
+                background: hoverBg, color: disabled ? subText : textColor,
+                cursor: disabled ? 'default' : 'pointer', flexShrink: 0,
+                opacity: disabled ? 0.4 : 1,
+              }}
+            >{label}</button>
+          ))}
           <button
             onClick={toggleTts}
             title={ttsOn ? 'Speech on (click to mute)' : 'Speech off (click to unmute)'}
@@ -325,7 +353,7 @@ export default function VerseMemorizeModal({
                       }}>
                         {i + 1}
                       </span>
-                      <span style={{ lineHeight: 1.5, fontSize: '0.88rem', textAlign: 'left', color: subText }}>
+                      <span style={{ lineHeight: 1.5, fontSize: `${0.88 * fontScale}rem`, textAlign: 'left', color: subText }}>
                         {text.slice(0, 70)}{text.length > 70 ? '…' : ''}
                       </span>
                     </button>
@@ -358,11 +386,11 @@ export default function VerseMemorizeModal({
                 >
                   <span style={{
                     fontWeight: 700, color: accent, minWidth: 18,
-                    fontSize: '0.92rem', lineHeight: 1.7, flexShrink: 0,
+                    fontSize: `${0.92 * fontScale}rem`, lineHeight: 1.7, flexShrink: 0,
                   }}>
                     {i + 1}
                   </span>
-                  <span style={{ lineHeight: 1.65, fontSize: '0.97rem' }}>{chunk}</span>
+                  <span style={{ lineHeight: 1.65, fontSize: `${0.97 * fontScale}rem` }}>{chunk}</span>
                 </div>
               ))}
             </>
