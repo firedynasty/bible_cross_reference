@@ -351,12 +351,14 @@ export default function VerseMemorizeModal({
           ) : (
             /* ── Chunks view ── */
             <>
-              <p style={{
-                margin: '0 0 10px', fontSize: '0.72rem', color: subText,
-                textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600,
-              }}>
-                Tap the verse or press 1 to hear it · ←/→ for previous/next verse (reads it aloud)
-              </p>
+              {/* Color spectrum band */}
+              <div
+                aria-hidden="true"
+                style={{
+                  height: 48, borderRadius: 8, marginBottom: 12,
+                  background: 'linear-gradient(to right, #d32f2f 0%, #e07b2e 14%, #f5e050 26%, #fdff5a 33%, #8fe03a 42%, #4cb85a 50%, #6ff2ff 62%, #3f8fe0 74%, #0a0a8c 82%, #5a1fc4 92%, #6a2fb0 100%)',
+                }}
+              />
               {chunks.slice(0, 9).map((chunk, i) => (
                 <div
                   key={i}
