@@ -7,10 +7,11 @@ function splitIntoChunks(verseText) {
 
 // Mirrors the modal's TTS toggle so speakText can stay a plain module function
 let ttsEnabled = true;
+let ttsRate = 1;
+const TTS_RATES = [0.5, 0.75, 1];
 
 const SPECTRUM_STOPS = ['#d32f2f 0%', '#e07b2e 14%', '#f5e050 26%', '#fdff5a 33%', '#8fe03a 42%', '#4cb85a 50%', '#6ff2ff 62%', '#3f8fe0 74%', '#0a0a8c 82%', '#5a1fc4 92%', '#6a2fb0 100%'];
 // Mirrored copy appended so the band tiles seamlessly while it slides
-const SPECTRUM_STATIC = `linear-gradient(to right, ${SPECTRUM_STOPS.join(', ')})`;
 const SPECTRUM_LOOP = `linear-gradient(to right, ${SPECTRUM_STOPS.join(', ')}, ${[...SPECTRUM_STOPS].reverse().map((st, i) => { const [c, pct] = st.split(' '); return `${c} ${100 + (100 - parseFloat(pct))}%`; }).join(', ')})`;
 
 function speakText(text, onEnd) {
@@ -18,7 +19,7 @@ function speakText(text, onEnd) {
   window.speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(text);
   utt.lang = 'en-US';
-  utt.rate = 0.9;
+  utt.rate = ttsRate;
   const voices = window.speechSynthesis.getVoices();
   const voice =
     voices.find(v => v.lang.startsWith('en') && (v.name.includes('Enhanced') || v.name.includes('Premium'))) ||
@@ -52,6 +53,20 @@ export default function VerseMemorizeModal({
     try { return localStorage.getItem('memorize-tts') !== 'off'; } catch { return true; }
   });
   ttsEnabled = ttsOn;
+  const [rate, setRate] = useState(() => {
+    try {
+      const v = parseFloat(localStorage.getItem('memorize-tts-rate'));
+      return TTS_RATES.includes(v) ? v : 1;
+    } catch { return 1; }
+  });
+  ttsRate = rate;
+  // Cycles 0.5x -> 0.75x -> 1x -> back to 0.5x
+  const cycleRate = () => {
+    const next = TTS_RATES[(TTS_RATES.indexOf(rate) + 1) % TTS_RATES.length];
+    ttsRate = next;
+    setRate(next);
+    try { localStorage.setItem('memorize-tts-rate', String(next)); } catch { /* ignore */ }
+  };
   // Body text scale (rem multiplier), adjusted by the A-/A+ buttons
   const [fontScale, setFontScale] = useState(() => {
     try {
@@ -357,6 +372,17 @@ export default function VerseMemorizeModal({
             }}
           >🌈</button>
           <button
+            onClick={cycleRate}
+            title={`Speech speed ${rate}x (click to change)`}
+            aria-label={`Speech speed ${rate}x`}
+            style={{
+              padding: '3px 8px', fontSize: '0.82rem', fontWeight: 700,
+              border: `1px solid ${border}`, borderRadius: 6,
+              background: hoverBg, color: accent,
+              cursor: 'pointer', flexShrink: 0, minWidth: 44,
+            }}
+          >{rate}x</button>
+          <button
             onClick={toggleTts}
             title={ttsOn ? 'Speech on (click to mute)' : 'Speech off (click to unmute)'}
             aria-pressed={ttsOn}
@@ -465,17 +491,25 @@ export default function VerseMemorizeModal({
               {/* Color spectrum band */}
               <style>{`
                 @keyframes memorize-spectrum-slide { from { background-position: 0% 0; } to { background-position: 200% 0; } }
-                @media (prefers-reduced-motion: reduce) { .memorize-spectrum-running { animation: none !important; } }
+                @media (prefers-reduced-motion: reduce) { .memorize-spectrum { animation: none !important; } }
               `}</style>
               <div
-                aria-hidden="true"
-                className={spectrumRunning ? 'memorize-spectrum-running' : undefined}
+                role="button"
+                tabIndex={0}
+                aria-pressed={spectrumRunning}
+                aria-label={spectrumRunning ? 'Stop spectrum' : 'Start spectrum'}
+                title={spectrumRunning ? 'Tap to stop' : 'Tap to start'}
+                onClick={toggleSpectrum}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); toggleSpectrum(); } }}
+                className="memorize-spectrum"
                 style={{
-                  height: 48, borderRadius: 8, marginBottom: 12,
-                  background: spectrumRunning ? SPECTRUM_LOOP : SPECTRUM_STATIC,
-                  backgroundSize: spectrumRunning ? '200% 100%' : '100% 100%',
+                  height: 48, borderRadius: 8, marginBottom: 12, cursor: 'pointer',
+                  background: SPECTRUM_LOOP,
+                  backgroundSize: '200% 100%',
                   backgroundRepeat: 'repeat-x',
-                  animation: spectrumRunning ? 'memorize-spectrum-slide 5s linear infinite' : 'none',
+                  // Paused (not removed) so stopping freezes the colours in place
+                  animation: 'memorize-spectrum-slide 5s linear infinite',
+                  animationPlayState: spectrumRunning ? 'running' : 'paused',
                 }}
               />
               {chunks.slice(0, 9).map((chunk, i) => (
