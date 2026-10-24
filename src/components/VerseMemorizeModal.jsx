@@ -196,6 +196,38 @@ export default function VerseMemorizeModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, selectedIdx, hasChapterVerses, chunks, activeChunk, onClose]);
 
+  // Touch swipes mirror the arrow keys: left/right = next/previous verse, up = back to verse 1, down = repeat the verse
+  const touchStartRef = useRef(null);
+  const onTouchStart = (e) => {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start || selectedIdx === null) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const SWIPE_MIN = 50;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < SWIPE_MIN) return;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) goToNext(); else goToPrev(); // swipe left = next verse
+    } else {
+      // Skip vertical swipes when the body is long enough to scroll instead
+      const body = e.currentTarget;
+      if (body.scrollHeight > body.clientHeight + 1) return;
+      if (dy < 0 && selectedIdx > 0) {
+        jumpToVerse(0); // swipe up = home, verse 1 (reads it aloud)
+      } else {
+        // swipe down = repeat; also swipe up while already on verse 1
+        playTokenRef.current++;
+        setActiveChunk(0);
+        speakText(chunks[0]);
+      }
+    }
+  };
+
   if (!open) return null;
 
   const showPicker = selectedIdx === null && hasChapterVerses;
@@ -205,9 +237,8 @@ export default function VerseMemorizeModal({
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 10100,
-        // Anchored to the top so the modal doesn't jump when verse length changes
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.55)', padding: '0 1rem 1rem',
+        display: 'flex', alignItems: 'stretch', justifyContent: 'stretch',
+        background: bg, padding: 0,
       }}
       role="dialog"
       aria-modal="true"
@@ -217,10 +248,8 @@ export default function VerseMemorizeModal({
         onClick={e => e.stopPropagation()}
         style={{
           background: bg, color: textColor,
-          borderRadius: 12, border: `1px solid ${border}`,
-          width: '100%', maxWidth: 540,
-          maxHeight: '82vh', display: 'flex', flexDirection: 'column',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.35)',
+          width: '100%', height: '100%',
+          display: 'flex', flexDirection: 'column',
         }}
       >
         {/* Header */}
@@ -317,22 +346,25 @@ export default function VerseMemorizeModal({
               }}
               aria-label="Speak all chunks"
             >▶ All</button>
-          ) : (
-            <button
-              onClick={onClose}
-              style={{
-                width: 28, height: 28, border: 'none', borderRadius: 6,
-                cursor: 'pointer', background: closeBg, color: textColor,
-                fontWeight: 700, fontSize: 14, flexShrink: 0,
-              }}
-              aria-label="Close"
-            >✕</button>
-          )}
+          ) : null}
+          <button
+            onClick={() => { playTokenRef.current++; window.speechSynthesis?.cancel(); onClose(); }}
+            style={{
+              width: 32, height: 32, border: 'none', borderRadius: 6,
+              cursor: 'pointer', background: closeBg, color: textColor,
+              fontWeight: 700, fontSize: 16, flexShrink: 0,
+            }}
+            aria-label="Close"
+          >✕</button>
           </div>
         </div>
 
         {/* Body */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '12px 18px' }}>
+        <div
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+          style={{ overflowY: 'auto', flex: 1, padding: '12px 18px' }}
+        >
           {showPicker ? (
             /* ── Verse picker ── */
             <>
