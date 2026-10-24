@@ -120,16 +120,28 @@ export default function VerseMemorizeModal({
   const activeVerseNumber = selectedIdx !== null && hasChapterVerses ? selectedIdx + 1 : startVerseNumber;
 
   // Move to a different verse, resetting the active chunk back to 1 (like pressing '1')
-  const jumpToVerse = (newIdx) => {
+  const jumpToVerse = (newIdx, speak = true) => {
     if (selectedIdx === null || newIdx === selectedIdx) return;
     playTokenRef.current++; // cancel any in-progress '/' auto-play
+    window.speechSynthesis?.cancel(); // a silent jump shouldn't leave the old verse talking
     setSelectedIdx(newIdx);
     const newChunks = splitIntoChunks(verseToString(chapterVerses[newIdx]));
     setActiveChunk(0);
-    speakText(newChunks[0]);
+    if (speak) speakText(newChunks[0]);
   };
-  const goToPrev = () => { if (selectedIdx !== null) jumpToVerse(Math.max(0, selectedIdx - 1)); };
-  const goToNext = () => { if (selectedIdx !== null) jumpToVerse(Math.min((chapterVerses?.length ?? 1) - 1, selectedIdx + 1)); };
+  const goToPrev = (speak = true) => { if (selectedIdx !== null) jumpToVerse(Math.max(0, selectedIdx - 1), speak); };
+  const goToNext = (speak = true) => { if (selectedIdx !== null) jumpToVerse(Math.min((chapterVerses?.length ?? 1) - 1, selectedIdx + 1), speak); };
+
+  // Shared by swipes and arrow keys: up = silent jump to the home verse, down = read the verse aloud
+  const readCurrent = () => {
+    playTokenRef.current++;
+    setActiveChunk(0);
+    speakText(chunks[0]);
+  };
+  const goHome = () => {
+    if (selectedIdx === homeIdx) readCurrent(); // already home: repeat instead of a dead key
+    else jumpToVerse(homeIdx, false);
+  };
 
   // '/' continues speaking chunks one after another starting from the highlighted
   // one, advancing the highlight as each finishes — like pressing Enter to keep going.
@@ -175,24 +187,10 @@ export default function VerseMemorizeModal({
         return;
       }
       if (selectedIdx !== null) {
-        if (e.key === 'ArrowLeft') { e.preventDefault(); goToPrev(); return; }
-        if (e.key === 'ArrowRight') { e.preventDefault(); goToNext(); return; }
-        if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          playTokenRef.current++;
-          const next = activeChunk === null ? 0 : Math.max(0, activeChunk - 1);
-          setActiveChunk(next);
-          speakText(chunks[next]);
-          return;
-        }
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          playTokenRef.current++;
-          const next = activeChunk === null ? 0 : Math.min(chunks.length - 1, activeChunk + 1);
-          setActiveChunk(next);
-          speakText(chunks[next]);
-          return;
-        }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); goToPrev(false); return; }
+        if (e.key === 'ArrowRight') { e.preventDefault(); goToNext(false); return; }
+        if (e.key === 'ArrowUp') { e.preventDefault(); goHome(); return; }
+        if (e.key === 'ArrowDown') { e.preventDefault(); readCurrent(); return; }
         if (e.key === '/') {
           e.preventDefault();
           speakFromHighlight();
@@ -212,7 +210,7 @@ export default function VerseMemorizeModal({
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, selectedIdx, hasChapterVerses, chunks, activeChunk, onClose]);
+  }, [open, selectedIdx, homeIdx, hasChapterVerses, chunks, activeChunk, onClose]);
 
   // Stop the browser's pull-to-refresh from reloading the page on a swipe down
   const bodyRef = useRef(null);
@@ -243,7 +241,7 @@ export default function VerseMemorizeModal({
     };
   }, [open, selectedIdx]);
 
-  // Touch swipes mirror the arrow keys: left/right = next/previous verse, up = back to the home verse, down = repeat the verse
+  // Touch swipes mirror the arrow keys: left/right = next/previous verse and up = back to the home verse (both silent), down = read the verse aloud
   const touchStartRef = useRef(null);
   const onTouchStart = (e) => {
     const t = e.touches[0];
@@ -259,19 +257,12 @@ export default function VerseMemorizeModal({
     const SWIPE_MIN = 50;
     if (Math.max(Math.abs(dx), Math.abs(dy)) < SWIPE_MIN) return;
     if (Math.abs(dx) > Math.abs(dy)) {
-      if (dx < 0) goToNext(); else goToPrev(); // swipe left = next verse
+      if (dx < 0) goToNext(false); else goToPrev(false); // swipe left = next verse (silent)
     } else {
       // Skip vertical swipes when the body is long enough to scroll instead
       const body = e.currentTarget;
       if (body.scrollHeight > body.clientHeight + 1) return;
-      if (dy < 0 && selectedIdx !== homeIdx) {
-        jumpToVerse(homeIdx); // swipe up = home verse chosen in the dropdown (reads it aloud)
-      } else {
-        // swipe down = repeat; also swipe up while already on the home verse
-        playTokenRef.current++;
-        setActiveChunk(0);
-        speakText(chunks[0]);
-      }
+      if (dy < 0) goHome(); else readCurrent();
     }
   };
 
@@ -307,7 +298,7 @@ export default function VerseMemorizeModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
             {selectedIdx !== null && hasChapterVerses && (
               <button
-                onClick={goToPrev}
+                onClick={() => goToPrev(false)}
                 disabled={selectedIdx <= 0}
                 style={{
                   padding: '3px 8px', fontSize: '0.82rem', fontWeight: 700,
@@ -327,7 +318,7 @@ export default function VerseMemorizeModal({
             </h2>
             {selectedIdx !== null && hasChapterVerses && (
               <button
-                onClick={goToNext}
+                onClick={() => goToNext(false)}
                 disabled={selectedIdx >= (chapterVerses?.length ?? 1) - 1}
                 style={{
                   padding: '3px 8px', fontSize: '0.82rem', fontWeight: 700,
