@@ -44,6 +44,8 @@ export default function VerseMemorizeModal({
   // null = show verse picker; number = 0-based index of selected verse
   const [selectedIdx, setSelectedIdx] = useState(null);
   const [activeChunk, setActiveChunk] = useState(null);
+  // Verse that swipe-up returns to (0-based); defaults to verse 1
+  const [homeIdx, setHomeIdx] = useState(0);
   // Bumped on every manual speak action to invalidate any in-flight '/' auto-play chain
   const playTokenRef = useRef(0);
   const [ttsOn, setTtsOn] = useState(() => {
@@ -142,6 +144,7 @@ export default function VerseMemorizeModal({
         setSelectedIdx(null);
       }
       setActiveChunk(null);
+      setHomeIdx(0);
     }
   }, [open, startVerseNumber, hasChapterVerses]);
 
@@ -225,7 +228,7 @@ export default function VerseMemorizeModal({
     };
   }, [open, selectedIdx]);
 
-  // Touch swipes mirror the arrow keys: left/right = next/previous verse, up = back to verse 1, down = repeat the verse
+  // Touch swipes mirror the arrow keys: left/right = next/previous verse, up = back to the home verse, down = repeat the verse
   const touchStartRef = useRef(null);
   const onTouchStart = (e) => {
     const t = e.touches[0];
@@ -246,10 +249,10 @@ export default function VerseMemorizeModal({
       // Skip vertical swipes when the body is long enough to scroll instead
       const body = e.currentTarget;
       if (body.scrollHeight > body.clientHeight + 1) return;
-      if (dy < 0 && selectedIdx > 0) {
-        jumpToVerse(0); // swipe up = home, verse 1 (reads it aloud)
+      if (dy < 0 && selectedIdx !== homeIdx) {
+        jumpToVerse(homeIdx); // swipe up = home verse chosen in the dropdown (reads it aloud)
       } else {
-        // swipe down = repeat; also swipe up while already on verse 1
+        // swipe down = repeat; also swipe up while already on the home verse
         playTokenRef.current++;
         setActiveChunk(0);
         speakText(chunks[0]);
@@ -438,6 +441,27 @@ export default function VerseMemorizeModal({
           ) : (
             /* ── Chunks view ── */
             <>
+              {hasChapterVerses && (
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10,
+                  fontSize: '0.82rem', fontWeight: 600, color: subText,
+                }}>
+                  Swipe up returns to
+                  <select
+                    value={homeIdx}
+                    onChange={e => setHomeIdx(Number(e.target.value))}
+                    style={{
+                      padding: '4px 8px', fontSize: '0.9rem', fontWeight: 700,
+                      border: `1px solid ${border}`, borderRadius: 6,
+                      background: hoverBg, color: textColor,
+                    }}
+                  >
+                    {chapterVerses.map((_, i) => (
+                      <option key={i} value={i}>{chapter ? `${chapter}:${i + 1}` : `Verse ${i + 1}`}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
               {/* Color spectrum band */}
               <style>{`
                 @keyframes memorize-spectrum-slide { from { background-position: 0% 0; } to { background-position: 200% 0; } }
