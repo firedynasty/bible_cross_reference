@@ -196,6 +196,35 @@ export default function VerseMemorizeModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, selectedIdx, hasChapterVerses, chunks, activeChunk, onClose]);
 
+  // Stop the browser's pull-to-refresh from reloading the page on a swipe down
+  const bodyRef = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const html = document.documentElement;
+    const prevHtml = html.style.overscrollBehaviorY;
+    const prevBody = document.body.style.overscrollBehaviorY;
+    html.style.overscrollBehaviorY = 'none';
+    document.body.style.overscrollBehaviorY = 'none';
+    // Older iOS ignores overscroll-behavior, so also cancel vertical drags when the body can't scroll
+    const el = bodyRef.current;
+    let startY = 0;
+    const onStart = (e) => { startY = e.touches[0].clientY; };
+    const onMove = (e) => {
+      if (!el) return;
+      const dy = e.touches[0].clientY - startY;
+      const scrollable = el.scrollHeight > el.clientHeight + 1;
+      if (!scrollable || (dy > 0 && el.scrollTop <= 0)) e.preventDefault();
+    };
+    el?.addEventListener('touchstart', onStart, { passive: true });
+    el?.addEventListener('touchmove', onMove, { passive: false });
+    return () => {
+      html.style.overscrollBehaviorY = prevHtml;
+      document.body.style.overscrollBehaviorY = prevBody;
+      el?.removeEventListener('touchstart', onStart);
+      el?.removeEventListener('touchmove', onMove);
+    };
+  }, [open, selectedIdx]);
+
   // Touch swipes mirror the arrow keys: left/right = next/previous verse, up = back to verse 1, down = repeat the verse
   const touchStartRef = useRef(null);
   const onTouchStart = (e) => {
@@ -361,9 +390,10 @@ export default function VerseMemorizeModal({
 
         {/* Body */}
         <div
+          ref={bodyRef}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
-          style={{ overflowY: 'auto', flex: 1, padding: '12px 18px' }}
+          style={{ overflowY: 'auto', overscrollBehavior: 'none', flex: 1, padding: '12px 18px' }}
         >
           {showPicker ? (
             /* ── Verse picker ── */
