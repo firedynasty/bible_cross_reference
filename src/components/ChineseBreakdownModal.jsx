@@ -83,10 +83,10 @@ export default function ChineseBreakdownModal({
     try { localStorage.setItem('chinese-breakdown-font-scale', String(fontScale)); } catch {}
   }, [fontScale]);
 
-  // Chapter changes (←/→) jump back to the top of the scroll area
+  // Chapter (←/→) and verse (↑/↓) changes jump back to the top of the scroll area
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
-  }, [chap]);
+  }, [chap, idx]);
 
   // Reset to the opening chapter/verse each time the modal opens
   useEffect(() => {
