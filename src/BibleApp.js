@@ -8,6 +8,7 @@ import YouTubeVideoModal from './components/YouTubeVideoModal';
 import OutlineModal from './components/OutlineModal';
 import VerseCommentaryModal from './components/VerseCommentaryModal';
 import VerseMemorizeModal from './components/VerseMemorizeModal';
+import ChineseBreakdownModal from './components/ChineseBreakdownModal';
 import SongMemorizeModal, { parseSongTxt } from './components/SongMemorizeModal';
 import { getStorytimeAudioUrl } from './data/storytimeAudio';
 import { getRhymeAudioUrl } from './data/rhymeAudio';
@@ -1540,6 +1541,7 @@ const BibleApp = () => {
     return () => window.removeEventListener('keydown', onKey, true);
   }, [refContextMenu]);
   const [verseModalData, setVerseModalData] = useState(null); // { verseLabel, verseText, bookAbbrev, chapter, verseNumber }
+  const [chineseBreakdownData, setChineseBreakdownData] = useState(null); // { bookName, chapter, verseNumber }
   const [memorizeModalData, setMemorizeModalData] = useState(null); // { verseLabel, verseText, bookAbbrev, chapter, verseNumber }
   const [songMemorizeData, setSongMemorizeData] = useState(null); // { sections, songTitle }
   const songFileInputRef = useRef(null);
@@ -6366,6 +6368,18 @@ const BibleApp = () => {
                 Memorize(i)
               </button>
             )}
+
+            {/* Chinese word-by-word breakdown (CUV) */}
+            <button
+              onClick={() => {
+                if (!selectedBook || !selectedChapter) return;
+                setChineseBreakdownData({ bookName: getBookName(selectedBook.abbrev), chapter: selectedChapter, verseNumber: 1 });
+              }}
+              className={`px-2 py-0.5 rounded text-xs font-semibold ${isDarkMode ? 'bg-blue-700 text-white hover:bg-blue-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+              title="Chinese word-by-word breakdown"
+            >
+              中文
+            </button>
 
             {/* Song .txt memorize */}
             <>
@@ -12322,6 +12336,15 @@ const BibleApp = () => {
         onClose={() => setSongMemorizeData(null)}
         sections={songMemorizeData?.sections || []}
         songTitle={songMemorizeData?.songTitle || ''}
+        isDarkMode={isDarkMode}
+        isSepiaMode={isSepiaMode}
+      />
+      <ChineseBreakdownModal
+        open={!!chineseBreakdownData}
+        onClose={() => setChineseBreakdownData(null)}
+        bookName={chineseBreakdownData?.bookName}
+        chapter={chineseBreakdownData?.chapter}
+        startVerseNumber={chineseBreakdownData?.verseNumber}
         isDarkMode={isDarkMode}
         isSepiaMode={isSepiaMode}
       />
