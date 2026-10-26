@@ -46,6 +46,7 @@ export default function ChineseBreakdownModal({
   open, onClose,
   bookName, chapter, startVerseNumber,
   isDarkMode, isSepiaMode,
+  data, // preloaded chinese_breakdown.json: { "Genesis": { "1": [verses] } }
 }) {
   const [chap, setChap] = useState(chapter);
   const [verses, setVerses] = useState([]);
@@ -60,15 +61,20 @@ export default function ChineseBreakdownModal({
   useEffect(() => {
     if (!open || !bookName || !chap) return;
     let cancelled = false;
-    const slug = bookName.toLowerCase().replace(/\s+/g, '_');
     setStatus('loading');
     (async () => {
       try {
-        const res = await fetch(`/chinese_breakdown/${slug}/${slug}_${chap}.csv`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const parsed = rowsToVerses(parseCsv(await res.text()));
+        let parsed;
+        if (data) {
+          parsed = data[bookName]?.[String(chap)] || [];
+        } else {
+          const slug = bookName.toLowerCase().replace(/\s+/g, '_');
+          const res = await fetch(`/chinese_breakdown/${slug}/${slug}_${chap}.csv`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          parsed = rowsToVerses(parseCsv(await res.text()));
+        }
         if (cancelled) return;
-        if (!parsed.length) throw new Error('no verses in CSV');
+        if (!parsed.length) throw new Error('no verses for chapter');
         setVerses(parsed);
         setIdx(i => Math.min(i, parsed.length - 1));
         setStatus('ready');
@@ -80,7 +86,7 @@ export default function ChineseBreakdownModal({
       }
     })();
     return () => { cancelled = true; };
-  }, [open, bookName, chap]);
+  }, [open, bookName, chap, data]);
 
   // ↑/↓ = verse, ←/→ = chapter, Esc = close
   useEffect(() => {

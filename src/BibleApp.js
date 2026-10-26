@@ -2590,6 +2590,26 @@ const BibleApp = () => {
   // Story Time data
   const [storytimeData, setStorytimeData] = useState(null);
 
+  // Chinese word-by-word breakdown data (combined JSON)
+  const [chineseBreakdownJson, setChineseBreakdownJson] = useState(null);
+
+  // Load Chinese breakdown JSON on startup
+  useEffect(() => {
+    const loadChineseBreakdown = async () => {
+      try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}/chinese_breakdown.json`);
+        if (response.ok) {
+          const data = await response.json();
+          setChineseBreakdownJson(data);
+        }
+      } catch (error) {
+        console.log('No chinese_breakdown.json found');
+      }
+    };
+    loadChineseBreakdown();
+  }, []);
+
   // Load Story Time JSON on startup
   useEffect(() => {
     const loadStorytime = async () => {
@@ -12347,6 +12367,7 @@ const BibleApp = () => {
         startVerseNumber={chineseBreakdownData?.verseNumber}
         isDarkMode={isDarkMode}
         isSepiaMode={isSepiaMode}
+        data={chineseBreakdownJson}
       />
       <VerseMemorizeModal
         open={!!memorizeModalData}
