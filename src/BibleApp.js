@@ -4100,7 +4100,7 @@ const BibleApp = () => {
       }
 
       // Up Arrow - scroll up one line at a time in KJV pane (opposite of 'x' key)
-      else if ((e.key === 'ArrowUp' || e.key === 'a') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal && !showOutlineModal && !showSearchModal && !verseModalData && !memorizeModalData) {
+      else if ((e.key === 'ArrowUp' || e.key === 'a') && kjvContentRef.current && !showQuiz2Modal && !showYouTubeModal && !showOutlineModal && !showSearchModal && !verseModalData && !memorizeModalData && !chineseBreakdownData) {
         
         // Set the flag to prevent feedback loops
         isManuallyScrollingRef.current = true;
@@ -4195,7 +4195,7 @@ const BibleApp = () => {
         }
       }
       // 'p' key, PageDown key, ArrowDown key, or Spacebar - page down (matches pane 2 page-down button: scroll, or advance chapter at bottom)
-      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === 's') && kjvContentRef.current && !showQuiz2Modal && !showWordsModal && !showYouTubeModal && !showOutlineModal && !showSearchModal && !verseModalData && !memorizeModalData) {
+      else if ((e.key === 'p' || e.key === ' ' || e.key === 'PageDown' || e.key === 'ArrowDown' || e.key === 's') && kjvContentRef.current && !showQuiz2Modal && !showWordsModal && !showYouTubeModal && !showOutlineModal && !showSearchModal && !verseModalData && !memorizeModalData && !chineseBreakdownData) {
         const kjvPane = kjvContentRef.current;
         const maxScroll = kjvPane.scrollHeight - kjvPane.clientHeight;
         const atBottom = maxScroll > 0 && kjvPane.scrollTop >= maxScroll - 5;
@@ -4421,9 +4421,10 @@ const BibleApp = () => {
         e.preventDefault();
       }
 
-      // '/' key - toggle Read to End button (disabled while the Memorize modal is open,
-      // so its own chunk-reading keys aren't interrupted by the chapter-wide TTS toggle)
-      else if ((e.key === '/' || e.keyCode === 191) && !memorizeModalData) {
+      // '/' key - toggle Read to End button (disabled while the Memorize or Chinese
+      // breakdown modal is open, so their own reading keys aren't interrupted by the
+      // chapter-wide TTS toggle)
+      else if ((e.key === '/' || e.keyCode === 191) && !memorizeModalData && !chineseBreakdownData) {
         // Find and click the Read to End toggle button
         const readToEndButton = Array.from(document.querySelectorAll('button'))
           .find(btn => btn.textContent.includes('Read2End'));
@@ -4677,7 +4678,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, storyIntroTab, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showDramatizedModal, showRefPrompt, showBookNavModal, loadStorytimeForCurrent, showOutlineModal, verseModalData, memorizeModalData]);
+  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, storyIntroTab, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showDramatizedModal, showRefPrompt, showBookNavModal, loadStorytimeForCurrent, showOutlineModal, verseModalData, memorizeModalData, chineseBreakdownData]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {

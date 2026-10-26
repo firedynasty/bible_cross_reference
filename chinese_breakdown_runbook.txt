@@ -1,0 +1,72 @@
+CHINESE BREAKDOWN — RUNBOOK FOR NEW BOOKS
+==========================================
+
+Goal: generate word-by-word Chinese breakdowns for a book and make them
+show up in the app's 中文 modal (which preloads public/chinese_breakdown.json).
+
+Genesis (chapters 1-50) is already done. Work one book at a time, in order:
+Exodus, Leviticus, Numbers, Deuteronomy, Joshua, ...
+
+
+STEP 0 — prerequisites
+----------------------
+Run these commands in a NORMAL terminal (not inside a Claude Code session):
+the generator shells out to `claude -p`, which needs your claude.ai login.
+Inside a Claude Code session it fails with "Not logged in" or model-access
+errors because of the session's env vars.
+
+Source text must exist at:
+    bible_chinese/<Book>/<book>_<chapter>.txt     (one verse per line)
+e.g. bible_chinese/Exodus/exodus_1.txt
+
+SANITY-CHECK THE SOURCE FIRST (learned from the Genesis 24 bug):
+    awk 'length($0) < 5 {print FILENAME": line "FNR": "$0}' bible_chinese/Exodus/*.txt
+Any suspiciously short line (like a stray "a") is a corrupt verse — fix the
+.txt before generating, or the CSV will faithfully encode the corruption.
+The usual pattern: the previous line has two verses merged into one, and the
+"a" line should hold the second verse's text (split them apart).
+
+KNOWN: bible_chinese/Exodus/exodus_38.txt line 15 is corrupt this way
+(line 14 has verses 14+15 merged). Fix before generating Exodus.
+
+
+STEP 1 — generate one book
+--------------------------
+    python3 generate_chinese_breakdown_cli.py Exodus
+
+Or a single chapter:
+    python3 generate_chinese_breakdown_cli.py Exodus 1
+
+Notes:
+- Resumable: chapters that already have a CSV are skipped, so an
+  interrupted run can just be re-run.
+- Output CSVs land in public/chinese_breakdown/<book>/<book>_<ch>.csv
+- When the run finishes it AUTOMATICALLY re-runs the combiner, so
+  public/chinese_breakdown.json is rebuilt with the new book included.
+
+
+STEP 2 — compile everything together (any session can do this)
+--------------------------------------------------------------
+If you ever need to rebuild the combined JSON by hand (e.g. after editing
+or adding CSVs from another session):
+
+    python3 combine_chinese_breakdown.py
+
+It scans public/chinese_breakdown/*/ and rewrites public/chinese_breakdown.json.
+The app preloads that single JSON on startup — no app code changes needed
+when adding books.
+
+
+STEP 3 — verify
+---------------
+    node -e "const d=require('./public/chinese_breakdown.json'); console.log(Object.keys(d)); console.log('Exodus chapters:', Object.keys(d.Exodus||{}).length)"
+
+Then in the app: open the 中文 modal on the new book and arrow through
+chapters/verses.
+
+
+STEP 4 — commit and push
+------------------------
+    git add bible_chinese/<Book>/ public/chinese_breakdown/<book>/ public/chinese_breakdown.json
+    git commit -m "Add Chinese breakdown for <Book>"
+    git push
