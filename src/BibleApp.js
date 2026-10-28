@@ -12,6 +12,7 @@ import ChineseBreakdownModal from './components/ChineseBreakdownModal';
 import SongMemorizeModal, { parseSongTxt } from './components/SongMemorizeModal';
 import { getStorytimeAudioUrl } from './data/storytimeAudio';
 import { getRhymeAudioUrl } from './data/rhymeAudio';
+import ChapterAudioModal from './components/ChapterAudioModal';
 
 // Import Firebase modules
 import { initializeApp } from 'firebase/app';
@@ -509,6 +510,7 @@ const NavigationPlaceholder = ({
   onClassicalMusic,
   onClassicalTogglePlay,
   classicalPlaying,
+  onChapterAudio,
   onYouTubeVideo,
   isYouTubePlaying,
   onYouTubeTogglePlay,
@@ -816,6 +818,13 @@ const NavigationPlaceholder = ({
                 onClick={() => onClassicalMusic && onClassicalMusic()}
               >
                 🎻
+              </button>}
+              {isFeatureVisible('chapterAudio') && <button
+                className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-pink-100 text-pink-900 hover:bg-pink-200"
+                title="Open swipe audio player (KJV / Story Time)"
+                onClick={() => onChapterAudio && onChapterAudio()}
+              >
+                🎧
               </button>}
               {isFeatureVisible('classicalPlay') && <button
                 className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${
@@ -1485,6 +1494,7 @@ const BibleApp = () => {
   const [showBookDropdown, setShowBookDropdown] = useState(false);
   const [showFiguresModal, setShowFiguresModal] = useState(false);
   const [showClassicalModal, setShowClassicalModal] = useState(false);
+  const [showChapterAudioModal, setShowChapterAudioModal] = useState(false);
   const [classicalPlaying, setClassicalPlaying] = useState(false);
   const classicalRef = useRef(null);
   const [showYouTubeModal, setShowYouTubeModal] = useState(false);
@@ -1708,7 +1718,7 @@ const BibleApp = () => {
     'search', 'rhyme', 'storyAudio', 'chpCopy', 'ruler', 'col', 'hymn', 'prompt',
     'nltPsalms', 'plan', 'math', 'figures', 'copyPane2', 'toggleCuv', 'togglePsalms',
     'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
-    'fontPlus', 'youtube', 'youtubeDramatized', 'lang', 'soaking', 'classical', 'classicalPlay',
+    'fontPlus', 'youtube', 'youtubeDramatized', 'lang', 'soaking', 'classical', 'classicalPlay', 'chapterAudio',
     'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
     'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting', 'outline', 'intro',
     'memorize', 'commentary'
@@ -1721,7 +1731,7 @@ const BibleApp = () => {
     toggleRhyme: 'WEB/Rhyme', cyclePane1: '1:cycle', clrPane1: 'clr pane 1',
     ref: 'Ref(e)', syllable: 'Syllable', darkMode: 'Dark/Light', fontMinus: 'Font -',
     fontPlus: 'Font +', youtube: 'YouTube', youtubeDramatized: 'Dramatized', lang: 'Language', soaking: 'Soaking',
-    classical: '🎻 Classical-Scriptures', classicalPlay: 'Fast ▶/⏸',
+    classical: '🎻 Classical-Scriptures', classicalPlay: 'Fast ▶/⏸', chapterAudio: '🎧 Swipe Audio',
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com',
@@ -1758,6 +1768,7 @@ const BibleApp = () => {
     soaking: 'Plays or pauses the soaking worship music (s).',
     classical: 'Opens the classical music player.',
     classicalPlay: 'Plays or pauses the classical music.',
+    chapterAudio: 'Opens the swipe audio player (KJV / Story Time): swipe up/down to change source, left/right to change chapter.',
     pane1Verse: 'Shows pane 1\'s translation of the verses you last copied from pane 2.',
     snippets: 'Saves and copies text snippets.',
     clipboardRef: 'Reads a chapter:verse from the clipboard and goes to it.',
@@ -7254,6 +7265,7 @@ const BibleApp = () => {
               onFontScaleDown={() => setFontScale(prev => Math.max(0.5, prev - 0.1))}
               onFontScaleUp={() => setFontScale(prev => Math.min(2, prev + 0.1))}
               onClassicalMusic={() => setShowClassicalModal(true)}
+              onChapterAudio={() => setShowChapterAudioModal(true)}
               onClassicalTogglePlay={() => {
                 if (classicalRef.current) classicalRef.current.togglePlay();
               }}
@@ -12412,6 +12424,17 @@ const BibleApp = () => {
           setVerseModalData(null);
           setShowOutlineModal(true);
         }}
+      />
+      <ChapterAudioModal
+        open={showChapterAudioModal}
+        onClose={() => setShowChapterAudioModal(false)}
+        bookAbbrev={selectedBook?.abbrev}
+        bookName={selectedBook ? selectedBook.name || selectedBook.abbrev : ''}
+        currentChapter={selectedChapter}
+        chapterCount={selectedBook ? selectedBook.chapters.length : 0}
+        onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }}
+        isDarkMode={isDarkMode}
+        isSepiaMode={isSepiaMode}
       />
       <ClassicalMusicModal ref={classicalRef} open={showClassicalModal} onClose={() => setShowClassicalModal(false)} onPlayingChange={setClassicalPlaying} />
       <YouTubeVideoModal ref={youtubeModalRef} open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} onOpen={() => setShowYouTubeModal(true)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsYouTubePlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} ytMode={ytMode} onYtModeChange={handleYtModeChange} />

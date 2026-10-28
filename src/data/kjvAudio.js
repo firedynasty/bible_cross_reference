@@ -1324,4 +1324,11 @@ const kjvAudioData = {
   },
 };
 
+export function getKjvAudioUrl(bookAbbrev, chapter) {
+  if (!bookAbbrev || chapter == null) return null;
+  const book = kjvAudioData[bookAbbrev];
+  if (!book) return null;
+  return book[chapter] || null;
+}
+
 export default kjvAudioData;
