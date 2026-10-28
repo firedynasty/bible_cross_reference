@@ -12,6 +12,7 @@ const SWIPE_MIN_PX = 40;
 const SKIP_SECONDS = 10;
 const SPEEDS = [1, 1.25, 1.5, 2, 0.75];
 const MOBILE_MAX_WIDTH = 640;
+const SLEEP_OPTIONS_MIN = [15, 30];
 
 function formatTime(seconds) {
   if (!isFinite(seconds) || seconds < 0) return '0:00';
@@ -38,12 +39,15 @@ function ChapterAudioModal({
   const [speedIndex, setSpeedIndex] = useState(0);
   const [flash, setFlash] = useState('');
   const [loadError, setLoadError] = useState(false);
+  const [sleepEndsAt, setSleepEndsAt] = useState(null);
+  const [sleepRemaining, setSleepRemaining] = useState(0);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_MAX_WIDTH);
 
   const audioRef = useRef(null);
   const pointerStart = useRef(null);
   const wantPlayRef = useRef(true);
   const flashTimerRef = useRef(null);
+  const sleepChoiceRef = useRef(-1);
 
   const source = SOURCES[sourceIndex];
   const url = source.getUrl(bookAbbrev, currentChapter);
@@ -98,11 +102,49 @@ function ChapterAudioModal({
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // Sleep timer: pause playback when the countdown reaches zero
+  useEffect(() => {
+    if (!sleepEndsAt) return undefined;
+    const tick = () => {
+      const remaining = Math.max(0, sleepEndsAt - Date.now());
+      setSleepRemaining(remaining);
+      if (remaining === 0) {
+        wantPlayRef.current = false;
+        if (audioRef.current) audioRef.current.pause();
+        sleepChoiceRef.current = -1;
+        setSleepEndsAt(null);
+        showFlash('Sleep timer ended');
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [sleepEndsAt, showFlash]);
+
+  // Cycle: Off -> 15 -> 30 -> Off
+  const cycleSleepTimer = useCallback(() => {
+    const nextIdx = sleepChoiceRef.current + 1;
+    if (nextIdx >= SLEEP_OPTIONS_MIN.length) {
+      sleepChoiceRef.current = -1;
+      setSleepEndsAt(null);
+      setSleepRemaining(0);
+      showFlash('Sleep timer off');
+      return;
+    }
+    sleepChoiceRef.current = nextIdx;
+    setSleepEndsAt(Date.now() + SLEEP_OPTIONS_MIN[nextIdx] * 60000);
+    showFlash(`Stops in ${SLEEP_OPTIONS_MIN[nextIdx]} min`);
+  }, [showFlash]);
+
   // Pause when the modal closes
   useEffect(() => {
     if (!open && audioRef.current) {
       audioRef.current.pause();
       wantPlayRef.current = true;
+    }
+    if (!open) {
+      sleepChoiceRef.current = -1;
+      setSleepEndsAt(null);
     }
   }, [open]);
 
@@ -272,9 +314,10 @@ function ChapterAudioModal({
         />
 
         {/* Fine controls */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginTop: 8 }}>
           <button onClick={() => skip(-SKIP_SECONDS)} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: surface, color: fg, cursor: 'pointer' }}>⟲ {SKIP_SECONDS}s</button>
           <button onClick={cycleSpeed} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: surface, color: fg, cursor: 'pointer', minWidth: 52 }}>{SPEEDS[speedIndex]}x</button>
+          <button onClick={cycleSleepTimer} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: sleepEndsAt ? '#ec4899' : surface, color: sleepEndsAt ? 'white' : fg, cursor: 'pointer', minWidth: 72 }} title="Sleep timer: tap to cycle 15 / 30 min / off">😴 {sleepEndsAt ? formatTime(sleepRemaining / 1000) : 'Off'}</button>
           <button onClick={() => skip(SKIP_SECONDS)} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: surface, color: fg, cursor: 'pointer' }}>{SKIP_SECONDS}s ⟳</button>
         </div>
 
