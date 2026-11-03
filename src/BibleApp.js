@@ -4236,16 +4236,6 @@ const BibleApp = () => {
         return;
       }
 
-      // 't' key - open Story modal
-      if (e.key === 't' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showOutlineModal) {
-        e.preventDefault();
-        loadStorytimeForCurrent();
-        setStoryIntroTab('story');
-        setShowSearchModal(true);
-        setSearchStartRef('');
-        return;
-      }
-
       // 'm' key - open Verse Commentary modal for topmost visible verse in right pane
       if (e.key === 'm' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showOutlineModal) {
         e.preventDefault();
@@ -4523,13 +4513,6 @@ const BibleApp = () => {
         e.preventDefault();
       }
 
-      // 'r' key - read highlighted/selected text in English
-      else if (e.key === 'r' || e.key === 'R' || e.keyCode === 82) {
-        const sel = window.getSelection();
-        const text = sel ? sel.toString().trim() : '';
-        if (text) speakSelectedText(text, 'en-US');
-        e.preventDefault();
-      }
       // 'd' key - toggle dark mode
       else if (e.key === 'd' || e.keyCode === 68) {
         // Find and click the dark mode toggle button
