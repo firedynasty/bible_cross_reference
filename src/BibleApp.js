@@ -4167,15 +4167,15 @@ const BibleApp = () => {
         const t = e.target;
         const tag = t && t.tagName;
         const typing = t && (tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable || (tag === 'INPUT' && !t.hasAttribute('data-verse-cb')));
-        const boxes = typing ? [] : Array.from(document.querySelectorAll('input[data-verse-cb]'));
+        const boxes = typing ? [] : Array.from(document.querySelectorAll('input[data-verse-cb]')).filter(b => b.offsetParent !== null); // visible ones only (a hidden pane still renders)
         if (boxes.length) {
           const nums = boxes.map(b => Number(b.getAttribute('data-verse-cb'))).sort((a, b) => a - b);
           const cur = kbVerseRef.current;
           if (e.key === 'Enter') {
-            if (cur != null && nums.includes(cur) && selectedBookRef.current) {
+            const box = boxes.find(b => Number(b.getAttribute('data-verse-cb')) === cur);
+            if (cur != null && box) {
               e.preventDefault();
-              toggleVerseSelected(selectedBookRef.current.abbrev, selectedChapterRef.current, cur);
-              // If "selected only" is on, the verse may disappear: move the cursor to a neighbour that stays
+              toggleVerseSelected(box.getAttribute('data-verse-book'), Number(box.getAttribute('data-verse-chapter')), cur);
             }
             return;
           }
@@ -4187,7 +4187,8 @@ const BibleApp = () => {
           if (!nums.includes(next)) next = nums[0];
           kbVerseRef.current = next;
           setKbVerse(next);
-          const el = document.getElementById(`verse-${next}`);
+          const nextBox = boxes.find(b => Number(b.getAttribute('data-verse-cb')) === next);
+          const el = nextBox && nextBox.closest('[id^="verse-"], [id^="right-pane-verse-"]');
           if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
           return;
         }
@@ -7928,6 +7929,8 @@ const BibleApp = () => {
                           <input
                             type="checkbox"
                             data-verse-cb={verseNumber}
+                            data-verse-book={selectedBook.abbrev}
+                            data-verse-chapter={selectedChapter}
                             checked={isVerseSelected}
                             onChange={() => toggleVerseSelected(selectedBook.abbrev, selectedChapter, verseNumber)}
                             title={isVerseSelected ? 'Unselect verse' : 'Select verse'}
@@ -8594,11 +8597,15 @@ const BibleApp = () => {
                               return currentChapterFilter.includes(verseNumber);
                             })
                             .map(({ verse, verseNumber }) => {
+                            // Pane 1 is hidden (phone showing pane 2, or P2 Only): offer the verse checkboxes here instead
+                            const pane1Hidden = showPane2Only || (isMobileView && !isTabletView && showKJVOnMobile);
+                            const selAbbrev = pane2Book ? pane2Book.abbrev : selectedBook.abbrev;
+                            const p2Selected = pane1Hidden && isVerseSelectedFn(selAbbrev, effectiveChapter, verseNumber);
                             return (
                               <div
                                 key={verseNumber}
                                 id={`right-pane-verse-${verseNumber}`}
-                                className="leading-relaxed p-4 rounded-md transition-colors"
+                                className={`leading-relaxed p-4 rounded-md transition-colors ${p2Selected ? (isDarkMode ? 'bg-gray-800' : 'bg-blue-50') : ''} ${pane1Hidden && kbVerse === verseNumber ? 'ring-2 ring-sky-500' : ''}`}
                                 style={{ fontSize: `${fontScale * 1.125}rem` }}
                               >
                                 <p className="flex">
@@ -8619,6 +8626,19 @@ const BibleApp = () => {
                                     className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}
                                   >{verseNumber}</span>
                                   <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(showPane2Syllables ? syllabifyText(verse) : verse, showGlosses)}</span>
+                                  {pane1Hidden && (
+                                    <input
+                                      type="checkbox"
+                                      data-verse-cb={verseNumber}
+                                      data-verse-book={selAbbrev}
+                                      data-verse-chapter={effectiveChapter}
+                                      checked={p2Selected}
+                                      onChange={() => toggleVerseSelected(selAbbrev, effectiveChapter, verseNumber)}
+                                      title={p2Selected ? 'Unselect verse' : 'Select verse'}
+                                      aria-label={`Select verse ${verseNumber}`}
+                                      className="ml-3 mt-2 h-5 w-5 flex-shrink-0 cursor-pointer"
+                                    />
+                                  )}
                                 </p>
                               </div>
                             );
