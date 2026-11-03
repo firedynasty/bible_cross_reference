@@ -1711,7 +1711,7 @@ const BibleApp = () => {
     'search', 'rhyme', 'storyAudio', 'chpCopy', 'ruler', 'col', 'hymn', 'prompt',
     'nltPsalms', 'plan', 'math', 'figures', 'copyPane2', 'toggleCuv', 'togglePsalms',
     'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
-    'fontPlus', 'youtube', 'youtubeDramatized', 'lang', 'soaking', 'classical', 'classicalPlay', 'chapterAudio', 'verseSelect',
+    'fontPlus', 'youtube', 'youtubeDramatized', 'lang', 'soaking', 'classical', 'classicalPlay', 'chapterAudio', 'verseSelect', 'panePill',
     'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
     'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting', 'outline', 'intro',
     'memorize', 'commentary'
@@ -1724,7 +1724,7 @@ const BibleApp = () => {
     toggleRhyme: 'WEB/Rhyme', cyclePane1: '1:cycle', clrPane1: 'clr pane 1',
     ref: 'Ref(e)', syllable: 'Syllable', darkMode: 'Dark/Light', fontMinus: 'Font -',
     fontPlus: 'Font +', youtube: 'YouTube', youtubeDramatized: 'Dramatized', lang: 'Language', soaking: 'Soaking',
-    classical: '🎻 Classical-Scriptures', classicalPlay: 'Fast ▶/⏸', chapterAudio: '🎧 Swipe Audio', verseSelect: '☑ Selected verses',
+    classical: '🎻 Classical-Scriptures', classicalPlay: 'Fast ▶/⏸', chapterAudio: '🎧 Swipe Audio', verseSelect: '☑ Selected verses', panePill: 'Pane 1 | Pane 2 (phone)',
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com',
@@ -1761,6 +1761,7 @@ const BibleApp = () => {
     soaking: 'Plays or pauses the soaking worship music (s).',
     classical: 'Opens the classical music player.',
     classicalPlay: 'Plays or pauses the classical music.',
+    panePill: 'Phone only: the Pane 1 | Pane 2 switch at the start of the navbar.',
     verseSelect: 'Navbar buttons for checked verses: Only On/Off, Save, Load, Clear chapter and Dropbox sign in/out.',
     chapterAudio: 'Opens the swipe audio player (KJV / Story Time): swipe up/down to change source, left/right to change chapter.',
     pane1Verse: 'Shows pane 1\'s translation of the verses you last copied from pane 2.',
@@ -7305,7 +7306,7 @@ const BibleApp = () => {
               onClassicalMusic={() => setShowClassicalModal(true)}
               onChapterAudio={() => setShowChapterAudioModal(true)}
               verseSelectControls={renderVerseSelectNav()}
-              mobilePanePill={isMobileView && !isTabletView && viewMode === 'side-by-side' && !showPane2Only ? (
+              mobilePanePill={isFeatureVisible('panePill') && isMobileView && !isTabletView && viewMode === 'side-by-side' && !showPane2Only ? (
                 <span className="inline-flex rounded-full overflow-hidden border border-sky-500 text-sm font-bold" role="group" aria-label="Choose pane">
                   <button
                     onClick={() => { setShowKJVOnMobile(false); localStorage.setItem('mobilePanePreference', 'pane1'); }}
