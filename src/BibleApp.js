@@ -1881,7 +1881,28 @@ const BibleApp = () => {
 
   // State for Notes Modal
   const [showNotesModal, setShowNotesModal] = useState(false);
-  const [notesText, setNotesText] = useState(() => { try { return localStorage.getItem('bibleNotesText') || ''; } catch { return ''; } });
+  // Notes are one JSON document: { version, general: {text, updatedAt}, notes: { "rm": {text, updatedAt}, ... } } (one note per book)
+  const [notesData, setNotesData] = useState(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('bibleNotesData') || 'null');
+      if (cached && typeof cached === 'object') return { version: 1, general: cached.general || { text: '', updatedAt: null }, notes: cached.notes || {} };
+    } catch {}
+    let legacy = '';
+    try { legacy = localStorage.getItem('bibleNotesText') || ''; } catch {}
+    return { version: 1, general: { text: legacy, updatedAt: null }, notes: {} };
+  });
+  const [notesKeyOverride, setNotesKeyOverride] = useState(null); // null = follow the book being read
+  const [notesShowJson, setNotesShowJson] = useState(false);
+  const [notesFontSize, setNotesFontSize] = useState(() => {
+    try { const n = parseInt(localStorage.getItem('bibleNotesFontSize'), 10); return n >= 10 && n <= 40 ? n : 14; } catch { return 14; }
+  });
+  const changeNotesFontSize = (delta) => setNotesFontSize(prev => {
+    const next = Math.min(40, Math.max(10, prev + delta));
+    try { localStorage.setItem('bibleNotesFontSize', String(next)); } catch {}
+    return next;
+  });
+  const notesTouchedRef = useRef(new Set()); // note keys edited since the last save/load
+  const notesLoadedRef = useRef(false);
   const [notesStatus, setNotesStatus] = useState('');
   const [notesSaving, setNotesSaving] = useState(false);
   const [notesLoading, setNotesLoading] = useState(false);
@@ -2533,8 +2554,45 @@ const BibleApp = () => {
     }
   }, [dropboxAccessToken, loadDropboxFolder]);
 
-  // Notes: load from Dropbox /vercel/bible_app/notes.txt
-  const NOTES_PATH = '/vercel/bible_app/notes.txt';
+  // Notes live in ONE JSON file on Dropbox, keyed by book abbreviation ("rm"), plus a "general" note.
+  const NOTES_PATH = '/vercel/bible_app/notes.json';
+  const LEGACY_NOTES_PATH = '/vercel/bible_app/notes.txt'; // old single text file, imported once as the General note
+  const currentNotesKey = notesKeyOverride || (selectedBook ? selectedBook.abbrev : 'general');
+  const notesLabel = (key) => {
+    if (key === 'general') return 'General';
+    const i = key.lastIndexOf('-'); // older per-chapter keys like "rm-8" still display sensibly
+    return i > 0 && /^\d+$/.test(key.slice(i + 1)) ? `${getBookName(key.slice(0, i))} ${key.slice(i + 1)}` : getBookName(key);
+  };
+  const currentNote = currentNotesKey === 'general' ? notesData.general : (notesData.notes[currentNotesKey] || { text: '', updatedAt: null });
+
+  const persistNotesCache = (data) => { try { localStorage.setItem('bibleNotesData', JSON.stringify(data)); } catch {} };
+
+  const editNote = (text) => {
+    const key = currentNotesKey;
+    const entry = { text, updatedAt: new Date().toISOString() };
+    notesTouchedRef.current.add(key);
+    setNotesData(prev => {
+      const next = key === 'general' ? { ...prev, general: entry } : { ...prev, notes: { ...prev.notes, [key]: entry } };
+      persistNotesCache(next);
+      return next;
+    });
+  };
+
+  const downloadDropboxText = async (tok, path) => {
+    const r = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tok}`, 'Dropbox-API-Arg': JSON.stringify({ path }) },
+    });
+    if (r.status === 409) return { missing: true };
+    if (r.status === 401) return { expired: true };
+    if (!r.ok) throw new Error('Download failed (' + r.status + ')');
+    return { text: await r.text() };
+  };
+
+  const parseNotesJson = (text) => {
+    const d = JSON.parse(text);
+    return { version: 1, general: d.general || { text: '', updatedAt: null }, notes: d.notes || {} };
+  };
 
   const loadNotes = useCallback(async (token) => {
     const tok = token || dropboxAccessToken;
@@ -2542,20 +2600,23 @@ const BibleApp = () => {
     setNotesLoading(true);
     setNotesStatus('Loading…');
     try {
-      const r = await fetch('https://content.dropboxapi.com/2/files/download', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${tok}`,
-          'Dropbox-API-Arg': JSON.stringify({ path: NOTES_PATH }),
-        },
-      });
-      if (r.status === 409) { setNotesStatus(''); return; } // file doesn't exist yet
-      if (r.status === 401) { setDropboxAccessToken(null); setNotesStatus('Session expired — sign in again'); return; }
-      if (!r.ok) throw new Error('Download failed (' + r.status + ')');
-      const text = await r.text();
-      setNotesText(text);
-      try { localStorage.setItem('bibleNotesText', text); } catch {}
-      setNotesStatus('');
+      const res = await downloadDropboxText(tok, NOTES_PATH);
+      if (res.expired) { setDropboxAccessToken(null); setNotesStatus('Session expired — sign in again'); return; }
+      let data;
+      if (res.missing) {
+        // First time: import the old notes.txt (if any) as the General note
+        const legacy = await downloadDropboxText(tok, LEGACY_NOTES_PATH);
+        data = { version: 1, general: { text: legacy.text || '', updatedAt: legacy.text ? new Date().toISOString() : null }, notes: {} };
+        if (legacy.text) notesTouchedRef.current = new Set(['general']);
+        setNotesStatus(legacy.text ? 'Imported notes.txt as General — Save to create notes.json' : 'No notes saved yet');
+      } else {
+        data = parseNotesJson(res.text);
+        notesTouchedRef.current = new Set();
+        setNotesStatus('');
+      }
+      setNotesData(data);
+      persistNotesCache(data);
+      notesLoadedRef.current = true;
     } catch (e) {
       setNotesStatus('Error loading: ' + e.message);
     } finally {
@@ -2563,11 +2624,23 @@ const BibleApp = () => {
     }
   }, [dropboxAccessToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Save: re-read the file first and replace only the notes edited here, so other devices' notes are kept
   const saveNotes = useCallback(async () => {
     if (!dropboxAccessToken) return;
     setNotesSaving(true);
     setNotesStatus('Saving…');
     try {
+      let remote = { version: 1, general: { text: '', updatedAt: null }, notes: {} };
+      const res = await downloadDropboxText(dropboxAccessToken, NOTES_PATH);
+      if (res.expired) { setDropboxAccessToken(null); setNotesStatus('Session expired — sign in again'); return; }
+      if (!res.missing) remote = parseNotesJson(res.text);
+      const merged = { version: 1, general: remote.general, notes: { ...remote.notes } };
+      notesTouchedRef.current.forEach((key) => {
+        if (key === 'general') { merged.general = notesData.general; return; }
+        const local = notesData.notes[key];
+        if (local && local.text) merged.notes[key] = local; else delete merged.notes[key];
+      });
+      // notes never touched here come from Dropbox; notes only known locally (never touched) are dropped
       const r = await fetch('https://content.dropboxapi.com/2/files/upload', {
         method: 'POST',
         headers: {
@@ -2575,10 +2648,13 @@ const BibleApp = () => {
           'Dropbox-API-Arg': JSON.stringify({ path: NOTES_PATH, mode: { '.tag': 'overwrite' }, mute: true }),
           'Content-Type': 'application/octet-stream',
         },
-        body: notesText,
+        body: JSON.stringify(merged, null, 2),
       });
       if (r.status === 401) { setDropboxAccessToken(null); setNotesStatus('Session expired — sign in again'); return; }
       if (!r.ok) throw new Error('Upload failed (' + r.status + ')');
+      notesTouchedRef.current = new Set();
+      setNotesData(merged);
+      persistNotesCache(merged);
       setNotesStatus('Saved ✓');
       setTimeout(() => setNotesStatus(''), 2500);
     } catch (e) {
@@ -2586,7 +2662,21 @@ const BibleApp = () => {
     } finally {
       setNotesSaving(false);
     }
-  }, [dropboxAccessToken, notesText]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dropboxAccessToken, notesData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const notesJsonText = JSON.stringify(notesData, null, 2);
+  const copyNotesJson = async () => {
+    try { await navigator.clipboard.writeText(notesJsonText); setNotesStatus('JSON copied ✓'); }
+    catch { setNotesStatus('Could not copy — select the text and copy it'); }
+    setTimeout(() => setNotesStatus(''), 2500);
+  };
+  const downloadNotesJson = () => {
+    const blob = new Blob([notesJsonText], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'bible_notes.json'; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Verse checkboxes: selection is { "rm-8": [1, 5, 10] }, held in memory and saved/loaded to Dropbox on demand
   const VERSES_PATH = '/vercel/bible_app/selected_verses.json';
@@ -2791,8 +2881,16 @@ const BibleApp = () => {
   );
 
   const handleNotesOpen = useCallback(() => {
+    setNotesKeyOverride(null);
     setShowNotesModal(true);
   }, []);
+
+  // First time the modal is opened after signing in: pull notes.json (never over unsaved edits)
+  useEffect(() => {
+    if (showNotesModal && dropboxAccessToken && !notesLoadedRef.current && notesTouchedRef.current.size === 0) {
+      loadNotes();
+    }
+  }, [showNotesModal, dropboxAccessToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // State to track scroll position for mobile view during translation changes
   // eslint-disable-next-line no-unused-vars
@@ -10104,7 +10202,7 @@ const BibleApp = () => {
           <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 600, height: '75vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', position: 'relative' }}>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexShrink: 0 }}>
-              <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333' }}>Notes</h3>
+              <h3 style={{ margin: 0, fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333' }}>Notes — {notesLabel(currentNotesKey)}</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {notesStatus && (
                   <span style={{ fontSize: 12, color: notesStatus.includes('Error') ? '#e53e3e' : isDarkMode ? '#aaa' : '#888' }}>{notesStatus}</span>
@@ -10129,18 +10227,62 @@ const BibleApp = () => {
               </div>
             ) : (
               <>
+                {/* Which note: this book, General, or any book that already has a note */}
+                <select
+                  value={notesKeyOverride || ''}
+                  onChange={(e) => setNotesKeyOverride(e.target.value || null)}
+                  style={{ marginBottom: 8, padding: '6px 8px', borderRadius: 8, fontSize: 13, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, background: isDarkMode ? '#333' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333', flexShrink: 0 }}
+                >
+                  <option value="">{selectedBook ? `This book: ${getBookName(selectedBook.abbrev)}` : 'This book'}</option>
+                  <option value="general">General</option>
+                  {Object.keys(notesData.notes).filter(k => notesData.notes[k] && notesData.notes[k].text).sort().map(k => (
+                    <option key={k} value={k}>{notesLabel(k)}</option>
+                  ))}
+                </select>
                 <textarea
-                  value={notesText}
-                  onChange={(e) => { const v = e.target.value; setNotesText(v); try { localStorage.setItem('bibleNotesText', v); } catch {} }}
+                  value={currentNote.text}
+                  onChange={(e) => editNote(e.target.value)}
                   disabled={notesLoading}
-                  placeholder="Write your notes here…"
+                  placeholder={`Notes for ${notesLabel(currentNotesKey)}…`}
                   style={{
                     flex: 1, resize: 'none', border: `1px solid ${isDarkMode ? '#444' : '#ddd'}`,
-                    borderRadius: 8, padding: '10px 12px', fontSize: 14, lineHeight: 1.6,
+                    borderRadius: 8, padding: '10px 12px', fontSize: notesFontSize, lineHeight: 1.6,
                     background: isDarkMode ? '#1e1e1e' : '#fafafa', color: isDarkMode ? '#e0e0e0' : '#222',
-                    fontFamily: 'inherit', outline: 'none', marginBottom: 12,
+                    fontFamily: 'inherit', outline: 'none', marginBottom: 8, minHeight: 80,
                   }}
                 />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexShrink: 0, fontSize: 12, color: isDarkMode ? '#aaa' : '#777', flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: 'monospace' }}>Dropbox: {NOTES_PATH}</span>
+                  {notesTouchedRef.current.size > 0 && <span style={{ color: '#d97706', fontWeight: 700 }}>• unsaved</span>}
+                  <button
+                    onClick={() => changeNotesFontSize(-2)}
+                    title="Smaller text"
+                    style={{ marginLeft: 'auto', padding: '2px 8px', fontSize: 12, fontWeight: 700, borderRadius: 6, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, background: 'transparent', color: 'inherit', cursor: 'pointer' }}
+                  >A−</button>
+                  <button
+                    onClick={() => changeNotesFontSize(2)}
+                    title="Larger text"
+                    style={{ padding: '2px 8px', fontSize: 12, fontWeight: 700, borderRadius: 6, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, background: 'transparent', color: 'inherit', cursor: 'pointer' }}
+                  >A+</button>
+                  <button
+                    onClick={() => setNotesShowJson(v => !v)}
+                    style={{ padding: '2px 8px', fontSize: 12, borderRadius: 6, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, background: notesShowJson ? (isDarkMode ? '#444' : '#e5e7eb') : 'transparent', color: 'inherit', cursor: 'pointer' }}
+                  >{'{ }'} JSON</button>
+                </div>
+                {notesShowJson && (
+                  <div style={{ marginBottom: 8, flexShrink: 0 }}>
+                    <textarea
+                      readOnly
+                      value={notesJsonText}
+                      onFocus={(e) => e.target.select()}
+                      style={{ width: '100%', height: 130, boxSizing: 'border-box', resize: 'vertical', fontFamily: 'monospace', fontSize: 11, padding: 8, borderRadius: 8, border: `1px solid ${isDarkMode ? '#444' : '#ddd'}`, background: isDarkMode ? '#1e1e1e' : '#f5f5f5', color: isDarkMode ? '#d1d5db' : '#333' }}
+                    />
+                    <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                      <button onClick={copyNotesJson} style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, background: isDarkMode ? '#333' : '#f5f5f5', color: isDarkMode ? '#ddd' : '#333', cursor: 'pointer' }}>Copy JSON</button>
+                      <button onClick={downloadNotesJson} style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, background: isDarkMode ? '#333' : '#f5f5f5', color: isDarkMode ? '#ddd' : '#333', cursor: 'pointer' }}>Download .json</button>
+                    </div>
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                   <button
                     onClick={() => loadNotes()}
@@ -10177,7 +10319,7 @@ const BibleApp = () => {
                       boxShadow: '0 8px 32px rgba(0,0,0,0.4)', textAlign: 'center', maxWidth: 280,
                     }}>
                       <p style={{ margin: '0 0 18px', fontSize: 15, color: isDarkMode ? '#e0e0e0' : '#333', lineHeight: 1.5 }}>
-                        Overwrite <strong>notes.txt</strong> on Dropbox?
+                        Save to <strong>notes.json</strong> on Dropbox? Only the notes you edited here are changed.
                       </p>
                       <div style={{ display: 'flex', gap: 10 }}>
                         <button
