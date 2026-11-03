@@ -319,6 +319,26 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
     } catch {}
   }, [open, playerReady, bookAbbrev, currentChapter, isDramatized]);
 
+  // Seek the player to the start of a chapter (falls back to the nearest earlier chapter that has a timestamp)
+  const seekPlayerToChapter = (bookKey, chapter) => {
+    const player = playerRef.current;
+    if (!player || !bookKey || !chapter) return false;
+    const tsData = isDramatizedRef.current ? dramatizedChapterTimestamps : youtubeChapterTimestamps;
+    const bookTimestamps = tsData[bookKey];
+    if (!bookTimestamps) return false;
+    let ch = chapter;
+    while (ch >= 1 && bookTimestamps[ch] == null) { ch--; }
+    if (ch < 1) return false;
+    const ts = bookTimestamps[ch] + bookOffsetRef.current;
+    try {
+      player.seekTo(ts, true);
+      setCurrentTime(ts);
+      saveTime(bookKey, ts, storageKeyRef.current);
+      chapterSeekDone.current = `${bookKey}-${chapter}`;
+      return true;
+    } catch { return false; }
+  };
+
   // Reset chapter seek tracking when modal closes
   useEffect(() => {
     if (!open) { chapterSeekDone.current = null; setSessionSecs(0); }
@@ -436,24 +456,6 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
           playerRef.current.setVolume(next);
           setVolume(next);
         } catch {}
-      }
-      if (e.key === 'r' && playerRef.current && currentChapterRef.current) {
-        e.preventDefault();
-        const tsData = isDramatizedRef.current ? dramatizedChapterTimestamps : youtubeChapterTimestamps;
-        const bookTimestamps = tsData[bookAbbrevRef.current];
-        if (bookTimestamps) {
-          let ch = currentChapterRef.current;
-          while (ch >= 1 && bookTimestamps[ch] == null) { ch--; }
-          if (ch >= 1) {
-            const ts = bookTimestamps[ch] + bookOffsetRef.current;
-            try {
-              playerRef.current.seekTo(ts, true);
-              setCurrentTime(ts);
-              saveTime(bookAbbrevRef.current, ts, storageKeyRef.current);
-              chapterSeekDone.current = `${bookAbbrevRef.current}-${currentChapterRef.current}`;
-            } catch {}
-          }
-        }
       }
       if ((e.key === '+' || e.key === '=') && playerRef.current) {
         try {
@@ -610,6 +612,8 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
   }, []);
 
   useImperativeHandle(ref, () => ({
+    // Jump the video to the start of the chapter being read; works with the modal closed. Returns false if there is no player yet.
+    seekToCurrentChapter: () => seekPlayerToChapter(bookAbbrevRef.current, currentChapterRef.current),
     togglePlayPause: () => {
       if (!playerRef.current) {
         // No player yet — open the modal so the iframe can load, then auto-play
@@ -860,9 +864,9 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                           } catch {}
                         }}
                         className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
-                        title={`Restart chapter ${currentChapter} (r)`}
+                        title={`Restart chapter ${currentChapter} (t)`}
                       >
-                        ↻ ch(r)
+                        ↻ ch(t)
                       </button>
                     );
                   })()}
@@ -973,6 +977,33 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                       {timerPaused ? '▶ resume' : '⏸ pause'}
                     </button>
                   )}
+                  <button
+                    onClick={onClose}
+                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                    title="Close the modal (y)"
+                  >
+                    close(y)
+                  </button>
+                  <button
+                    onClick={() => seekPlayerToChapter(bookAbbrev, currentChapter)}
+                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                    title="Jump the video to the start of this chapter (t)"
+                  >
+                    ch(t)
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!playerRef.current) return;
+                      try {
+                        if (playerRef.current.getPlayerState() === 1) playerRef.current.pauseVideo();
+                        else playerRef.current.playVideo();
+                      } catch {}
+                    }}
+                    className="text-xs px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+                    title="Play / pause (r)"
+                  >
+                    ▶/⏸(r)
+                  </button>
                 </>
               )}
             </h2>

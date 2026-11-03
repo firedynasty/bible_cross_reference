@@ -4129,7 +4129,8 @@ const BibleApp = () => {
         return;
       }
       // Prevent keycode handling when user is typing in input fields or select dropdowns
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+      // (a verse checkbox that has focus after a click does not count as typing)
+      if ((e.target.tagName === 'INPUT' && !e.target.hasAttribute('data-verse-cb')) || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
         return;
       }
       
@@ -4234,6 +4235,27 @@ const BibleApp = () => {
           });
         }
         return;
+      }
+
+      // 't' key - jump the YouTube video (KJV or Dramatized, whichever mode is active) to the start of the chapter being read.
+      // Works with the modal closed; does nothing if the video has not been started yet.
+      if (e.key === 't' && !e.metaKey && !e.ctrlKey && !e.altKey && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showOutlineModal && !verseModalData && !memorizeModalData && !chineseBreakdownData) {
+        const ytRef = ytMode === 'drm' ? dramatizedModalRef : youtubeModalRef;
+        if (ytRef.current && ytRef.current.seekToCurrentChapter) {
+          e.preventDefault();
+          ytRef.current.seekToCurrentChapter();
+          return;
+        }
+      }
+
+      // 'r' key - play/pause the YouTube video (KJV or Dramatized, whichever mode is active); works with the modal closed
+      if (e.key === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showOutlineModal && !verseModalData && !memorizeModalData && !chineseBreakdownData) {
+        const ytRef = ytMode === 'drm' ? dramatizedModalRef : youtubeModalRef;
+        if (ytRef.current && ytRef.current.togglePlayPause) {
+          e.preventDefault();
+          ytRef.current.togglePlayPause();
+          return;
+        }
       }
 
       // 'm' key - open Verse Commentary modal for topmost visible verse in right pane
