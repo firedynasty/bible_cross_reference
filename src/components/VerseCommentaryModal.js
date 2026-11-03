@@ -54,6 +54,7 @@ export default function VerseCommentaryModal({
   verseLabel, verseText,
   bookAbbrev, chapter, verseNumber,
   totalVerses, onNavigateVerse,
+  prevVerse, nextVerse, // set (number or null) only while "Selected only" is on: step through checked verses
   isDarkMode, isSepiaMode,
   onOpenStory,
   onOpenIntro,
@@ -133,17 +134,21 @@ export default function VerseCommentaryModal({
     }
   }, [open]);
 
+  const filtered = prevVerse !== undefined || nextVerse !== undefined;
+  const prevTarget = filtered ? prevVerse : (verseNumber > 1 ? verseNumber - 1 : null);
+  const nextTarget = filtered ? nextVerse : (totalVerses && verseNumber < totalVerses ? verseNumber + 1 : null);
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') { onClose?.(); return; }
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
         e.stopPropagation();
-        if (verseNumber > 1) onNavigateVerse?.(verseNumber - 1);
+        if (prevTarget != null) onNavigateVerse?.(prevTarget);
       } else if (e.key === 'ArrowRight' || e.key === 'f') {
         e.preventDefault();
         e.stopPropagation();
-        if (totalVerses && verseNumber < totalVerses) onNavigateVerse?.(verseNumber + 1);
+        if (nextTarget != null) onNavigateVerse?.(nextTarget);
       } else if (e.key === 'ArrowDown' || e.key === 's') {
         e.preventDefault();
         e.stopPropagation();
@@ -156,7 +161,7 @@ export default function VerseCommentaryModal({
     };
     if (open) window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [open, onClose, onNavigateVerse, verseNumber, totalVerses]);
+  }, [open, onClose, onNavigateVerse, verseNumber, totalVerses, prevTarget, nextTarget]);
 
   if (!open) return null;
 
@@ -197,25 +202,25 @@ export default function VerseCommentaryModal({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button
-              onClick={() => onNavigateVerse?.(verseNumber - 1)}
-              disabled={!verseNumber || verseNumber <= 1}
+              onClick={() => prevTarget != null && onNavigateVerse?.(prevTarget)}
+              disabled={prevTarget == null}
               style={{
                 width: 28, height: 28, border: `1px solid ${border}`, borderRadius: 6,
-                cursor: verseNumber > 1 ? 'pointer' : 'default',
-                background: closeBg, color: verseNumber > 1 ? textColor : subText,
-                fontWeight: 700, fontSize: 14, opacity: verseNumber > 1 ? 1 : 0.4,
+                cursor: prevTarget != null ? 'pointer' : 'default',
+                background: closeBg, color: prevTarget != null ? textColor : subText,
+                fontWeight: 700, fontSize: 14, opacity: prevTarget != null ? 1 : 0.4,
               }}
               aria-label="Previous verse"
             >‹</button>
             <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{verseLabel}</h2>
             <button
-              onClick={() => onNavigateVerse?.(verseNumber + 1)}
-              disabled={!totalVerses || verseNumber >= totalVerses}
+              onClick={() => nextTarget != null && onNavigateVerse?.(nextTarget)}
+              disabled={nextTarget == null}
               style={{
                 width: 28, height: 28, border: `1px solid ${border}`, borderRadius: 6,
-                cursor: (totalVerses && verseNumber < totalVerses) ? 'pointer' : 'default',
-                background: closeBg, color: (totalVerses && verseNumber < totalVerses) ? textColor : subText,
-                fontWeight: 700, fontSize: 14, opacity: (totalVerses && verseNumber < totalVerses) ? 1 : 0.4,
+                cursor: nextTarget != null ? 'pointer' : 'default',
+                background: closeBg, color: nextTarget != null ? textColor : subText,
+                fontWeight: 700, fontSize: 14, opacity: nextTarget != null ? 1 : 0.4,
               }}
               aria-label="Next verse"
             >›</button>
@@ -346,9 +351,9 @@ export default function VerseCommentaryModal({
 
         {/* Scrollable commentary body */}
         <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          {totalVerses > 0 && verseNumber < totalVerses && (
+          {nextTarget != null && (
             <button
-              onClick={() => onNavigateVerse?.(verseNumber + 1)}
+              onClick={() => onNavigateVerse?.(nextTarget)}
               style={{ position: 'absolute', bottom: 14, left: 14, zIndex: 10, fontFamily: 'inherit', fontSize: 15, background: isDarkMode ? '#2a2c30' : isSepiaMode ? '#f5efe0' : '#fff', border: `1px solid ${border}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer', color: isDarkMode ? '#93c5fd' : isSepiaMode ? '#7a5a2a' : '#2563eb', boxShadow: '0 2px 6px rgba(0,0,0,0.18)', opacity: 0.35 }}
               title="Next verse (f)"
             >Next Verse (f) ›</button>
@@ -382,9 +387,9 @@ export default function VerseCommentaryModal({
               ))}
             </>
           )}
-          {totalVerses > 0 && verseNumber < totalVerses && (
+          {nextTarget != null && (
             <button
-              onClick={() => onNavigateVerse?.(verseNumber + 1)}
+              onClick={() => onNavigateVerse?.(nextTarget)}
               style={{
                 display: 'block', marginTop: 24, marginBottom: 8,
                 marginLeft: -6,

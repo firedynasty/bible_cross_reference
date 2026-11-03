@@ -5787,6 +5787,15 @@ const BibleApp = () => {
     return null;
   };
 
+  // While "Selected only" is on (and signed in to Dropbox), the commentary modal steps through the checked verses only
+  const verseModalNeighbors = () => {
+    if (!verseModalData || !dropboxAccessToken || !showSelectedOnly) return { prev: undefined, next: undefined };
+    const list = selectedVerses[`${verseModalData.bookAbbrev}-${verseModalData.chapter}`] || [];
+    const cur = verseModalData.verseNumber;
+    const before = list.filter(v => v < cur);
+    return { prev: before.length ? before[before.length - 1] : null, next: list.find(v => v > cur) ?? null };
+  };
+
   const handleVerseModalNavigate = (newVerseNumber) => {
     if (!verseModalData) return;
     const { bookAbbrev, chapter } = verseModalData;
@@ -12372,6 +12381,8 @@ const BibleApp = () => {
         verseNumber={verseModalData?.verseNumber}
         totalVerses={verseModalTotalVerses}
         onNavigateVerse={handleVerseModalNavigate}
+        prevVerse={verseModalNeighbors().prev}
+        nextVerse={verseModalNeighbors().next}
         isDarkMode={isDarkMode}
         isSepiaMode={isSepiaMode}
         onOpenStory={() => {
