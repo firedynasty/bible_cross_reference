@@ -512,6 +512,7 @@ const NavigationPlaceholder = ({
   classicalPlaying,
   onChapterAudio,
   verseSelectControls,
+  mobilePanePill,
   onYouTubeVideo,
   isYouTubePlaying,
   onYouTubeTogglePlay,
@@ -572,7 +573,8 @@ const NavigationPlaceholder = ({
     <div className="relative">
       {/* Current Location Display */}
       <div className="flex flex-wrap gap-y-2 items-center bg-blue-50 px-2 py-1 rounded-md text-blue-800 text-sm">
-        
+        {mobilePanePill}
+
         {/* Reference Prompt Button */}
         {isFeatureVisible('ref') && <button
           onClick={() => onRefPrompt && onRefPrompt()}
@@ -2724,23 +2726,28 @@ const BibleApp = () => {
 
   // Navbar controls (no modal): sign in, or Selected-only / Save / Load / Clear / Sign out
   const renderVerseSelectNav = () => {
-    const btn = 'ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-sky-100 text-sky-900 hover:bg-sky-200';
+    const phone = isMobileView && !isTabletView;
+    const btn = `${phone ? 'px-2 py-1 text-sm' : 'ml-1 px-2 py-0.5 text-xs'} rounded focus:outline-none font-semibold bg-sky-100 text-sky-900 hover:bg-sky-200 whitespace-nowrap`;
+    // On phones the buttons sit on their own full-width row that scrolls sideways instead of wrapping
+    const wrap = (children) => phone
+      ? <span className="flex items-center gap-1 flex-nowrap overflow-x-auto w-full basis-full">{children}</span>
+      : <>{children}</>;
     if (!dropboxAccessToken) {
-      return (
+      return wrap(
         <button className={btn} onClick={handleDropboxSignIn} title="Sign in to Dropbox to use selected verses (signing in reloads the page)">
-          ☑ Sign in Dropbox
+          ☑ {phone ? 'Dropbox' : 'Sign in Dropbox'}
         </button>
       );
     }
     const chapterHasSelection = selectedBook && (selectedVerses[`${selectedBook.abbrev}-${selectedChapter}`] || []).length > 0;
-    return (
+    return wrap(
       <>
         <button
-          className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showSelectedOnly ? 'bg-sky-500 text-white hover:bg-sky-600' : 'bg-sky-100 text-sky-900 hover:bg-sky-200'}`}
+          className={`${phone ? 'px-2 py-1 text-sm' : 'ml-1 px-2 py-0.5 text-xs'} rounded focus:outline-none font-semibold whitespace-nowrap ${showSelectedOnly ? 'bg-sky-500 text-white hover:bg-sky-600' : 'bg-sky-100 text-sky-900 hover:bg-sky-200'}`}
           onClick={() => setShowSelectedOnly(v => !v)}
           title="Show only the checked verses (both panes)"
         >
-          ☑ Only: {showSelectedOnly ? 'On' : 'Off'}
+          {phone ? `☑ ${showSelectedOnly ? 'On' : 'Off'}` : `☑ Only: ${showSelectedOnly ? 'On' : 'Off'}`}
         </button>
         <button className={btn} onClick={saveSelectedVerses} title="Save all checked verses to Dropbox (/vercel/bible_app/selected_verses.json)">
           ☁ Save{selectedDirty ? ' •' : ''}
@@ -2750,14 +2757,14 @@ const BibleApp = () => {
         </button>
         {chapterHasSelection && (
           <button className={btn} onClick={clearSelectedVerses} title="Uncheck the verses in this chapter only (saved to Dropbox when you change chapter or click Save)">
-            ✕ Clear chapter
+            ✕ {phone ? 'Clear' : 'Clear chapter'}
           </button>
         )}
         <button className={btn} onClick={signOutDropbox} title="Forget the Dropbox sign-in on this page">
-          Sign out
+          {phone ? 'Out' : 'Sign out'}
         </button>
         {selectedStatus && (
-          <span className={`ml-1 text-xs ${selectedStatus.includes('Error') ? 'text-red-600' : 'text-gray-500'}`}>{selectedStatus}</span>
+          <span className={`ml-1 text-xs whitespace-nowrap ${selectedStatus.includes('Error') ? 'text-red-600' : 'text-gray-500'}`}>{selectedStatus}</span>
         )}
       </>
     );
@@ -4185,10 +4192,10 @@ const BibleApp = () => {
         }
       }
 
-      // 'u' key - toggle reading ruler
-      if (e.key === 'u' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showRefPrompt) {
+      // 'u' key - toggle Outline modal
+      if (e.key === 'u' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal) {
         e.preventDefault();
-        setReadingGuide(prev => { const next = !prev; localStorage.setItem('readingGuide', next); return next; });
+        setShowOutlineModal(prev => !prev);
         return;
       }
 
@@ -4200,10 +4207,10 @@ const BibleApp = () => {
         return;
       }
 
-      // 'o' key - toggle Outline modal
-      if (e.key === 'o' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal) {
+      // 'o' key - toggle "Selected only" (needs Dropbox sign-in, same as the navbar button)
+      if (e.key === 'o' && !e.metaKey && !e.ctrlKey && !e.altKey && unloadStateRef.current.token && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showOutlineModal) {
         e.preventDefault();
-        setShowOutlineModal(prev => !prev);
+        setShowSelectedOnly(v => !v);
         return;
       }
 
@@ -7298,6 +7305,24 @@ const BibleApp = () => {
               onClassicalMusic={() => setShowClassicalModal(true)}
               onChapterAudio={() => setShowChapterAudioModal(true)}
               verseSelectControls={renderVerseSelectNav()}
+              mobilePanePill={isMobileView && !isTabletView && viewMode === 'side-by-side' && !showPane2Only ? (
+                <span className="inline-flex rounded-full overflow-hidden border border-sky-500 text-sm font-bold" role="group" aria-label="Choose pane">
+                  <button
+                    onClick={() => { setShowKJVOnMobile(false); localStorage.setItem('mobilePanePreference', 'pane1'); }}
+                    className={`px-3 py-1 ${!showKJVOnMobile ? 'bg-sky-500 text-white' : 'bg-white text-sky-700'}`}
+                    aria-pressed={!showKJVOnMobile}
+                  >
+                    Pane 1
+                  </button>
+                  <button
+                    onClick={() => { setShowKJVOnMobile(true); localStorage.setItem('mobilePanePreference', 'pane2'); }}
+                    className={`px-3 py-1 ${showKJVOnMobile ? 'bg-sky-500 text-white' : 'bg-white text-sky-700'}`}
+                    aria-pressed={showKJVOnMobile}
+                  >
+                    Pane 2
+                  </button>
+                </span>
+              ) : null}
               onClassicalTogglePlay={() => {
                 if (classicalRef.current) classicalRef.current.togglePlay();
               }}

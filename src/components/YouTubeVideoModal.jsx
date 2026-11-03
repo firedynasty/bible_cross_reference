@@ -233,20 +233,18 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
   const [sessionSecs, setSessionSecs] = useState(0);
   const [calcVerse, setCalcVerse] = useState(null);
   const [playerReady, setPlayerReady] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState(1);
+  const [, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(100);
   const [autoInit] = useState(false);
-  const [timerLoops, setTimerLoops] = useState(40);
+  const [timerLoops] = useState(40);
   const [timerTimestamp, setTimerTimestamp] = useState('00:00:00');
   const timerTimestampRef = useRef('00:00:00');
   const [timerActive, setTimerActive] = useState(false);
   const [timerRemaining, setTimerRemaining] = useState(0);
   const [timerPaused, setTimerPaused] = useState(false);
   const timerRef = useRef(null);
-  const timerLoopsRef = useRef(0);
   const timerPausedRef = useRef(false);
   const timerStuckRef = useRef(false); // fired while paused, waiting to resume
-  const timerStuckLoopsRef = useRef(0);
   const playerRef = useRef(null);
   const pendingPlayRef = useRef(false);
   const intervalRef = useRef(null);
@@ -786,8 +784,8 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                 copy s
               </button>
               {currentChapter && (
-                <a
-                  href="#"
+                <button
+                  type="button"
                   onClick={(e) => {
                     e.preventDefault();
                     const tsData = isDramatized ? dramatizedChapterTimestamps : youtubeChapterTimestamps;
@@ -806,7 +804,7 @@ const YouTubeVideoModal = forwardRef(function YouTubeVideoModal({ open, onClose,
                   title={`Open current chapter in BibleGateway NKJV (calculated from audio position)`}
                 >
                   BG NKJV
-                </a>
+                </button>
               )}
               {videoId && (
                 <>

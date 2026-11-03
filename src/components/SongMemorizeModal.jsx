@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 /**
  * Parse a song .txt file into sections.
@@ -64,7 +64,7 @@ export default function SongMemorizeModal({
   const sidebarBg = isDarkMode ? '#16192a' : isSepiaMode ? '#ede5d0' : '#f3f4f6';
   const activeSectionBg = isDarkMode ? '#2a2f4a' : isSepiaMode ? '#ddd0b8' : '#e0e7ff';
 
-  const activeSection = sections[activeSectionIdx] || { title: '', lines: [] };
+  const activeSection = useMemo(() => sections[activeSectionIdx] || { title: '', lines: [] }, [sections, activeSectionIdx]);
 
   // Reset when modal opens
   useEffect(() => {
