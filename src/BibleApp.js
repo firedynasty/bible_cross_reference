@@ -511,6 +511,7 @@ const NavigationPlaceholder = ({
   onClassicalTogglePlay,
   classicalPlaying,
   onChapterAudio,
+  onVerseSelect,
   onYouTubeVideo,
   isYouTubePlaying,
   onYouTubeTogglePlay,
@@ -825,6 +826,13 @@ const NavigationPlaceholder = ({
                 onClick={() => onChapterAudio && onChapterAudio()}
               >
                 🎧
+              </button>}
+              {isFeatureVisible('verseSelect') && <button
+                className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-sky-100 text-sky-900 hover:bg-sky-200"
+                title="Selected verses: show only checked verses, save/load to Dropbox"
+                onClick={() => onVerseSelect && onVerseSelect()}
+              >
+                ☑
               </button>}
               {isFeatureVisible('classicalPlay') && <button
                 className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${
@@ -1314,8 +1322,7 @@ Psalm 145:9
 Isaiah 54:10
 Exodus 23:25
 1 Thessalonians 5:24
-3 John 1:2
-Psalm 147:3`,
+3 John 1:2`,
   "Obey": `1 Corinthians 6:19-20
 Proverbs 3:7
 Ecclesiastes 11:10
@@ -1495,6 +1502,7 @@ const BibleApp = () => {
   const [showFiguresModal, setShowFiguresModal] = useState(false);
   const [showClassicalModal, setShowClassicalModal] = useState(false);
   const [showChapterAudioModal, setShowChapterAudioModal] = useState(false);
+  const [showVerseSelectModal, setShowVerseSelectModal] = useState(false);
   const [classicalPlaying, setClassicalPlaying] = useState(false);
   const classicalRef = useRef(null);
   const [showYouTubeModal, setShowYouTubeModal] = useState(false);
@@ -1512,7 +1520,6 @@ const BibleApp = () => {
   };
   const [pendingBookSelection, setPendingBookSelection] = useState(null);
   const pendingBookRef = useRef(null);
-  const [crossReferences, setCrossReferences] = useState({});
 
   // Refs so keyboard handlers always see fresh values without stale closures
   const selectedBookRef = useRef(null);
@@ -1542,14 +1549,6 @@ const BibleApp = () => {
     pendingBookRef.current = pendingBookSelection;
   }, [pendingBookSelection]);
   const [showCrossRef, setShowCrossRef] = useState(null);
-  const [expandedRefsData, setExpandedRefsData] = useState(null); // { verseLabel, refs: [{label, text}] }
-  const [refContextMenu, setRefContextMenu] = useState(null); // { x, y, book, chapter, verse }
-  useEffect(() => {
-    if (!refContextMenu) return;
-    const onKey = (e) => { if (e.key === 'Escape') setRefContextMenu(null); };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [refContextMenu]);
   const [verseModalData, setVerseModalData] = useState(null); // { verseLabel, verseText, bookAbbrev, chapter, verseNumber }
   const [chineseBreakdownData, setChineseBreakdownData] = useState(null); // { bookName, chapter, verseNumber }
   const [memorizeModalData, setMemorizeModalData] = useState(null); // { verseLabel, verseText, bookAbbrev, chapter, verseNumber }
@@ -1573,7 +1572,6 @@ const BibleApp = () => {
 
   // State to track primary reading vs cross-reference viewing
   const [isViewingCrossRef, setIsViewingCrossRef] = useState(false);
-  const [lastCrossRef, setLastCrossRef] = useState(null); // { book, chapter, verse, label }
 
   // State for book number input with timeout
 
@@ -1718,7 +1716,7 @@ const BibleApp = () => {
     'search', 'rhyme', 'storyAudio', 'chpCopy', 'ruler', 'col', 'hymn', 'prompt',
     'nltPsalms', 'plan', 'math', 'figures', 'copyPane2', 'toggleCuv', 'togglePsalms',
     'toggleRhyme', 'cyclePane1', 'clrPane1', 'ref', 'syllable', 'darkMode', 'fontMinus',
-    'fontPlus', 'youtube', 'youtubeDramatized', 'lang', 'soaking', 'classical', 'classicalPlay', 'chapterAudio',
+    'fontPlus', 'youtube', 'youtubeDramatized', 'lang', 'soaking', 'classical', 'classicalPlay', 'chapterAudio', 'verseSelect',
     'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
     'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting', 'outline', 'intro',
     'memorize', 'commentary'
@@ -1731,7 +1729,7 @@ const BibleApp = () => {
     toggleRhyme: 'WEB/Rhyme', cyclePane1: '1:cycle', clrPane1: 'clr pane 1',
     ref: 'Ref(e)', syllable: 'Syllable', darkMode: 'Dark/Light', fontMinus: 'Font -',
     fontPlus: 'Font +', youtube: 'YouTube', youtubeDramatized: 'Dramatized', lang: 'Language', soaking: 'Soaking',
-    classical: '🎻 Classical-Scriptures', classicalPlay: 'Fast ▶/⏸', chapterAudio: '🎧 Swipe Audio',
+    classical: '🎻 Classical-Scriptures', classicalPlay: 'Fast ▶/⏸', chapterAudio: '🎧 Swipe Audio', verseSelect: '☑ Verses',
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com',
@@ -1768,6 +1766,7 @@ const BibleApp = () => {
     soaking: 'Plays or pauses the soaking worship music (s).',
     classical: 'Opens the classical music player.',
     classicalPlay: 'Plays or pauses the classical music.',
+    verseSelect: 'Opens the selected-verses panel: show only the verses you checked, and save/load the list to Dropbox.',
     chapterAudio: 'Opens the swipe audio player (KJV / Story Time): swipe up/down to change source, left/right to change chapter.',
     pane1Verse: 'Shows pane 1\'s translation of the verses you last copied from pane 2.',
     snippets: 'Saves and copies text snippets.',
@@ -2590,6 +2589,78 @@ const BibleApp = () => {
     }
   }, [dropboxAccessToken, notesText]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Verse checkboxes: selection is { "rm-8": [1, 5, 10] }, held in memory and saved/loaded to Dropbox on demand
+  const VERSES_PATH = '/vercel/bible_app/selected_verses.json';
+  const [selectedVerses, setSelectedVerses] = useState({});
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedDirty, setSelectedDirty] = useState(false); // changed since last save/load
+  const selectedCount = Object.values(selectedVerses).reduce((n, a) => n + a.length, 0);
+
+  const isVerseSelectedFn = (abbrev, chapter, verse) =>
+    (selectedVerses[`${abbrev}-${chapter}`] || []).includes(verse);
+
+  const toggleVerseSelected = (abbrev, chapter, verse) => {
+    const key = `${abbrev}-${chapter}`;
+    setSelectedVerses(prev => {
+      const cur = prev[key] || [];
+      const arr = cur.includes(verse) ? cur.filter(v => v !== verse) : [...cur, verse].sort((a, b) => a - b);
+      const next = { ...prev };
+      if (arr.length) next[key] = arr; else delete next[key];
+      return next;
+    });
+    setSelectedDirty(true);
+  };
+
+  const clearSelectedVerses = () => {
+    setSelectedVerses({});
+    setSelectedDirty(true);
+  };
+
+  const saveSelectedVerses = async () => {
+    if (!dropboxAccessToken) { setSelectedStatus('Sign in to Dropbox first'); return; }
+    try {
+      setSelectedStatus('Saving…');
+      const r = await fetch('https://content.dropboxapi.com/2/files/upload', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${dropboxAccessToken}`,
+          'Dropbox-API-Arg': JSON.stringify({ path: VERSES_PATH, mode: { '.tag': 'overwrite' }, mute: true }),
+          'Content-Type': 'application/octet-stream',
+        },
+        body: JSON.stringify({ version: 1, savedAt: new Date().toISOString(), selected: selectedVerses }, null, 2),
+      });
+      if (r.status === 401) { setDropboxAccessToken(null); setSelectedStatus('Session expired — sign in again'); return; }
+      if (!r.ok) throw new Error('Upload failed (' + r.status + ')');
+      setSelectedDirty(false);
+      setSelectedStatus('Saved ✓');
+      setTimeout(() => setSelectedStatus(''), 2500);
+    } catch (e) {
+      setSelectedStatus('Error saving: ' + e.message);
+    }
+  };
+
+  const loadSelectedVerses = async () => {
+    if (!dropboxAccessToken) { setSelectedStatus('Sign in to Dropbox first'); return; }
+    try {
+      setSelectedStatus('Loading…');
+      const r = await fetch('https://content.dropboxapi.com/2/files/download', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${dropboxAccessToken}`, 'Dropbox-API-Arg': JSON.stringify({ path: VERSES_PATH }) },
+      });
+      if (r.status === 401) { setDropboxAccessToken(null); setSelectedStatus('Session expired — sign in again'); return; }
+      if (r.status === 409) { setSelectedStatus('No saved selection yet — tick verses and Save'); return; }
+      if (!r.ok) throw new Error('Download failed (' + r.status + ')');
+      const data = JSON.parse(await r.text());
+      setSelectedVerses(data && data.selected ? data.selected : {});
+      setSelectedDirty(false);
+      setSelectedStatus('Loaded ✓');
+      setTimeout(() => setSelectedStatus(''), 2500);
+    } catch (e) {
+      setSelectedStatus('Error loading: ' + e.message);
+    }
+  };
+
   const handleNotesOpen = useCallback(() => {
     setShowNotesModal(true);
   }, []);
@@ -3118,19 +3189,6 @@ const BibleApp = () => {
     're': 'Revelation', 'ge': 'Genesis'
   };
 
-  // Build a BibleGateway deep link for a cross-reference {book, chapter, verse}
-  const getRefBibleGatewayUrl = (ref) => {
-    const bgBook = (abbrevToBookName[ref.book] || getBookName(ref.book)).replace(/ /g, '%20');
-    return `https://www.biblegateway.com/passage/?search=${bgBook}%20${ref.chapter}&version=WEB#v${ref.verse}`;
-  };
-
-  // Build an in-app deep link for a cross-reference {book, chapter, verse}
-  // Uses the same ?bookname&chapter[:verse] convention as the deep-link loader above.
-  const getRefVercelBibleUrl = (ref) => {
-    const token = (abbrevToBookName[ref.book] || getBookName(ref.book)).toLowerCase().replace(/\s+/g, '');
-    const chapterVerse = ref.verse ? `${ref.chapter}:${ref.verse}` : `${ref.chapter}`;
-    return `${window.location.origin}${window.location.pathname}?${token}&${chapterVerse}`;
-  };
 
   // Handle Story Time button click - load story content and open combined modal
   const handleStorytimeButtonClick = useCallback(() => {
@@ -5160,9 +5218,6 @@ const BibleApp = () => {
           console.log("❌ No state to set - no savedBook and no bibleData");
         }
         
-        // Load cross-references from the JSON file, using the same method that worked for Bible data
-        await loadCrossReferences(baseUrl, usingApiEndpoint);
-        
         setLoading(false);
         
         // Reset the scroll sync initialized flag
@@ -5270,110 +5325,6 @@ const BibleApp = () => {
     setThemeMode(prev => prev === 'light' ? 'dark' : prev === 'dark' ? 'sepia' : 'light');
   };
 
-  // Load cross references from external JSON file
-  const loadCrossReferences = async (baseUrl, useApiEndpoint = false) => {
-    try {
-      // If we already know the API endpoint worked for Bible data, use it directly
-      if (useApiEndpoint) {
-        console.log("Using API endpoint for cross references");
-        // For local development, we need to use a different port for the API server
-        const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : baseUrl;
-        const apiUrl = `${apiBaseUrl}/api/json/crossRefs.json`;
-        console.log("Attempting to load cross references from API:", apiUrl);
-        
-        const apiResponse = await fetch(apiUrl);
-        console.log("API cross references response status:", apiResponse.status);
-        
-        if (!apiResponse.ok) {
-          throw new Error(`API HTTP error! Status: ${apiResponse.status}`);
-        }
-        
-        const crossRefs = await apiResponse.json();
-        setCrossReferences(crossRefs);
-        console.log("Cross references loaded successfully via API");
-        return crossRefs;
-      }
-      
-      // Try direct file access first
-      const url = `${baseUrl}/crossRefs.json`;
-      console.log("Attempting to load cross references from", url);
-      
-      try {
-        const response = await fetch(url);
-        console.log("Cross references response status:", response.status);
-        
-        // Check if we got HTML instead of JSON
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('text/html')) {
-          console.warn("Received HTML instead of JSON for cross references, will try API endpoint");
-          throw new Error("Received HTML instead of JSON");
-        }
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        
-        // Get response as text first to validate
-        const responseText = await response.text();
-        console.log("Response received, first 50 characters:", responseText.substring(0, 50));
-        
-        // Check if the response starts with HTML tags
-        if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
-          throw new Error("Received HTML instead of JSON");
-        }
-        
-        // Parse the JSON
-        const crossRefs = JSON.parse(responseText);
-        setCrossReferences(crossRefs);
-        console.log("Cross references loaded successfully via direct file");
-        return crossRefs;
-      } catch (directError) {
-        console.warn("Error loading cross references from direct file:", directError.message);
-        
-        // Try the API endpoint as fallback
-        console.log("Trying API endpoint for cross references as fallback...");
-        // For local development, we need to use a different port for the API server
-        const apiBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : baseUrl;
-        const apiUrl = `${apiBaseUrl}/api/json/crossRefs.json`;
-        console.log("Attempting to load cross references from API fallback:", apiUrl);
-        
-        const apiResponse = await fetch(apiUrl);
-        console.log("API cross references response status:", apiResponse.status);
-        
-        if (!apiResponse.ok) {
-          throw new Error(`API HTTP error! Status: ${apiResponse.status}`);
-        }
-        
-        const crossRefs = await apiResponse.json();
-        setCrossReferences(crossRefs);
-        console.log("Cross references loaded successfully via API fallback");
-        return crossRefs;
-      }
-    } catch (err) {
-      console.error("Failed to load cross references:", err);
-      
-      // Provide more specific error message based on the type of error
-      let errorMessage = "Cross-references could not be loaded. Some features may be limited.";
-      
-      if (err.message.includes("HTML instead of JSON")) {
-        errorMessage = "The cross-reference file was not found. Check that crossRefs.json is in the public folder.";
-      } else if (err instanceof SyntaxError) {
-        errorMessage = "The cross-reference file contains invalid JSON. Please check the file format.";
-      }
-      
-      setError(errorMessage);
-      
-      // Attempt to continue with the Bible app despite the error
-      // Wait 5 seconds and then clear the error so the user can still use the app
-      setTimeout(() => {
-        setError(null);
-        // Now set empty cross references to allow the app to function
-        setCrossReferences({});
-      }, 5000);
-      
-      return {};
-    }
-  };
 
   // Handle book selection
   const handleBookSelect = (abbrev) => {
@@ -5428,7 +5379,6 @@ const BibleApp = () => {
     setSelectedChapter(chapterNum);
     console.log("✓ setSelectedChapter called with:", chapterNum);
     setShowCrossRef(null); // Hide any cross-reference popup
-    setExpandedRefsData(null); // Clear expanded cross-references
 
     // No need to reset auto-scroll timer here - will be handled in NavigationPlaceholder component
 
@@ -5654,53 +5604,6 @@ const BibleApp = () => {
     // The actual translation change will happen when the user clicks the "Apply" button
   };
 
-  // Handle click on a cross-reference — navigate pane 2 only
-  const handleCrossRefNavigate = (ref) => {
-    // Find the book in the right pane Bible data
-    const book = (rightPaneBibleData || bibleData || []).find(b => b.abbrev === ref.book);
-    if (book) {
-      // Push current pane 2 state (including any open concordance) to history before navigating
-      setPane2History(h => [...h, { book: pane2Book, chapter: pane2Chapter, concordance: strongsConcordance }]);
-      // Update pane 2 independently
-      setPane2Book(book);
-      setPane2Chapter(ref.chapter);
-
-      // Mark that we're viewing a cross-reference
-      setIsViewingCrossRef(true);
-
-      // Remember last cross-ref for the jump-back button
-      setLastCrossRef({ book: ref.book, chapter: ref.chapter, verse: ref.verse, label: `${getBookName(ref.book)} ${ref.chapter}:${ref.verse}` });
-
-      // Auto-add to ref history
-      setRefHistory(prev => {
-        if (prev.length > 0 && prev[prev.length - 1].parsed.abbrev === ref.book) return prev;
-        const label = `${getBookName(ref.book)} ${ref.chapter}`;
-        return [...prev, { raw: label, parsed: { abbrev: ref.book, chapter: ref.chapter } }];
-      });
-
-      // Scroll pane 2 to the referenced verse — disable scroll sync to prevent pane 1 from moving
-      const scrollToVerse = (verseNum, attempts = 0) => {
-        const el = document.getElementById(`right-pane-verse-${verseNum}`);
-        const pane = kjvContentRef.current;
-        if (el && pane) {
-          // Disable scroll sync for the duration of this scroll
-          isManuallyScrolling.current = true;
-          const elRect = el.getBoundingClientRect();
-          const paneRect = pane.getBoundingClientRect();
-          const offset = elRect.top - paneRect.top + pane.scrollTop - pane.clientHeight / 3;
-          pane.scrollTo({ top: offset, behavior: 'smooth' });
-          el.style.backgroundColor = isDarkMode ? '#b45309' : '#fef9c3';
-          el.style.color = isDarkMode ? '#fffbeb' : '';
-          setTimeout(() => { el.style.backgroundColor = ''; el.style.color = ''; }, 3000);
-          // Re-enable scroll sync after smooth scroll completes (~600ms)
-          setTimeout(() => { isManuallyScrolling.current = false; }, 800);
-        } else if (attempts < 5) {
-          setTimeout(() => scrollToVerse(verseNum, attempts + 1), 150);
-        }
-      };
-      setTimeout(() => scrollToVerse(ref.verse), 300);
-    }
-  };
 
   // Helper: get resolved right-pane verses for a given bookAbbrev + chapter
   const getRightPaneChapterVerses = (bookAbbrev, chapter) => {
@@ -5778,38 +5681,6 @@ const BibleApp = () => {
     return () => window.removeEventListener('openVerseCommentaryAtVerse', handler);
   }, [selectedBook, selectedChapter, getRightPaneChapterVerses, getBookName]);
 
-  // Handle expanding all cross-references for a verse into pane 2
-  const handleExpandRefs = (refKey, verseNumber) => {
-    const refs = crossReferences[refKey];
-    if (!refs || refs.length === 0) return;
-    const sourceData = rightPaneBibleData || bibleData || [];
-    const results = refs.map(ref => {
-      const book = sourceData.find(b => b.abbrev === ref.book);
-      let verseText = '';
-      if (book && book.chapters[ref.chapter - 1]) {
-        const verses = book.chapters[ref.chapter - 1];
-        if (verses[ref.verse - 1]) {
-          const v = verses[ref.verse - 1];
-          verseText = typeof v === 'string' ? v : (v.text || v.verse || String(v));
-        }
-      }
-      return {
-        label: `${getBookName(ref.book)} ${ref.chapter}:${ref.verse}`,
-        text: verseText || '(verse not found in current translation)',
-        book: ref.book,
-        chapter: ref.chapter,
-        verse: ref.verse
-      };
-    });
-    const bookName = selectedBook ? getBookName(selectedBook.abbrev) : '';
-    setExpandedRefsData({
-      verseLabel: `${bookName} ${selectedChapter}:${verseNumber}`,
-      refs: results
-    });
-    if (kjvContentRef.current) {
-      kjvContentRef.current.scrollTop = 0;
-    }
-  };
 
   // Handle clicking a Strong's number — load index + dictionary if needed, show concordance in pane 2
   const handleStrongsClick = useCallback(async (strongsNum) => {
@@ -7266,6 +7137,7 @@ const BibleApp = () => {
               onFontScaleUp={() => setFontScale(prev => Math.min(2, prev + 0.1))}
               onClassicalMusic={() => setShowClassicalModal(true)}
               onChapterAudio={() => setShowChapterAudioModal(true)}
+              onVerseSelect={() => setShowVerseSelectModal(true)}
               onClassicalTogglePlay={() => {
                 if (classicalRef.current) classicalRef.current.togglePlay();
               }}
@@ -7489,7 +7361,9 @@ const BibleApp = () => {
 
                         // Check if should be filtered
                         let shouldShow = true;
-                        if (showFilteredVersesOnly && verseFilterData) {
+                        if (showSelectedOnly) {
+                          shouldShow = isVerseSelectedFn(selectedBook.abbrev, selectedChapter, verseNumber);
+                        } else if (showFilteredVersesOnly && verseFilterData) {
                           const currentChapterFilter = verseFilterData.chapters[selectedChapter];
                           if (currentChapterFilter) {
                             shouldShow = currentChapterFilter.includes(verseNumber);
@@ -7524,8 +7398,6 @@ const BibleApp = () => {
 
                       // Render interleaved verses
                       return interleavedVerses.map((item, index) => {
-                        const refKey = `${selectedBook.abbrev}-${selectedChapter}-${item.verseNumber}`;
-                        const hasReference = item.type === 'primary' && crossReferences[refKey] && crossReferences[refKey].length > 0;
 
                         return (
                           <div
@@ -7537,7 +7409,7 @@ const BibleApp = () => {
                                 : item.type === 'primary'
                                   ? (isDarkMode ? 'bg-gray-800' : 'bg-blue-50')
                                   : (isDarkMode ? 'bg-gray-700' : 'bg-gray-50')
-                            } ${hasReference ? (isDarkMode ? 'hover:bg-blue-900' : 'hover:bg-blue-100') : ''}`}
+                            }`}
                             style={{ fontSize: `${fontScale * 1.125}rem`, ...(highlightedVerses.includes(item.verseNumber) ? { borderLeft: '4px solid #eab308' } : {}) }}
                           >
                             <p className="flex">
@@ -7567,51 +7439,6 @@ const BibleApp = () => {
                               </span>
                             </p>
 
-                            {/* Cross-references — always visible for primary pane */}
-                            {hasReference && (
-                              <div className={`mt-2 pl-8 ${
-                                isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                              }`} style={{ fontSize: `${fontScale * 0.85}rem` }}>
-                                <span className="font-medium mr-1">Refs:</span>
-                                {crossReferences[refKey].map((ref, i) => {
-                                  const isPentateuch = ['gn','ge','ex','lv','nm','dt'].includes(ref.book);
-                                  const isIsaiah = ref.book === 'is';
-                                  const isOrange = ['ps','rm','hb','lk'].includes(ref.book);
-                                  const isNT = ['mt','mk','jo','act','1co','2co','gl','eph','ph','cl','1ts','2ts','1tm','2tm','tt','phm','jm','1pe','2pe','1jo','2jo','3jo','jd','re'].includes(ref.book);
-                                  return (
-                                  <button
-                                    key={i}
-                                    onClick={() => window.open(getRefBibleGatewayUrl(ref), '_blank')}
-                                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setRefContextMenu({ x: e.clientX, y: e.clientY, book: ref.book, chapter: ref.chapter, verse: ref.verse }); }}
-                                    title="Right-click for more options"
-                                    className={`mr-2 ${
-                                      isPentateuch || isIsaiah
-                                        ? 'hover:opacity-80'
-                                        : isOrange
-                                          ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
-                                          : isNT
-                                            ? (isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-800')
-                                            : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
-                                    }`}
-                                    style={
-                                      isPentateuch ? { color: isDarkMode ? '#FCD34D' : '#92400E' }
-                                      : isIsaiah ? { color: isDarkMode ? '#e8e8e6' : '#242422' }
-                                      : undefined
-                                    }
-                                  >
-                                    {getBookName(ref.book)} {ref.chapter}:{ref.verse}{i < crossReferences[refKey].length - 1 ? ',' : ''}
-                                  </button>
-                                  );
-                                })}
-                                <button
-                                  onClick={() => handleExpandRefs(refKey, item.verseNumber)}
-                                  className={`ml-1 inline-flex items-center ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-500 hover:text-blue-700'}`}
-                                  title="Show all cross-reference verses in pane 2"
-                                >
-                                  <Link className="h-4 w-4" />
-                                </button>
-                              </div>
-                            )}
                           </div>
                         );
                       });
@@ -7860,10 +7687,16 @@ const BibleApp = () => {
                   </span>
                 </h2>
                 <div className="space-y-5">
+                  {showSelectedOnly && selectedBook && !(selectedVerses[`${selectedBook.abbrev}-${selectedChapter}`] || []).length && (
+                    <p className="text-gray-500 italic">No verses selected in this chapter. Open the ☑ button in the navbar and turn off “Selected verses only” to pick some.</p>
+                  )}
                   {selectedBook && selectedBook.chapters && selectedBook.chapters[selectedChapter - 1] &&
                     selectedBook.chapters[selectedChapter - 1]
                       .map((verse, originalIndex) => ({ verse, verseNumber: originalIndex + 1 }))
                       .filter(({ verseNumber }) => {
+                        // Selected-only toggle: show just the checked verses
+                        if (showSelectedOnly) return isVerseSelectedFn(selectedBook.abbrev, selectedChapter, verseNumber);
+
                         // If filtering is disabled, show all verses
                         if (!showFilteredVersesOnly || !verseFilterData) return true;
 
@@ -7877,17 +7710,14 @@ const BibleApp = () => {
                         return currentChapterFilter.includes(verseNumber);
                       })
                       .map(({ verse, verseNumber }, displayIndex) => {
-                    const refKey = `${selectedBook.abbrev}-${selectedChapter}-${verseNumber}`;
-                    const hasReference = crossReferences[refKey] && crossReferences[refKey].length > 0;
+                    const isVerseSelected = isVerseSelectedFn(selectedBook.abbrev, selectedChapter, verseNumber);
 
                     return (
                       <div
                         key={verseNumber}
                         id={`verse-${verseNumber}`}
                         className={`leading-relaxed p-4 rounded-md transition-colors ${
-                          hasReference
-                            ? isDarkMode ? 'hover:bg-blue-900' : 'hover:bg-blue-50'
-                            : ''
+                          isVerseSelected ? (isDarkMode ? 'bg-gray-800' : 'bg-blue-50') : ''
                         }`}
                         style={{ fontSize: `${fontScale * 1.125}rem` }}
                       >
@@ -7907,51 +7737,16 @@ const BibleApp = () => {
                             className={`font-bold mr-4 cursor-pointer hover:opacity-70 ${speakingPaneVerse === verseNumber ? (isDarkMode ? 'text-green-400' : 'text-green-600') : (isDarkMode ? 'text-blue-400' : 'text-blue-600')}`}
                           >{verseNumber}</span>
                           <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(verse, showGlosses)}</span>
+                          <input
+                            type="checkbox"
+                            checked={isVerseSelected}
+                            onChange={() => toggleVerseSelected(selectedBook.abbrev, selectedChapter, verseNumber)}
+                            title={isVerseSelected ? 'Unselect verse' : 'Select verse'}
+                            aria-label={`Select verse ${verseNumber}`}
+                            className="ml-3 mt-2 h-5 w-5 flex-shrink-0 cursor-pointer"
+                          />
                         </p>
 
-                        {/* Cross-references — always visible */}
-                        {hasReference && (
-                          <div className={`mt-2 pl-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} style={{ fontSize: `${fontScale * 0.85}rem` }}>
-                            <span className="font-medium mr-1">Refs:</span>
-                            {crossReferences[refKey].map((ref, i) => {
-                              const isPentateuch = ['gn','ge','ex','lv','nm','dt'].includes(ref.book);
-                              const isIsaiah = ref.book === 'is';
-                              const isOrange = ['ps','rm','hb','lk'].includes(ref.book);
-                              const isNT = ['mt','mk','jo','act','1co','2co','gl','eph','ph','cl','1ts','2ts','1tm','2tm','tt','phm','jm','1pe','2pe','1jo','2jo','3jo','jd','re'].includes(ref.book);
-                              return (
-                              <button
-                                key={i}
-                                onClick={() => window.open(getRefBibleGatewayUrl(ref), '_blank')}
-                                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setRefContextMenu({ x: e.clientX, y: e.clientY, book: ref.book, chapter: ref.chapter, verse: ref.verse }); }}
-                                title="Right-click for more options"
-                                className={`mr-2 ${
-                                  isPentateuch || isIsaiah
-                                    ? 'hover:opacity-80'
-                                    : isOrange
-                                      ? (isDarkMode ? 'text-orange-300 hover:text-orange-200' : 'text-orange-600 hover:text-orange-800')
-                                      : isNT
-                                        ? (isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-800')
-                                        : (isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-800')
-                                }`}
-                                style={
-                                  isPentateuch ? { color: isDarkMode ? '#FCD34D' : '#92400E' }
-                                  : isIsaiah ? { color: isDarkMode ? '#e8e8e6' : '#242422' }
-                                  : undefined
-                                }
-                              >
-                                {getBookName(ref.book)} {ref.chapter}:{ref.verse}{i < crossReferences[refKey].length - 1 ? ',' : ''}
-                              </button>
-                              );
-                            })}
-                            <button
-                              onClick={() => handleExpandRefs(refKey, verseNumber)}
-                              className={`ml-1 inline-flex items-center ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-500 hover:text-blue-700'}`}
-                              title="Show all cross-reference verses in pane 2"
-                            >
-                              <Link className="h-4 w-4" />
-                            </button>
-                          </div>
-                        )}
                       </div>
                     );
                       })
@@ -8295,51 +8090,6 @@ const BibleApp = () => {
                     </button>
                   </>
                 )}
-                {/* Expanded Cross-References View */}
-                {expandedRefsData && (
-                  <div className={`${showPane2Only ? 'max-w-[70ch] mx-auto' : ''} pb-8`}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <h3 style={{ margin: 0, fontSize: `${fontScale * 1.1}em`, color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333' }}>
-                        Cross-References — {expandedRefsData.verseLabel}
-                      </h3>
-                      <button
-                        onClick={() => setExpandedRefsData(null)}
-                        style={{ width: 28, height: 28, fontSize: 14, fontWeight: 700, border: 'none', borderRadius: 6, cursor: 'pointer', background: isDarkMode ? '#555' : isSepiaMode ? '#d4c9a8' : '#d0d0d0', color: isDarkMode ? '#e0e0e0' : isSepiaMode ? '#5a5a5a' : '#333' }}
-                      >✕</button>
-                    </div>
-                    <div className="space-y-4">
-                      {expandedRefsData.refs.map((ref, i) => {
-                        const isPentateuch = ['gn','ge','ex','lv','nm','dt'].includes(ref.book);
-                        const isIsaiah = ref.book === 'is';
-                        const isOrange = ['ps','rm','hb','lk'].includes(ref.book);
-                        const isNT = ['mt','mk','jo','act','1co','2co','gl','eph','ph','cl','1ts','2ts','1tm','2tm','tt','phm','jm','1pe','2pe','1jo','2jo','3jo','jd','re'].includes(ref.book);
-                        const labelColor = isPentateuch ? (isDarkMode ? '#FCD34D' : '#92400E')
-                          : isIsaiah ? (isDarkMode ? '#e8e8e6' : '#242422')
-                          : isOrange ? (isDarkMode ? '#fb923c' : '#ea580c')
-                          : isNT ? (isDarkMode ? '#86efac' : '#16a34a')
-                          : (isDarkMode ? '#93c5fd' : '#2563eb');
-                        return (
-                          <div key={i} className={`p-3 rounded-md ${isDarkMode ? 'bg-gray-800' : ''}`} style={isSepiaMode ? { backgroundColor: '#e8ddc4' } : !isDarkMode ? { backgroundColor: '#f9fafb' } : {}}>
-                            <a
-                              href={`https://www.biblegateway.com/passage/?search=${encodeURIComponent(getBookName(ref.book) + ' ' + ref.chapter)}&version=NLT`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setRefContextMenu({ x: e.clientX, y: e.clientY, book: ref.book, chapter: ref.chapter, verse: ref.verse }); }}
-                              title="Right-click for more options"
-                              className="font-bold mb-1 hover:underline"
-                              style={{ color: labelColor, padding: 0, fontSize: `${fontScale * 0.95}rem`, textDecoration: 'none' }}
-                            >
-                              {ref.label}
-                            </a>
-                            <p style={{ margin: '4px 0 0', fontSize: `${fontScale * 1.125}rem`, lineHeight: 1.6, color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333' }}>
-                              {ref.text}
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
                 {showStudyQModal && studyQData && (() => {
                   const bookName = selectedBook ? (selectedBook.book || getBookName(selectedBook.abbrev)) : '';
                   const bookQuestions = selectedBook && studyQData[selectedBook.abbrev];
@@ -8526,15 +8276,6 @@ const BibleApp = () => {
                       Exact Sync
                     </span>
                     <div className="ml-auto flex items-center">
-                      {lastCrossRef && (
-                        <button
-                          onClick={() => handleCrossRefNavigate(lastCrossRef)}
-                          className={`text-xs px-2 py-1 rounded mr-2 font-semibold ${isDarkMode ? 'bg-gray-700 text-yellow-300 hover:bg-gray-600' : 'bg-gray-100 text-blue-700 hover:bg-gray-200'}`}
-                          title="Jump pane 2 back to last cross-reference"
-                        >
-                          {lastCrossRef.label}
-                        </button>
-                      )}
                     </div>
                   </h2>
                   <div className="space-y-5">
@@ -8646,6 +8387,9 @@ const BibleApp = () => {
                           return resolvedVerses
                             .map((verse, originalIndex) => ({ verse, verseNumber: originalIndex + 1 }))
                             .filter(({ verseNumber }) => {
+                              // Selected-only toggle: same checked verses as pane 1 (keyed by the book/chapter pane 2 is showing)
+                              if (showSelectedOnly) return isVerseSelectedFn(pane2Book ? pane2Book.abbrev : selectedBook.abbrev, effectiveChapter, verseNumber);
+
                               // If filtering is disabled, show all verses
                               if (!showFilteredVersesOnly || !verseFilterData) return true;
 
@@ -12425,6 +12169,90 @@ const BibleApp = () => {
           setShowOutlineModal(true);
         }}
       />
+      {showVerseSelectModal && (
+        <div
+          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowVerseSelectModal(false); }}
+        >
+          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 480, maxHeight: '75vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', color: isDarkMode ? '#e0e0e0' : '#333' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexShrink: 0 }}>
+              <h3 style={{ margin: 0, fontSize: '1.1em' }}>Selected verses</h3>
+              <button
+                onClick={() => setShowVerseSelectModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDarkMode ? '#aaa' : '#666', fontSize: 20, padding: '0 4px', lineHeight: 1 }}
+                title="Close"
+              >✕</button>
+            </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none', marginBottom: 12 }}>
+              <input
+                type="checkbox"
+                checked={showSelectedOnly}
+                onChange={(e) => setShowSelectedOnly(e.target.checked)}
+                style={{ marginRight: 8, width: 16, height: 16 }}
+              />
+              Selected verses only ({selectedCount})
+            </label>
+
+            {!dropboxAccessToken ? (
+              <div style={{ marginBottom: 12, fontSize: 13, color: isDarkMode ? '#aaa' : '#666' }}>
+                <p style={{ margin: '0 0 8px' }}>Sign in to save or load across devices. Sign in before ticking verses, because signing in reloads the page and clears unsaved ticks.</p>
+                <button
+                  onClick={handleDropboxSignIn}
+                  style={{ padding: '8px 18px', fontSize: 14, border: 'none', borderRadius: 8, background: '#0061fe', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Sign In to Dropbox
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                <button
+                  onClick={saveSelectedVerses}
+                  title="Save all checked verses to Dropbox (/vercel/bible_app/selected_verses.json), overwriting the file"
+                  style={{ padding: '8px 16px', fontSize: 14, border: 'none', borderRadius: 8, background: '#0061fe', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  ☁ Save{selectedDirty ? ' •' : ''}
+                </button>
+                <button
+                  onClick={loadSelectedVerses}
+                  title="Replace everything checked here with the list saved in Dropbox"
+                  style={{ padding: '8px 16px', fontSize: 14, border: 'none', borderRadius: 8, background: '#0061fe', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  ☁ Load (replaces)
+                </button>
+              </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 12, minHeight: 20 }}>
+              {selectedCount > 0 && (
+                <button
+                  onClick={clearSelectedVerses}
+                  style={{ padding: '2px 8px', fontSize: 12, border: `1px solid ${isDarkMode ? '#555' : '#bbb'}`, borderRadius: 6, background: 'transparent', color: 'inherit', cursor: 'pointer' }}
+                >
+                  Clear all
+                </button>
+              )}
+              <span style={{ color: selectedStatus.includes('Error') ? '#e53e3e' : isDarkMode ? '#aaa' : '#888' }}>{selectedStatus}</span>
+            </div>
+
+            <div style={{ overflowY: 'auto', fontSize: 14, lineHeight: 1.7 }}>
+              {selectedCount === 0 ? (
+                <span style={{ color: isDarkMode ? '#888' : '#999', fontStyle: 'italic' }}>Nothing checked yet. Tick the boxes at the right of verses in pane 1.</span>
+              ) : (
+                Object.entries(selectedVerses)
+                  .map(([key, verses]) => {
+                    const i = key.lastIndexOf('-');
+                    return { abbrev: key.slice(0, i), chapter: Number(key.slice(i + 1)), verses };
+                  })
+                  .map(({ abbrev, chapter, verses }) => (
+                    <div key={`${abbrev}-${chapter}`}>
+                      <strong>{getBookName(abbrev)} {chapter}:</strong> {verses.join(', ')}
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <ChapterAudioModal
         open={showChapterAudioModal}
         onClose={() => setShowChapterAudioModal(false)}
@@ -12440,53 +12268,6 @@ const BibleApp = () => {
       <YouTubeVideoModal ref={youtubeModalRef} open={showYouTubeModal} onClose={() => setShowYouTubeModal(false)} onOpen={() => setShowYouTubeModal(true)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsYouTubePlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} ytMode={ytMode} onYtModeChange={handleYtModeChange} />
       <YouTubeVideoModal ref={dramatizedModalRef} isDramatized open={showDramatizedModal} onClose={() => setShowDramatizedModal(false)} onOpen={() => setShowDramatizedModal(true)} bookAbbrev={selectedBook?.abbrev} currentChapter={selectedChapter} onPlayingChange={setIsDramatizedPlaying} onChapterChange={(ch) => { if (selectedBook && ch !== selectedChapter && ch >= 1 && ch <= selectedBook.chapters.length) handleChapterSelect(ch); }} ytMode={ytMode} onYtModeChange={handleYtModeChange} />
 
-      {/* Right-click context menu for cross-reference links: choose BibleGateway or in-app (Vercel-Bible) */}
-      {refContextMenu && (
-        <div
-          onClick={() => setRefContextMenu(null)}
-          onContextMenu={(e) => { e.preventDefault(); setRefContextMenu(null); }}
-          style={{ position: 'fixed', inset: 0, zIndex: 10300 }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: 'fixed',
-              top: Math.min(refContextMenu.y, window.innerHeight - 96),
-              left: Math.min(refContextMenu.x, window.innerWidth - 190),
-              zIndex: 10301, minWidth: 170,
-              background: isDarkMode ? '#2d3148' : '#ffffff',
-              border: `1px solid ${isDarkMode ? '#3a3f5c' : '#e5e7eb'}`,
-              borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-              padding: 5, display: 'flex', flexDirection: 'column', gap: 2,
-            }}
-          >
-            <button
-              onClick={() => { window.open(getRefBibleGatewayUrl(refContextMenu), '_blank'); setRefContextMenu(null); }}
-              style={{
-                textAlign: 'left', padding: '7px 10px', borderRadius: 6, border: 'none',
-                background: 'transparent', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
-                color: isDarkMode ? '#e0e0e0' : '#1a1a1a',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = isDarkMode ? '#3a3f5c' : '#f3f4f6'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-            >
-              Open in BibleGateway
-            </button>
-            <button
-              onClick={() => { window.open(getRefVercelBibleUrl(refContextMenu), '_blank'); setRefContextMenu(null); }}
-              style={{
-                textAlign: 'left', padding: '7px 10px', borderRadius: 6, border: 'none',
-                background: 'transparent', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
-                color: isDarkMode ? '#e0e0e0' : '#1a1a1a',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = isDarkMode ? '#3a3f5c' : '#f3f4f6'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-            >
-              Open in Vercel-Bible
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Outline Modal */}
       {showOutlineModal && (() => {
