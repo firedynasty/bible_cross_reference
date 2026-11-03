@@ -2592,6 +2592,13 @@ const BibleApp = () => {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedDirty, setSelectedDirty] = useState(false); // changed since last save/load
   const selectedCount = Object.values(selectedVerses).reduce((n, a) => n + a.length, 0);
+  // Keyboard cursor over the verse checkboxes (ArrowUp/Down move, Enter toggles); resets on a new chapter
+  const [kbVerse, setKbVerse] = useState(null);
+  const kbVerseRef = useRef(null);
+  useEffect(() => {
+    kbVerseRef.current = null;
+    setKbVerse(null);
+  }, [selectedBook, selectedChapter]);
 
   const isVerseSelectedFn = (abbrev, chapter, verse) =>
     (selectedVerses[`${abbrev}-${chapter}`] || []).includes(verse);
@@ -4141,6 +4148,40 @@ const BibleApp = () => {
         setBookNavInput('');
         setShowBookNavModal(true);
         return;
+      }
+
+      // Verse checkboxes: ArrowDown/ArrowUp move the cursor, Enter ticks/unticks the verse under it
+      if ((e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') && !e.metaKey && !e.ctrlKey && !e.altKey
+        && !showQuiz2Modal && !showQuizModal && !showWordsModal && !showYouTubeModal && !showOutlineModal && !showSearchModal
+        && !showBucketsModal && !showBreatheModal && !showNotesModal && !showFeatureToggleModal && !showShortcutsModal
+        && !showDropboxModal && !showBookNavModal && !verseModalData && !memorizeModalData && !chineseBreakdownData) {
+        const t = e.target;
+        const tag = t && t.tagName;
+        const typing = t && (tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable || (tag === 'INPUT' && !t.hasAttribute('data-verse-cb')));
+        const boxes = typing ? [] : Array.from(document.querySelectorAll('input[data-verse-cb]'));
+        if (boxes.length) {
+          const nums = boxes.map(b => Number(b.getAttribute('data-verse-cb'))).sort((a, b) => a - b);
+          const cur = kbVerseRef.current;
+          if (e.key === 'Enter') {
+            if (cur != null && nums.includes(cur) && selectedBookRef.current) {
+              e.preventDefault();
+              toggleVerseSelected(selectedBookRef.current.abbrev, selectedChapterRef.current, cur);
+              // If "selected only" is on, the verse may disappear: move the cursor to a neighbour that stays
+            }
+            return;
+          }
+          e.preventDefault();
+          let next;
+          if (cur == null) next = nums[0];
+          else if (e.key === 'ArrowDown') next = nums.find(n => n > cur) ?? cur;
+          else next = [...nums].reverse().find(n => n < cur) ?? cur;
+          if (!nums.includes(next)) next = nums[0];
+          kbVerseRef.current = next;
+          setKbVerse(next);
+          const el = document.getElementById(`verse-${next}`);
+          if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          return;
+        }
       }
 
       // 'u' key - toggle reading ruler
@@ -7834,7 +7875,7 @@ const BibleApp = () => {
                         id={`verse-${verseNumber}`}
                         className={`leading-relaxed p-4 rounded-md transition-colors ${
                           isVerseSelected ? (isDarkMode ? 'bg-gray-800' : 'bg-blue-50') : ''
-                        }`}
+                        } ${kbVerse === verseNumber ? 'ring-2 ring-sky-500' : ''}`}
                         style={{ fontSize: `${fontScale * 1.125}rem` }}
                       >
                         <p className="flex">
@@ -7855,6 +7896,7 @@ const BibleApp = () => {
                           <span className="flex-1">{selectedTranslation === 'he_heb_strong.json' ? renderWithStrongs(verse, showGlosses) : renderWithGlosses(verse, showGlosses)}</span>
                           <input
                             type="checkbox"
+                            data-verse-cb={verseNumber}
                             checked={isVerseSelected}
                             onChange={() => toggleVerseSelected(selectedBook.abbrev, selectedChapter, verseNumber)}
                             title={isVerseSelected ? 'Unselect verse' : 'Select verse'}
