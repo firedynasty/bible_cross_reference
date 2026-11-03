@@ -511,7 +511,7 @@ const NavigationPlaceholder = ({
   onClassicalTogglePlay,
   classicalPlaying,
   onChapterAudio,
-  onVerseSelect,
+  verseSelectControls,
   onYouTubeVideo,
   isYouTubePlaying,
   onYouTubeTogglePlay,
@@ -827,13 +827,7 @@ const NavigationPlaceholder = ({
               >
                 🎧
               </button>}
-              {isFeatureVisible('verseSelect') && <button
-                className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-sky-100 text-sky-900 hover:bg-sky-200"
-                title="Selected verses: show only checked verses, save/load to Dropbox"
-                onClick={() => onVerseSelect && onVerseSelect()}
-              >
-                ☑
-              </button>}
+              {isFeatureVisible('verseSelect') && verseSelectControls}
               {isFeatureVisible('classicalPlay') && <button
                 className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${
                   classicalPlaying
@@ -1502,7 +1496,6 @@ const BibleApp = () => {
   const [showFiguresModal, setShowFiguresModal] = useState(false);
   const [showClassicalModal, setShowClassicalModal] = useState(false);
   const [showChapterAudioModal, setShowChapterAudioModal] = useState(false);
-  const [showVerseSelectModal, setShowVerseSelectModal] = useState(false);
   const [classicalPlaying, setClassicalPlaying] = useState(false);
   const classicalRef = useRef(null);
   const [showYouTubeModal, setShowYouTubeModal] = useState(false);
@@ -1729,7 +1722,7 @@ const BibleApp = () => {
     toggleRhyme: 'WEB/Rhyme', cyclePane1: '1:cycle', clrPane1: 'clr pane 1',
     ref: 'Ref(e)', syllable: 'Syllable', darkMode: 'Dark/Light', fontMinus: 'Font -',
     fontPlus: 'Font +', youtube: 'YouTube', youtubeDramatized: 'Dramatized', lang: 'Language', soaking: 'Soaking',
-    classical: '🎻 Classical-Scriptures', classicalPlay: 'Fast ▶/⏸', chapterAudio: '🎧 Swipe Audio', verseSelect: '☑ Verses',
+    classical: '🎻 Classical-Scriptures', classicalPlay: 'Fast ▶/⏸', chapterAudio: '🎧 Swipe Audio', verseSelect: '☑ Selected verses',
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com',
@@ -1766,7 +1759,7 @@ const BibleApp = () => {
     soaking: 'Plays or pauses the soaking worship music (s).',
     classical: 'Opens the classical music player.',
     classicalPlay: 'Plays or pauses the classical music.',
-    verseSelect: 'Opens the selected-verses panel: show only the verses you checked, and save/load the list to Dropbox.',
+    verseSelect: 'Navbar buttons for checked verses: Only On/Off, Save, Load, Clear chapter and Dropbox sign in/out.',
     chapterAudio: 'Opens the swipe audio player (KJV / Story Time): swipe up/down to change source, left/right to change chapter.',
     pane1Verse: 'Shows pane 1\'s translation of the verses you last copied from pane 2.',
     snippets: 'Saves and copies text snippets.',
@@ -1808,6 +1801,9 @@ const BibleApp = () => {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [shortcutsContent, setShortcutsContent] = useState('');
   const isFeatureVisible = (key) => visibleFeatures[key] !== false;
+  // Alphabetical order for the settings lists (ignores leading emoji/symbols and case)
+  const featureSortKey = (key) => (featureLabels[key] || key).replace(/^[^A-Za-z0-9]+/, '').toLowerCase();
+  const byFeatureLabel = (a, b) => featureSortKey(a).localeCompare(featureSortKey(b));
   const toggleFeature = (key) => {
     setVisibleFeatures(prev => {
       const next = { ...prev, [key]: !prev[key] };
@@ -2612,8 +2608,16 @@ const BibleApp = () => {
     setSelectedDirty(true);
   };
 
+  // Uncheck every verse in the chapter currently shown (pane 1)
   const clearSelectedVerses = () => {
-    setSelectedVerses({});
+    if (!selectedBook) return;
+    const key = `${selectedBook.abbrev}-${selectedChapter}`;
+    setSelectedVerses(prev => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
     setSelectedDirty(true);
   };
 
@@ -2640,6 +2644,16 @@ const BibleApp = () => {
     }
   };
 
+  // Auto-save when the chapter changes (Next/Previous buttons, chapter picker, etc.) if there are unsaved changes
+  const lastChapterKeyRef = useRef(null);
+  useEffect(() => {
+    const key = selectedBook ? `${selectedBook.abbrev}-${selectedChapter}` : null;
+    if (lastChapterKeyRef.current !== null && key !== lastChapterKeyRef.current && selectedDirty && dropboxAccessToken) {
+      saveSelectedVerses();
+    }
+    lastChapterKeyRef.current = key;
+  }, [selectedBook, selectedChapter]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const loadSelectedVerses = async () => {
     if (!dropboxAccessToken) { setSelectedStatus('Sign in to Dropbox first'); return; }
     try {
@@ -2660,6 +2674,106 @@ const BibleApp = () => {
       setSelectedStatus('Error loading: ' + e.message);
     }
   };
+
+  // After signing in (the redirect reloads the page), pull the saved selection automatically
+  useEffect(() => {
+    if (dropboxAccessToken) loadSelectedVerses();
+  }, [dropboxAccessToken]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Best-effort save when the tab is reloaded or closed with unsaved changes
+  const unloadStateRef = useRef({});
+  unloadStateRef.current = { token: dropboxAccessToken, dirty: selectedDirty, selected: selectedVerses };
+  useEffect(() => {
+    const onPageHide = () => {
+      const { token, dirty, selected } = unloadStateRef.current;
+      if (!token || !dirty) return;
+      try {
+        fetch('https://content.dropboxapi.com/2/files/upload', {
+          method: 'POST',
+          keepalive: true,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Dropbox-API-Arg': JSON.stringify({ path: VERSES_PATH, mode: { '.tag': 'overwrite' }, mute: true }),
+            'Content-Type': 'application/octet-stream',
+          },
+          body: JSON.stringify({ version: 1, savedAt: new Date().toISOString(), selected }, null, 2),
+        });
+      } catch {}
+    };
+    window.addEventListener('pagehide', onPageHide);
+    return () => window.removeEventListener('pagehide', onPageHide);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Smart button: Dropbox sign-in until signed in, then the Selected-only toggle
+  useEffect(() => {
+    if (!dropboxAccessToken) setShowSelectedOnly(false);
+  }, [dropboxAccessToken]);
+
+  const signOutDropbox = () => {
+    setDropboxAccessToken(null);
+    setShowSelectedOnly(false);
+    setSelectedStatus('');
+  };
+
+  // Navbar controls (no modal): sign in, or Selected-only / Save / Load / Clear / Sign out
+  const renderVerseSelectNav = () => {
+    const btn = 'ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold bg-sky-100 text-sky-900 hover:bg-sky-200';
+    if (!dropboxAccessToken) {
+      return (
+        <button className={btn} onClick={handleDropboxSignIn} title="Sign in to Dropbox to use selected verses (signing in reloads the page)">
+          ☑ Sign in Dropbox
+        </button>
+      );
+    }
+    const chapterHasSelection = selectedBook && (selectedVerses[`${selectedBook.abbrev}-${selectedChapter}`] || []).length > 0;
+    return (
+      <>
+        <button
+          className={`ml-1 px-2 py-0.5 rounded focus:outline-none text-xs font-semibold ${showSelectedOnly ? 'bg-sky-500 text-white hover:bg-sky-600' : 'bg-sky-100 text-sky-900 hover:bg-sky-200'}`}
+          onClick={() => setShowSelectedOnly(v => !v)}
+          title="Show only the checked verses (both panes)"
+        >
+          ☑ Only: {showSelectedOnly ? 'On' : 'Off'}
+        </button>
+        <button className={btn} onClick={saveSelectedVerses} title="Save all checked verses to Dropbox (/vercel/bible_app/selected_verses.json)">
+          ☁ Save{selectedDirty ? ' •' : ''}
+        </button>
+        <button className={btn} onClick={loadSelectedVerses} title="Replace the checked verses with the list saved in Dropbox">
+          ☁ Load
+        </button>
+        {chapterHasSelection && (
+          <button className={btn} onClick={clearSelectedVerses} title="Uncheck the verses in this chapter only (saved to Dropbox when you change chapter or click Save)">
+            ✕ Clear chapter
+          </button>
+        )}
+        <button className={btn} onClick={signOutDropbox} title="Forget the Dropbox sign-in on this page">
+          Sign out
+        </button>
+        {selectedStatus && (
+          <span className={`ml-1 text-xs ${selectedStatus.includes('Error') ? 'text-red-600' : 'text-gray-500'}`}>{selectedStatus}</span>
+        )}
+      </>
+    );
+  };
+
+  const renderSelectedOnlyButton = () => dropboxAccessToken ? (
+    <button
+      onClick={() => setShowSelectedOnly(v => !v)}
+      title="Toggle: show only the checked verses"
+      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
+      style={showSelectedOnly ? { backgroundColor: '#dbeafe', borderColor: '#3b82f6' } : undefined}
+    >
+      Selected only: {showSelectedOnly ? 'On' : 'Off'}
+    </button>
+  ) : (
+    <button
+      onClick={handleDropboxSignIn}
+      title="Sign in to Dropbox to use selected verses (signing in reloads the page)"
+      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
+    >
+      Sign in to Dropbox
+    </button>
+  );
 
   const handleNotesOpen = useCallback(() => {
     setShowNotesModal(true);
@@ -7137,7 +7251,7 @@ const BibleApp = () => {
               onFontScaleUp={() => setFontScale(prev => Math.min(2, prev + 0.1))}
               onClassicalMusic={() => setShowClassicalModal(true)}
               onChapterAudio={() => setShowChapterAudioModal(true)}
-              onVerseSelect={() => setShowVerseSelectModal(true)}
+              verseSelectControls={renderVerseSelectNav()}
               onClassicalTogglePlay={() => {
                 if (classicalRef.current) classicalRef.current.togglePlay();
               }}
@@ -7447,19 +7561,21 @@ const BibleApp = () => {
 
                   {/* Chapter Navigation */}
                   <div className="mt-10 flex justify-between pb-4">
-                    <button
-                      onClick={handleStorytimeButtonClick}
-                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
-                    >
-                      Story
-                    </button>
+                    {selectedBook && selectedChapter > 1 ? (
+                      <button
+                        onClick={() => {
+                          handleChapterSelect(selectedChapter - 1, true);
+                          if (chapterContentRef.current) {
+                            setTimeout(() => { chapterContentRef.current.scrollTop = 0; }, 100);
+                          }
+                        }}
+                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
+                      >
+                        &lt; Previous Chapter
+                      </button>
+                    ) : <span />}
 
-                    <button
-                      onClick={handleHomeReset}
-                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
-                    >
-                      Home (esc)
-                    </button>
+                    {renderSelectedOnlyButton()}
 
                     {selectedBook && selectedChapter < selectedBook.chapters.length && (
                       <button
@@ -7755,20 +7871,22 @@ const BibleApp = () => {
 
                 {/* Chapter Navigation - Simple inline approach */}
                 <div className="mt-10 flex justify-between pb-4">
-                  <button
-                    onClick={handleStorytimeButtonClick}
-                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
-                  >
-                    Story
-                  </button>
+                  {selectedBook && selectedChapter > 1 ? (
+                      <button
+                        onClick={() => {
+                          handleChapterSelect(selectedChapter - 1, true);
+                          if (kjvContentRef.current) {
+                            setTimeout(() => { kjvContentRef.current.scrollTop = 0; }, 100);
+                          }
+                        }}
+                        className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
+                      >
+                        &lt; Previous Chapter
+                      </button>
+                    ) : <span />}
 
                   {/* Home button to scroll to top */}
-                  <button
-                    onClick={handleHomeReset}
-                    className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
-                  >
-                    Home (esc)
-                  </button>
+                  {renderSelectedOnlyButton()}
 
                   {selectedBook && selectedChapter < selectedBook.chapters.length && (
                     <button
@@ -8448,20 +8566,33 @@ const BibleApp = () => {
               
               {/* Navigation buttons for KJV panel */}
                   <div id="pane2-bottom-buttons" className="mt-10 flex justify-between pb-4">
-                    <button
-                      onClick={handleStorytimeButtonClick}
-                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
-                    >
-                      Story
-                    </button>
+                    {(() => {
+                      const p2Book = pane2Book || selectedBook;
+                      const p2Chapter = pane2Chapter || selectedChapter;
+                      if (!p2Book || p2Chapter <= 1) return <span />;
+                      return (
+                        <button
+                          onClick={() => {
+                            const prevChapter = p2Chapter - 1;
+                            localStorage.removeItem('mobileScrollPosition');
+                            setMobileScrollPosition(0);
+                            setSelectedBook(p2Book);
+                            setSelectedChapter(prevChapter);
+                            setPane2Book(null);
+                            setPane2Chapter(null);
+                            setPrimaryReading({ book: p2Book, chapter: prevChapter });
+                            setIsViewingCrossRef(false);
+                            setTimeout(() => { handleHomeReset(); }, 100);
+                          }}
+                          className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
+                        >
+                          &lt; Previous Chapter
+                        </button>
+                      );
+                    })()}
 
                     {/* Home button — scroll both panes to top */}
-                    <button
-                      onClick={() => { if (kjvContentRef.current) kjvContentRef.current.scrollTop = 0; if (chapterContentRef.current) chapterContentRef.current.scrollTop = 0; }}
-                      className="bg-white bg-opacity-80 border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold rounded px-8 py-4 shadow text-xl"
-                    >
-                      Home (esc)
-                    </button>
+                    {renderSelectedOnlyButton()}
 
                     {(() => {
                       const p2Book = pane2Book || selectedBook;
@@ -9192,7 +9323,7 @@ const BibleApp = () => {
               {(() => {
                 const excludedKeys = ['qa','quiz','words','recite','cursive','breathe','repeat','goTextR','oaiKey','oaiRead','kjvRead','ttsChpCopy','fontPlus'];
                 const fontPairOn = visibleFeatures['fontMinus'] !== false && visibleFeatures['fontPlus'] !== false;
-                return allFeatureKeys.filter(k => !excludedKeys.includes(k)).map(key => {
+                return allFeatureKeys.filter(k => !excludedKeys.includes(k)).sort(byFeatureLabel).map(key => {
                   if (key === 'fontMinus') {
                     return (
                       <label key="font-pair" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: fontPairOn ? (isDarkMode ? '#3a3a5a' : '#f0f7ff') : (isDarkMode ? '#1a1a2a' : '#f5f5f5'), border: `1px solid ${fontPairOn ? '#667eea' : (isDarkMode ? '#444' : '#ddd')}` }}
@@ -9237,7 +9368,7 @@ const BibleApp = () => {
             {/* TTS / Study buttons section */}
             <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: isDarkMode ? '#bb8899' : '#e06688', paddingLeft: 4 }}>TTS / Study Tools</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              {['qa','quiz','words','recite','cursive','breathe','repeat','goTextR','oaiKey','oaiRead','kjvRead','ttsChpCopy'].map(key => (
+              {['qa','quiz','words','recite','cursive','breathe','repeat','goTextR','oaiKey','oaiRead','kjvRead','ttsChpCopy'].sort(byFeatureLabel).map(key => (
                 <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: visibleFeatures[key] !== false ? (isDarkMode ? '#4a3a3a' : '#fff0f5') : (isDarkMode ? '#1a1a2a' : '#f5f5f5'), border: `1px solid ${visibleFeatures[key] !== false ? '#e06688' : (isDarkMode ? '#444' : '#ddd')}` }}>
                   <input
                     type="checkbox"
@@ -9278,7 +9409,7 @@ const BibleApp = () => {
             {/* TTS Tooltip Language Visibility */}
             <div style={{ marginBottom: 8, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: isDarkMode ? '#88aabb' : '#3388aa', paddingLeft: 4 }}>Verse TTS Tooltip Languages</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 4 }}>
-              {TTS_TOOLTIP_LANGS.map(l => (
+              {[...TTS_TOOLTIP_LANGS].sort((a, b) => `${a.label} ${a.title}`.localeCompare(`${b.label} ${b.title}`)).map(l => (
                 <label key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, cursor: 'pointer', background: isTtsLangVisible(l.key) ? (isDarkMode ? '#3a3a5a' : '#f0f7ff') : (isDarkMode ? '#1a1a2a' : '#f5f5f5'), border: `1px solid ${isTtsLangVisible(l.key) ? '#3388aa' : (isDarkMode ? '#444' : '#ddd')}` }}>
                   <input type="checkbox" checked={isTtsLangVisible(l.key)} onChange={() => toggleTtsLang(l.key)} style={{ accentColor: '#3388aa' }} />
                   <span style={{ fontSize: 13, color: isDarkMode ? '#e0e0e0' : '#333' }}>{l.label} {l.title}</span>
@@ -12169,90 +12300,6 @@ const BibleApp = () => {
           setShowOutlineModal(true);
         }}
       />
-      {showVerseSelectModal && (
-        <div
-          style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-          onClick={(e) => { if (e.target === e.currentTarget) setShowVerseSelectModal(false); }}
-        >
-          <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 480, maxHeight: '75vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', color: isDarkMode ? '#e0e0e0' : '#333' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexShrink: 0 }}>
-              <h3 style={{ margin: 0, fontSize: '1.1em' }}>Selected verses</h3>
-              <button
-                onClick={() => setShowVerseSelectModal(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDarkMode ? '#aaa' : '#666', fontSize: 20, padding: '0 4px', lineHeight: 1 }}
-                title="Close"
-              >✕</button>
-            </div>
-
-            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none', marginBottom: 12 }}>
-              <input
-                type="checkbox"
-                checked={showSelectedOnly}
-                onChange={(e) => setShowSelectedOnly(e.target.checked)}
-                style={{ marginRight: 8, width: 16, height: 16 }}
-              />
-              Selected verses only ({selectedCount})
-            </label>
-
-            {!dropboxAccessToken ? (
-              <div style={{ marginBottom: 12, fontSize: 13, color: isDarkMode ? '#aaa' : '#666' }}>
-                <p style={{ margin: '0 0 8px' }}>Sign in to save or load across devices. Sign in before ticking verses, because signing in reloads the page and clears unsaved ticks.</p>
-                <button
-                  onClick={handleDropboxSignIn}
-                  style={{ padding: '8px 18px', fontSize: 14, border: 'none', borderRadius: 8, background: '#0061fe', color: 'white', cursor: 'pointer', fontWeight: 600 }}
-                >
-                  Sign In to Dropbox
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                <button
-                  onClick={saveSelectedVerses}
-                  title="Save all checked verses to Dropbox (/vercel/bible_app/selected_verses.json), overwriting the file"
-                  style={{ padding: '8px 16px', fontSize: 14, border: 'none', borderRadius: 8, background: '#0061fe', color: 'white', cursor: 'pointer', fontWeight: 600 }}
-                >
-                  ☁ Save{selectedDirty ? ' •' : ''}
-                </button>
-                <button
-                  onClick={loadSelectedVerses}
-                  title="Replace everything checked here with the list saved in Dropbox"
-                  style={{ padding: '8px 16px', fontSize: 14, border: 'none', borderRadius: 8, background: '#0061fe', color: 'white', cursor: 'pointer', fontWeight: 600 }}
-                >
-                  ☁ Load (replaces)
-                </button>
-              </div>
-            )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 12, minHeight: 20 }}>
-              {selectedCount > 0 && (
-                <button
-                  onClick={clearSelectedVerses}
-                  style={{ padding: '2px 8px', fontSize: 12, border: `1px solid ${isDarkMode ? '#555' : '#bbb'}`, borderRadius: 6, background: 'transparent', color: 'inherit', cursor: 'pointer' }}
-                >
-                  Clear all
-                </button>
-              )}
-              <span style={{ color: selectedStatus.includes('Error') ? '#e53e3e' : isDarkMode ? '#aaa' : '#888' }}>{selectedStatus}</span>
-            </div>
-
-            <div style={{ overflowY: 'auto', fontSize: 14, lineHeight: 1.7 }}>
-              {selectedCount === 0 ? (
-                <span style={{ color: isDarkMode ? '#888' : '#999', fontStyle: 'italic' }}>Nothing checked yet. Tick the boxes at the right of verses in pane 1.</span>
-              ) : (
-                Object.entries(selectedVerses)
-                  .map(([key, verses]) => {
-                    const i = key.lastIndexOf('-');
-                    return { abbrev: key.slice(0, i), chapter: Number(key.slice(i + 1)), verses };
-                  })
-                  .map(({ abbrev, chapter, verses }) => (
-                    <div key={`${abbrev}-${chapter}`}>
-                      <strong>{getBookName(abbrev)} {chapter}:</strong> {verses.join(', ')}
-                    </div>
-                  ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
       <ChapterAudioModal
         open={showChapterAudioModal}
         onClose={() => setShowChapterAudioModal(false)}
