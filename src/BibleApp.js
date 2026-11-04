@@ -1913,12 +1913,18 @@ const BibleApp = () => {
   const [notesSaveConfirm, setNotesSaveConfirm] = useState(false);
 
   // State for Text Paste (in Go to Reference modal)
-  const [textPasteContent, setTextPasteContent] = useState('');
-  const [textParsedRefs, setTextParsedRefs] = useState([]);
+  const [textPasteContent, setTextPasteContent] = useState(() => { try { return localStorage.getItem('bibleRefPasteText') || ''; } catch (e) { return ''; } });
+  const [textParsedRefs, setTextParsedRefs] = useState(() => { try { return JSON.parse(localStorage.getItem('bibleRefParsedRefs') || '[]'); } catch (e) { return []; } });
+  // Keep whatever was typed/pasted in the Ref(e) modal so it is still there after closing and reopening
+  useEffect(() => {
+    try {
+      if (textPasteContent) localStorage.setItem('bibleRefPasteText', textPasteContent); else localStorage.removeItem('bibleRefPasteText');
+      if (textParsedRefs.length) localStorage.setItem('bibleRefParsedRefs', JSON.stringify(textParsedRefs)); else localStorage.removeItem('bibleRefParsedRefs');
+    } catch (e) {}
+  }, [textPasteContent, textParsedRefs]);
   const [refRegexMode, setRefRegexMode] = useState(() => {
     try { return localStorage.getItem('bibleRefRegexMode') || 'parenthesized'; } catch { return 'parenthesized'; }
   });
-  const [refNotes, setRefNotes] = useState(() => localStorage.getItem('bibleRefNotes') || '');
 
   // State for Book Search Modal
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -4642,7 +4648,7 @@ const BibleApp = () => {
       // 'e' key - open Ref prompt modal
       else if (e.key === 'e' || e.key === 'E' || e.keyCode === 69) {
         if (!showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showRefPrompt) {
-          setTextPasteContent(''); setTextParsedRefs([]); setShowRefPrompt(true);
+          setShowRefPrompt(true);
         }
         e.preventDefault();
       }
@@ -7467,7 +7473,7 @@ const BibleApp = () => {
               showPane2Syllables={showPane2Syllables}
               onTogglePane2Syllables={() => setShowPane2Syllables(s => { const next = !s; localStorage.setItem('bible-pane2-syllables', next); return next; })}
               syllabifyText={syllabifyText}
-              onRefPrompt={() => { setTextPasteContent(''); setTextParsedRefs([]); setShowRefPrompt(true); }}
+              onRefPrompt={() => { setShowRefPrompt(true); }}
               onClipboardRef={async () => {
                 try {
                   const text = (await navigator.clipboard.readText()).trim();
@@ -9146,6 +9152,39 @@ const BibleApp = () => {
             return [...filtered, ...toAdd];
           });
         };
+        const nkjvUrl = (ref) => `https://www.biblegateway.com/passage/?search=${encodeURIComponent(ref)}&version=NKJV`;
+        const goToRef = (item) => { navigateToRefWithHighlight(item.ref); setShowRefPrompt(false); };
+        // "Psalm 93:3-4, Isaiah 17:12" → [{ref:'Psalms 93:3-4'},{ref:'Isaiah 17:12'}]. Keeps verses; a bare "6" after a verse ref
+        // means another verse in that chapter, and a bare chapter number means a chapter of the current book.
+        const parseTypedRefs = (val) => {
+          const out = [];
+          const seen = new Set();
+          let last = null;
+          for (const token of val.split(/[,;\n]+/).map(t => t.trim()).filter(Boolean)) {
+            let abbrev, chapter, verseStr = '';
+            const parsed = parseSingleBibleRef(token);
+            const vm = token.match(/:\s*(\d+)(?:\s*[-\u2013]\s*(\d+))?/);
+            if (parsed) {
+              abbrev = parsed.abbrev; chapter = parsed.chapter;
+              if (vm) verseStr = vm[2] ? `${vm[1]}-${vm[2]}` : vm[1];
+              last = { abbrev, chapter, hasVerse: !!vm };
+            } else {
+              const m = token.match(/^(\d+)(?:\s*[-\u2013]\s*(\d+))?$/);
+              if (!m) continue;
+              if (last && last.hasVerse) {
+                abbrev = last.abbrev; chapter = last.chapter; verseStr = m[2] ? `${m[1]}-${m[2]}` : m[1];
+              } else if (selectedBook && !m[2]) {
+                abbrev = selectedBook.abbrev; chapter = parseInt(m[1]);
+                last = { abbrev, chapter, hasVerse: false };
+              } else continue;
+            }
+            const ref = `${getBookName(abbrev)} ${chapter}${verseStr ? ':' + verseStr : ''}`;
+            if (seen.has(ref)) continue;
+            seen.add(ref);
+            out.push({ ref });
+          }
+          return out;
+        };
         return (
         <div
           style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}
@@ -9153,96 +9192,8 @@ const BibleApp = () => {
         >
           <div style={{ background: isDarkMode ? '#2a2a2a' : 'white', borderRadius: 16, padding: 24, width: '90%', maxWidth: 450, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '1.1em', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'center' }}>Go to Reference</h3>
-            {/* Inline-typed ref pills — shown above history */}
-            {textParsedRefs.length > 0 && (
-              <div style={{ marginBottom: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {textParsedRefs.map((item, i) => (
-                  <button
-                    key={i}
-                    onClick={() => { navigateToRefWithHighlight(item.ref); setShowRefPrompt(false); }}
-                    style={{
-                      padding: '5px 10px', fontSize: 12, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 6,
-                      cursor: 'pointer', fontWeight: 600,
-                      background: isDarkMode ? '#383838' : '#f0f4ff',
-                      color: isDarkMode ? '#93c5fd' : '#1d4ed8',
-                      transition: 'background 0.15s'
-                    }}
-                    title={`Go to ${item.ref}`}
-                  >
-                    {item.ref}
-                  </button>
-                ))}
-              </div>
-            )}
-            {/* Persistent history buttons above input */}
-            {refHistory.length > 0 && (
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>History</span>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button
-                      onClick={() => {
-                        if (!bibleData) return;
-                        const lines = [];
-                        for (const h of refHistory) {
-                          const verseMatch = h.raw.match(/:(\d+)(?:\s*[-–]\s*(\d+))?/);
-                          if (!verseMatch) continue;
-                          const parsed = parseSingleBibleRef(h.raw);
-                          if (!parsed) continue;
-                          const book = bibleData.find(b => b.abbrev === parsed.abbrev);
-                          if (!book || !book.chapters) continue;
-                          const ch = book.chapters[parsed.chapter - 1];
-                          if (!ch) continue;
-                          const fullBookName = getBookName(parsed.abbrev);
-                          const start = parseInt(verseMatch[1]);
-                          const end = verseMatch[2] ? parseInt(verseMatch[2]) : start;
-                          for (let v = start; v <= end; v++) {
-                            if (ch[v - 1]) lines.push(`${fullBookName} ${parsed.chapter}:${v} — ${ch[v - 1]}`);
-                          }
-                        }
-                        if (lines.length > 0) {
-                          const addition = lines.join('\n');
-                          setRefNotes(prev => {
-                            const updated = prev ? prev + '\n' + addition : addition;
-                            localStorage.setItem('bibleRefNotes', updated);
-                            return updated;
-                          });
-                        }
-                      }}
-                      style={{ fontSize: 11, color: isDarkMode ? '#86efac' : '#16a34a', background: isDarkMode ? '#1a2e1a' : '#f0fff0', border: `1px solid ${isDarkMode ? '#166534' : '#bbf7d0'}`, borderRadius: 4, cursor: 'pointer', fontWeight: 600, padding: '3px 10px' }}
-                    >
-                      Print
-                    </button>
-                    <button
-                      onClick={() => { setRefHistory([]); localStorage.removeItem('bibleRefHistory'); }}
-                      style={{ fontSize: 11, color: isDarkMode ? '#f87171' : '#dc2626', background: isDarkMode ? '#3b1c1c' : '#fef2f2', border: `1px solid ${isDarkMode ? '#7f1d1d' : '#fecaca'}`, borderRadius: 4, cursor: 'pointer', fontWeight: 600, padding: '3px 10px' }}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {refHistory.map((h, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { navigateToRefWithHighlight(h.raw); setShowRefPrompt(false); }}
-                      style={{
-                        padding: '5px 10px', fontSize: 12, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 6,
-                        cursor: 'pointer', fontWeight: 600,
-                        background: isDarkMode ? '#383838' : '#f0f4ff',
-                        color: isDarkMode ? '#93c5fd' : '#1d4ed8',
-                        transition: 'background 0.15s'
-                      }}
-                      title={`Go to ${h.raw}`}
-                    >
-                      {h.raw}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
             {/* Text Paste Area */}
-            <div style={{ marginTop: 10, borderTop: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, paddingTop: 8 }}>
+            <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>Paste paragraphs</span>
                 {textPasteContent && (
@@ -9318,88 +9269,108 @@ const BibleApp = () => {
                     try { return decodeURIComponent(m[1].replace(/\+/g, ' ')); } catch (err) { return url; }
                   });
                   setTextPasteContent(val);
-                  // Parse quoted verse references (Dropbox style)
-                  const quotedRefs = parseDropboxVerseFile(val);
-                  // Also parse plain refs ("Romans 10") and bare chapter numbers ("10" → current book)
-                  const tokens = val.split(/[,;\n]+/).map(t => t.trim()).filter(t => t);
-                  const inlineRefs = [];
-                  const seen = new Set();
-                  for (const token of tokens) {
-                    const parsed = parseSingleBibleRef(token);
-                    if (parsed) {
-                      const key = `${parsed.abbrev}_${parsed.chapter}`;
-                      if (!seen.has(key)) {
-                        seen.add(key);
-                        inlineRefs.push({ ref: `${getBookName(parsed.abbrev)} ${parsed.chapter}` });
-                      }
-                    } else if (/^\d+$/.test(token) && selectedBook) {
-                      const chapter = parseInt(token);
-                      const key = `${selectedBook.abbrev}_${chapter}`;
-                      if (!seen.has(key)) {
-                        seen.add(key);
-                        inlineRefs.push({ ref: `${getBookName(selectedBook.abbrev)} ${chapter}` });
-                      }
-                    }
-                  }
-                  setTextParsedRefs(inlineRefs.length > 0 ? inlineRefs : quotedRefs);
+                  const typed = parseTypedRefs(val);
+                  setTextParsedRefs(typed.length > 0 ? typed : parseDropboxVerseFile(val));
                 }}
-                placeholder={'Paste text with refs e.g. "...make every effort (Romans 14:19; 1 Timothy 6:11)..."'}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setShowRefPrompt(false); }
+                  else if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    const typed = parseTypedRefs(e.currentTarget.value);
+                    if (typed.length > 0) { e.preventDefault(); goToRef(typed[0]); }
+                  }
+                }}
+                placeholder={'Type or paste refs, e.g. Psalm 93:3-4, Isaiah 17:12  (Enter = go to first, Esc = close)'}
                 style={{
-                  width: '100%', minHeight: 120, padding: 10, fontSize: 13, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
+                  width: '100%', minHeight: 72, padding: 10, fontSize: 13, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
                   borderRadius: 6, background: isDarkMode ? '#333' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333',
                   boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4
                 }}
               />
+              {textParsedRefs.length > 0 && (
+                <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {textParsedRefs.map((item, i) => (
+                    <span key={`${i}-${item.ref}`} style={{ display: 'inline-flex', alignItems: 'stretch', gap: 4 }}>
+                      <button
+                        onClick={() => goToRef(item)}
+                        style={{ padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 6, background: isDarkMode ? '#383838' : '#f0f4ff', color: isDarkMode ? '#93c5fd' : '#1d4ed8' }}
+                        title={`Go to ${item.ref}${i === 0 ? ' (Enter)' : ''}`}
+                      >{item.ref}</button>
+                      <a
+                        href={nkjvUrl(item.ref)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`Open ${item.ref} in BibleGateway NKJV`}
+                        style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 10px', fontSize: 12, fontWeight: 600, textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 6, background: isDarkMode ? '#383838' : '#f0f4ff', color: isDarkMode ? '#93c5fd' : '#1d4ed8' }}
+                      >NKJV-out</a>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Personal Notes Area */}
-            <div style={{ marginTop: 16, borderTop: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, paddingTop: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>Notes</span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {textParsedRefs.length > 0 && (
+            {/* Persistent history buttons above input */}
+            {refHistory.length > 0 && (
+              <div style={{ marginTop: 14, borderTop: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, paddingTop: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, color: isDarkMode ? '#999' : '#888', fontWeight: 600 }}>History</span>
+                  <div style={{ display: 'flex', gap: 6 }}>
                     <button
-                      onClick={() => { navigateToRefWithHighlight(textParsedRefs[0].ref); setShowRefPrompt(false); }}
-                      style={{ fontSize: 11, color: isDarkMode ? '#86efac' : '#15803d', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 6px', marginBottom: 4 }}
-                      title={`Go to ${textParsedRefs[0].ref}`}
+                      onClick={() => {
+                        if (!bibleData) return;
+                        const lines = [];
+                        for (const h of refHistory) {
+                          const verseMatch = h.raw.match(/:(\d+)(?:\s*[-–]\s*(\d+))?/);
+                          if (!verseMatch) continue;
+                          const parsed = parseSingleBibleRef(h.raw);
+                          if (!parsed) continue;
+                          const book = bibleData.find(b => b.abbrev === parsed.abbrev);
+                          if (!book || !book.chapters) continue;
+                          const ch = book.chapters[parsed.chapter - 1];
+                          if (!ch) continue;
+                          const fullBookName = getBookName(parsed.abbrev);
+                          const start = parseInt(verseMatch[1]);
+                          const end = verseMatch[2] ? parseInt(verseMatch[2]) : start;
+                          for (let v = start; v <= end; v++) {
+                            if (ch[v - 1]) lines.push(`${fullBookName} ${parsed.chapter}:${v} — ${ch[v - 1]}`);
+                          }
+                        }
+                        if (lines.length > 0) {
+                          const addition = lines.join('\n');
+                          try { navigator.clipboard.writeText(addition); } catch (err) {}
+                        }
+                      }}
+                      style={{ fontSize: 11, color: isDarkMode ? '#86efac' : '#16a34a', background: isDarkMode ? '#1a2e1a' : '#f0fff0', border: `1px solid ${isDarkMode ? '#166534' : '#bbf7d0'}`, borderRadius: 4, cursor: 'pointer', fontWeight: 600, padding: '3px 10px' }}
                     >
-                      go to pill
+                      Print
                     </button>
-                  )}
-                  {refNotes && (
                     <button
-                      onClick={() => { navigator.clipboard.writeText(refNotes); }}
-                      style={{ fontSize: 11, color: isDarkMode ? '#93c5fd' : '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 6px', marginBottom: 4 }}
-                    >
-                      Copy
-                    </button>
-                  )}
-                  {refNotes && (
-                    <button
-                      onClick={() => { setRefNotes(''); localStorage.removeItem('bibleRefNotes'); }}
-                      style={{ fontSize: 11, color: isDarkMode ? '#f87171' : '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 6px', marginBottom: 4 }}
+                      onClick={() => { setRefHistory([]); localStorage.removeItem('bibleRefHistory'); }}
+                      style={{ fontSize: 11, color: isDarkMode ? '#f87171' : '#dc2626', background: isDarkMode ? '#3b1c1c' : '#fef2f2', border: `1px solid ${isDarkMode ? '#7f1d1d' : '#fecaca'}`, borderRadius: 4, cursor: 'pointer', fontWeight: 600, padding: '3px 10px' }}
                     >
                       Clear
                     </button>
-                  )}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {refHistory.map((h, i) => (
+                    <span key={i} style={{ display: 'inline-flex', alignItems: 'stretch', gap: 4 }}>
+                      <button
+                        onClick={() => goToRef({ ref: h.raw })}
+                        style={{ padding: '5px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 6, background: isDarkMode ? '#383838' : '#f0f4ff', color: isDarkMode ? '#93c5fd' : '#1d4ed8' }}
+                        title={`Go to ${h.raw}`}
+                      >{h.raw}</button>
+                      <a
+                        href={nkjvUrl(h.raw)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`Open ${h.raw} in BibleGateway NKJV`}
+                        style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 10px', fontSize: 12, fontWeight: 600, textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, borderRadius: 6, background: isDarkMode ? '#383838' : '#f0f4ff', color: isDarkMode ? '#93c5fd' : '#1d4ed8' }}
+                      >↗</a>
+                    </span>
+                  ))}
                 </div>
               </div>
-              <textarea
-                value={refNotes}
-                onChange={(e) => {
-                  setRefNotes(e.target.value);
-                  localStorage.setItem('bibleRefNotes', e.target.value);
-                }}
-                placeholder="Your study notes, thoughts, observations..."
-                style={{
-                  width: '100%', minHeight: 100, padding: 10, fontSize: 13,
-                  border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`,
-                  borderRadius: 8, background: isDarkMode ? '#1e1e2e' : '#fafbff',
-                  color: isDarkMode ? '#e0e0e0' : '#333',
-                  boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6
-                }}
-              />
-            </div>
+            )}
           </div>
         </div>
         );
