@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import DevotionalChat from "./DevotionalChat";
 
 // Maps app book abbreviations → HelloAO API book IDs
 const BOOK_ID_MAP = {
@@ -49,6 +50,50 @@ const COMMENTARIES = [
   { id: 'matthew-henry',        name: 'Matthew Henry' },
 ];
 
+// Scripture reference linkifier: turns "Psalm 97:11", "1 Samuel 1:10", "Gen. 1:1-3" into NKJV links
+const REF_BOOKS = [
+  'Genesis','Gen','Exodus','Exod','Ex','Leviticus','Lev','Numbers','Num','Deuteronomy','Deut','Joshua','Josh',
+  'Judges','Judg','Ruth','1 Samuel','2 Samuel','1 Sam','2 Sam','1 Kings','2 Kings','1 Kgs','2 Kgs',
+  '1 Chronicles','2 Chronicles','1 Chron','2 Chron','1 Chr','2 Chr','Ezra','Nehemiah','Neh','Esther','Esth',
+  'Job','Psalms','Psalm','Ps','Proverbs','Prov','Ecclesiastes','Eccl','Eccles','Song of Solomon','Song of Songs',
+  'Canticles','Isaiah','Isa','Jeremiah','Jer','Lamentations','Lam','Ezekiel','Ezek','Daniel','Dan','Hosea','Hos',
+  'Joel','Amos','Obadiah','Obad','Jonah','Micah','Mic','Nahum','Nah','Habakkuk','Hab','Zephaniah','Zeph',
+  'Haggai','Hag','Zechariah','Zech','Malachi','Mal','Matthew','Matt','Mat','Mark','Luke','John','Acts',
+  'Romans','Rom','1 Corinthians','2 Corinthians','1 Cor','2 Cor','Galatians','Gal','Ephesians','Eph',
+  'Philippians','Phil','Colossians','Col','1 Thessalonians','2 Thessalonians','1 Thess','2 Thess',
+  '1 Timothy','2 Timothy','1 Tim','2 Tim','Titus','Philemon','Hebrews','Heb','James','1 Peter','2 Peter',
+  '1 Pet','2 Pet','1 John','2 John','3 John','Jude','Revelation','Rev',
+].sort((a, b) => b.length - a.length);
+const REF_REGEX = new RegExp(
+  `\\b(?:${REF_BOOKS.map((b) => b.replace(/ /g, '\\s+')).join('|')})\\.?\\s+\\d{1,3}:\\d{1,3}(?:[-\u2013]\\d{1,3})?`,
+  'g'
+);
+
+function linkifyRefs(text) {
+  if (typeof text !== 'string') return text;
+  const out = [];
+  let last = 0;
+  let m;
+  REF_REGEX.lastIndex = 0;
+  while ((m = REF_REGEX.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    const ref = m[0];
+    out.push(
+      <a
+        key={`${m.index}-${ref}`}
+        href={`https://www.biblegateway.com/passage/?search=${encodeURIComponent(ref)}&version=NKJV`}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={`Open ${ref} in BibleGateway NKJV`}
+        style={{ color: 'inherit', textDecoration: 'underline', textDecorationStyle: 'dotted' }}
+      >{ref}</a>
+    );
+    last = m.index + ref.length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
 export default function VerseCommentaryModal({
   open, onClose,
   verseLabel, verseText,
@@ -68,6 +113,7 @@ export default function VerseCommentaryModal({
   const [commentary, setCommentary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [chatOpen, setChatOpen] = useState(false);
   // Cache: "bookId-chapter-commentaryId" → chapter content array
   const cacheRef = useRef({});
   const bodyRef = useRef(null);
@@ -129,6 +175,7 @@ export default function VerseCommentaryModal({
 
   useEffect(() => {
     if (!open) {
+      setChatOpen(false);
       setCommentary(null);
       setError(null);
     }
@@ -140,7 +187,11 @@ export default function VerseCommentaryModal({
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'Escape') { onClose?.(); return; }
+      if (e.key === 'Escape') { if (chatOpen) setChatOpen(false); else onClose?.(); return; }
+      // Let the chat box (or any field) take normal typing: s, a, f and the arrows must not trigger shortcuts
+      const tag = e.target && e.target.tagName;
+      if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT' || (e.target && e.target.isContentEditable)) return;
+      if (chatOpen) return;
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
         e.stopPropagation();
@@ -161,7 +212,7 @@ export default function VerseCommentaryModal({
     };
     if (open) window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [open, onClose, onNavigateVerse, verseNumber, totalVerses, prevTarget, nextTarget]);
+  }, [open, onClose, onNavigateVerse, verseNumber, totalVerses, prevTarget, nextTarget, chatOpen]);
 
   if (!open) return null;
 
@@ -246,6 +297,35 @@ export default function VerseCommentaryModal({
                 </a>
               );
             })()}
+            {verseLabel && (
+              <a
+                href={`https://www.biblegateway.com/passage/?search=${encodeURIComponent(verseLabel)}&version=NKJV`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Open ${verseLabel} in BibleGateway NKJV`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: '#3b82f6', color: '#fff', border: '1px solid #3b82f6',
+                  borderRadius: 6, padding: '4px 9px', fontSize: '0.82rem',
+                  fontWeight: 600, textDecoration: 'none', cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                NKJV-out
+              </a>
+            )}
+            <button
+              onClick={() => setChatOpen(true)}
+              title="Chat about this verse (devotional)"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                background: selectBg, color: textColor, border: `1px solid ${border}`,
+                borderRadius: 6, padding: '4px 9px', fontSize: '0.82rem',
+                fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+              }}
+            >
+              Chat
+            </button>
             {onOpenStory && (
               <button
                 onClick={() => { onClose?.(); onOpenStory(); }}
@@ -351,6 +431,14 @@ export default function VerseCommentaryModal({
 
         {/* Scrollable commentary body */}
         <div style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <DevotionalChat
+            open={chatOpen}
+            onClose={() => setChatOpen(false)}
+            verseLabel={verseLabel}
+            verseText={verseText}
+            commentaryText={commentary?.paragraphs?.filter((p) => typeof p === 'string').join('\n\n')}
+            bg={bg} textColor={textColor} border={border} subText={subText} selectBg={selectBg}
+          />
           {nextTarget != null && (
             <button
               onClick={() => onNavigateVerse?.(nextTarget)}
@@ -382,7 +470,7 @@ export default function VerseCommentaryModal({
               )}
               {commentary.paragraphs.map((para, i) => (
                 <p key={i} style={{ marginTop: 0, marginBottom: 14, lineHeight: 1.8, fontSize: `${fontSize}rem` }}>
-                  {para}
+                  {linkifyRefs(para)}
                 </p>
               ))}
             </>

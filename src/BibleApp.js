@@ -7,6 +7,7 @@ import ClassicalMusicModal from './components/ClassicalMusicModal';
 import YouTubeVideoModal from './components/YouTubeVideoModal';
 import OutlineModal from './components/OutlineModal';
 import VerseCommentaryModal from './components/VerseCommentaryModal';
+import HintsModal from './components/HintsModal';
 import VerseMemorizeModal from './components/VerseMemorizeModal';
 import ChineseBreakdownModal from './components/ChineseBreakdownModal';
 import SongMemorizeModal, { parseSongTxt } from './components/SongMemorizeModal';
@@ -1714,7 +1715,7 @@ const BibleApp = () => {
     'fontPlus', 'youtube', 'youtubeDramatized', 'lang', 'soaking', 'classical', 'classicalPlay', 'chapterAudio', 'verseSelect', 'panePill',
     'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
     'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting', 'outline', 'intro',
-    'memorize', 'commentary'
+    'memorize', 'commentary', 'hints'
   ];
   const featureLabels = {
     search: 'Story', rhyme: 'Rhyme', storyAudio: 'Story ▶/⏸', chpCopy: 'Chp📋',
@@ -1729,7 +1730,7 @@ const BibleApp = () => {
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com',
     pane2Only: 'P2 Only', scriptureWriting: 'Scripture Writing', outline: 'Outline(o)', intro: 'Intro',
-    memorize: 'Memorize', commentary: 'Commentary'
+    memorize: 'Memorize', commentary: 'Commentary', hints: 'Hints'
   };
   // One-line explanations shown under each name in the Toggle Buttons modal (only for buttons whose behaviour is known)
   const featureDescriptions = {
@@ -1774,6 +1775,7 @@ const BibleApp = () => {
     intro: 'Opens the book introduction and outline (i).',
     memorize: 'Opens Memorize for the current verse.',
     commentary: 'Opens the commentary for the current verse.',
+    hints: 'Opens a cheat sheet of keyboard shortcuts.',
     repeat: 'Paste text and have it read aloud.',
   };
   const [visibleFeatures, setVisibleFeatures] = useState(() => {
@@ -1782,6 +1784,7 @@ const BibleApp = () => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.scriptureWriting === undefined) parsed.scriptureWriting = false;
+        if (parsed.hints === undefined) parsed.hints = false;
         return parsed;
       }
     } catch (e) {}
@@ -1789,6 +1792,7 @@ const BibleApp = () => {
     defaults.scriptureWriting = false;
     defaults.memorize = false;
     defaults.commentary = false;
+    defaults.hints = false;
     return defaults;
   });
   // Which side the single mobile page-down button sits on ('left' | 'right'), remembered across sessions
@@ -2004,6 +2008,7 @@ const BibleApp = () => {
 
   // State for Outline Modal
   const [showOutlineModal, setShowOutlineModal] = useState(false);
+  const [showHintsModal, setShowHintsModal] = useState(false);
   const [outlineReturnArmed, setOutlineReturnArmed] = useState(false);
   const [outlinesData, setOutlinesData] = useState(null);
   const [outlinesLoaded, setOutlinesLoaded] = useState(false);
@@ -4365,8 +4370,8 @@ const BibleApp = () => {
         }
       }
 
-      // 'm' key - open Verse Commentary modal for topmost visible verse in right pane
-      if (e.key === 'm' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showOutlineModal) {
+      // 'm' or 'c' key - open Verse Commentary modal for topmost visible verse in right pane
+      if ((e.key === 'm' || (e.key === 'c' && !e.metaKey && !e.ctrlKey && !e.altKey)) && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showOutlineModal) {
         e.preventDefault();
         const pane = kjvContentRef.current;
         if (pane) {
@@ -6619,6 +6624,17 @@ const BibleApp = () => {
                 title="View commentary for current verse"
               >
                 Commentary
+              </button>
+            )}
+
+            {/* Hints button */}
+            {isFeatureVisible('hints') && (
+              <button
+                onClick={() => setShowHintsModal(true)}
+                className={`px-2 py-0.5 rounded text-xs font-semibold ${isDarkMode ? 'bg-teal-600 text-white hover:bg-teal-500' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
+                title="Keyboard shortcut hints"
+              >
+                Hints
               </button>
             )}
 
@@ -12513,6 +12529,7 @@ const BibleApp = () => {
         isDarkMode={isDarkMode}
         isSepiaMode={isSepiaMode}
       />
+      <HintsModal open={showHintsModal} onClose={() => setShowHintsModal(false)} isDarkMode={isDarkMode} isSepiaMode={isSepiaMode} />
       <VerseCommentaryModal
         open={!!verseModalData}
         onClose={() => setVerseModalData(null)}

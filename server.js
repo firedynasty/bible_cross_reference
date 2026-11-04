@@ -85,6 +85,9 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
+// Devotional chat proxy (needs OPENAI_API_KEY and ACCESS_CODE env vars)
+app.all('/api/tutor', require('./api/tutor'));
+
 // Simple API endpoint for queries (without Claude integration)
 app.post('/api/ask-query', async (req, res) => {
   const { query } = req.body;
