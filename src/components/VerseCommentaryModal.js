@@ -437,7 +437,7 @@ export default function VerseCommentaryModal({
             verseLabel={verseLabel}
             verseText={verseText}
             commentaryText={commentary?.paragraphs?.filter((p) => typeof p === 'string').join('\n\n')}
-            bg={bg} textColor={textColor} border={border} subText={subText} selectBg={selectBg}
+            bg={bg} textColor={textColor} border={border} subText={subText} selectBg={selectBg} fontSize={fontSize}
           />
           {nextTarget != null && (
             <button

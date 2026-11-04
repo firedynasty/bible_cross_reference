@@ -26,12 +26,13 @@ function systemPrompt(verseLabel, verseText, commentaryText) {
 
 export default function DevotionalChat({
   open, onClose, verseLabel, verseText, commentaryText,
-  bg, textColor, border, subText, selectBg,
+  bg, textColor, border, subText, selectBg, fontSize = 0.93,
 }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
   const [codeDraft, setCodeDraft] = useState('');
   const [hasCode, setHasCode] = useState(() => !!readCode());
   const feedRef = useRef(null);
@@ -47,6 +48,24 @@ export default function DevotionalChat({
     if (!k) return;
     try { localStorage.setItem(CODE_KEY, k); } catch (e) { /* ignore */ }
     setHasCode(true); setCodeDraft(''); setError('');
+  };
+
+  const copyChat = async () => {
+    const text = `${verseLabel}\n"${verseText}"\n\n` + messages
+      .filter((m) => m.content)
+      .map((m) => `${m.role === 'user' ? 'Me' : 'Companion'}: ${m.content}`)
+      .join('\n\n');
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta); ta.select();
+        ok = document.execCommand('copy'); ta.remove();
+      } catch (e2) { /* ignore */ }
+    }
+    setCopied(ok ? 'Copied' : 'Copy failed');
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const send = async (raw) => {
@@ -101,7 +120,12 @@ export default function DevotionalChat({
     <div style={{ position: 'absolute', inset: 0, zIndex: 20, background: bg, color: textColor, display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderBottom: `1px solid ${border}`, flexShrink: 0 }}>
         <strong style={{ fontSize: '0.9rem' }}>Devotional chat · {verseLabel}</strong>
-        <button onClick={onClose} style={{ ...pill, borderRadius: 6 }}>Back to commentary</button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {hasCode && messages.length > 0 && (
+            <button onClick={copyChat} style={{ ...pill, borderRadius: 6 }} title="Copy this conversation">{copied || 'Copy chat'}</button>
+          )}
+          <button onClick={onClose} style={{ ...pill, borderRadius: 6 }}>Back to commentary</button>
+        </div>
       </div>
 
       {!hasCode ? (
@@ -122,10 +146,10 @@ export default function DevotionalChat({
         </div>
       ) : (
         <>
-          <div ref={feedRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 16px' }}>
+          <div ref={feedRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', fontSize: `${fontSize}rem` }}>
             {messages.length === 0 && (
               <div>
-                <p style={{ marginTop: 0, color: subText, fontSize: '0.9rem' }}>Slow down with this verse. Ask anything, or start here:</p>
+                <p style={{ marginTop: 0, color: subText, fontSize: '0.9em' }}>Slow down with this verse. Ask anything, or start here:</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {STARTERS.map((s) => <button key={s} onClick={() => send(s)} style={pill}>{s}</button>)}
                 </div>
@@ -147,7 +171,7 @@ export default function DevotionalChat({
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } }}
               placeholder="Ask or reflect… (Enter to send)"
-              style={{ flex: 1, resize: 'none', background: selectBg, color: textColor, border: `1px solid ${border}`, borderRadius: 6, padding: '6px 8px', fontFamily: 'inherit' }}
+              style={{ flex: 1, resize: 'none', background: selectBg, color: textColor, border: `1px solid ${border}`, borderRadius: 6, padding: '6px 8px', fontFamily: 'inherit', fontSize: `${fontSize}rem` }}
             />
             <button onClick={() => send()} disabled={busy} style={{ ...pill, borderRadius: 6, opacity: busy ? 0.5 : 1 }}>Send</button>
           </div>
