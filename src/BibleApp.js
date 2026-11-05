@@ -2708,6 +2708,7 @@ const BibleApp = () => {
     (selectedVerses[`${abbrev}-${chapter}`] || []).includes(verse);
 
   const toggleVerseSelected = (abbrev, chapter, verse) => {
+    if (!dropboxAccessToken) return; // checkboxes only work while signed in to Dropbox
     const key = `${abbrev}-${chapter}`;
     setSelectedVerses(prev => {
       const cur = prev[key] || [];
@@ -4276,7 +4277,7 @@ const BibleApp = () => {
         const t = e.target;
         const tag = t && t.tagName;
         const typing = t && (tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable || (tag === 'INPUT' && !t.hasAttribute('data-verse-cb')));
-        const boxes = typing ? [] : Array.from(document.querySelectorAll('input[data-verse-cb]')).filter(b => b.offsetParent !== null); // visible ones only (a hidden pane still renders)
+        const boxes = (typing || !dropboxAccessToken) ? [] : Array.from(document.querySelectorAll('input[data-verse-cb]')).filter(b => b.offsetParent !== null); // visible ones only (a hidden pane still renders)
         if (boxes.length) {
           const nums = boxes.map(b => Number(b.getAttribute('data-verse-cb'))).sort((a, b) => a - b);
           const cur = kbVerseRef.current;
@@ -5025,7 +5026,7 @@ const BibleApp = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, storyIntroTab, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showDramatizedModal, showRefPrompt, showBookNavModal, loadStorytimeForCurrent, showOutlineModal, verseModalData, memorizeModalData, chineseBreakdownData]);
+  }, [selectedTranslation, showSidebar, showQuizModal, showSearchModal, storyIntroTab, showCollectionModal, collectionVersePreview, showDropboxModal, showBucketsModal, showCursiveModal, showBreatheModal, showWordsModal, showQuiz2Modal, showYouTubeModal, showDramatizedModal, showRefPrompt, showBookNavModal, loadStorytimeForCurrent, showOutlineModal, verseModalData, memorizeModalData, chineseBreakdownData, dropboxAccessToken]);
   
   // Save reading position to localStorage when it changes
   useEffect(() => {
@@ -8061,10 +8062,11 @@ const BibleApp = () => {
                             data-verse-book={selectedBook.abbrev}
                             data-verse-chapter={selectedChapter}
                             checked={isVerseSelected}
+                            disabled={!dropboxAccessToken}
                             onChange={() => toggleVerseSelected(selectedBook.abbrev, selectedChapter, verseNumber)}
-                            title={isVerseSelected ? 'Unselect verse' : 'Select verse'}
+                            title={!dropboxAccessToken ? 'Sign in to Dropbox to select verses' : isVerseSelected ? 'Unselect verse' : 'Select verse'}
                             aria-label={`Select verse ${verseNumber}`}
-                            className="ml-3 mt-2 h-5 w-5 flex-shrink-0 cursor-pointer"
+                            className={`ml-3 mt-2 h-5 w-5 flex-shrink-0 ${dropboxAccessToken ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}
                           />
                         </p>
 
@@ -8762,10 +8764,11 @@ const BibleApp = () => {
                                       data-verse-book={selAbbrev}
                                       data-verse-chapter={effectiveChapter}
                                       checked={p2Selected}
+                                      disabled={!dropboxAccessToken}
                                       onChange={() => toggleVerseSelected(selAbbrev, effectiveChapter, verseNumber)}
-                                      title={p2Selected ? 'Unselect verse' : 'Select verse'}
+                                      title={!dropboxAccessToken ? 'Sign in to Dropbox to select verses' : p2Selected ? 'Unselect verse' : 'Select verse'}
                                       aria-label={`Select verse ${verseNumber}`}
-                                      className="ml-3 mt-2 h-5 w-5 flex-shrink-0 cursor-pointer"
+                                      className={`ml-3 mt-2 h-5 w-5 flex-shrink-0 ${dropboxAccessToken ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}
                                     />
                                   )}
                                 </p>
