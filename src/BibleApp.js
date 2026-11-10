@@ -1715,7 +1715,7 @@ const BibleApp = () => {
     'fontPlus', 'youtube', 'youtubeDramatized', 'lang', 'soaking', 'classical', 'classicalPlay', 'chapterAudio', 'verseSelect', 'panePill',
     'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
     'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting', 'outline', 'intro',
-    'memorize', 'commentary', 'hints'
+    'memorize', 'commentary', 'hints', 'summary'
   ];
   const featureLabels = {
     search: 'Story', rhyme: 'Rhyme', storyAudio: 'Story ▶/⏸', chpCopy: 'Chp📋',
@@ -1729,7 +1729,7 @@ const BibleApp = () => {
     qa: 'QA', quiz: 'Quiz', words: 'Words(w)', recite: 'Recite', cursive: 'Cursive',
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com',
-    pane2Only: 'P2 Only', scriptureWriting: 'Scripture Writing', outline: 'Outline(o)', intro: 'Intro',
+    pane2Only: 'P2 Only', scriptureWriting: 'Scripture Writing', outline: 'Outline(o)', intro: 'Intro', summary: 'Summary(k)',
     memorize: 'Memorize', commentary: 'Commentary', hints: 'Hints'
   };
   // One-line explanations shown under each name in the Toggle Buttons modal (only for buttons whose behaviour is known)
@@ -1773,6 +1773,7 @@ const BibleApp = () => {
     scriptureWriting: 'Shows or hides the scripture writing panel.',
     outline: 'Opens the sentence outline of the current chapter (o).',
     intro: 'Opens the book introduction and outline (i).',
+    summary: 'Opens the chapter summary — overview plus section breakdown (k).',
     memorize: 'Opens Memorize for the current verse.',
     commentary: 'Opens the commentary for the current verse.',
     hints: 'Opens a cheat sheet of keyboard shortcuts.',
@@ -2027,6 +2028,11 @@ const BibleApp = () => {
   const introModalScrollRef = useRef(null);
   const introModalScrollPosRef = useRef(0);
   const introModalScrollBookRef = useRef(null);
+
+  // State for chapter summaries (Sum tab in the Story modal)
+  const [summaryData, setSummaryData] = useState(null);
+  const [summaryLoaded, setSummaryLoaded] = useState(false);
+  const summaryModalScrollRef = useRef(null);
 
   // State for Repeat Modal (paste text and have it read aloud)
   const [showRepeatModal, setShowRepeatModal] = useState(false);
@@ -3019,6 +3025,18 @@ const BibleApp = () => {
         .catch(() => {});
     }
   }, [showSearchModal, storyIntroTab, introLoaded]);
+
+  // Load chapter summaries JSON lazily on first time the Sum tab is shown
+  useEffect(() => {
+    if (showSearchModal && storyIntroTab === 'summary' && !summaryLoaded) {
+      setSummaryLoaded(true);
+      const baseUrl = getBaseUrl();
+      fetch(`${baseUrl}/chapter_summaries.json`)
+        .then(r => r.json())
+        .then(data => setSummaryData(data))
+        .catch(() => {});
+    }
+  }, [showSearchModal, storyIntroTab, summaryLoaded]);
 
   // Load verse filters JSON on startup
   useEffect(() => {
@@ -4304,6 +4322,15 @@ const BibleApp = () => {
         }
       }
 
+      // 'k' key - open Story modal on the chapter Summary tab
+      if (e.key === 'k' && !e.metaKey && !e.ctrlKey && !e.altKey && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal && !showRefPrompt && !showOutlineModal) {
+        e.preventDefault();
+        setStoryIntroTab('summary');
+        setShowSearchModal(true);
+        setSearchStartRef('');
+        return;
+      }
+
       // 'u' key - toggle Outline modal
       if (e.key === 'u' && !showWordsModal && !showQuiz2Modal && !showQuizModal && !showBucketsModal && !showCursiveModal && !showBreatheModal && !showSearchModal && !showYouTubeModal) {
         e.preventDefault();
@@ -4451,6 +4478,12 @@ const BibleApp = () => {
         e.preventDefault();
         const step = introModalScrollRef.current.clientHeight * 0.35;
         introModalScrollRef.current.scrollBy({ top: e.key === 'ArrowDown' ? step : -step, behavior: 'smooth' });
+        return;
+      }
+      else if (showSearchModal && storyIntroTab === 'summary' && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && summaryModalScrollRef.current) {
+        e.preventDefault();
+        const step = summaryModalScrollRef.current.clientHeight * 0.35;
+        summaryModalScrollRef.current.scrollBy({ top: e.key === 'ArrowDown' ? step : -step, behavior: 'smooth' });
         return;
       }
 
@@ -6901,6 +6934,15 @@ const BibleApp = () => {
                   title="Book introduction and outline (i)"
                 >
                   Intro(i)
+                </button>}
+
+                {/* Chapter Summary Modal Button */}
+                {isFeatureVisible('summary') && <button
+                  onClick={() => { setStoryIntroTab('summary'); setShowSearchModal(true); setSearchStartRef(''); }}
+                  className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-violet-600 text-white hover:bg-violet-700 font-semibold"
+                  title="Chapter summary and section breakdown (k)"
+                >
+                  Sum(k)
                 </button>}
 
                 {/* Dropbox Highlights Button - hidden */}
@@ -11960,6 +12002,10 @@ const BibleApp = () => {
                           onClick={() => setStoryIntroTab('intro')}
                           style={{ fontSize: '0.72em', fontWeight: 700, padding: '2px 8px', borderRadius: 4, cursor: 'pointer', background: storyIntroTab === 'intro' ? tabActiveBg : 'transparent', color: storyIntroTab === 'intro' ? '#fff' : isDarkMode ? '#aaa' : '#555', transition: 'background 0.15s' }}
                         >Intro</span>
+                        <span
+                          onClick={() => setStoryIntroTab('summary')}
+                          style={{ fontSize: '0.72em', fontWeight: 700, padding: '2px 8px', borderRadius: 4, cursor: 'pointer', background: storyIntroTab === 'summary' ? tabActiveBg : 'transparent', color: storyIntroTab === 'summary' ? '#fff' : isDarkMode ? '#aaa' : '#555', transition: 'background 0.15s' }}
+                        >Sum</span>
                       </div>
                       {/* Comm button — opens commentary modal for verse 1 of active chapter */}
                       <button
@@ -12044,6 +12090,84 @@ const BibleApp = () => {
                           >A+</button>
                         </>
                       )}
+
+                      {/* Summary-tab controls */}
+                      {storyIntroTab === 'summary' && (() => {
+                        const sumChapters = summaryData
+                          ? Object.keys(summaryData)
+                              .filter(k => k.slice(0, k.lastIndexOf(' ')) === bookDisplayName)
+                              .map(k => parseInt(k.slice(k.lastIndexOf(' ') + 1), 10))
+                              .filter(n => !isNaN(n))
+                              .sort((a, b) => a - b)
+                          : [];
+                        const goToChapter = (ch) => { setPane2Chapter(ch); setSelectedChapter(ch); };
+                        const idx = sumChapters.indexOf(activeChapter);
+                        const entry = summaryData ? summaryData[`${bookDisplayName} ${activeChapter}`] : null;
+                        return (
+                          <>
+                            <span style={{ fontSize: '0.85em', fontWeight: 700, color: isDarkMode ? '#c4b5fd' : '#7c3aed', flexShrink: 0 }}>
+                              {bookDisplayName}
+                            </span>
+                            <button
+                              onClick={() => { if (idx > 0) goToChapter(sumChapters[idx - 1]); }}
+                              disabled={idx <= 0}
+                              style={{ ...navBtnStyle, opacity: idx <= 0 ? 0.4 : 1, cursor: idx <= 0 ? 'default' : 'pointer', padding: '3px 7px' }}
+                              title="Previous chapter"
+                            >‹</button>
+                            <select
+                              value={activeChapter}
+                              onChange={(e) => goToChapter(parseInt(e.target.value, 10))}
+                              style={{ fontSize: '0.8em', padding: '2px 4px', borderRadius: 5, border: `1px solid ${isDarkMode ? '#555' : '#ccc'}`, background: isDarkMode ? '#1a1a1a' : '#fff', color: isDarkMode ? '#e0e0e0' : '#333', cursor: 'pointer' }}
+                              title="Jump to chapter"
+                            >
+                              {sumChapters.length > 0
+                                ? sumChapters.map(ch => <option key={ch} value={ch}>Ch {ch}</option>)
+                                : <option value={activeChapter}>Ch {activeChapter}</option>
+                              }
+                            </select>
+                            <button
+                              onClick={() => { if (idx !== -1 && idx < sumChapters.length - 1) goToChapter(sumChapters[idx + 1]); }}
+                              disabled={idx === -1 || idx >= sumChapters.length - 1}
+                              style={{ ...navBtnStyle, opacity: (idx === -1 || idx >= sumChapters.length - 1) ? 0.4 : 1, cursor: (idx === -1 || idx >= sumChapters.length - 1) ? 'default' : 'pointer', padding: '3px 7px' }}
+                              title="Next chapter"
+                            >›</button>
+                            <span style={{ width: 1, alignSelf: 'stretch', background: isDarkMode ? '#555' : '#ddd', margin: '0 2px', flexShrink: 0 }} />
+                            <button
+                              onClick={() => setIntroFontSize(s => Math.max(9, s - 1))}
+                              style={{ background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.75em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '2px 6px', fontWeight: 'bold' }}
+                              title="Decrease font size"
+                            >A−</button>
+                            <button
+                              onClick={() => setIntroFontSize(s => Math.min(24, s + 1))}
+                              style={{ background: isDarkMode ? '#444' : isSepiaMode ? '#d4c9a8' : '#e5e7eb', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: '0.75em', color: isDarkMode ? '#e0e0e0' : '#333', padding: '2px 6px', fontWeight: 'bold' }}
+                              title="Increase font size"
+                            >A+</button>
+                            {entry && (
+                              <button
+                                onClick={() => {
+                                  const lines = [
+                                    `${bookDisplayName} ${activeChapter}`,
+                                    '',
+                                    entry.overview,
+                                    '',
+                                    ...(entry.sections || []).map(s => {
+                                      const range = s.start_verse === s.end_verse
+                                        ? `${activeChapter}:${s.start_verse}`
+                                        : `${activeChapter}:${s.start_verse}-${s.end_verse}`;
+                                      return `${range}  ${s.heading}`;
+                                    }),
+                                  ];
+                                  navigator.clipboard.writeText(lines.join('\n'))
+                                    .then(() => alert('Copied to clipboard'))
+                                    .catch(err => alert('Failed to copy: ' + err));
+                                }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85em', color: isDarkMode ? '#aaa' : '#666', padding: '2px 4px' }}
+                                title="Copy summary to clipboard"
+                              >📋</button>
+                            )}
+                          </>
+                        );
+                      })()}
 
                       <div style={{ flex: 1 }} />
 
@@ -12214,6 +12338,52 @@ const BibleApp = () => {
               })()}
 
               {/* Intro content */}
+              {storyIntroTab === 'summary' && (() => {
+                const sumBook = pane2Book || selectedBook;
+                const sumChapter = pane2Chapter || selectedChapter;
+                const sumBookName = sumBook ? (abbrevToBookName[sumBook.abbrev] || sumBook.abbrev) : '';
+                const entry = summaryData ? (summaryData[`${sumBookName} ${sumChapter}`] || null) : null;
+                const goToVerse = (verse) => {
+                  const fullRef = `${sumBookName} ${sumChapter}:${verse}`;
+                  navigateToRefWithHighlight(fullRef);
+                  if (introToastTimerRef.current) clearTimeout(introToastTimerRef.current);
+                  setIntroToast({ text: `${sumChapter}:${verse}`, id: Date.now() });
+                  introToastTimerRef.current = setTimeout(() => setIntroToast(null), 5000);
+                  closeStoryModal();
+                };
+                return (
+                  <div ref={summaryModalScrollRef} className={isDarkMode ? 'scrollbar-dark' : isSepiaMode ? 'scrollbar-sepia' : ''} style={{ flex: 1, overflowY: 'auto', textAlign: 'left', fontSize: introFontSize, lineHeight: 1.7, color: isDarkMode ? '#d0d0d0' : isSepiaMode ? '#5a5a5a' : '#333', scrollbarColor: isDarkMode ? '#555 #2a2a2a' : isSepiaMode ? '#c4b89a #f4ecd8' : undefined }}>
+                    {!summaryData ? (
+                      <div style={{ color: isDarkMode ? '#888' : '#999', fontStyle: 'italic', fontSize: 13 }}>Loading…</div>
+                    ) : !entry ? (
+                      <div style={{ color: isDarkMode ? '#888' : '#999', fontStyle: 'italic', fontSize: 13 }}>No summary available for {sumBookName} {sumChapter}.</div>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 11, color: isDarkMode ? '#666' : '#aaa', marginBottom: 10, fontStyle: 'italic', borderBottom: `1px solid ${isDarkMode ? '#444' : '#e0e0e0'}`, paddingBottom: 6 }}>
+                          {sumBookName} {sumChapter} — click a verse range to navigate
+                        </div>
+                        <div style={{ marginBottom: 14 }}>{entry.overview}</div>
+                        {(entry.sections || []).map((section, i) => {
+                          const range = section.start_verse === section.end_verse
+                            ? `${sumChapter}:${section.start_verse}`
+                            : `${sumChapter}:${section.start_verse}–${section.end_verse}`;
+                          return (
+                            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 6 }}>
+                              <span
+                                onClick={() => goToVerse(section.start_verse)}
+                                style={{ flexShrink: 0, color: isDarkMode ? '#93c5fd' : '#1d4ed8', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline', textDecorationStyle: 'dotted', fontVariantNumeric: 'tabular-nums' }}
+                                title={`Go to ${range}`}
+                              >{range}</span>
+                              <span>{section.heading}</span>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+
               {storyIntroTab === 'intro' && (() => {
                 const introBookAbbrev = selectedBook?.abbrev;
                 const introBookName = introBookAbbrev ? (getBookName(introBookAbbrev) || introBookAbbrev) : '';
