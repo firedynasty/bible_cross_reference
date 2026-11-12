@@ -1732,6 +1732,19 @@ const BibleApp = () => {
     pane2Only: 'P2 Only', scriptureWriting: 'Scripture Writing', outline: 'Outline(o)', intro: 'Intro', summary: 'Summary(k)',
     memorize: 'Memorize', commentary: 'Commentary', hints: 'Hints'
   };
+  const rhymeBooks = [
+    { abbrev: 'gn', name: 'Genesis', chapters: 50 },
+    { abbrev: 'prv', name: 'Proverbs', chapters: 31 },
+    { abbrev: 'mk', name: 'Mark', chapters: 16 },
+    { abbrev: 'ec', name: 'Ecclesiastes', chapters: 12 },
+    { abbrev: 'et', name: 'Esther', chapters: 10 },
+    { abbrev: 'rt', name: 'Ruth', chapters: 4 },
+    { abbrev: 'jn', name: 'Jonah', chapters: 4 },
+    { abbrev: 'ps', name: 'Psalms', chapters: 150 },
+    { abbrev: 'is', name: 'Isaiah', chapters: 66 },
+    { abbrev: 'job', name: 'Job', chapters: 42 },
+    { abbrev: 'jo', name: 'John', chapters: 21 },
+  ];
   // One-line explanations shown under each name in the Toggle Buttons modal (only for buttons whose behaviour is known)
   const featureDescriptions = {
     search: 'Opens the Story / Intro / commentary reader (Esc).',
@@ -5851,6 +5864,13 @@ const BibleApp = () => {
       }
     }, 200);
   };
+
+  const handleOpenRhymeBook = (abbrev) => {
+    handleBookSelect(abbrev);
+    setSelectedDropdownTranslation('en_rhyme.json');
+    handleApplySelectedTranslationToPane2('en_rhyme.json');
+    setShowFeatureToggleModal(false);
+  };
   
   // Apply selected translation from dropdown to the primary pane
   const handleApplySelectedTranslationToPane1 = (translationValue) => {
@@ -9579,6 +9599,27 @@ const BibleApp = () => {
                   );
                 });
               })()}
+            </div>
+
+            {/* Quick links to books with rhyme summaries */}
+            <div style={{ borderTop: `2px solid ${isDarkMode ? '#555' : '#ddd'}`, marginTop: 12, marginBottom: 12 }} />
+            <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: isDarkMode ? '#bb8899' : '#e06688', paddingLeft: 4 }}>Rhyme Books (11)</div>
+            <div style={{ margin: '0 0 8px', fontSize: 11, color: isDarkMode ? '#aaa' : '#777' }}>Open a book at chapter 1 with Bible Rhyme in pane 2.</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6, marginBottom: 16 }}>
+              {rhymeBooks.map(book => {
+                const isActive = selectedBook?.abbrev === book.abbrev && rightPaneTranslation === 'en_rhyme.json';
+                return (
+                  <button
+                    key={book.abbrev}
+                    onClick={() => handleOpenRhymeBook(book.abbrev)}
+                    title={`Open ${book.name} in Bible Rhyme`}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, padding: '7px 8px', borderRadius: 6, cursor: 'pointer', border: `1px solid ${isActive ? '#e06688' : (isDarkMode ? '#555' : '#ddd')}`, background: isActive ? (isDarkMode ? '#4a3a3a' : '#fff0f5') : (isDarkMode ? '#3a3a4a' : '#f8f8f8'), color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'left', fontSize: 12 }}
+                  >
+                    <span>{book.name}</span>
+                    <span style={{ color: isDarkMode ? '#aaa' : '#888', fontSize: 10, whiteSpace: 'nowrap' }}>{book.chapters} ch</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Mobile page-down button side */}
