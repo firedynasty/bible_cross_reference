@@ -14,6 +14,7 @@ import SongMemorizeModal, { parseSongTxt } from './components/SongMemorizeModal'
 import { getStorytimeAudioUrl } from './data/storytimeAudio';
 import { getRhymeAudioUrl } from './data/rhymeAudio';
 import ChapterAudioModal from './components/ChapterAudioModal';
+import RhymeSongsModal from './components/RhymeSongsModal';
 
 // Import Firebase modules
 import { initializeApp } from 'firebase/app';
@@ -1715,7 +1716,7 @@ const BibleApp = () => {
     'fontPlus', 'youtube', 'youtubeDramatized', 'lang', 'soaking', 'classical', 'classicalPlay', 'chapterAudio', 'verseSelect', 'panePill',
     'qa', 'quiz', 'words', 'recite', 'cursive', 'breathe', 'repeat', 'pane1Verse', 'snippets', 'goTextR', 'oaiKey',
     'oaiRead', 'kjvRead', 'ttsChpCopy', 'clipboardRef', 'searchNiv', 'pane2Only', 'scriptureWriting', 'outline', 'intro',
-    'memorize', 'commentary', 'hints', 'summary'
+    'memorize', 'commentary', 'hints', 'summary', 'rhymeSongs'
   ];
   const featureLabels = {
     search: 'Story', rhyme: 'Rhyme', storyAudio: 'Story ▶/⏸', chpCopy: 'Chp📋',
@@ -1730,7 +1731,7 @@ const BibleApp = () => {
     breathe: 'br_ (Breathe)', repeat: 'Repeat', pane1Verse: 'Pane1 Verse', snippets: 'Snippets', goTextR: 'Go:TextR', oaiKey: 'Key',
     oaiRead: 'Read (OpenAI)', kjvRead: 'Read:KJV', ttsChpCopy: 'TTS Chp📋', clipboardRef: 'ch:v', searchNiv: 'search-.com',
     pane2Only: 'P2 Only', scriptureWriting: 'Scripture Writing', outline: 'Outline(o)', intro: 'Intro', summary: 'Summary(k)',
-    memorize: 'Memorize', commentary: 'Commentary', hints: 'Hints'
+    memorize: 'Memorize', commentary: 'Commentary', hints: 'Hints', rhymeSongs: '🎤 Songs'
   };
   const rhymeBooks = [
     { abbrev: 'gn', name: 'Genesis', chapters: 50 },
@@ -1754,6 +1755,7 @@ const BibleApp = () => {
     ruler: 'Toggles the reading ruler (u) and lets you change its height.',
     col: 'Opens your verse collections.',
     hymn: 'Opens the recommended hymns for this book.',
+    rhymeSongs: 'Opens Bible Rhymes — the rhyme chapters rendered as tracks, with lyrics and a player.',
     prompt: 'Not used by any button in the app right now.',
     nltPsalms: 'Opens the current chapter in BibleGateway (NKJV).',
     plan: 'Opens the Bible reading plan.',
@@ -2085,6 +2087,7 @@ const BibleApp = () => {
   const [psalmHymnsData, setPsalmHymnsData] = useState(null);
   const [lukeHymnsData, setLukeHymnsData] = useState(null);
   const [showHymnModal, setShowHymnModal] = useState(false);
+  const [showRhymeSongsModal, setShowRhymeSongsModal] = useState(false);
 
   // State for Story Time Modal
   const storytimeScrollRef = useRef(null);
@@ -5871,6 +5874,21 @@ const BibleApp = () => {
     handleApplySelectedTranslationToPane2('en_rhyme.json');
     setShowFeatureToggleModal(false);
   };
+
+  // From a Bible Rhymes track: open its book AND chapter with Bible Rhyme in pane 2.
+  // handleChapterSelect would read a stale selectedBook here, so the chapter is set directly.
+  const handleOpenRhymeSongChapter = (abbrev, chapter) => {
+    handleOpenRhymeBook(abbrev);
+    if (chapter && chapter !== 1) {
+      const book = bibleData?.find(b => b.abbrev === abbrev);
+      setSelectedChapter(chapter);
+      if (book) {
+        setPrimaryReading({ book, chapter });
+        setIsViewingCrossRef(false);
+      }
+    }
+    setShowRhymeSongsModal(false);
+  };
   
   // Apply selected translation from dropdown to the primary pane
   const handleApplySelectedTranslationToPane1 = (translationValue) => {
@@ -6982,6 +7000,17 @@ const BibleApp = () => {
                     title="Recommended hymns"
                   >
                     Hymn
+                  </button>
+                )}
+
+                {/* Bible Rhymes: rhyme chapters rendered as tracks, with lyrics and a player */}
+                {isFeatureVisible('rhymeSongs') && (
+                  <button
+                    onClick={() => setShowRhymeSongsModal(true)}
+                    className="ml-1 px-2 py-0.5 rounded focus:outline-none text-xs bg-pink-700 text-white hover:bg-pink-800 font-semibold"
+                    title="Bible Rhymes — 7 tracks with lyrics and a player"
+                  >
+                    &#127908; Songs
                   </button>
                 )}
 
@@ -9621,6 +9650,18 @@ const BibleApp = () => {
                 );
               })}
             </div>
+
+            {/* Bible Rhymes songs */}
+            <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: isDarkMode ? '#bb8899' : '#e06688', paddingLeft: 4 }}>Bible Rhymes (7 tracks)</div>
+            <div style={{ margin: '0 0 8px', fontSize: 11, color: isDarkMode ? '#aaa' : '#777' }}>Rhyme chapters rendered as tracks. Tap a track for the lyric sheet and a player.</div>
+            <button
+              onClick={() => { setShowFeatureToggleModal(false); setShowRhymeSongsModal(true); }}
+              title="Open Bible Rhymes"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 8, padding: '8px 10px', marginBottom: 16, borderRadius: 6, cursor: 'pointer', border: `1px solid ${isDarkMode ? '#e06688' : '#e06688'}`, background: isDarkMode ? '#4a3a3a' : '#fff0f5', color: isDarkMode ? '#e0e0e0' : '#333', textAlign: 'left' }}
+            >
+              <span style={{ fontSize: 13 }}>&#127908; Open Bible Rhymes</span>
+              <span style={{ fontSize: 10, color: isDarkMode ? '#aaa' : '#888', whiteSpace: 'nowrap' }}>Isaiah, Ruth, Jonah, Esther</span>
+            </button>
 
             {/* Mobile page-down button side */}
             <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: isDarkMode ? '#8899bb' : '#667eea', paddingLeft: 4 }}>Mobile</div>
@@ -12715,6 +12756,14 @@ const BibleApp = () => {
         isSepiaMode={isSepiaMode}
       />
       <HintsModal open={showHintsModal} onClose={() => setShowHintsModal(false)} isDarkMode={isDarkMode} isSepiaMode={isSepiaMode} />
+      <RhymeSongsModal
+        open={showRhymeSongsModal}
+        onClose={() => setShowRhymeSongsModal(false)}
+        baseUrl={getBaseUrl()}
+        isDarkMode={isDarkMode}
+        isSepiaMode={isSepiaMode}
+        onOpenChapter={handleOpenRhymeSongChapter}
+      />
       <VerseCommentaryModal
         open={!!verseModalData}
         onClose={() => setVerseModalData(null)}

@@ -1,0 +1,661 @@
+[
+ {
+  "n": 1,
+  "title": "You Are Mine",
+  "ref": "isaiah:43",
+  "book": "Isaiah",
+  "ch": 43,
+  "audio": "https://www.dropbox.com/scl/fi/4r2x3me41gkkttz7mlvot/1112_you_are_mine.mp3?rlkey=zzpume6lmw79j3pd8zwzcgy4z&raw=1",
+  "beat": "boom bap · 90–94",
+  "dynamic": "reflective",
+  "genre": "Christian rap",
+  "why": "Comfort lane, same as Be Still / Fret Not. The hook is verse 2 almost verbatim; 43:25 is the half-tempo spoken bridge, so the arc ends big.",
+  "source": "rhyme_pipeline/runs/isaiah_fill2/is43_v4_repair2.txt",
+  "note": "",
+  "sections": [
+   {
+    "label": "Hook",
+    "lines": [
+     "Fear not, I formed you, I called you by name,",
+     "Through the water, through the fire, you come out the same.",
+     "You are mine, you are mine, that's what the Maker said,",
+     "Precious in his sight, so I'm lifting up my head."
+    ]
+   },
+   {
+    "label": "Verse 1",
+    "lines": [
+     "He who created Jacob, who formed Israel, said",
+     "\"Do not fear, I redeemed you\" — put his name on my head.",
+     "Through the waters he's with me, the rivers won't drown,",
+     "Through the fire I don't burn, not a flame on me now.",
+     "I'm precious in his sight, I'm honored, I'm loved,",
+     "He paid out whole nations for the one he thought of.",
+     "From the east bring my children, from the west gather in,",
+     "North, give 'em up; south, don't hold 'em — bring 'em home again."
+    ]
+   },
+   {
+    "label": "Hook",
+    "lines": [
+     "Fear not, I formed you, I called you by name,",
+     "Through the water, through the fire, you come out the same.",
+     "You are mine, you are mine, that's what the Maker said,",
+     "Precious in his sight, so I'm lifting up my head."
+    ]
+   },
+   {
+    "label": "Verse 2",
+    "lines": [
+     "Bring the blind that got eyes, bring the deaf that got ears,",
+     "Let the nations stand up, let the witness appear.",
+     "Who called out the first things, who can say it in advance?",
+     "You're my witness, says Yahweh, this was never happenstance.",
+     "No god formed before me, ain't a god after me,",
+     "No savior but the one who cut the road through the sea.",
+     "I declared it, I saved you, no stranger in the room,",
+     "No hand delivers out of mine — who undoes what I do?"
+    ]
+   },
+   {
+    "label": "Verse 3",
+    "lines": [
+     "He made a way through the water, cut a path through the deep,",
+     "Horse and chariot and army went out like a wick in its sleep.",
+     "\"Don't remember the former, don't you dwell on what's gone,",
+     "Behold, I'm doing a new thing — can't you see it come on?\"",
+     "Rivers in the desert, and a way where there's none,",
+     "Streams in the wilderness for the people he formed.",
+     "Didn't bring him my lambs, didn't burn him my spice,",
+     "Only brought him my sin, made him carry the weight —",
+     "And still:"
+    ]
+   },
+   {
+    "label": "Bridge - half tempo, spoken",
+    "lines": [
+     "\"For my own sake,",
+     "for my own sake,",
+     "I blot out your transgressions.",
+     "I will not remember your sins.",
+     "Put me in remembrance. Plead your case.\""
+    ]
+   },
+   {
+    "label": "Hook - final, big",
+    "lines": [
+     "Fear not, I formed you, I called you by name,",
+     "Through the water, through the fire, you come out the same.",
+     "You are mine, you are mine, that's what the Maker said,",
+     "Precious in his sight, so I'm lifting up my head.",
+     "Behold, he's doing a new thing — can't you see it break through?",
+     "Rivers in the desert, and the desert was you."
+    ]
+   }
+  ],
+  "bars": 44,
+  "abbrev": "is"
+ },
+ {
+  "n": 2,
+  "title": "Here Am I",
+  "ref": "isaiah:6",
+  "book": "Isaiah",
+  "ch": 6,
+  "audio": "https://www.dropbox.com/scl/fi/cindwh9xgh0uwc5lsu36n/1112_here_am_i.mp3?rlkey=8uww08gk41rfwkoaxtefjciah&raw=1",
+  "beat": "trap · 90–95",
+  "dynamic": "narrative",
+  "genre": "Christian rap",
+  "why": "Throne -> 'woe, I am undone' -> the coal -> 'send me'. Only 8 couplets, so it rides on hook repetition: 'Holy, holy, holy' is the chant.",
+  "source": "rhyme_pipeline/runs/isaiah/is6_v4_final.txt",
+  "note": "",
+  "sections": [
+   {
+    "label": "Hook",
+    "lines": [
+     "Holy, holy, holy — Yahweh of Armies, King,",
+     "Whole earth full of glory and the door posts ring.",
+     "I said, \"Woe, I'm undone\" — then the coal touched my mouth,",
+     "Here am I, send me. Here am I, send me out."
+    ]
+   },
+   {
+    "label": "Verse 1",
+    "lines": [
+     "The year the king died, I saw the Lord enthroned,",
+     "High and lifted up, and his train filled the holy home.",
+     "Six-winged seraphs calling out across the hall,",
+     "\"Holy, holy, holy\" — and the whole earth's full.",
+     "The caller's voice hit the thresholds, foundations quaked,",
+     "And the house filled up with smoke, filling all of the space.",
+     "I'm standing in the light with nowhere left to hide,",
+     "A man of unclean lips in the room where the King resides."
+    ]
+   },
+   {
+    "label": "Hook",
+    "lines": [
+     "Holy, holy, holy — Yahweh of Armies, King,",
+     "Whole earth full of glory and the door posts ring.",
+     "I said, \"Woe, I'm undone\" — then the coal touched my mouth,",
+     "Here am I, send me. Here am I, send me out."
+    ]
+   },
+   {
+    "label": "Verse 2",
+    "lines": [
+     "\"Woe is me, I'm undone\" — that's the cry that came out,",
+     "Unclean lips, and I live where the lips are unclean now.",
+     "My eyes have seen the King, Yahweh of Armies, and I",
+     "Should have been ash on the floor, but I'm somehow alive.",
+     "Then a seraph took a live coal from the altar in flight,",
+     "Touched it to my mouth — didn't soothe me, it ignited.",
+     "\"Your iniquity is taken, and your sin is atoned,\"",
+     "And the mouth that said \"unclean\" is the mouth he now owns."
+    ]
+   },
+   {
+    "label": "Bridge - half tempo, spoken",
+    "lines": [
+     "Then the voice of the Lord:",
+     "\"Whom shall I send?",
+     "And who will go for us?\"",
+     "And I said — before I knew what it would cost —",
+     "\"Here am I. Send me.\""
+    ]
+   },
+   {
+    "label": "Verse 3",
+    "lines": [
+     "He said, \"Go and tell this people: hear, but never understand,",
+     "See, but don't perceive it\" — that's the word he put in my hand.",
+     "\"Make the heart fat, the ears heavy, shut the eyes tight,",
+     "Lest they turn and I heal them\" — that's a heavy thing to write.",
+     "I said, \"Lord, how long?\" He said, \"Till the cities lie waste,",
+     "Till the houses have no people and the land is a bare place.",
+     "Till a tenth is consumed, and consumed once again —\"",
+     "But the stump that's left standing is the holy seed. Amen."
+    ]
+   },
+   {
+    "label": "Hook - final, big",
+    "lines": [
+     "Holy, holy, holy — Yahweh of Armies, King,",
+     "Whole earth full of glory and the door posts ring.",
+     "I said, \"Woe, I'm undone\" — then the coal touched my mouth,",
+     "Here am I, send me. Here am I, send me out.",
+     "The stump is still standing, there's a seed in the ground,",
+     "Here am I, send me. Here am I, send me out."
+    ]
+   }
+  ],
+  "bars": 43,
+  "abbrev": "is"
+ },
+ {
+  "n": 3,
+  "title": "No Money No Price",
+  "ref": "isaiah:55",
+  "book": "Isaiah",
+  "ch": 55,
+  "audio": "https://www.dropbox.com/scl/fi/jmp1g7d54ys8uayqla3zo/1112_no_money_no_price.mp3?rlkey=vk3ktdpt45ssqhg4w1yj41rx6&raw=1",
+  "beat": "boom bap · 95–100",
+  "dynamic": "anthemic",
+  "genre": "Christian hip-hop",
+  "why": "Most accessible. 'Come, thirsty ones -- no money, no price' is already a hook.",
+  "source": "rhyme_pipeline/runs/isaiah/is55_v4_final.txt",
+  "note": "",
+  "sections": [
+   {
+    "label": "Hook",
+    "lines": [
+     "Come, all you thirsty, come down to the water and buy,",
+     "Wine and milk and bread — no money, no price.",
+     "Why you spending what you got on what was never bread?",
+     "Come and eat what is good, let your soul be fed."
+    ]
+   },
+   {
+    "label": "Verse 1",
+    "lines": [
+     "Ho, everyone thirsty, come down to the stream,",
+     "No coin in your pocket, but the table's still free.",
+     "Buy the wine, buy the milk, and the cost of it is nil,",
+     "Why you labor for a wage that was never gonna fill?",
+     "Listen close to me, eat good, let your soul take delight,",
+     "Turn your ear, come to God, and your soul comes alive.",
+     "He says, \"I'll cut a pact with you that doesn't run out,",
+     "The sure mercies of David — that's what this is about.\""
+    ]
+   },
+   {
+    "label": "Hook",
+    "lines": [
+     "Come, all you thirsty, come down to the water and buy,",
+     "Wine and milk and bread — no money, no price.",
+     "Why you spending what you got on what was never bread?",
+     "Come and eat what is good, let your soul be fed."
+    ]
+   },
+   {
+    "label": "Verse 2",
+    "lines": [
+     "He gave him as a witness to the peoples, a guide,",
+     "A leader and commander to the nations worldwide.",
+     "Now a nation that never knew you comes running at the sound,",
+     "'Cause Yahweh, the Holy One, has glorified you now.",
+     "So seek him while he's found, call on him while he's near,",
+     "Let the wicked leave his way and his thoughts — come here.",
+     "He pardons, and he pardons like the debt was never owed,",
+     "That's the only kind of math that his mercy has known."
+    ]
+   },
+   {
+    "label": "Verse 3",
+    "lines": [
+     "\"My thoughts are not your thoughts, and my ways are not yours,\"",
+     "As high as the heavens over earth, that's how far.",
+     "Like the rain and like the snow coming down from the sky,",
+     "They don't go back up till the ground is satisfied —",
+     "Till it waters and it buds and it gives seed and bread,",
+     "So the word out of his mouth does the thing that he said.",
+     "It will not come back empty, it will finish what it starts,",
+     "And you'll go out with joy and the peace will lead you out."
+    ]
+   },
+   {
+    "label": "Hook - final, big",
+    "lines": [
+     "Come, all you thirsty, come down to the water and buy,",
+     "Wine and milk and bread — no money, no price.",
+     "Why you spending what you got on what was never bread?",
+     "Come and eat what is good, let your soul be fed.",
+     "The mountains and the hills break out into song,",
+     "And the trees of the field clap their hands all along.",
+     "Where the thorn was, a cypress; where the brier, a myrtle tree,",
+     "Standing as a sign to his name eternally."
+    ]
+   }
+  ],
+  "bars": 40,
+  "abbrev": "is"
+ },
+ {
+  "n": 4,
+  "title": "Rise Like Eagles",
+  "ref": "isaiah:40",
+  "book": "Isaiah",
+  "ch": 40,
+  "audio": "https://www.dropbox.com/scl/fi/ywccfkhc9en0egvf16lnp/1112_rise_like_eagles.mp3?rlkey=bcv0fy1vva5fb0u2phwaq0ctc&raw=1",
+  "beat": "boom bap · 100–105",
+  "dynamic": "gritty",
+  "genre": "gospel rap",
+  "why": "The big anthem. Dense list material trimmed -- see the sheet's footer.",
+  "source": "rhyme_pipeline/runs/isaiah/is40_v4_final.txt",
+  "note": "Trimmed from the rhyme text: Lebanon's beasts as burnt offerings, and the cast-idol/gold-overlay couplet. Both are list material that raps badly and neither carries the chapter's argument the way the \"who measured\" lines do.",
+  "sections": [
+   {
+    "label": "Hook",
+    "lines": [
+     "They that wait on the Lord will renew their strength,",
+     "Rise up like eagles on a wind off the edge.",
+     "Run and not be weary, walk and not faint,",
+     "The grass is gonna wither but his word's gonna stay."
+    ]
+   },
+   {
+    "label": "Verse 1",
+    "lines": [
+     "Comfort, comfort my people — that's the word from the throne,",
+     "Tell Jerusalem her warfare's over, her sin is atoned.",
+     "She's received of his hand double for all that she's done,",
+     "And a voice in the wilderness is saying, \"Prepare for the One.\"",
+     "Make it level, make it straight, raise the valley from the low,",
+     "Bring the mountain and the hill down where the highway's gonna go.",
+     "Then the glory of the Lord is gonna show for every eye,",
+     "'Cause the mouth of Yahweh spoke it — that's the only reason why."
+    ]
+   },
+   {
+    "label": "Hook",
+    "lines": [
+     "They that wait on the Lord will renew their strength,",
+     "Rise up like eagles on a wind off the edge.",
+     "Run and not be weary, walk and not faint,",
+     "The grass is gonna wither but his word's gonna stay."
+    ]
+   },
+   {
+    "label": "Verse 2",
+    "lines": [
+     "All flesh is grass and the glory is a flower in the field,",
+     "The grass withers, the flower fades, and that's the whole deal.",
+     "But the word of our God is still standing when it's bare,",
+     "So go up on the mountain, lift your voice, cast off fear.",
+     "Say it loud to the cities of Judah: \"Behold your God!\"",
+     "He is coming with a ruling arm and the wage that he brought.",
+     "But the same arm that rules is the arm that gathers lambs,",
+     "Holds them up against his chest, leads the mothers by hand."
+    ]
+   },
+   {
+    "label": "Verse 3",
+    "lines": [
+     "Who measured out the waters in the hollow of a hand?",
+     "Who spanned the sky, who weighed the mountains, who set the scale to stand?",
+     "Nobody counseled him, nobody taught him the way,",
+     "And the nations are a drop in the bucket on that scale.",
+     "He sits above the circle of the earth, and from that height",
+     "We look like grasshoppers — he spread the sky out like a tent at night.",
+     "He brings the princes down to nothing, blows the judges away,",
+     "Like a withered piece of stubble, and there's no trace where they lay."
+    ]
+   },
+   {
+    "label": "Bridge - half tempo, spoken",
+    "lines": [
+     "\"Lift up your eyes. Who created these?",
+     "He brings out their host by number.",
+     "He calls them every one by name.",
+     "Not one of them is missing.\"",
+     "So why do you say it, Jacob —",
+     "\"My way is hidden from the Lord,",
+     "and the justice due me is passed over by my God\"?"
+    ]
+   },
+   {
+    "label": "Hook - final, big",
+    "lines": [
+     "Have you not known? Have you not heard it before?",
+     "The everlasting God, the Creator, don't get worn.",
+     "He don't faint, he don't tire, and his wisdom has no end,",
+     "He gives power to the fainting, and the weak, he gives strength.",
+     "They that wait on the Lord will renew their strength,",
+     "Rise up like eagles on a wind off the edge.",
+     "Run and not be weary, walk and not faint,",
+     "The grass is gonna wither but his word's gonna stay."
+    ]
+   }
+  ],
+  "bars": 47,
+  "abbrev": "is"
+ },
+ {
+  "n": 5,
+  "title": "Where You Go",
+  "ref": "ruth:1",
+  "book": "Ruth",
+  "ch": 1,
+  "audio": "https://www.dropbox.com/scl/fi/n1e44eeomiot7nc6p0at0/1112_where_you_go.mp3?rlkey=s842a6mhtw8gyp78mychnh2wm&raw=1",
+  "beat": "boom bap · 90–94",
+  "dynamic": "narrative",
+  "genre": "Christian rap",
+  "why": "Best hook in the whole corpus and it was already written: 'where you go, I'll go... your God, my God.' Ends dark on 'call me Mara', which is the spoken bridge, so the final hook has to lift against it.",
+  "source": "rhyme_pipeline/runs/ruth/rt1_v4_final.txt",
+  "note": "",
+  "sections": [
+   {
+    "label": "Hook",
+    "lines": [
+     "Where you go, I'll go; where you stay, I'll stay,",
+     "Your people are my people, and your God is my God.",
+     "Where you die, I'll die, and they'll lay me where you lay,",
+     "Let the Lord do worse to me if I turn from this road."
+    ]
+   },
+   {
+    "label": "Verse 1",
+    "lines": [
+     "Famine came to Bethlehem and the house of bread went dry,",
+     "So Elimelech took Naomi and his two sons to survive.",
+     "Moab was a season, not a country, not a home,",
+     "Then Elimelech died and left Naomi on her own.",
+     "The sons took Moabite wives, Orpah and Ruth by name,",
+     "Ten years in a borrowed field, and then the second wave came.",
+     "Both sons died — no husband, and no children, and no claim,",
+     "Just three widows in a field and a God she wants to blame."
+    ]
+   },
+   {
+    "label": "Hook",
+    "lines": [
+     "Where you go, I'll go; where you stay, I'll stay,",
+     "Your people are my people, and your God is my God.",
+     "Where you die, I'll die, and they'll lay me where you lay,",
+     "Let the Lord do worse to me if I turn from this road."
+    ]
+   },
+   {
+    "label": "Verse 2",
+    "lines": [
+     "Then she heard that Yahweh gave his people bread again,",
+     "So she set out on the Judah road with both her daughters then.",
+     "\"Go home,\" she told them. \"May Yahweh deal kind with you,",
+     "May he give you rest in a husband's house — there's nothing here for you.\"",
+     "They wept and said, \"No, we'll go back with you instead,\"",
+     "She said, \"Are there sons left in my womb? Is there a husband in my bed?",
+     "Yahweh's hand has gone out against me; I'm too bitter to be near\" —",
+     "And Orpah kissed her, turned around, and disappeared."
+    ]
+   },
+   {
+    "label": "Verse 3",
+    "lines": [
+     "But Ruth held on, and Ruth clung, and Ruth would not turn away,",
+     "Naomi saw the set of her face and had nothing left to say.",
+     "So the two of them walked into Bethlehem, and the whole town stirred,",
+     "\"Is this Naomi?\" — and you could hear the doubt in the word."
+    ]
+   },
+   {
+    "label": "Bridge - half tempo, spoken",
+    "lines": [
+     "\"Don't call me Naomi.",
+     "Call me Mara,",
+     "because the Almighty has dealt bitterly with me.",
+     "I went out full.",
+     "Yahweh has brought me home empty.",
+     "Why call me pleasant",
+     "when he has testified against me?\""
+    ]
+   },
+   {
+    "label": "Hook - final, big",
+    "lines": [
+     "Where you go, I'll go; where you stay, I'll stay,",
+     "Your people are my people, and your God is my God.",
+     "Where you die, I'll die, and they'll lay me where you lay,",
+     "Let the Lord do worse to me if I turn from this road.",
+     "She came home empty and she said it out loud,",
+     "But the barley harvest started the day she got to town.",
+     "Where you go, I'll go — and she went. And she stayed.",
+     "And the empty house of bread had bread again."
+    ]
+   }
+  ],
+  "bars": 43,
+  "abbrev": "rt"
+ },
+ {
+  "n": 6,
+  "title": "Salvation Belongs",
+  "ref": "jonah:2",
+  "book": "Jonah",
+  "ch": 2,
+  "audio": "https://www.dropbox.com/scl/fi/pu83yhg912x6devotzw6r/1112_salvation_belongs.mp3?rlkey=la3jrpmmhnd8dr3af1940tnwg&raw=1",
+  "beat": "trap · 90–95",
+  "dynamic": "narrative",
+  "genre": "Christian rap",
+  "why": "First person from inside the fish. 7 couplets, the shortest sheet here, so like Isaiah 6 it carries on repetition. The turn ('I remembered Yahweh') is the bridge, placed before verse 2 so the song goes down, turns, then rises.",
+  "source": "rhyme_pipeline/runs/jonah/jn2_v4_final.txt",
+  "note": "",
+  "sections": [
+   {
+    "label": "Hook",
+    "lines": [
+     "Salvation belongs to Yahweh — say it from the deep,",
+     "Say it with the water in your lungs and the weeds on your feet.",
+     "I went down to the bottom and the bottom wasn't the end,",
+     "He heard me from the belly. Salvation belongs to him."
+    ]
+   },
+   {
+    "label": "Verse 1",
+    "lines": [
+     "Out of the belly of Sheol I called, and he heard me,",
+     "From the heart of the sea where the current had turned me.",
+     "You threw me in the deep — I'm not blaming the crew,",
+     "Every breaker, every billow passing over me was you.",
+     "I said, \"I'm driven from your sight\" — then I said the other thing:",
+     "\"Yet I will look again toward your holy temple, King.\"",
+     "The waters closed in on my soul, the deep was all around,",
+     "Weeds were wrapped around my head and the earth barred me down."
+    ]
+   },
+   {
+    "label": "Hook",
+    "lines": [
+     "Salvation belongs to Yahweh — say it from the deep,",
+     "Say it with the water in your lungs and the weeds on your feet.",
+     "I went down to the bottom and the bottom wasn't the end,",
+     "He heard me from the belly. Salvation belongs to him."
+    ]
+   },
+   {
+    "label": "Bridge - half tempo, spoken",
+    "lines": [
+     "Down to the roots of the mountains.",
+     "The earth with her bars closed behind me.",
+     "And when my soul fainted within me —",
+     "I remembered Yahweh.",
+     "And my prayer came in to you,",
+     "into your holy temple."
+    ]
+   },
+   {
+    "label": "Verse 2",
+    "lines": [
+     "Then you brought my life up out of the pit where I lay,",
+     "And the man who ran from the word is the man who stayed to pray.",
+     "Everybody clinging to a lie that cannot hold",
+     "forsakes the only mercy that was ever his to own.",
+     "So I'll sacrifice with thanksgiving, I will pay what I vowed,",
+     "I'll say it in the dark the way I'd say it in the crowd.",
+     "Three days in the dark and I learned the whole of it:",
+     "He don't need the dry land to hear a man repent."
+    ]
+   },
+   {
+    "label": "Hook - final, big",
+    "lines": [
+     "Salvation belongs to Yahweh — say it from the deep,",
+     "Say it with the water in your lungs and the weeds on your feet.",
+     "I went down to the bottom and the bottom wasn't the end,",
+     "He heard me from the belly. Salvation belongs to him.",
+     "Then Yahweh spoke one word and the fish obeyed the sound,",
+     "And it put me on the dry land, and I'm standing on the ground."
+    ]
+   }
+  ],
+  "bars": 36,
+  "abbrev": "jn"
+ },
+ {
+  "n": 7,
+  "title": "For Such A Time",
+  "ref": "esther:4",
+  "book": "Esther",
+  "ch": 4,
+  "audio": "https://www.dropbox.com/scl/fi/d38vkzju2k0enjav7wvw2/1112_for_such_a_time.mp3?rlkey=dg96e63z2zf6brj4v1jx6r9n1&raw=1",
+  "beat": "boom bap · 95–100",
+  "dynamic": "narrative",
+  "genre": "Christian hip-hop",
+  "why": "'Perhaps this time you came to reign' is the hook. Mordecai's speech is the spoken bridge, and 'if I perish, I perish' is the big finish.",
+  "source": "rhyme_pipeline/runs/esther/et4_v4_final.txt",
+  "note": "",
+  "sections": [
+   {
+    "label": "Hook",
+    "lines": [
+     "Who knows but that you came to the kingdom for this,",
+     "For such a time as this, for such a time as this.",
+     "If I perish, I perish — but I'm walking in there,",
+     "Three days with no water, and I'm going on a prayer."
+    ]
+   },
+   {
+    "label": "Verse 1",
+    "lines": [
+     "Mordecai heard the decree and he tore what he wore,",
+     "Put on sackcloth and ashes, went out crying in the road.",
+     "Every province where the writing of the king had been read,",
+     "There was fasting, there was weeping, there was sackcloth and dread.",
+     "Esther heard her man was mourning and it shook her,",
+     "Sent him clothes to change into — he would not take them from her.",
+     "So she called for Hathach: \"Go find out the what and the why,\"",
+     "Met him in the open square by the king's gate outside."
+    ]
+   },
+   {
+    "label": "Hook",
+    "lines": [
+     "Who knows but that you came to the kingdom for this,",
+     "For such a time as this, for such a time as this.",
+     "If I perish, I perish — but I'm walking in there,",
+     "Three days with no water, and I'm going on a prayer."
+    ]
+   },
+   {
+    "label": "Verse 2",
+    "lines": [
+     "He told him about Haman and the silver he weighed,",
+     "Handed him the decree: \"Take it to her. Tell her plead.\"",
+     "She sent it back: \"There's a law that everybody knows —",
+     "You don't walk in uncalled where the inner court goes.",
+     "One law. You die. Unless he holds the gold scepter out.",
+     "And he has not called for me in thirty days. That's the count.\""
+    ]
+   },
+   {
+    "label": "Bridge - half tempo, spoken",
+    "lines": [
+     "And Mordecai sent back:",
+     "\"Don't imagine you'll escape in the king's house",
+     "any more than the rest of the Jews.",
+     "If you stay silent now,",
+     "relief will come from somewhere else —",
+     "but you and your father's house will perish.",
+     "And who knows",
+     "whether you have come to the kingdom",
+     "for such a time as this?\""
+    ]
+   },
+   {
+    "label": "Verse 3",
+    "lines": [
+     "She said, \"Go and gather every Jew in Susa, all of them,",
+     "Fast for me three days, three nights, no water and no bread.",
+     "Me and all my maidens, we will fast the same way,",
+     "Then I'll go in to the king against the law — and if I die, I die.\"",
+     "Mordecai went his way and he did everything she said,",
+     "Same man who was wailing with the ashes on his head.",
+     "The one who had been telling her is the one who obeyed,",
+     "And the queen who can't be summoned is the one who named the day."
+    ]
+   },
+   {
+    "label": "Hook - final, big",
+    "lines": [
+     "Who knows but that you came to the kingdom for this,",
+     "For such a time as this, for such a time as this.",
+     "If I perish, I perish — but I'm walking in there,",
+     "Three days with no water, and I'm going on a prayer.",
+     "Not the scepter, not the law, not the thirty days of silence —",
+     "She put her whole house on a maybe and she walked in."
+    ]
+   }
+  ],
+  "bars": 45,
+  "abbrev": "et"
+ }
+]
